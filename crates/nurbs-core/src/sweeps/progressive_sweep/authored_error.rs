@@ -1,4 +1,6 @@
 //! Constructor-owned original-law premises for authored sweep error.
+#[cfg(test)]
+use arc_frame_owned::closed_frenet_position_seam;
 use super::*;
 use crate::distance_bounds::Interval as I;
 use crate::numerics::interval_vec3::{dot_tight, sub as interval_sub};
@@ -95,10 +97,6 @@ pub(super) fn patch_error(
     )?;
     let section = section_interpolation(sweep, count, max_cells)?;
     patch_error_from_section(sweep, count, max_products, section)
-}
-pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
-    shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
-    patch_error_with_path_evidence(sweep,count,max_cells,max_products,shared_length,None)
 }
 pub(super) fn patch_error_with_path_evidence(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
     shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<PatchErrorReport>{
@@ -202,13 +200,14 @@ pub(super) fn rmf_default_patch_error_with_length(sweep:&Sweep<'_>,count:usize,m
         // The aggregate owner has already paid for this original source.
         // Reuse its frame/position proof instead of starting a per-profile
         // candidate that cannot share that expenditure.
-        return rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells,max_products,shared_length,shared_rmf,shared_pose);
+        return rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells,max_products,
+            SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..Default::default()});
     }
     let planar=rmf_planar_patch_error_with_pose(sweep,count,max_cells,max_products,shared_length,shared_pose.as_deref_mut())?;
     if !matches!(planar.reason,Some("source-plane-coefficients-nonzero"|"rmf-original-frame-correspondence-unproved"|"rmf-closed-correction-correspondence-unproved"))
         || planar.cells>=max_cells || planar.products>max_products {return Ok(planar);}
     let mut general=rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells-planar.cells,
-        max_products-planar.products,shared_length,shared_rmf,shared_pose)?;
+        max_products-planar.products,SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..Default::default()})?;
     general.cells+=planar.cells;
     general.products+=planar.products;
     Ok(general)
@@ -232,7 +231,7 @@ pub(super) fn corrected_patch_error_with_length(sweep:&Sweep<'_>,count:usize,max
 pub(super) fn corrected_patch_error_with_shared_arc_pose(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_pose:Option<&mut SharedArcPose>)->Result<PatchErrorReport>{
     check(max_cells<=100000&&max_products<=1000000,"Corrected frame error work exceeds limits")?;
     if shared_pose.as_ref().is_some_and(|p|p.regular_certified) {
-        let section=original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,shared_length,OriginalTransport::CorrectedRegular,None,512,None,shared_pose)?;
+        let section=original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,OriginalTransport::CorrectedRegular,512,SharedProofs{length:shared_length,pose:shared_pose,..Default::default()})?;
         return patch_error_from_section(sweep,count,max_products,section);
     }
 
@@ -248,7 +247,7 @@ pub(super) fn corrected_patch_error_with_shared_arc_pose(sweep:&Sweep<'_>,count:
     if matches!(section.reason,Some("source-plane-coefficients-nonzero"|"corrected-closed-frame-correspondence-unproved")) {
         let spent=section.cells;
         section=if sweep.options.spacing!=Spacing::Parameter {
-            original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,remaining-spent,shared_length,OriginalTransport::CorrectedRegular,None,512,None,shared_pose)?
+            original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,remaining-spent,OriginalTransport::CorrectedRegular,512,SharedProofs{length:shared_length,pose:shared_pose,..Default::default()})?
         }else{guided_section_interpolation_mode(sweep,count,remaining-spent,OriginalTransport::CorrectedRegular)?};
         section.cells+=spent;
     }
@@ -329,11 +328,13 @@ pub(super) fn guided_control_value(
         return Ok(unresolved(initial.cells, initial.reason.unwrap()));
     }
     let mut report = authored_frame_certificate::certify_path_guide_control_value(
-        sweep.path,
+        crate::sweeps::progressive_sweep::SweepLaws {
+            path: sweep.path,
+            scale: sweep.scale,
+            twist: sweep.twist,
+            affine: sweep.affine_laws,
+        },
         guide,
-        sweep.scale,
-        sweep.twist,
-        sweep.affine_laws,
         initial.coordinates.unwrap()[profile_control],
         traversal,
         max_cells - initial.cells,
@@ -534,7 +535,7 @@ fn guided_section_interpolation_mode(
 
 
 fn original_frame_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,mode:OriginalTransport,shared_guide:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
-    original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,shared_length,mode,shared_guide,512,None,None)
+    original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,mode,512,SharedProofs{length:shared_length,guide:shared_guide,..Default::default()})
 }
 
 
@@ -552,9 +553,12 @@ pub(super) fn rmf_spatial_patch_error(sweep:&Sweep<'_>,count:usize,steps:usize,m
     rmf_spatial_patch_error_with_length(sweep,count,steps,max_cells,max_products,None)
 }
 pub(super) fn rmf_spatial_patch_error_with_length(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
-    rmf_spatial_patch_error_with_transport(sweep,count,steps,max_cells,max_products,shared_length,None,None)
+    rmf_spatial_patch_error_with_transport(sweep,count,steps,max_cells,max_products,
+        SharedProofs{length:shared_length,..Default::default()})
 }
-pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut SharedArcPose>)->Result<PatchErrorReport>{
+pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,
+    shared:SharedProofs<'_,'_>)->Result<PatchErrorReport>{
+    let SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..}=shared;
     check(count>=sweep.options.initial_sections && count<=sweep.options.max_sections
         && steps.is_power_of_two() && (2..=16384).contains(&steps)
         && max_cells<=100000 && max_products<=1000000,"Invalid spatial RMF proof limits")?;
@@ -566,7 +570,7 @@ pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usiz
             spatial_parameter::section_interpolation(sweep,count,steps,max_cells,shared_rmf,shared_pose)?);
     }
     patch_error_from_section(sweep,count,max_products,
-        original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,shared_length,OriginalTransport::RmfSpatial,None,steps,shared_rmf,shared_pose)?)
+        original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,OriginalTransport::RmfSpatial,steps,SharedProofs{length:shared_length,guide:None,rmf:shared_rmf,pose:shared_pose,chord:None})?)
 }
 
 
@@ -657,7 +661,7 @@ use guided_interpolation_owned::guided_section_interpolation_mode_with_pose;
 #[path = "authored_error/arc_frame_owned.rs"]
 mod arc_frame_owned;
 use arc_frame_owned::original_frame_arc_length_section_interpolation_with_rmf_steps;
-use arc_frame_owned::closed_frenet_position_seam;
+pub(super) use arc_frame_owned::SharedProofs;
 use arc_frame_owned::fixed_normal_arc_length_section_interpolation;
 
 #[path = "authored_error/arc_position_owned.rs"]

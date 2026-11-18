@@ -44,7 +44,7 @@ pub fn admit(graph: &Arrangement, max_pairs: usize) -> Result<usize> {
     }
     let mut checks = 0;
     // Unified guard as a typed backstop for the explicit `max_pairs` budget.
-    let mut guard = crate::foundation::guards::Budget::with_iterations(max_pairs + 1)?
+    let mut guard = crate::numerics::guards::Budget::with_iterations(max_pairs + 1)?
         .guard("chord_embedding");
     for i in 0..lines.len() {
         for j in i + 1..lines.len() {

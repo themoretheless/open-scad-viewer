@@ -83,15 +83,7 @@ fn corrected_fixed_normal_hollow_body_tessellates_original_boundary() {
     let twist = constant_vector_law([0.; 3]).unwrap();
     let axes = constant_vector_law([2., 3., 1.]).unwrap();
     let center = constant_vector_law([0.; 3]).unwrap();
-    let body = brep_core::analytic::progressive_profile_body_with_evidence_and_correction(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
-        None,
-        None,
-        Options {
+    let body = brep_core::analytic::progressive_profile_body_with_evidence_and_correction(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: None }, Options {
             normal: [1., 0., 0.],
             orientation: Orientation::FixedNormal,
             spacing: Spacing::ArcLength {
@@ -101,13 +93,11 @@ fn corrected_fixed_normal_hollow_body_tessellates_original_boundary() {
             initial_sections: 3,
             max_sections: 17,
             max_deviation: 2.,
-        },
-        Some(brep_core::analytic::EndpointCapCorrection {
+        }, Some(brep_core::analytic::EndpointCapCorrection {
             quantum: 2_f64.powi(-40),
             tolerance: 1e-9,
             max_work: 1000000,
-        }),
-    )
+        }))
     .unwrap();
     assert_eq!(body.boundary_error_within_budget, Some(true));
     for detail in [1, 2, 4, 8] {
@@ -118,8 +108,8 @@ fn corrected_fixed_normal_hollow_body_tessellates_original_boundary() {
 #[test]
 fn periodic_step_sphere_tessellates_with_shared_seam_and_poles() {
     let source = brep_core::sphere(2.).unwrap();
-    let text = brep_core::export_step_v6(&source).unwrap().0;
-    let model = brep_core::import_step_v6(&text).unwrap().0;
+    let text = cad_step::export_step_v6(&source).unwrap().0;
+    let model = cad_step::import_step_v6(&text).unwrap().0;
     nurbs(&model, 8).unwrap();
 }
 fn append_model(target: &mut brep_core::Model, mut source: brep_core::Model) {

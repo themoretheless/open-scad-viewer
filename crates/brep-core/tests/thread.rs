@@ -1,5 +1,12 @@
 use nurbs_core::thread::{self, Spec};
 
+fn fit() -> brep_core::thread::PatchFit {
+    brep_core::thread::PatchFit {
+        max_uv_error: 1e-12,
+        tolerance: 1e-3,
+        max_spans: 128,
+    }
+}
 fn qualification_limits() -> brep_core::volume_validity::Limits {
     brep_core::volume_validity::Limits {
         boundary: brep_core::boundary_embedding::Limits {
@@ -57,7 +64,7 @@ fn interior_clipped_network_connects_across_turn_and_profile_wrap() {
     let limits = [1.13, 1.87];
     let source = thread::trim_candidates(spec, limits, 1e-3).unwrap();
     let network =
-        brep_core::thread::clipped_thread_network(spec, limits, 1e-12, 1e-3, 128, 1e-8, 4_000_000)
+        brep_core::thread::clipped_thread_network(spec, limits, fit(), 1e-8, 4_000_000)
             .unwrap();
     assert_eq!(network.model.faces.len(), source.candidates.len());
     assert!(network.model.validate().unwrap().topology_valid);
@@ -109,7 +116,7 @@ fn automatic_clipped_network_retains_every_candidate() {
     let limits = [0.1, 0.4];
     let source = thread::trim_candidates(spec, limits, 1e-3).unwrap();
     let network =
-        brep_core::thread::clipped_thread_network(spec, limits, 1e-12, 1e-3, 128, 1e-8, 2_000_000)
+        brep_core::thread::clipped_thread_network(spec, limits, fit(), 1e-8, 2_000_000)
             .unwrap();
     assert_eq!(network.model.faces.len(), source.candidates.len());
     assert!(network.model.validate().unwrap().topology_valid);
@@ -126,7 +133,7 @@ fn automatic_clipped_network_retains_every_candidate() {
         );
     }
     assert!(
-        brep_core::thread::clipped_thread_network(spec, limits, 1e-12, 1e-3, 128, 1e-8, 0).is_err()
+        brep_core::thread::clipped_thread_network(spec, limits, fit(), 1e-8, 0).is_err()
     );
 }
 
@@ -419,17 +426,9 @@ fn finite_thread_patch_has_exact_planar_end_edges_after_bounded_projection() {
 
 #[test]
 fn whole_thread_turn_assembles_twenty_retained_patches() {
-    let result = brep_core::thread::untrimmed_turn_sheet(
-        Spec::default(),
-        0,
-        0,
-        1e-12,
-        1e-3,
-        128,
-        1e-10,
-        2_000_000,
-    )
-    .unwrap();
+    let result =
+        brep_core::thread::untrimmed_turn_sheet(Spec::default(), 0, 0, fit(), 1e-10, 2_000_000)
+            .unwrap();
     assert_eq!(result.model.faces.len(), 20);
     assert_eq!(result.model.edges.len(), 49);
     assert_eq!(result.model.vertices.len(), 30);
@@ -443,7 +442,7 @@ fn whole_thread_turn_assembles_twenty_retained_patches() {
         assert_eq!(face.surface, original.surface);
     }
     assert!(
-        brep_core::thread::untrimmed_turn_sheet(Spec::default(), 0, 0, 1e-12, 1e-3, 128, 1e-10, 0)
+        brep_core::thread::untrimmed_turn_sheet(Spec::default(), 0, 0, fit(), 1e-10, 0)
             .is_err()
     );
 }
@@ -887,7 +886,7 @@ fn single_bezier_thread_network_accepts_curved_general_caps() {
     };
     let limits = [1.13, 1.87];
     let network =
-        brep_core::thread::clipped_thread_network(spec, limits, 1e-12, 1e-3, 128, 1e-8, 4_000_000)
+        brep_core::thread::clipped_thread_network(spec, limits, fit(), 1e-8, 4_000_000)
             .unwrap();
     assert!(network.model.edges.iter().any(|e| e.curve.degree == 6));
     let before = network.model.clone();

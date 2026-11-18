@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0557",
+  "testedBase": "8f1eae3d6a4534cfb6ebb3c0a3fe23549167285c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 171,
+  "scope": [
+    "Materialize exact world edges and matching pcurve restrictions on periodic trim patches.",
+    "Lift pcurves exactly through the support tensor cells and pair each spatial piece with the exact UV restriction on its original clock."
+  ],
+  "logSha256": "505b26730bffb98cb56c63972880fd0eccd0825e51276c6db25dd24110c4c1df",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "e84a1aa29f091a797410e1cbb55a1cd033e74435b09ae6f09455fe8765d4490b",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "be9beaf688bf2755e526b21d3930dab9cb04cb7809e8183db2a5b5fa27c2549e",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "c0eed9ca51f25deefa92c07a0950d4238f48a151816e018cbc8448062a4388cf"
+  }
+}

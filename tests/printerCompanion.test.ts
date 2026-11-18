@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  companionDiscover,
-  companionHealth,
-  companionSend,
-  utf8ToBase64,
-} from '../src/services/printerCompanion'
+import { companionDiscover, companionHealth, companionSend, utf8ToBase64 } from '../src/fabrication/printerCompanion'
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('printerCompanion', () => {
   it('reports health false when fetch fails', async () => {
@@ -15,12 +13,18 @@ describe('printerCompanion', () => {
   })
 
   it('discovers and sends through the loopback companion', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, text: async () => JSON.stringify({ printers: [{ vendor: 'bambu', host: '10.0.0.2', serial: 'S1' }] }) })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({ printers: [{ vendor: 'bambu', host: '10.0.0.2', serial: 'S1' }] }),
+      })
       .mockResolvedValueOnce({ ok: true, text: async () => JSON.stringify({ remoteName: 'a.gcode', verified: true }) })
     vi.stubGlobal('fetch', fetchMock)
     await expect(companionDiscover()).resolves.toEqual([{ vendor: 'bambu', host: '10.0.0.2', serial: 'S1' }])
-    await expect(companionSend('moonraker', { host: 'http://10.0.0.3:7125' }, 'a.gcode', utf8ToBase64('G28'))).resolves.toEqual({
+    await expect(
+      companionSend('moonraker', { host: 'http://10.0.0.3:7125' }, 'a.gcode', utf8ToBase64('G28')),
+    ).resolves.toEqual({
       remoteName: 'a.gcode',
       verified: true,
       gcodeState: undefined,

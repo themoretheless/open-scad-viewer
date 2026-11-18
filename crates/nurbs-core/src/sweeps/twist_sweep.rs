@@ -6,10 +6,10 @@ use crate::scaled_sweep::{normalized,binomial};
 /// Add the path translation C(v)-C(0); this is not an RMF or arc-length twist.
 pub fn sweep(profile:&Curve,path:&Curve,origin:[f64;3],axis:[f64;3],start_degrees:f64,sweep_degrees:f64)->Result<Surface>{
     profile.validate()?;
-    crate::foundation::guards::require_finite_point(&origin,"origin")?;
-    crate::foundation::guards::require_finite_point(&axis,"axis")?;
-    crate::foundation::guards::require_finite_f64(start_degrees,"start_degrees")?;
-    crate::foundation::guards::require_finite_f64(sweep_degrees,"sweep_degrees")?;
+    crate::numerics::guards::require_finite_point(&origin,"origin")?;
+    crate::numerics::guards::require_finite_point(&axis,"axis")?;
+    crate::numerics::guards::require_finite_f64(start_degrees,"start_degrees")?;
+    crate::numerics::guards::require_finite_f64(sweep_degrees,"sweep_degrees")?;
     check(profile.control_points[0].len()==3 && profile.control_points.len()<=32,
         "Twist sweep needs a 3D profile")?;
     let max_axis=axis.iter().fold(0_f64,|a,x|a.max(x.abs()));
@@ -36,7 +36,7 @@ pub fn sweep(profile:&Curve,path:&Curve,origin:[f64;3],axis:[f64;3],start_degree
     let mut weights=vec![Vec::<f64>::new();profile.control_points.len()];
     let mut knots=vec![0.;degree+1];
     // Unified guard as a backstop over the span-decomposition budget.
-    let mut guard=crate::foundation::guards::Budget::with_iterations(cuts.len())?.guard("twist_sweep");
+    let mut guard=crate::numerics::guards::Budget::with_iterations(cuts.len())?.guard("twist_sweep");
     for (span,cut) in cuts.windows(2).enumerate(){
         guard.tick()?;
         let a=a.trim(cut[0],cut[1])?;let b=b.trim(cut[0],cut[1])?;

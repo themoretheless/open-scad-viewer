@@ -1,7 +1,4 @@
-use brep_core::{
-    Model, prism,
-    prism_frame::{Frame, localize},
-};
+use brep_core::{Model, prism, prism_frame::{Frame, localize}};
 fn pose(model: &Model, angles: [f64; 3], translation: [f64; 3]) -> Model {
     let rotate = |p: [f64; 3]| {
         let (sx, cx) = angles[0].sin_cos();

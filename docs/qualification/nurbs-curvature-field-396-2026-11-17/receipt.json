@@ -1,0 +1,41 @@
+{
+  "id": "NURBS-0396",
+  "testedBase": "efb8c4e90a8df09cce6651fdfe1d08f910f7262b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 116,
+  "scope": [
+    "Automatically find exact free rim cycles on a selected plane and sew compact expanded exact caps.",
+    "Plane membership is exact and only complete free cycles are accepted. Discovery and exact capping share the work budget and retain source topology."
+  ],
+  "logSha256": "a17358950325c7c3587b9488f88792812128c125f7f38b5603e69def31258985",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f297936379ef8f81e86f2bc8048f79e121a12c5fa914155b4b32e040647e3a06",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "a8e31b03caeea67e0bf6202278950ab1433e4900ab12959a9a8d681473304278",
+    "crates/brep-core/tests/section_cap_sheets.rs": "d6fa81f96ceb5cdaf73231ebe4566d4ef3bb31ed12e58ea630c17c90d9748498",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "470d8a36fbd030ba9cf1fe1922eb3284fe13b2ca407912e3d197e154c6adff37",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "5d0a939641aced9178c8633f2c945d542b52e6cd8f095dae293ccb9e30ee2b05",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "6da5012ec1d0f258ce8bdbcf2e57778b8c93d2f2abc0310609fd1d37ee17df11",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "b354b108e78cefd988c066490de00a364e317183d0c93db402bcf0931f84d77f",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a"
+  }
+}

@@ -1,48 +1,89 @@
 //! Диффгеом и меры (read-only запросы).
-pub mod curve_differential;
-pub mod surface_differential;
-pub mod curve_measure;
-pub mod surface_measure;
-pub mod curve_extrema;
-pub mod curve_analysis;
-pub mod curve_deviation;
-pub mod curve_plane;
-pub mod curve_regularity;
-pub mod surface_regularity;
-pub mod surface_continuity;
-pub(crate) mod surface_tensor_identity;
-pub mod affine_volume;
-pub mod fibered_volume;
-pub mod implicit_quadric;
-pub mod surface_correspondence;
-pub mod surface_injectivity;
-pub mod surface_monotonicity;
-pub mod surface_linear_monotonicity;
-pub mod surface_parameter_bounds;
-pub mod radial_bounds;
-pub mod skin_radius;
-pub mod surface_shape_operator;
-pub mod surface_normal_trace;
-pub mod curve_secant_trace;
-pub mod geodesic;
-pub mod unrolling;
-pub mod frechet;
-pub mod ray_surface;
-pub mod curve_surface_agreement;
-pub mod surface_collar;
-pub mod curve_pullback;
-pub mod primitive_fit;
-pub mod ransac_primitives;
+pub mod curve_coordinate_clock;
+pub mod surface_coordinate_flow;
+pub mod contact_normal_agreement;
+pub mod curve_surface_lift;
+pub mod moving_envelope;
+pub mod profile_projection_jacobian;
+pub mod surface_boundary_secant;
+pub mod surface_weight_profile;
+pub mod normal_alignment;
+pub mod boundary_partition;
+pub mod curve_partition_agreement;
+pub mod curve_surface_affine;
+pub mod moving_radius;
+pub mod retained_wall_domain_certificate;
+pub mod retained_wall_domain;
+pub mod surface_boundary;
+pub mod class_a;
 pub mod cloud_normals;
 pub mod cloud_segmentation;
-pub mod class_a;
-pub mod span_continuity_map;
 pub mod curvature_spectrum;
-pub mod higher_derivative_map;
-pub mod reference_deviation;
+pub mod curve_analysis;
+pub use crate::distance::curve_deviation;
+pub mod curve_differential;
+pub mod curve_extrema;
+pub mod curve_measure;
+pub mod curve_plane;
+pub mod curve_pullback;
+pub mod curve_regularity;
+pub mod curve_secant_trace;
+pub mod curve_surface_agreement;
 pub(crate) mod curve_surface_composition;
+pub mod frechet;
+pub mod geodesic;
+pub mod higher_derivative_map;
+pub mod implicit_quadric;
+pub mod point_inversion;
+pub mod primitive_fit;
+pub use crate::distance::radial_bounds;
+pub mod ransac_primitives;
+pub mod analytic_recognition;
+pub mod ray_surface;
+pub mod reference_deviation;
+pub mod skin_radius;
+pub mod span_continuity_map;
+pub mod surface_collar;
+pub mod surface_continuity;
+pub mod surface_correspondence;
+pub mod surface_differential;
+pub mod surface_injectivity;
+pub mod surface_linear_monotonicity;
+pub mod surface_chord_bound;
+pub mod surface_measure;
+pub mod surface_volume;
+pub mod surface_monotonicity;
+pub mod surface_normal_trace;
+pub mod surface_parameter_bounds;
+pub mod surface_regularity;
+pub mod surface_shape_operator;
+pub(crate) mod surface_tensor_identity;
+pub mod unrolling;
 
 pub mod surface_occlusion;
 
 /// Exact affine support of nominal NURBS control geometry.
 pub mod affine_support;
+pub mod bezier_curvature_bound;
+/// Normal cones and silhouettes of surfaces (formerly `numerics::normal_cone`).
+pub mod normal_cone;
+
+pub mod exact_affine_hull;
+
+pub mod planar_trim_projection;
+
+pub mod planar_face_area;
+
+pub mod exact_planar_face_mass;
+
+pub mod bounded_planar_face_mass;
+
+pub mod planar_face_perimeter;
+
+pub mod planar_boundary_distance;
+
+pub mod planar_face_ray;
+
+pub mod planar_coplanar_ray;
+
+pub mod exact_plane_intersection;

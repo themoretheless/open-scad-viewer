@@ -69,11 +69,7 @@ pub(super) fn control_trajectory(
         return Ok(unresolved(cells, initial.reason.unwrap()));
     }
     let mut report = authored_frame_certificate::certify_contact_control_trajectory(
-        sweep.path,
-        guide,
-        sweep.scale,
-        sweep.twist,
-        sweep.affine_laws,
+        authored_frame_certificate::ContactLaws { path: sweep.path, guide, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
         initial.coordinates.unwrap()[control],
         anchor.coordinates.unwrap()[0],
         traversal,
@@ -127,11 +123,7 @@ pub(super) fn control_value(
         return Ok(unresolved(cells, initial.reason.unwrap()));
     }
     let mut report = authored_frame_certificate::certify_contact_control_value(
-        sweep.path,
-        guide,
-        sweep.scale,
-        sweep.twist,
-        sweep.affine_laws,
+        authored_frame_certificate::ContactLaws { path: sweep.path, guide, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
         initial.coordinates.unwrap()[control],
         anchor.coordinates.unwrap()[0],
         traversal,

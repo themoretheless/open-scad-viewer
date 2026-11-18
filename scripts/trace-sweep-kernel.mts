@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {dirname,resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import * as module from 'node:module'
-import {decodeBinary} from '../src/services/valueBinaryCodec'
+import {decodeBinary} from '../src/core/valueBinaryCodec'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 
 const [sourcePath,outputPath]=process.argv.slice(2)
@@ -62,12 +62,12 @@ async function phase<T>(name:string,run:()=>T|Promise<T>):Promise<T> {
  finally{report.phases.push({name,milliseconds:performance.now()-start});save()}
 }
 try {
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
- const {readNativeGeometryData}=await import('../src/services/nativeGeometrySnapshot')
- const {tessellateNurbsBrep}=await import('../src/services/geometry/brep')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
- const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
+ const {readNativeGeometryData}=await import('../src/kernel/nativeGeometrySnapshot')
+ const {tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
+ const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const document=await phase('compile',()=>compileRushFrontend(source).document)
  const built=await phase('build',()=>buildOwnNurbsAsync(document,{action:'build',display:{segments:4,subdivisionLevels:0}}))
  assert.ok(built.nativeGeometry)

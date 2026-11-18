@@ -1,4 +1,4 @@
-import { computed, createRenderer, defineComponent, ref, shallowRef } from 'vue'
+import { computed, createRenderer, defineComponent, ref, shallowRef } from 'svet'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { useWorkspaceFileActions } from '../src/composables/useWorkspaceFileActions'
 import type { MeshData } from '../src/core/mesh'
@@ -8,17 +8,17 @@ const control = vi.hoisted(() => ({
   run: vi.fn(),
   cancel: vi.fn(),
   dispose: vi.fn(),
-  jobs: [] as any[],
+  jobs: [] as { kind: string; target?: string; mesh: unknown[] }[],
   events: [] as { phase: string; completed: number; total: number }[],
-  resolve: (value?: unknown) => {},
+  resolve: (_value?: unknown) => {},
 }))
 const download = vi.hoisted(() => vi.fn())
 
-vi.mock('../src/services/solidPreviewWorker', () => ({
+vi.mock('../src/kernel/solidPreviewWorker', () => ({
   createSolidPreviewWorker: () => ({ run: control.run, cancel: control.cancel, dispose: control.dispose }),
 }))
 vi.mock('../src/appHelpers', async importOriginal => ({
-  ...await importOriginal<typeof import('../src/appHelpers')>(),
+  ...(await importOriginal<typeof import('../src/appHelpers')>()),
   downloadBlob: download,
 }))
 
@@ -32,39 +32,50 @@ const renderer = createRenderer<Node, Node>({
   createElement: tag => new Node(tag),
   createText: text => Object.assign(new Node('#text'), { text }),
   createComment: () => new Node('#comment'),
-  setText: (node, text) => { node.text = text },
-  setElementText: (node, text) => { node.text = text },
+  setText: (node, text) => {
+    node.text = text
+  },
+  setElementText: (node, text) => {
+    node.text = text
+  },
   parentNode: node => node.parent,
   nextSibling: () => null,
   patchProp: () => {},
-  insert: (node, parent) => { node.parent = parent; parent.children.push(node) },
+  insert: (node, parent) => {
+    node.parent = parent
+    parent.children.push(node)
+  },
   remove: node => {
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
   },
   setScopeId: () => {},
-  insertStaticContent: () => { throw new Error('Unexpected static content') },
+  insertStaticContent: () => {
+    throw new Error('Unexpected static content')
+  },
 })
 
-const source = [
-  'v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1',
-  'f 1 3 2', 'f 1 2 4', 'f 2 3 4', 'f 1 4 3',
-].join('\n')
+const source = ['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1', 'f 1 3 2', 'f 1 2 4', 'f 2 3 4', 'f 1 4 3'].join('\n')
 const bytes = new TextEncoder().encode(source)
 const file = { name: 'solid.obj', arrayBuffer: async () => bytes.buffer } as unknown as File
 const lateResult = {
-  data: new Uint8Array([1]), mimeType: 'application/x-ply', extension: 'ply',
-  fileName: 'solid.ply', format: 'ply',
+  data: new Uint8Array([1]),
+  mimeType: 'application/x-ply',
+  extension: 'ply',
+  fileName: 'solid.ply',
+  format: 'ply',
   source: {
-    fileName: 'solid.obj', format: 'obj', byteLength: bytes.byteLength,
-    triangleCount: 4, vertexCount: 4, sourceVertexCount: 4, degenerateTriangles: 0,
+    fileName: 'solid.obj',
+    format: 'obj',
+    byteLength: bytes.byteLength,
+    triangleCount: 4,
+    vertexCount: 4,
+    sourceVertexCount: 4,
+    degenerateTriangles: 0,
   },
 }
 
 const sceneMesh = {
-  vertices: new Float32Array([
-    0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1,
-    0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1,
-  ]),
+  vertices: new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1]),
   indices: new Uint32Array([0, 2, 1, 0, 1, 3, 1, 2, 3, 0, 3, 2]),
   transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
 } as MeshData
@@ -75,11 +86,16 @@ function mount() {
   const Host = defineComponent({
     setup() {
       actions = useWorkspaceFileActions({
-        code: ref(''), fileName: ref('model.scad'), error: ref(''),
-        canExport: computed(() => true), sceneMeshes: computed(() => [sceneMesh]),
+        code: ref(''),
+        fileName: ref('model.scad'),
+        error: ref(''),
+        canExport: computed(() => true),
+        sceneMeshes: computed(() => [sceneMesh]),
         buildCounters: shallowRef({ builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }),
-        performanceSamples: shallowRef([]), markFitNextRender: () => {},
-        showNotice: message => notices.push(message), translate: key => key === 'converted' ? 'Converted' : key,
+        performanceSamples: shallowRef([]),
+        markFitNextRender: () => {},
+        showNotice: message => notices.push(message),
+        translate: key => (key === 'converted' ? 'Converted' : key),
       })
       return () => null
     },
@@ -90,7 +106,7 @@ function mount() {
 }
 
 beforeEach(async () => {
-  const { convertMeshFile, exportMesh } = await import('../src/services/meshConvert')
+  const { convertMeshFile, exportMesh } = await import('../src/exchange/meshConvert')
   control.defer = false
   control.jobs = []
   control.events = []
@@ -106,10 +122,14 @@ beforeEach(async () => {
       options?.onProgress?.(progress)
     }
     if (control.defer) {
-      report(job.kind === 'meshExport'
-        ? { phase: 'inspect', completed: 0, total: 2 }
-        : { phase: 'decode', completed: 0, total: 7 })
-      return new Promise(resolve => { control.resolve = resolve })
+      report(
+        job.kind === 'meshExport'
+          ? { phase: 'inspect', completed: 0, total: 2 }
+          : { phase: 'decode', completed: 0, total: 7 },
+      )
+      return new Promise(resolve => {
+        control.resolve = resolve
+      })
     }
     return job.kind === 'meshExport'
       ? exportMesh(job.mesh, job.target, job.options, report)
@@ -135,7 +155,9 @@ it('converts through the worker and publishes staged progress before downloading
     expect(notices).toEqual(['Converted: OBJ → STL_BINARY'])
     expect(actions.conversionPending.value).toBe(false)
     expect(actions.conversionProgress.value).toBeNull()
-  } finally { unmount() }
+  } finally {
+    unmount()
+  }
 })
 
 it('exports the scene and legacy STL/OBJ actions through the same worker job', async () => {
@@ -145,7 +167,9 @@ it('exports the scene and legacy STL/OBJ actions through the same worker job', a
     await actions.exportObj()
     await actions.exportStl()
     expect(control.jobs.map(job => [job.kind, job.target])).toEqual([
-      ['meshExport', 'stl_binary'], ['meshExport', 'obj'], ['meshExport', 'stl_binary'],
+      ['meshExport', 'stl_binary'],
+      ['meshExport', 'obj'],
+      ['meshExport', 'stl_binary'],
     ])
     expect(control.jobs.every(job => job.mesh.length === 1 && job.mesh[0] === sceneMesh)).toBe(true)
     expect(control.events.slice(0, 2)).toEqual([
@@ -156,7 +180,9 @@ it('exports the scene and legacy STL/OBJ actions through the same worker job', a
     expect(download.mock.calls.map(call => call[1])).toEqual(['model.stl', 'model.obj', 'model.stl'])
     expect(actions.conversionOperation.value).toBe('export')
     expect(actions.conversionPending.value).toBe(false)
-  } finally { unmount() }
+  } finally {
+    unmount()
+  }
 })
 
 it('cancels scene export and ignores a late artifact', async () => {

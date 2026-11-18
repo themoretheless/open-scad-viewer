@@ -214,4 +214,5 @@ mod tests {
         collapsed.vertices[1].point = collapsed.vertices[0].point;
         assert!(walk(&collapsed).is_err());
     }
+
 }

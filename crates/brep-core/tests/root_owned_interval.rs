@@ -1,8 +1,6 @@
 #[path = "../examples/support/nurbs_contact_stock.rs"]
 mod rational;
-use brep_core::{
-    Model, edge_partition::root_interval as roots, feature_ops::edge_partition::Limits,
-};
+use brep_core::{Model, edge_partition::root_interval as roots, feature_ops::edge_partition::Limits};
 fn cutter(z: f64) -> (Model, usize) {
     let m = brep_core::cuboid([-20., -20., z], [20., 20., z + 0.5]).unwrap();
     let f = m

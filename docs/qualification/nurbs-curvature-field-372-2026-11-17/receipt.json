@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0372",
+  "testedBase": "afdf9df729c453ad24ec008540306868ec28b166",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 72,
+  "scope": [
+    "Split a full periodic knot strip into complementary positively oriented UV trim loops along a certified section chain.",
+    "Strict monotone traversal and exact joins close both unwrapped UV loops. They use opposite directions of the shared section and retain its certified periodic identification and sign orientation."
+  ],
+  "logSha256": "edf46029258a908b3baa6d74418f92a3408046392da2af73d699bba1cb51f9a7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "0d36c700ed5d4aa806d8d025f8022daec66616b1c041d4ada8495fb1c318cdd6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "d67cd9ad27d209ecad0553dea00ec4c69f686c7330e63aa6c1addfe2f0a9cd8f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "4ee5521a1f667d154f8a8192849763ac5eac5f693ca82c6eae0ff469041653fa",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_trim.rs": "5c68c4acf4d5e2fb1167e129989808697f2367a7603ef370df44c7a1b1bced2a",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_periodic.rs": "03ce6a4d35adbe2d121526fc93db1c51aba78b6ea48b9d4ccb31c0fa175c3176",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_periodic.rs": "ae42fc3bcf76fa3261d9c9c81ed65937946e1ec5abec380991f804f7fec986db",
+    "crates/nurbs-core/src/trim/trim_domain.rs": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f"
+  }
+}

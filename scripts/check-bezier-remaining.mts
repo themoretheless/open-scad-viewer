@@ -1,8 +1,8 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {nonlinearFirst,nonlinearSecond,nonlinearWire,fourthOrderContact,contactLine,degreeEightLoop,nonprimitiveLoop,quarticContactFirst,quarticContactSecond,exactCusp,squareWire,bezierLine} from '../tests/fixtures/bezier-algebraic-cases'
 const bytes=readFileSync(process.argv[2]??'public/wasm/geometry-kernel.wasm')
 const wasm=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any

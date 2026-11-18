@@ -6,7 +6,7 @@ import {resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {performance} from 'node:perf_hooks'
 import {isDeepStrictEqual} from 'node:util'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {compileTextRust} from '../src/services/geometryRustKernel'
 const option=(key:string)=>process.argv.find(a=>a.startsWith(key+'='))?.slice(key.length+1)
 const referencePath=option('--reference')

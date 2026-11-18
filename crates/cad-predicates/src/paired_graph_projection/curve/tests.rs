@@ -60,9 +60,18 @@ fn run(span: [f64; 2], ends: [f64; 2], bad: bool, max: u64) -> CurveGraphProject
     });
     binary_curve_graph_projection(
         &mut ctx,
-        [&refs[0], &refs[1]],
-        [0, 0],
-        [true, false],
+        [
+            ProjectionSource {
+                net: &refs[0],
+                transverse: 0,
+                upper: true,
+            },
+            ProjectionSource {
+                net: &refs[1],
+                transverse: 0,
+                upper: false,
+            },
+        ],
         false,
         [1, 2],
         [arena.leaf(at).unwrap(), arena.leaf(at + 1).unwrap()],

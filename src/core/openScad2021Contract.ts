@@ -26,7 +26,8 @@ export interface OpenScadBuiltinFunctionContract {
 
 export interface OpenScadBuiltinModuleContract {
   readonly name: string
-  readonly category: 'primitive-2d' | 'primitive-3d' | 'transform' | 'csg' | 'extrusion' | 'file' | 'display' | 'control'
+  readonly category:
+    'primitive-2d' | 'primitive-3d' | 'transform' | 'csg' | 'extrusion' | 'file' | 'display' | 'control'
   readonly smoke: OpenScadSmokeCase
 }
 
@@ -123,8 +124,18 @@ export const OPENSCAD_2021_01_BUILTIN_MODULES = Object.freeze([
     'primitive-3d',
     'polyhedron(points = [[0,0,0], [1,0,0], [0,1,0], [0,0,1]], faces = [[0,1,2], [0,2,3], [0,3,1], [1,3,2]])',
   ),
-  builtinModule('square', 'primitive-2d', 'square([1, 2], center = true)', 'linear_extrude(height = 1) square([1, 2], center = true);'),
-  builtinModule('circle', 'primitive-2d', 'circle(r = 1, $fn = 12)', 'linear_extrude(height = 1) circle(r = 1, $fn = 12);'),
+  builtinModule(
+    'square',
+    'primitive-2d',
+    'square([1, 2], center = true)',
+    'linear_extrude(height = 1) square([1, 2], center = true);',
+  ),
+  builtinModule(
+    'circle',
+    'primitive-2d',
+    'circle(r = 1, $fn = 12)',
+    'linear_extrude(height = 1) circle(r = 1, $fn = 12);',
+  ),
   builtinModule(
     'polygon',
     'primitive-2d',
@@ -168,7 +179,11 @@ export const OPENSCAD_2021_01_BUILTIN_MODULES = Object.freeze([
     'surface(file = "fixtures/heightmap.dat", center = true);',
     ['heightmap-dat'],
   ),
-  builtinModule('rotate_extrude', 'extrusion', 'rotate_extrude(angle = 180, $fn = 16) translate([2, 0]) square([1, 1])'),
+  builtinModule(
+    'rotate_extrude',
+    'extrusion',
+    'rotate_extrude(angle = 180, $fn = 16) translate([2, 0]) square([1, 1])',
+  ),
 ] as const)
 
 export const OPENSCAD_2021_01_SMOKE_FIXTURES = Object.freeze([
@@ -186,7 +201,9 @@ export const OPENSCAD_2021_01_SMOKE_FIXTURES = Object.freeze([
     mediaType: 'text/plain',
     provisioning: 'inline-text' as const,
     text: '0 0 0\n0 1 0\n0 0 0\n',
-    requirements: Object.freeze(['Whitespace-separated rectangular numeric height grid with at least two rows and columns.']),
+    requirements: Object.freeze([
+      'Whitespace-separated rectangular numeric height grid with at least two rows and columns.',
+    ]),
   }),
   Object.freeze({
     id: 'fontconfig-default-font',
@@ -301,14 +318,28 @@ export const OPENSCAD_2021_01_SPECIAL_VARIABLES = Object.freeze([
   { name: '$vpr', scope: 'top-level-runtime', defaultValue: [55, 0, 25], purpose: 'viewport rotation' },
   { name: '$vpd', scope: 'top-level-runtime', defaultValue: 140, purpose: 'viewport camera distance' },
   { name: '$vpf', scope: 'top-level-runtime', defaultValue: 22.5, purpose: 'viewport field of view' },
-  { name: '$children', scope: 'user-module', defaultValue: 'call-dependent', purpose: 'number of supplied child nodes' },
-  { name: '$parent_modules', scope: 'user-module', defaultValue: 'call-stack-dependent', purpose: 'user-module stack depth' },
+  {
+    name: '$children',
+    scope: 'user-module',
+    defaultValue: 'call-dependent',
+    purpose: 'number of supplied child nodes',
+  },
+  {
+    name: '$parent_modules',
+    scope: 'user-module',
+    defaultValue: 'call-stack-dependent',
+    purpose: 'user-module stack depth',
+  },
 ] as const)
 
 export const OPENSCAD_2021_01_MODIFIERS = Object.freeze([
   { token: '!', name: 'root', previewEffect: 'render only the marked subtree as root' },
   { token: '#', name: 'highlight', previewEffect: 'highlight the marked subtree' },
-  { token: '%', name: 'background', previewEffect: 'show as transparent background and exclude from normal render result' },
+  {
+    token: '%',
+    name: 'background',
+    previewEffect: 'show as transparent background and exclude from normal render result',
+  },
   { token: '*', name: 'disable', previewEffect: 'remove the marked subtree from evaluation' },
 ] as const)
 
@@ -317,19 +348,22 @@ export const OPENSCAD_2021_01_FILE_SEMANTICS = Object.freeze({
     {
       name: 'include',
       syntax: 'include <path>',
-      semantics: 'Parse the target at the directive location, including assignments, definitions, and top-level geometry.',
+      semantics:
+        'Parse the target at the directive location, including assignments, definitions, and top-level geometry.',
     },
     {
       name: 'use',
       syntax: 'use <path>',
-      semantics: 'Load public module and function definitions without executing target assignments or top-level geometry.',
+      semantics:
+        'Load public module and function definitions without executing target assignments or top-level geometry.',
     },
   ]),
   resolution: Object.freeze({
     relativeBase: 'directory-of-referencing-scad-file',
     librarySearch: 'OPENSCADPATH entries followed by platform built-in library paths',
     recursiveOpenProtection: true,
-    mcpBoundary: 'Every source/library/asset is mounted in a bounded project-relative MEMFS; ambient host paths are unavailable.',
+    mcpBoundary:
+      'Every source/library/asset is mounted in a bounded project-relative MEMFS; ambient host paths are unavailable.',
   }),
   import: Object.freeze({
     extensions: Object.freeze(['stl', 'off', 'dxf', 'nef3', '3mf', 'amf', 'svg']),
@@ -348,31 +382,45 @@ export const OPENSCAD_2021_01_FILE_SEMANTICS = Object.freeze({
 
 export const OPENSCAD_2021_01_COMPATIBILITY_ALIASES = Object.freeze([
   {
-    symbol: 'assign', kind: 'module', replacement: 'regular assignment or let',
+    symbol: 'assign',
+    kind: 'module',
+    replacement: 'regular assignment or let',
     smoke: meshSmoke('assign(size = 1) cube(size)'),
   },
   {
-    symbol: 'child', kind: 'module', replacement: 'children',
+    symbol: 'child',
+    kind: 'module',
+    replacement: 'children',
     smoke: meshSmoke('child(0)', 'module legacy_child_probe() { child(0); } legacy_child_probe() cube(1);'),
   },
   {
-    symbol: 'dxf_linear_extrude', kind: 'module', replacement: 'linear_extrude',
+    symbol: 'dxf_linear_extrude',
+    kind: 'module',
+    replacement: 'linear_extrude',
     smoke: meshSmoke('dxf_linear_extrude(height = 1) square(1)'),
   },
   {
-    symbol: 'dxf_rotate_extrude', kind: 'module', replacement: 'rotate_extrude',
+    symbol: 'dxf_rotate_extrude',
+    kind: 'module',
+    replacement: 'rotate_extrude',
     smoke: meshSmoke('dxf_rotate_extrude($fn = 12) translate([2, 0]) square(1)'),
   },
   {
-    symbol: 'import_stl', kind: 'module', replacement: 'import',
+    symbol: 'import_stl',
+    kind: 'module',
+    replacement: 'import',
     smoke: meshSmoke('import_stl(file = "fixtures/legacy-tetra.stl")', undefined, ['legacy-tetra-stl']),
   },
   {
-    symbol: 'import_off', kind: 'module', replacement: 'import',
+    symbol: 'import_off',
+    kind: 'module',
+    replacement: 'import',
     smoke: meshSmoke('import_off(file = "fixtures/legacy-tetra.off")', undefined, ['legacy-tetra-off']),
   },
   {
-    symbol: 'import_dxf', kind: 'module', replacement: 'import',
+    symbol: 'import_dxf',
+    kind: 'module',
+    replacement: 'import',
     smoke: meshSmoke(
       'import_dxf(file = "fixtures/legacy-square.dxf")',
       'linear_extrude(height = 1) import_dxf(file = "fixtures/legacy-square.dxf");',
@@ -380,20 +428,20 @@ export const OPENSCAD_2021_01_COMPATIBILITY_ALIASES = Object.freeze([
     ),
   },
   {
-    symbol: 'dxf_dim', kind: 'function', replacement: 'no direct replacement; parse DXF dimension metadata externally',
-    smoke: valueSmoke(
-      'dxf_dim(file = "fixtures/legacy-dimensioned.dxf", name = "contract_dimension")',
-      undefined,
-      ['legacy-dimensioned-dxf'],
-    ),
+    symbol: 'dxf_dim',
+    kind: 'function',
+    replacement: 'no direct replacement; parse DXF dimension metadata externally',
+    smoke: valueSmoke('dxf_dim(file = "fixtures/legacy-dimensioned.dxf", name = "contract_dimension")', undefined, [
+      'legacy-dimensioned-dxf',
+    ]),
   },
   {
-    symbol: 'dxf_cross', kind: 'function', replacement: 'no direct replacement; parse DXF intersection metadata externally',
-    smoke: valueSmoke(
-      'dxf_cross(file = "fixtures/legacy-dimensioned.dxf", layer = "contract_cross")',
-      undefined,
-      ['legacy-dimensioned-dxf'],
-    ),
+    symbol: 'dxf_cross',
+    kind: 'function',
+    replacement: 'no direct replacement; parse DXF intersection metadata externally',
+    smoke: valueSmoke('dxf_cross(file = "fixtures/legacy-dimensioned.dxf", layer = "contract_cross")', undefined, [
+      'legacy-dimensioned-dxf',
+    ]),
   },
 ] as const)
 
@@ -453,7 +501,8 @@ export const OPENSCAD_2021_01_EXECUTION_RUNTIME = Object.freeze({
   archiveSha256: '82054dfb4911686de0ee3ea36771dbf81f3d014c3460c8ea069ab4f933f6d888' as const,
   relationshipToLanguageTarget: 'different-release-validated-against-target-not-contract-source' as const,
   extensionPolicy: 'Snapshot-only syntax and built-ins do not count toward 2021.01 conformance.' as const,
-  compatibilityTailPolicy: 'Deprecated 2021.01 aliases require an explicit probe or adapter shim; they are outside the 38+35 stable gate.' as const,
+  compatibilityTailPolicy:
+    'Deprecated 2021.01 aliases require an explicit probe or adapter shim; they are outside the 38+35 stable gate.' as const,
 })
 
 export const OPENSCAD_2021_01_INDEPENDENT_ENGINE = Object.freeze({

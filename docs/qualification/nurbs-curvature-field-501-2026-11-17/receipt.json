@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0501",
+  "testedBase": "71ad5b360428d5fb65ee409794b4955a35b3c622",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "exact_mobius_spline_contracts",
+    "--test",
+    "exact_mobius_trimmed_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 64,
+  "scope": [
+    "Match a regular G2 seam to C2 with a pole-free exact fractional-linear change of the right clock.",
+    "Map knots by a positive fractional-linear clock derived from the exact tangent ratio and tangential acceleration correction. Preserve the spline image with exact common-gauge weights and reject poles over the full domain."
+  ],
+  "logSha256": "c66bc9e9f7e8b44615cfccc2d6d4996b1984c682448ad7a8037d50305656017b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "ea213b8000ad5fe1ab704d72cb1138ae817ecd2aeb4a418552c1ed34edf9fa61",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "3875fa55c6ab4899f9609c065199f26b1bae05b9c485083cb8ca29c74158f306",
+    "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs": "4bbb434a4a9e149418e6955f3e32c9e9d9b4a71a421a5d345f3d73fec9078fe5"
+  }
+}

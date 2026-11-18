@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "baseCommit": "017d2df23693fa38bc1583e70b8343d96dbe38d5",
+  "nativeTests": 44,
+  "bridgeTests": 17,
+  "clockTests": 3,
+  "tensorCensusTests": 1,
+  "clientTests": 74,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "44e32467b01d7c5dc50edf47ed8d0e4dd0018fff6ab20fba055654db7f2aa498",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock.rs": "7862d51a86a8a59c264b6eb7c81a9a7afee40967071881c6578d2737f084dc29",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_separable.rs": "7064af8221da3da06101fca1ecf4dbada7c9f06601c14bcc7088c34bdf6cfb56",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "49274c16f6e4f75023f1be13a555d1a2a250052bf2974db202f0a781ba170628",
+    "crates/nurbs-core/tests/original_quadric_graph_homogeneous_separable.rs": "5d2b6a06a05e45707a72a9498836166e2981dc2f1a4516f0c5264efb75ded8a1",
+    "crates/geometry-bridge/src/intersections/quadric_graph.rs": "0c1a9fad79e77feaf88a9919b11e36d53451d07dc4191e3bed019fc00e5934e7",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "e13f0bac1d1b89eb7983794e5354bdc7d97590d20eb5b23159e9b910b8d501d4"
+  },
+  "scope": "Original positive-weight single Bezier graph targets with exact tensor cross-identities Au*Du_boundary-W*Nu_boundary and Av*Dv_boundary-W*Nv_boundary. Ordered original boundary ordinates prove strict monotone clocks and full rectangular coverage, including nonplanar coupled representations with nonlinear rational parameterization. Original quadric tensor membership and unique-sheet checks remain required.",
+  "sourceRewritten": false,
+  "arithmeticScope": "Degree-bounded exact rational chart census and 64-cut inverse schedule are separate from predicate maxExactWork; no predicate budget reset.",
+  "qualification": "All 64 degree pairs 1 through 8 for exact cross-identities, independent direct Bernstein inverse checks, subnormal fractions and unordered/invalid clock refusals. Actual coupled nonplanar target, rotations/gauges, six algebraic edges/corners, ULP drift, wrong original membership and zero predicate budget.",
+  "fixtureParameterWidthChecks": {
+    "curveNaturalT": 1e-08,
+    "targetNaturalUv": 1e-12,
+    "queryTolerance": 1e-09,
+    "scope": "These fixture checks are not a universal arbitrary UV-tolerance guarantee."
+  },
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for homogeneous-separable targets",
+    "Multispan nonlinear boundary-clock identities",
+    "General joint coupled projected maps without independent clocks",
+    "Unordered boundary clock certificates and general UV precision",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0572",
+  "testedBase": "1392b7bfd41df08e26748db8f3da6dd7c1309cdf",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_binding_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 14,
+  "scope": [
+    "Extract restricted world curves across a periodic seam with original traversal metadata.",
+    "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal."
+  ],
+  "logSha256": "5c28be252fe96cc7bf5a34622b6064e77ce812c386cb701a876fa5084f1f7599",
+  "sourceSha256": {
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "9d6de632cf481fec099887735485ebf8f30297dcead834f7fffb48e6c3f692be",
+    "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs": "962cac635421cdd45473ef71821d801f89e176876a6fb2533bdb3abc65e4924d"
+  }
+}

@@ -78,9 +78,7 @@ class OfficialStdioClient {
     const response = new Promise<JsonRpcResponse>((resolveResponse, rejectResponse) => {
       const timeout = setTimeout(() => {
         this.waiters.delete(id)
-        rejectResponse(new Error(
-          `Timed out waiting for ${method}\nstderr:\n${this.stderrLines.join('\n')}`,
-        ))
+        rejectResponse(new Error(`Timed out waiting for ${method}\nstderr:\n${this.stderrLines.join('\n')}`))
       }, 130_000)
       this.waiters.set(id, value => {
         clearTimeout(timeout)
@@ -125,12 +123,14 @@ class OfficialStdioClient {
 }
 
 afterEach(async () => {
-  await Promise.all([...liveChildren].map(async child => {
-    if (child.exitCode === null && child.signalCode === null) child.kill()
-    if (child.exitCode === null && child.signalCode === null) {
-      await new Promise<void>(resolveClose => child.once('close', () => resolveClose()))
-    }
-  }))
+  await Promise.all(
+    [...liveChildren].map(async child => {
+      if (child.exitCode === null && child.signalCode === null) child.kill()
+      if (child.exitCode === null && child.signalCode === null) {
+        await new Promise<void>(resolveClose => child.once('close', () => resolveClose()))
+      }
+    }),
+  )
 })
 
 function result(response: JsonRpcResponse): Record<string, unknown> {
@@ -148,31 +148,39 @@ function toolContent(response: JsonRpcResponse): Record<string, unknown> {
 describeWithRuntime('official OpenSCAD over actual MCP stdio', () => {
   it('checks a multi-file program, exports text, serves the artifact, and joins on EOF', async () => {
     const client = new OfficialStdioClient()
-    expect((await client.request('initialize', {
-      protocolVersion: '2025-11-25',
-      capabilities: {},
-      clientInfo: { name: 'official-stdio-conformance', version: '1.0.0' },
-    })).error).toBeUndefined()
+    expect(
+      (
+        await client.request('initialize', {
+          protocolVersion: '2025-11-25',
+          capabilities: {},
+          clientInfo: { name: 'official-stdio-conformance', version: '1.0.0' },
+        })
+      ).error,
+    ).toBeUndefined()
     await client.notify('notifications/initialized')
 
-    const status = toolContent(await client.request('tools/call', {
-      name: 'openscad_official_status',
-      arguments: {},
-    })) as { official_runtime: { provider_role: string; available: boolean; runtime_version: string } }
+    const status = toolContent(
+      await client.request('tools/call', {
+        name: 'openscad_official_status',
+        arguments: {},
+      }),
+    ) as { official_runtime: { provider_role: string; available: boolean; runtime_version: string } }
     expect(status.official_runtime).toMatchObject({
       provider_role: 'qualification-oracle',
       available: true,
       runtime_version: '2026.09.01',
     })
 
-    const checked = toolContent(await client.request('tools/call', {
-      name: 'openscad_official_check',
-      arguments: {
-        source: 'include <lib/value.scad>\nfunction squared(x) = x * x; echo(squared(value)); cube(squared(value));',
-        files: [{ path: 'lib/value.scad', text: 'value = 2;\n' }],
-        hard_warnings: true,
-      },
-    })) as {
+    const checked = toolContent(
+      await client.request('tools/call', {
+        name: 'openscad_official_check',
+        arguments: {
+          source: 'include <lib/value.scad>\nfunction squared(x) = x * x; echo(squared(value)); cube(squared(value));',
+          files: [{ path: 'lib/value.scad', text: 'value = 2;\n' }],
+          hard_warnings: true,
+        },
+      }),
+    ) as {
       check: {
         provider_role: string
         language_contract: { id: string }
@@ -185,23 +193,29 @@ describeWithRuntime('official OpenSCAD over actual MCP stdio', () => {
     expect(checked.check.language_contract.id).toBe('openscad/stable-2021.01')
     expect(checked.check.runtime_version).toBe('2026.09.01')
     expect(checked.check.csg_bytes).toBeGreaterThan(0)
-    expect([...checked.check.logs.stdout, ...checked.check.logs.stderr]).toContainEqual(expect.stringContaining('ECHO: 4'))
+    expect([...checked.check.logs.stdout, ...checked.check.logs.stderr]).toContainEqual(
+      expect.stringContaining('ECHO: 4'),
+    )
 
-    const exported = toolContent(await client.request('tools/call', {
-      name: 'openscad_official_export',
-      arguments: {
-        source: 'linear_extrude(height = 1) text("MCP", size = 10, font = "Basic:style=Regular");',
-        files: [],
-        format: 'stl',
-        hard_warnings: true,
-      },
-    })) as { artifact: { resource_uri: string; byte_length: number; sha256: string } }
+    const exported = toolContent(
+      await client.request('tools/call', {
+        name: 'openscad_official_export',
+        arguments: {
+          source: 'linear_extrude(height = 1) text("MCP", size = 10, font = "Basic:style=Regular");',
+          files: [],
+          format: 'stl',
+          hard_warnings: true,
+        },
+      }),
+    ) as { artifact: { resource_uri: string; byte_length: number; sha256: string } }
     expect(exported.artifact.byte_length).toBeGreaterThan(84)
     expect(exported.artifact.sha256).toMatch(/^[a-f0-9]{64}$/)
 
-    const resource = result(await client.request('resources/read', {
-      uri: exported.artifact.resource_uri,
-    })) as { contents?: Array<{ blob?: string; mimeType?: string }> }
+    const resource = result(
+      await client.request('resources/read', {
+        uri: exported.artifact.resource_uri,
+      }),
+    ) as { contents?: Array<{ blob?: string; mimeType?: string }> }
     expect(resource.contents?.[0]).toMatchObject({ mimeType: 'model/stl', blob: expect.any(String) })
     const artifactBytes = Buffer.from(resource.contents![0].blob!, 'base64')
     expect(artifactBytes.byteLength).toBe(exported.artifact.byte_length)

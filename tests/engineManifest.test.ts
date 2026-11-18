@@ -2,10 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from '../src/core/currentRuntimeGeometryEvidence'
-import {
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
-  GEOMETRY_MANIFEST_ARCHIVE,
-} from '../src/core/geometryExecution'
+import { CURRENT_GEOMETRY_MANIFEST_VERSIONS, GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
 import {
   archivedGeometryManifest,
   computeGeometryManifestDigest,
@@ -35,8 +32,7 @@ describe('immutable geometry manifest archive', () => {
         manifest_resource_uri: _resource,
         ...payload
       } = staticEngineManifestToWire(manifest)
-      expect(createHash('sha256').update(independentCanonicalJson(payload)).digest('hex'))
-        .toBe(manifest.manifestDigest)
+      expect(createHash('sha256').update(independentCanonicalJson(payload)).digest('hex')).toBe(manifest.manifestDigest)
       expect(Object.isFrozen(manifest)).toBe(true)
       expect(Object.isFrozen(manifest.capabilities)).toBe(true)
       expect(Object.isFrozen(manifest.qualification)).toBe(true)
@@ -45,7 +41,7 @@ describe('immutable geometry manifest archive', () => {
     }
 
     expect(() => {
-      (GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].capabilities as string[]).push('tampered')
+      ;(GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].capabilities as string[]).push('tampered')
     }).toThrow()
   })
 
@@ -57,7 +53,7 @@ describe('immutable geometry manifest archive', () => {
       packages: Record<string, { version?: string }>
     }
 
-    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v10')
+    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v13')
     expect(manifest.engineClass).toBe('mesh')
     expect(manifest.qualification).toMatchObject({
       status: 'qualified',
@@ -67,7 +63,9 @@ describe('immutable geometry manifest archive', () => {
     expect(sha256(notices)).toBe(manifest.dependency.sbomSha256)
     expect(sha256(lockfile)).toBe(manifest.dependency.lockfileSha256)
     expect(parsedLockfile.packages['node_modules/manifold-3d']).toBeUndefined()
-    expect(JSON.parse(lockfile.toString('utf8')).packages['tools/manifold-bench/node_modules/manifold-3d']).toBeUndefined()
+    expect(
+      JSON.parse(lockfile.toString('utf8')).packages['tools/manifold-bench/node_modules/manifold-3d'],
+    ).toBeUndefined()
     expect(manifest.dependency.packageName).toBe('workspace:geometry-bridge')
     const wasm = await readFile(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url))
     expect(manifest.kernelFingerprint).toBe(`sha256:${sha256(wasm)}`)
@@ -75,15 +73,25 @@ describe('immutable geometry manifest archive', () => {
 
   it('resolves only archived version and engine-class pairs', () => {
     expect(archivedGeometryManifest('own-rust-node-v1')?.engineClass).toBe('mesh')
-    expect(archivedGeometryManifest('own-rust-node-v1')?.kernelFingerprint)
-      .toBe('sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6')
-    expect(archivedGeometryManifest('own-rust-node-v2')?.qualification.status)
-      .toBe('baseline-pending')
-    expect(archivedGeometryManifest('own-rust-node-v3')?.kernelFingerprint).toBe('sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1')
-    expect(archivedGeometryManifest('brep-closed-v3')?.kernelFingerprint).toBe('sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1')
-    expect(archivedGeometryManifest('own-rust-node-v7')?.kernelFingerprint).toBe('sha256:91521ffbc32570cddc99b4555dcdd3f55fdaa902a806fccc215bf7afefab129f')
-    expect(archivedGeometryManifest('brep-closed-v7')?.kernelFingerprint).toBe('sha256:91521ffbc32570cddc99b4555dcdd3f55fdaa902a806fccc215bf7afefab129f')
-    expect(archivedGeometryManifest('own-rust-node-v7')?.dependency.lockfileSha256).toBe('8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271')
+    expect(archivedGeometryManifest('own-rust-node-v1')?.kernelFingerprint).toBe(
+      'sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6',
+    )
+    expect(archivedGeometryManifest('own-rust-node-v2')?.qualification.status).toBe('baseline-pending')
+    expect(archivedGeometryManifest('own-rust-node-v3')?.kernelFingerprint).toBe(
+      'sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1',
+    )
+    expect(archivedGeometryManifest('brep-closed-v3')?.kernelFingerprint).toBe(
+      'sha256:68dd0ed6d368a7f4e5beb8e1a65c26720b8e6316c54a4f953e1ee49161ca4bd1',
+    )
+    expect(archivedGeometryManifest('own-rust-node-v7')?.kernelFingerprint).toBe(
+      'sha256:91521ffbc32570cddc99b4555dcdd3f55fdaa902a806fccc215bf7afefab129f',
+    )
+    expect(archivedGeometryManifest('brep-closed-v7')?.kernelFingerprint).toBe(
+      'sha256:91521ffbc32570cddc99b4555dcdd3f55fdaa902a806fccc215bf7afefab129f',
+    )
+    expect(archivedGeometryManifest('own-rust-node-v7')?.dependency.lockfileSha256).toBe(
+      '8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271',
+    )
     expect(archivedGeometryManifest('missing-v1')).toBeNull()
     expect(immutableEngineManifestToWire('mesh', 'own-rust-node-v1')).toMatchObject({
       engine_class: 'mesh',

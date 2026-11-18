@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {readFileSync,writeFileSync,existsSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {checkRetainedAxisAudit} from './retained-axis-audit-contract.mjs'
 
 const [gatePath,output]=process.argv.slice(2)

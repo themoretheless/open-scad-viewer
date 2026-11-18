@@ -357,9 +357,11 @@ pub fn certify_trim_candidates(
         source.spec.turns,
         mid(iv(source.parameters.lead)?),
         trims,
-        max_uv_error,
-        axial_tolerance,
-        max_patches,
+        crate::thread::CoverageLimits {
+            max_uv_error,
+            axial_tolerance,
+            max_patches,
+        },
     )
 }
 pub struct QualifiedTrimmedPatches {

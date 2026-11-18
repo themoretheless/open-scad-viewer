@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { CadKernelHandle, CadKernelOps } from '../src/services/cadKernelOps'
-import { createBrepRecordingKernelOps } from '../src/services/solid/brepRecorder'
-import { rushGraphNurbsSchema } from '../src/services/rushGraphNurbs'
+import type { CadKernelHandle, CadKernelOps } from '../src/kernel/cadKernelOps'
+import { createBrepRecordingKernelOps } from '../src/kernel/solid/brepRecorder'
+import { rushGraphNurbsSchema } from '../src/language/rushGraphNurbs'
 
 /**
  * The recorder only needs distinct handle identities from the polygon track, so the
  * base is a stub. What is under test is the exact graph recorded beside it.
  */
 function stubKernel(): CadKernelOps {
-  const handle = () => ({ dimension: 3 } as unknown as CadKernelHandle)
+  const handle = () => ({ dimension: 3 }) as unknown as CadKernelHandle
   const stub = new Proxy({} as CadKernelOps, {
     get(_target, property) {
       if (property === 'implementationKey') return 'own-rust-cad-plan-v1'
@@ -34,9 +34,7 @@ describe('B-rep recording kernel', () => {
 
     const resolved = recording.resolve(cut)
     expect(resolved).toHaveProperty('id')
-    const parsed = rushGraphNurbsSchema.parse(
-      documentOf(recording.nodes, (resolved as { id: string }).id),
-    )
+    const parsed = rushGraphNurbsSchema.parse(documentOf(recording.nodes, (resolved as { id: string }).id))
     const ops_ = parsed.nodes.map(node => node.op)
     expect(ops_).toEqual(['brep_box', 'brep_cylinder', 'brep_boolean'])
     const box = parsed.nodes[0] as { min: number[]; max: number[] }

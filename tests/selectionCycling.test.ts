@@ -4,7 +4,7 @@ import {
   MAX_NORMALIZED_DEPTH_CANDIDATES,
   normalizeDepthCandidates,
   type DepthCandidate,
-} from '../src/services/selectionCycling'
+} from '../src/render/selectionCycling'
 
 function candidate(key: string, distance: number): DepthCandidate<string> {
   return { key, distance, value: key }
@@ -12,13 +12,18 @@ function candidate(key: string, distance: number): DepthCandidate<string> {
 
 describe('depth selection cycling', () => {
   it('sorts front-to-back, removes mode-level duplicates and applies a budget', () => {
-    expect(normalizeDepthCandidates([
-      candidate('back', 8),
-      candidate('front', 2),
-      candidate('front', 3),
-      candidate('middle', 5),
-      candidate('invalid', Number.NaN),
-    ], 2).map(item => item.key)).toEqual(['front', 'middle'])
+    expect(
+      normalizeDepthCandidates(
+        [
+          candidate('back', 8),
+          candidate('front', 2),
+          candidate('front', 3),
+          candidate('middle', 5),
+          candidate('invalid', Number.NaN),
+        ],
+        2,
+      ).map(item => item.key),
+    ).toEqual(['front', 'middle'])
   })
 
   it('cycles repeated clicks and wraps while the candidate signature is stable', () => {
@@ -73,5 +78,4 @@ describe('depth selection cycling', () => {
     expect(normalized.map(item => item.key)).toEqual(['duplicate', 'near-0', 'near-1', 'near-2'])
     expect(normalized[0].distance).toBe(0.5)
   })
-
 })

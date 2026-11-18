@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { AbortedError, OpenSCADParseError } from '../src/services/openscadParser'
+import { AbortedError, OpenSCADParseError } from '../src/language/openscadParser'
 import {
   GeometryBuildEngine,
   GeometryCapabilityUnavailableError,
   GeometryEngineUnavailableError,
   GeometryLanguageContractError,
-} from '../src/services/geometryBuildEngine'
+} from '../src/kernel/geometryBuildEngine'
 import {
   ArtifactSizeError,
   CustomizerValueError,
@@ -14,24 +14,16 @@ import {
   InvalidGeometryError,
 } from '../src/mcp/geometryService'
 import { CatalogQuotaError, ModelRevisionConflictError } from '../src/mcp/modelStore'
-import { OpenScadProjectError } from '../src/services/openScadProject'
-import { OpenScadProjectCompileError } from '../src/services/openScadProjectCompiler'
-import {
-  buildDiagnostic,
-  ModelNotFoundError,
-  PUBLIC_ERROR_CODES,
-  publicToolError,
-} from '../src/mcp/publicError'
-import {
-  DirectGeometryJoinError,
-  DirectGeometryQuarantinedError,
-} from '../src/mcp/directGeometrySupervisor'
+import { OpenScadProjectError } from '../src/language/openScadProject'
+import { OpenScadProjectCompileError } from '../src/language/openScadProjectCompiler'
+import { buildDiagnostic, ModelNotFoundError, PUBLIC_ERROR_CODES, publicToolError } from '../src/mcp/publicError'
+import { DirectGeometryJoinError, DirectGeometryQuarantinedError } from '../src/mcp/directGeometrySupervisor'
 
 describe('MCP public errors', () => {
   it('maps every frozen public code to its exact retry class', () => {
     const engine = new GeometryBuildEngine()
     const execution = engine.planSource('cube(1);', { quality: 'full', purpose: 'analysis' })
-    const cases: Array<[unknown, typeof PUBLIC_ERROR_CODES[number], boolean]> = [
+    const cases: Array<[unknown, (typeof PUBLIC_ERROR_CODES)[number], boolean]> = [
       [new ModelNotFoundError('missing'), 'model_not_found', false],
       [new ModelRevisionConflictError('part', 1, 2), 'revision_conflict', true],
       [new OpenSCADParseError('bad();', 0, 'bad'), 'source_syntax_error', false],
@@ -93,16 +85,20 @@ describe('MCP public errors', () => {
   })
 
   it('exposes bounded project and dependency failures as actionable source diagnostics', () => {
-    expect(publicToolError(new OpenScadProjectCompileError(
-      'E_PROJECT_DEPENDENCY_MISSING',
-      'include from main.scad refers to missing project file lib/part.scad.',
-      {
-        directive: 'include',
-        importer: 'main.scad',
-        specifier: 'lib/part.scad',
-        path: 'lib/part.scad',
-      },
-    ))).toMatchObject({
+    expect(
+      publicToolError(
+        new OpenScadProjectCompileError(
+          'E_PROJECT_DEPENDENCY_MISSING',
+          'include from main.scad refers to missing project file lib/part.scad.',
+          {
+            directive: 'include',
+            importer: 'main.scad',
+            specifier: 'lib/part.scad',
+            path: 'lib/part.scad',
+          },
+        ),
+      ),
+    ).toMatchObject({
       internal: false,
       error: {
         code: 'source_syntax_error',
@@ -116,11 +112,13 @@ describe('MCP public errors', () => {
         },
       },
     })
-    expect(publicToolError(new OpenScadProjectError(
-      'E_PROJECT_PATH_ESCAPE',
-      'OpenSCAD dependency path escapes the project root.',
-      { path: '../../outside.scad' },
-    ))).toMatchObject({
+    expect(
+      publicToolError(
+        new OpenScadProjectError('E_PROJECT_PATH_ESCAPE', 'OpenSCAD dependency path escapes the project root.', {
+          path: '../../outside.scad',
+        }),
+      ),
+    ).toMatchObject({
       internal: false,
       error: {
         code: 'source_syntax_error',
@@ -135,35 +133,37 @@ describe('MCP public errors', () => {
 
   it('maps source routing failures without suggesting cross-engine fallback', () => {
     const engine = new GeometryBuildEngine()
-    const brepExecution = engine.planSource(
-      '// @language openscad-viewer/brep-1\ncube(1);',
-      { quality: 'full', purpose: 'analysis' },
-    )
-    expect(publicToolError(new GeometryEngineUnavailableError(brepExecution, 'not deployed')).error)
-      .toMatchObject({
-        code: 'engine_unavailable',
-        retryable: false,
-        details: {
-          language_contract: 'openscad-viewer/brep-1',
-          engine_class: 'brep',
-          automatic_fallback: false,
-        },
-      })
+    const brepExecution = engine.planSource('// @language openscad-viewer/brep-1\ncube(1);', {
+      quality: 'full',
+      purpose: 'analysis',
+    })
+    expect(publicToolError(new GeometryEngineUnavailableError(brepExecution, 'not deployed')).error).toMatchObject({
+      code: 'engine_unavailable',
+      retryable: false,
+      details: {
+        language_contract: 'openscad-viewer/brep-1',
+        engine_class: 'brep',
+        automatic_fallback: false,
+      },
+    })
 
     const manifoldExecution = engine.planSource('cube(1);', { quality: 'full', purpose: 'analysis' })
-    expect(publicToolError(new GeometryCapabilityUnavailableError(
-      manifoldExecution,
-      ['nurbs.surfaces'],
-    )).error).toMatchObject({
+    expect(
+      publicToolError(new GeometryCapabilityUnavailableError(manifoldExecution, ['nurbs.surfaces'])).error,
+    ).toMatchObject({
       code: 'capability_unavailable',
       details: { engine_class: 'mesh', missing_capabilities: 'nurbs.surfaces' },
     })
 
-    expect(publicToolError(new GeometryLanguageContractError(
-      'Unsupported geometry language contract future/unknown.',
-      'future/unknown',
-      1,
-    )).error).toMatchObject({
+    expect(
+      publicToolError(
+        new GeometryLanguageContractError(
+          'Unsupported geometry language contract future/unknown.',
+          'future/unknown',
+          1,
+        ),
+      ).error,
+    ).toMatchObject({
       code: 'language_contract_unsupported',
       retryable: false,
       details: { reported_contract: 'future/unknown' },
@@ -174,20 +174,16 @@ describe('MCP public errors', () => {
   it('marks transient provider readiness failures as retryable', () => {
     const engine = new GeometryBuildEngine()
     const execution = engine.planSource('cube(1);', { quality: 'full', purpose: 'analysis' })
-    expect(publicToolError(new GeometryEngineUnavailableError(
-      execution,
-      'readiness timed out',
-      'readiness-timeout',
-    )).error).toMatchObject({
+    expect(
+      publicToolError(new GeometryEngineUnavailableError(execution, 'readiness timed out', 'readiness-timeout')).error,
+    ).toMatchObject({
       code: 'engine_unavailable',
       retryable: true,
       details: { availability_cause: 'readiness-timeout', automatic_fallback: false },
     })
-    expect(buildDiagnostic(new GeometryEngineUnavailableError(
-      execution,
-      'readiness timed out',
-      'readiness-timeout',
-    ))).toMatchObject({
+    expect(
+      buildDiagnostic(new GeometryEngineUnavailableError(execution, 'readiness timed out', 'readiness-timeout')),
+    ).toMatchObject({
       contractVersion: 1,
       code: 'engine_unavailable',
       retryable: true,
@@ -196,10 +192,7 @@ describe('MCP public errors', () => {
   })
 
   it('requires an MCP restart after the disposable Worker host is quarantined', () => {
-    for (const error of [
-      new DirectGeometryJoinError(7, 1_000),
-      new DirectGeometryQuarantinedError(7),
-    ]) {
+    for (const error of [new DirectGeometryJoinError(7, 1_000), new DirectGeometryQuarantinedError(7)]) {
       expect(publicToolError(error)).toMatchObject({
         internal: false,
         error: {

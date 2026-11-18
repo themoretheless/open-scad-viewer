@@ -108,80 +108,106 @@ fn tensor(p: &B, a: [&Q; 2], b: [&Q; 2], ctx: &mut PredicateContext<'_>) -> Resu
     }
     Ok(out)
 }
+/// Address of one refinement box: the span pair, the cofactor axis, the subdivision level and the
+/// box indices along each parameter at that level.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct BoxKey {
+    pub a: usize,
+    pub b: usize,
+    pub axis: usize,
+    pub level: usize,
+    pub pa: usize,
+    pub pb: usize,
+}
+/// Non-empty knot spans and knot vectors of both strip parameters.
+#[derive(Clone, Copy)]
+pub(super) struct StripKnots<'a> {
+    pub spans: &'a [Vec<(usize, Vec<H>)>],
+    pub u: &'a [Vec<Q>],
+}
+/// One polynomial piece: strip `side`, knot span `span`, coordinate `axis`,
+/// and the `part`-th of the `2^level` equal subintervals of that span.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct PieceKey {
+    pub side: usize,
+    pub span: usize,
+    pub axis: usize,
+    pub level: usize,
+    pub part: usize,
+}
+impl PieceKey {
+    fn key(self) -> (usize, usize, usize, usize, usize) {
+        (self.side, self.span, self.axis, self.level, self.part)
+    }
+    /// The piece one subdivision level up that contains this one.
+    fn parent(self) -> Self {
+        Self {
+            level: self.level - 1,
+            part: self.part / 2,
+            ..self
+        }
+    }
+}
+/// Numerator of the derivative of coordinate `axis` over the span's homogeneous
+/// weight, with the span's knot index.
+fn slope_numerator(
+    spans: &[(usize, Vec<H>)],
+    span: usize,
+    axis: usize,
+    ctx: &mut PredicateContext<'_>,
+) -> Result<(usize, P), Reason> {
+    let (i, h) = &spans[span];
+    let n = &h[0][axis];
+    let d = &h[0][3];
+    let p = sub(
+        &mul(&derivative(n, ctx)?, d, ctx)?,
+        &mul(n, &derivative(d, ctx)?, ctx)?,
+        ctx,
+    )?;
+    Ok((*i, p))
+}
 impl Bounds {
     fn slope_coefficients(
         &mut self,
-        side: usize,
-        span: usize,
-        axis: usize,
-        level: usize,
-        part: usize,
+        piece: PieceKey,
         spans: &[(usize, Vec<H>)],
         u: &[Q],
         ctx: &mut PredicateContext<'_>,
     ) -> Result<P, Reason> {
-        let key = (side, span, axis, level, part);
+        let key = piece.key();
         if let Some(p) = self.slopes.get(&key) {
             return Ok(p.clone());
         }
-        let p = if level == 0 {
-            let (i, h) = &spans[span];
-            let n = &h[0][axis];
-            let d = &h[0][3];
-            let p = sub(
-                &mul(&derivative(n, ctx)?, d, ctx)?,
-                &mul(n, &derivative(d, ctx)?, ctx)?,
-                ctx,
-            )?;
-            coefficients(&p, &u[*i], &u[i + 1], ctx)?
+        let p = if piece.level == 0 {
+            let (i, p) = slope_numerator(spans, piece.span, piece.axis, ctx)?;
+            coefficients(&p, &u[i], &u[i + 1], ctx)?
         } else {
-            let parent =
-                self.slope_coefficients(side, span, axis, level - 1, part / 2, spans, u, ctx)?;
-            half(&parent, part % 2 == 1, ctx)?
+            let parent = self.slope_coefficients(piece.parent(), spans, u, ctx)?;
+            half(&parent, piece.part % 2 == 1, ctx)?
         };
         self.slopes.insert(key, p.clone());
         Ok(p)
     }
     fn deflated_coefficients(
         &mut self,
-        side: usize,
-        span: usize,
-        axis: usize,
-        level: usize,
-        part: usize,
+        piece: PieceKey,
         spans: &[(usize, Vec<H>)],
         u: &[Q],
         ctx: &mut PredicateContext<'_>,
     ) -> Result<Option<P>, Reason> {
-        let key = (side, span, axis, level, part);
+        let key = piece.key();
         if let Some(p) = self.deflated.get(&key) {
             return Ok(p.clone());
         }
-        let p = if level == 0 {
-            let (i, h) = &spans[span];
-            let n = &h[0][axis];
-            let d = &h[0][3];
-            let p = sub(
-                &mul(&derivative(n, ctx)?, d, ctx)?,
-                &mul(n, &derivative(d, ctx)?, ctx)?,
-                ctx,
-            )?;
+        let p = if piece.level == 0 {
+            let (i, p) = slope_numerator(spans, piece.span, piece.axis, ctx)?;
             match polynomial::even_deflation(&p, ctx)? {
-                Some(p) => Some(coefficients(&p, &u[*i], &u[i + 1], ctx)?),
+                Some(p) => Some(coefficients(&p, &u[i], &u[i + 1], ctx)?),
                 None => None,
             }
         } else {
-            match self.deflated_coefficients(
-                side,
-                span,
-                axis,
-                level - 1,
-                part / 2,
-                spans,
-                u,
-                ctx,
-            )? {
-                Some(p) => Some(half(&p, part % 2 == 1, ctx)?),
+            match self.deflated_coefficients(piece.parent(), spans, u, ctx)? {
+                Some(p) => Some(half(&p, piece.part % 2 == 1, ctx)?),
                 None => None,
             }
         };
@@ -190,21 +216,17 @@ impl Bounds {
     }
     pub(super) fn slope(
         &mut self,
-        side: usize,
-        span: usize,
-        axis: usize,
-        level: usize,
-        part: usize,
+        piece: PieceKey,
         spans: &[(usize, Vec<H>)],
         u: &[Q],
         sign: Sign,
         ctx: &mut PredicateContext<'_>,
     ) -> Result<bool, Reason> {
-        let p = self.slope_coefficients(side, span, axis, level, part, spans, u, ctx)?;
+        let p = self.slope_coefficients(piece, spans, u, ctx)?;
         if one_sign(p.iter().map(|q| q.n.sign()), Some(sign), ctx)? {
             return Ok(true);
         }
-        let Some(p) = self.deflated_coefficients(side, span, axis, level, part, spans, u, ctx)?
+        let Some(p) = self.deflated_coefficients(piece, spans, u, ctx)?
         else {
             return Ok(false);
         };
@@ -214,17 +236,13 @@ impl Bounds {
     }
     fn box_coefficients(
         &mut self,
-        a: usize,
-        b: usize,
-        axis: usize,
-        level: usize,
-        pa: usize,
-        pb: usize,
+        at: BoxKey,
         p: &B,
-        spans: &[Vec<(usize, Vec<H>)>],
-        u: &[Vec<Q>],
+        knots: StripKnots<'_>,
         ctx: &mut PredicateContext<'_>,
     ) -> Result<Vec<P>, Reason> {
+        let BoxKey { a, b, axis, level, pa, pb } = at;
+        let StripKnots { spans, u } = knots;
         let key = (a, b, axis, level, pa, pb);
         if let Some(p) = self.boxes.get(&key) {
             return Ok(p.clone());
@@ -240,7 +258,12 @@ impl Bounds {
             )?
         } else {
             let parent =
-                self.box_coefficients(a, b, axis, level - 1, pa / 2, pb / 2, p, spans, u, ctx)?;
+                self.box_coefficients(
+                    BoxKey { level: level - 1, pa: pa / 2, pb: pb / 2, ..at },
+                    p,
+                    knots,
+                    ctx,
+                )?;
             if parent.is_empty() {
                 return Ok(parent);
             }
@@ -270,21 +293,16 @@ impl Bounds {
     // source regularity remains mandatory at the public admission boundary.
     pub(super) fn cofactor(
         &mut self,
-        a: usize,
-        b: usize,
-        axis: usize,
-        level: usize,
-        pa: usize,
-        pb: usize,
+        at: BoxKey,
         p: &B,
-        spans: &[Vec<(usize, Vec<H>)>],
-        u: &[Vec<Q>],
+        knots: StripKnots<'_>,
         ctx: &mut PredicateContext<'_>,
     ) -> Result<bool, Reason> {
+        let BoxKey { a, b, axis, .. } = at;
         if p.is_empty() {
             return Ok(false);
         }
-        let coeff = self.box_coefficients(a, b, axis, level, pa, pb, p, spans, u, ctx)?;
+        let coeff = self.box_coefficients(at, p, knots, ctx)?;
         if one_sign(coeff.iter().flatten().map(|q| q.n.sign()), None, ctx)? {
             return Ok(true);
         }

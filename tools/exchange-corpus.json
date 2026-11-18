@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "self-authored-fixtures",
+      "origin": "self-authored",
+      "locator": "tests/fixtures",
+      "localDirectory": "tests/fixtures"
+    },
+    {
+      "id": "cax-if",
+      "origin": "CAX-IF",
+      "locator": "https://www.cax-if.org/",
+      "localDirectory": "tmp/exchange-corpus/cax-if"
+    },
+    {
+      "id": "nist",
+      "origin": "NIST",
+      "locator": "https://www.nist.gov/ctl/smart-connected-systems-division/step-and-step-related-tools-and-services",
+      "localDirectory": "tmp/exchange-corpus/nist"
+    }
+  ]
+}

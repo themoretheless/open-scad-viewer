@@ -91,8 +91,7 @@ pub fn approximate_variable_pitch(
     radius: f64,
     height: f64,
     turns: f64,
-    start_pitch: f64,
-    end_pitch: f64,
+    [start_pitch, end_pitch]: [f64; 2],
     phase_degrees: f64,
     max_deviation: f64,
 ) -> Result<Approximation> {
@@ -293,8 +292,8 @@ mod tests {
             let h = 7.;
             let m0 = turns * 2.;
             let m1 = turns * 11.;
-            let a =
-                approximate_variable_pitch([3., 4., 5.], 2., h, turns, 2., 11., 23., 1e-4).unwrap();
+            let a = approximate_variable_pitch([3., 4., 5.], 2., h, turns, [2., 11.], 23., 1e-4)
+                .unwrap();
             for i in 0..=1000 {
                 let t = i as f64 / 1000.;
                 let angle = 23_f64.to_radians() + 2. * std::f64::consts::PI * turns * t;
@@ -312,8 +311,8 @@ mod tests {
             assert!((a.curve.evaluate(0.).unwrap().d1.unwrap()[2] - m0).abs() < 1e-11);
             assert!((a.curve.evaluate(1.).unwrap().d1.unwrap()[2] - m1).abs() < 1e-11);
         }
-        assert!(approximate_variable_pitch([0.; 3], 2., 1., 1., f64::NAN, 2., 0., 1e-3).is_err());
-        assert!(approximate_variable_pitch([0.; 3], 2., 1., 2., f64::MAX, 2., 0., 1e-3).is_err());
+        assert!(approximate_variable_pitch([0.; 3], 2., 1., 1., [f64::NAN, 2.], 0., 1e-3).is_err());
+        assert!(approximate_variable_pitch([0.; 3], 2., 1., 2., [f64::MAX, 2.], 0., 1e-3).is_err());
     }
     #[cfg(feature = "transport")]
     #[test]

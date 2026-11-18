@@ -1,0 +1,45 @@
+{
+  "id": "NURBS-0392",
+  "testedBase": "79e689d89e1b8d76779b99e90336c9ff5dffda0e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 110,
+  "scope": [
+    "Close a standalone shell with inferred exact expanded cap supports and certify the material boundary and volume.",
+    "Exact inferred rim planes are sewn onto expanded supports without moving any source edge or vertex. The resulting material boundary must pass solid admission and positive volume enclosure."
+  ],
+  "logSha256": "b53b4cb67a8ac2457d1f3f074e5373fa9f7e94d7a187c24e249b1943eee303b1",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "06dc78b30e56e1d1934c93a803c4e3969052722107bb255a8d819dae7ca0be76",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c6a3d5bf743f6f452f3386838ac0c483fb2e9a17dfccd5dd834ae538c32b245d",
+    "crates/brep-core/tests/section_cap_sheets.rs": "6483d224243ebc9387943db7536957fe03c631105733a257d1b151ab335a9a18",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "c2621e69d0c302dd2ac3fd3df405770e8a2e5a5ffa9f309bac84b9adc2ff33aa",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "a4d0e821ecf52cc2696d7194e81d4d72dbed9309803e342fde6379ffb49a1e66",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "2bbec84ab8787e20516bfc5b382e023d5b03e13792e9fc4c6d948c582e94d6b7",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1",
+    "crates/brep-core/tests/support/closed_solid_policy.rs": "b48784952be7e19ab14bba29e675e839fc126d6437bc589d472c8032fa4e0efb",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "1ee32de89a9ce420fc4a4d2236cc3b991f477391341e01b6c0996fcd9898ab71",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "cd5e72ea9414e6c5092e2652e4d93f86be611334a2d0c3bcd81955f730c8281e",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a"
+  }
+}

@@ -6,7 +6,7 @@ import {
   THEME_CATALOG,
   THEME_SELECTIONS,
   themeCanvasColor,
-} from '../src/services/themePreferences'
+} from '../src/app/themePreferences'
 
 describe('theme preferences', () => {
   it('ships a unique localized and contrast-checked token catalog', () => {
@@ -19,15 +19,16 @@ describe('theme preferences', () => {
     expect(resolveTheme('system', true).id).toBe('dark')
     expect(resolveTheme('system', false).id).toBe('light')
     expect(resolveTheme('nord', false).id).toBe('nord')
-    expect(themeCanvasColor(resolveTheme('dark', false))).toEqual([
-      0x2d / 255, 0x2b / 255, 0x28 / 255,
-    ])
+    expect(themeCanvasColor(resolveTheme('dark', false))).toEqual([0x2d / 255, 0x2b / 255, 0x28 / 255])
   })
 
   it('computes WCAG contrast deterministically and rejects malformed tokens', () => {
     expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 6)
     expect(() => contrastRatio('red', '#ffffff')).toThrow(TypeError)
-    expect(() => assertThemeCatalog([{ ...THEME_CATALOG[0], id: 'bad', tokens: { ...THEME_CATALOG[0].tokens, '--text': '#111216' } }]))
-      .toThrow(/contrast/)
+    expect(() =>
+      assertThemeCatalog([
+        { ...THEME_CATALOG[0], id: 'bad', tokens: { ...THEME_CATALOG[0].tokens, '--text': '#111216' } },
+      ]),
+    ).toThrow(/contrast/)
   })
 })

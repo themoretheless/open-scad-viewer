@@ -1,29 +1,54 @@
 import { expect, it } from 'vitest'
 import { deepStrictEqual } from 'node:assert'
-import { parseDirectDocument, parseDirectDocumentAsync } from '../src/services/directModeling'
-import { sampleCurve } from '../src/services/directSketchGeometry'
-import { MAX_BODY_MESH_COMPONENTS } from '../src/services/directDocumentLimits'
+import { parseDirectDocument, parseDirectDocumentAsync } from '../src/app/directModeling'
+import { sampleCurve } from '../src/app/directSketchGeometry'
+import { MAX_BODY_MESH_COMPONENTS } from '../src/core/directDocumentLimits'
 
-it.each(['positions', 'indices'] as const)('rejects a body exceeding the bounded %s display cache in both parsers', async field => {
-  const mesh = { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] }
-  mesh[field] = Array(MAX_BODY_MESH_COMPONENTS + 3).fill(0)
-  const text = JSON.stringify({ version: 1, sketches: [], bodies: [{ id: 'over-budget', name: 'Over budget', mesh }] })
-  expect(() => parseDirectDocument(text)).toThrow('Invalid body mesh.')
-  await expect(parseDirectDocumentAsync(text)).rejects.toThrow('Invalid body mesh.')
-})
+it.each(['positions', 'indices'] as const)(
+  'rejects a body exceeding the bounded %s display cache in both parsers',
+  async field => {
+    const mesh = { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] }
+    mesh[field] = Array(MAX_BODY_MESH_COMPONENTS + 3).fill(0)
+    const text = JSON.stringify({
+      version: 1,
+      sketches: [],
+      bodies: [{ id: 'over-budget', name: 'Over budget', mesh }],
+    })
+    expect(() => parseDirectDocument(text)).toThrow('Invalid body mesh.')
+    await expect(parseDirectDocumentAsync(text)).rejects.toThrow('Invalid body mesh.')
+  },
+)
 
 const wrap = (metadata: string) => `{"version":1,"sketches":[],"bodies":[],"metadata":${metadata}}`
 const legacy = (text: string) => JSON.parse(JSON.stringify({ ...JSON.parse(text), curves: [], surfaces: [] }))
 
 it('matches legacy normalization across deterministic mixed JSON trees', () => {
   let seed = 173
-  const random = (max: number) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % max }
-  const leaves = ['-0', '-1e-999', '1e400', '-1e400', '1.2345678901234567', '1e-200', 'null', 'true', 'false', JSON.stringify('\ud800'), '"\\u0000"']
+  const random = (max: number) => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+    return seed % max
+  }
+  const leaves = [
+    '-0',
+    '-1e-999',
+    '1e400',
+    '-1e400',
+    '1.2345678901234567',
+    '1e-200',
+    'null',
+    'true',
+    'false',
+    JSON.stringify('\ud800'),
+    '"\\u0000"',
+  ]
   const keys = ['a', '0', '__proto__', 'constructor', 'toJSON', '\u00e9']
   const tree = (depth: number): string => {
     if (depth === 0 || random(3) === 0) return leaves[random(leaves.length)]!
     if (random(2)) return `[${Array.from({ length: random(5) }, () => tree(depth - 1)).join(',')}]`
-    return `{${keys.slice(0, random(keys.length + 1)).map(key => `${JSON.stringify(key)}:${tree(depth - 1)}`).join(',')}}`
+    return `{${keys
+      .slice(0, random(keys.length + 1))
+      .map(key => `${JSON.stringify(key)}:${tree(depth - 1)}`)
+      .join(',')}}`
   }
   for (let i = 0; i < 128; i++) {
     const text = wrap(tree(5))
@@ -61,7 +86,9 @@ it('owns regenerated analytic sketch samples independently of other parses', asy
   const sketch = { id: 'circle', name: 'Circle', closed: false, points: [], analytic }
   const input = { version: 1, sketches: [sketch], bodies: [] }
   const text = JSON.stringify(input)
-  const expected = legacy(JSON.stringify({ ...input, sketches: [{ ...sketch, closed: true, points: sampleCurve(analytic) }] }))
+  const expected = legacy(
+    JSON.stringify({ ...input, sketches: [{ ...sketch, closed: true, points: sampleCurve(analytic) }] }),
+  )
   const first = parseDirectDocument(text)
   const second = await parseDirectDocumentAsync(text)
   expect(first).toStrictEqual(expected)
@@ -73,8 +100,9 @@ it('owns regenerated analytic sketch samples independently of other parses', asy
 it('matches the runtime serializer admission for deeply nested metadata', async () => {
   const text = wrap('['.repeat(20_000) + '0' + ']'.repeat(20_000))
   let normalized: ReturnType<typeof legacy>
-  try { normalized = legacy(text) }
-  catch (error) {
+  try {
+    normalized = legacy(text)
+  } catch (error) {
     expect(error).toBeInstanceOf(RangeError)
     expect(() => parseDirectDocument(text)).toThrow(RangeError)
     await expect(parseDirectDocumentAsync(text)).rejects.toBeInstanceOf(RangeError)

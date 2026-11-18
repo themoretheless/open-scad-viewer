@@ -7,7 +7,7 @@ import {
   checkManifoldInKernel,
   metricsManifoldInKernel,
   repairManifoldInKernel,
-} from '../src/services/geometry/manifoldAnalysis'
+} from '../src/kernel/geometry/manifoldAnalysis'
 
 const publicBytes = readFileSync('public/wasm/geometry-kernel.wasm')
 const generatedBytes = readFileSync('src/generated/geometry-kernels/kernel_bg.wasm')
@@ -27,10 +27,12 @@ const manifoldExports = [
   'abi_free',
   'abi_array_field',
   'abi_array_free',
+  'abi_manifold_abi_version',
   'abi_manifold_check',
   'abi_manifold_repair',
   'abi_manifold_metrics',
   'abi_manifold_boolean',
+  'abi_manifold_diagnostics',
 ]
 for (const name of manifoldExports) assert.equal(exports.get(name), 'function', `Missing ${name}`)
 
@@ -49,6 +51,13 @@ const indices = new Uint32Array([
 const checked = checkManifoldInKernel(positions, indices)
 assert.equal(checked.isManifold, true)
 assert.equal(checked.componentCount, 1)
+assert.equal(checked.manifoldComponentCount, 1)
+assert.equal(checked.nonOrientableComponents, 0)
+assert.equal(checked.zeroAreaTriangles.length, 0)
+const padded = new Float64Array([...positions, 9, 9, 9])
+const compacted = repairManifoldInKernel(padded, indices, 0, false, true)
+assert.equal(compacted.removedIsolatedVertices, 1)
+assert.deepEqual([...(compacted.vertexRemap ?? [])], [0, 1, 2, 3, 0xffffffff])
 
 const measured = metricsManifoldInKernel(positions, indices)
 assert.ok(Math.abs(measured.signedVolume - 1 / 6) < 1e-12)

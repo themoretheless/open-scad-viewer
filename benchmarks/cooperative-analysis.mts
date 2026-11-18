@@ -6,8 +6,8 @@ import {strict as assert} from 'node:assert'
 import {createHash} from 'node:crypto'
 import {readFileSync, writeFileSync} from 'node:fs'
 import {parseArgs} from 'node:util'
-import {CadGeometryKernel} from '../src/services/cadGeometryKernel.ts'
-import {analyzeSolidCooperativelyInKernel, analyzeSolidInKernel} from '../src/services/geometry/meshAnalysis.ts'
+import {CadGeometryKernel} from '../src/kernel/cadGeometryKernel.ts'
+import {analyzeSolidCooperativelyInKernel, analyzeSolidInKernel} from '../src/kernel/geometry/meshAnalysis.ts'
 
 const {values} = parseArgs({options: {out: {type: 'string'}}})
 const session = await new CadGeometryKernel().openSession()
@@ -46,7 +46,7 @@ try {
 } finally {session.dispose()}
 const hashes = Object.fromEntries([
   'public/wasm/geometry-kernel.wasm','benchmarks/cooperative-analysis.mts',
-  'src/services/geometry/meshAnalysis.ts','crates/geometry-bridge/src/mesh_analysis.rs',
+  'src/kernel/geometry/meshAnalysis.ts','crates/geometry-bridge/src/mesh_analysis.rs',
   'crates/polygon-core/src/solid/edges.rs','crates/polygon-core/src/solid/edges/cooperative.rs',
 ].map(path=>[path,createHash('sha256').update(readFileSync(path)).digest('hex')]))
 const report={timestamp:new Date().toISOString(),node:process.version,hashes,warmups:2,samples:5,

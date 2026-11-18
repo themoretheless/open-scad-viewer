@@ -80,7 +80,18 @@ pub fn rational_bspline_affine_patch_roots(
         for k in 0..3 {
             plane[3] = plane[3].add(&plane[k].mul(&x[tail + k], ctx)?, ctx)?;
         }
-        solve::solve(ctx, &x[..tail], uv, n, degree, span, &plane, tolerance)
+        solve::solve(
+            ctx,
+            ExactSpan {
+                x: &x[..tail],
+                uv,
+                n,
+                degree,
+                span,
+            },
+            &plane,
+            tolerance,
+        )
     })()
     .and_then(|v| ctx.charge(0).map(|_| v));
     Ok(OriginalPlaneRootsDecision {

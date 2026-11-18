@@ -1,0 +1,1256 @@
+use num_rational::BigRational as Q;
+use nurbs_core::{
+    editing::exact_surface_derivative::{
+        PlaneGraphPosition, Refusal, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphStatus,
+        SurfacePlaneGraphStripOptions, SurfacePlanePolylineOptions, SurfacePlaneSide,
+        SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldStripOptions,
+        approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
+        approximate_surface_plane_strip_xyz, arrange_surface_plane_section_caps,
+        audit_surface_plane_graphs, audit_surface_plane_side, cap_surface_plane_section,
+        cap_surface_plane_section_with_holes, close_periodic_surface_plane_strip_xyz,
+        refine_surface_plane_side, sample_surface_plane_graph,
+        split_periodic_surface_strip_by_plane, split_surface_cell_by_plane,
+        stitch_surface_plane_graph_strip, store_periodic_surface_plane_section,
+        store_surface_plane_section_curve, store_surface_plane_section_pair,
+    },
+    surface::Surface,
+};
+
+const WORK: u64 = 1_000_000;
+
+fn q(n: i64) -> Q {
+    Q::from_integer(n.into())
+}
+
+fn surface(degree: usize, knots: Vec<f64>, heights: &[f64]) -> Surface {
+    Surface {
+        degree_u: degree,
+        degree_v: 1,
+        knots_u: knots,
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: heights
+            .iter()
+            .enumerate()
+            .map(|(i, &z)| vec![vec![i as f64, 0., z], vec![i as f64, 1., z]])
+            .collect(),
+        weights: (0..heights.len())
+            .map(|i| vec![i as f64 + 1., i as f64 + 2.])
+            .collect(),
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+
+#[test]
+fn certifies_closed_span_sides_at_a_rational_knot_seam() {
+    let surface = surface(1, vec![0., 0., 1., 2., 2.], &[1., 0., -1.]);
+    let report = audit_surface_plane_side(&surface, [0., 0., 1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    assert_eq!(cells.len(), 2);
+    assert_eq!(cells[0].domain, [[0., 1.], [0., 1.]]);
+    assert_eq!(cells[0].side, SurfacePlaneSide::Nonnegative);
+    assert_eq!(cells[0].residual, [q(0), q(1)]);
+    assert_eq!(cells[1].domain, [[1., 2.], [0., 1.]]);
+    assert_eq!(cells[1].side, SurfacePlaneSide::Nonpositive);
+    assert_eq!(cells[1].residual, [q(-1), q(0)]);
+    assert_eq!(&cells[0].corners[2..], &cells[1].corners[..2]);
+}
+
+#[test]
+fn distinguishes_corner_crossings_from_unresolved_mixed_coefficients() {
+    let crossing = surface(1, vec![0., 0., 1., 1.], &[-1., 1.]);
+    let crossing = audit_surface_plane_side(&crossing, [0., 0., 1.], 0., WORK)
+        .unwrap()
+        .cells
+        .unwrap();
+    assert_eq!(crossing[0].side, SurfacePlaneSide::Straddles);
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let folded = audit_surface_plane_side(&folded, [0., 0., 1.], 0., WORK)
+        .unwrap()
+        .cells
+        .unwrap();
+    assert_eq!(folded[0].side, SurfacePlaneSide::Unresolved);
+    assert_eq!(folded[0].corners, std::array::from_fn(|_| q(1)));
+    assert_eq!(folded[0].residual, [q(-3), q(1)]);
+}
+
+#[test]
+fn proves_coplanarity_for_unclamped_spans_and_shares_the_arithmetic_budget() {
+    let flat = surface(2, vec![-2., -1., 0., 1., 2., 3., 4.], &[3.; 4]);
+    let report = audit_surface_plane_side(&flat, [0., 0., 2.], 6., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    assert_eq!(cells.len(), 2);
+    assert!(
+        cells
+            .iter()
+            .all(|cell| cell.side == SurfacePlaneSide::Coplanar && cell.residual == [q(0), q(0)])
+    );
+    let limited = audit_surface_plane_side(&flat, [0., 0., 2.], 6., report.work_used - 1).unwrap();
+    assert_eq!(limited.cells, Err(Refusal::ResourceLimit));
+    assert!(limited.work_used < report.work_used);
+}
+
+#[test]
+fn proves_a_mixed_control_net_is_strictly_separated_after_subdivision() {
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -0.125, 1.]);
+    let audit = audit_surface_plane_side(&folded, [0., 0., 1.], 0., WORK)
+        .unwrap()
+        .cells
+        .unwrap();
+    assert_eq!(audit[0].side, SurfacePlaneSide::Unresolved);
+    let refined = refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, WORK)
+        .unwrap()
+        .regions
+        .unwrap();
+    assert_eq!(refined.len(), 2);
+    assert_eq!(refined[0].cell.domain, [[0., 0.5], [0., 1.]]);
+    assert_eq!(refined[1].cell.domain, [[0.5, 1.], [0., 1.]]);
+    assert!(
+        refined
+            .iter()
+            .all(|region| region.cell.side == SurfacePlaneSide::Positive)
+    );
+    assert_eq!(&refined[0].cell.corners[2..], &refined[1].cell.corners[..2]);
+}
+
+#[test]
+fn localizes_a_folded_crossing_and_keeps_the_whole_original_domain_covered() {
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let report = refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, WORK).unwrap();
+    let regions = report.regions.unwrap();
+    let area: f64 = regions
+        .iter()
+        .map(|region| {
+            region
+                .cell
+                .domain
+                .iter()
+                .map(|[a, b]| b - a)
+                .product::<f64>()
+        })
+        .sum();
+    assert_eq!(area, 1.);
+    assert!(
+        regions
+            .iter()
+            .any(|region| region.cell.side == SurfacePlaneSide::Positive)
+    );
+    assert!(
+        regions
+            .iter()
+            .any(|region| region.cell.side == SurfacePlaneSide::Negative)
+    );
+    assert!(
+        regions
+            .iter()
+            .any(|region| region.cell.side == SurfacePlaneSide::Straddles)
+    );
+    let limited =
+        refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, report.work_used - 1).unwrap();
+    assert_eq!(limited.regions, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn certifies_unique_intersection_graphs_in_the_interior_and_on_an_edge() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let crossing = surface(1, vec![0., 0., 1., 1.], &[-1., 1.]);
+    let report = audit_surface_plane_graphs(&crossing, [0., 0., 1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    let SurfacePlaneGraphStatus::Graphs(graphs) = &cells[0].status else {
+        panic!("{:?}", cells[0].status);
+    };
+    let graph = graphs[0].as_ref().unwrap();
+    assert_eq!(graph.solve_axis, UvAxis::U);
+    assert_eq!(graph.position, PlaneGraphPosition::Interior);
+    assert_eq!(graph.derivative, [q(3), q(5)]);
+    assert!(graphs[1].is_none());
+
+    let edge = surface(1, vec![-2., -2., 4., 4.], &[0., 1.]);
+    let report = audit_surface_plane_graphs(&edge, [0., 0., -1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    let SurfacePlaneGraphStatus::Graphs(graphs) = &cells[0].status else {
+        panic!("{:?}", cells[0].status);
+    };
+    assert_eq!(
+        graphs[0].as_ref().unwrap().position,
+        PlaneGraphPosition::LowerEdge
+    );
+    assert_eq!(graphs[0].as_ref().unwrap().derivative, [q(-3), q(-2)]);
+}
+
+#[test]
+fn handles_a_diagonal_across_closed_edges_and_refuses_to_certify_a_fold() {
+    let mut diagonal = surface(1, vec![0., 0., 1., 1.], &[-1., 0.]);
+    diagonal.weights = vec![vec![1.; 2]; 2];
+    diagonal.control_points[0][1][2] = 0.;
+    diagonal.control_points[1][1][2] = 1.;
+    let report = audit_surface_plane_graphs(&diagonal, [0., 0., 1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    let SurfacePlaneGraphStatus::Graphs(graphs) = &cells[0].status else {
+        panic!("{:?}", cells[0].status);
+    };
+    assert!(graphs.iter().all(|graph| {
+        graph
+            .as_ref()
+            .is_some_and(|g| g.position == PlaneGraphPosition::Closed)
+    }));
+    let limited =
+        audit_surface_plane_graphs(&diagonal, [0., 0., 1.], 0., report.work_used - 1).unwrap();
+    assert_eq!(limited.cells, Err(Refusal::ResourceLimit));
+
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let report = audit_surface_plane_graphs(&folded, [0., 0., 1.], 0., WORK).unwrap();
+    assert_eq!(
+        report.cells.unwrap()[0].status,
+        SurfacePlaneGraphStatus::Unresolved
+    );
+}
+
+#[test]
+fn samples_weighted_branches_at_nonbinary_parameters_without_rounding() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let crossing = surface(1, vec![-2., -2., 4., 4.], &[-1., 1.]);
+    let options = SurfacePlaneGraphSampleOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_normalized_width: 1e-18,
+        max_work: WORK,
+    };
+    let third = Q::new(1.into(), 3.into());
+    let inputs = [q(0), third, q(1)];
+    let report = sample_surface_plane_graph(&crossing, [0., 0., 1.], 0., &inputs, options).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.domain, [[-2., 4.], [0., 1.]]);
+    let exact = [
+        Q::new(1.into(), 3.into()),
+        Q::new(4.into(), 11.into()),
+        Q::new(2.into(), 5.into()),
+    ];
+    for ((sample, t), root) in result.samples.iter().zip(&inputs).zip(exact) {
+        assert_eq!(&sample.transverse, t);
+        assert!(sample.root[0] <= root && root <= sample.root[1]);
+        assert!(
+            &sample.root[1] - &sample.root[0]
+                <= Q::from_float(options.max_normalized_width).unwrap()
+        );
+    }
+    let reversed = sample_surface_plane_graph(&crossing, [0., 0., -1.], 0., &inputs, options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(result.samples, reversed.samples);
+    let limited = sample_surface_plane_graph(
+        &crossing,
+        [0., 0., 1.],
+        0.,
+        &inputs,
+        SurfacePlaneGraphSampleOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn retains_exact_edge_samples_and_requires_a_unique_full_graph() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let flat_edge = surface(1, vec![0., 0., 1., 1.], &[0., 1.]);
+    let options = SurfacePlaneGraphSampleOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_normalized_width: 1e-12,
+        max_work: WORK,
+    };
+    let report =
+        sample_surface_plane_graph(&flat_edge, [0., 0., 1.], 0., &[q(0), q(1)], options).unwrap();
+    assert!(
+        report
+            .outcome
+            .unwrap()
+            .samples
+            .iter()
+            .all(|sample| sample.root == [q(0), q(0)])
+    );
+
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let report = sample_surface_plane_graph(
+        &folded,
+        [0., 0., 1.],
+        0.,
+        &[q(0)],
+        SurfacePlaneGraphSampleOptions {
+            span: [2, 1],
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(report.outcome, Err(Refusal::UnprovedIdentity));
+}
+
+#[test]
+fn certifies_continuous_chord_error_for_a_parabolic_branch() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlanePolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_normalized_error: 1. / 64.,
+        max_segments: 16,
+        max_work: WORK,
+    };
+    let report = approximate_surface_plane_graph(&surface, [0., 0., 1.], 0., options).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.uv.len(), 9);
+    assert_eq!(result.normalized_error_upper, Q::new(1.into(), 256.into()));
+    for edge in result.uv.windows(2) {
+        let mid_u = (&edge[0][0] + &edge[1][0]) / q(2);
+        let mid_v = (&edge[0][1] + &edge[1][1]) / q(2);
+        assert_eq!(mid_u - mid_v.pow(2), result.normalized_error_upper);
+    }
+    let limited = approximate_surface_plane_graph(
+        &surface,
+        [0., 0., 1.],
+        0.,
+        SurfacePlanePolylineOptions {
+            max_segments: 2,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn represents_a_straight_graph_exactly_with_one_segment() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut diagonal = surface(1, vec![0., 0., 1., 1.], &[0., -1.]);
+    diagonal.weights = vec![vec![1.; 2]; 2];
+    diagonal.control_points[0][1][2] = 1.;
+    diagonal.control_points[1][1][2] = 0.;
+    let options = SurfacePlanePolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::V,
+        max_normalized_error: 1e-20,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let report = approximate_surface_plane_graph(&diagonal, [0., 0., 1.], 0., options).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.uv, [[q(0), q(0)], [q(1), q(1)]]);
+    assert_eq!(result.normalized_error_upper, q(0));
+}
+
+#[test]
+fn bounds_the_xyz_chord_error_on_a_curved_surface_plane_section() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1. / 64.,
+        max_segments: 32,
+        max_work: WORK,
+    };
+    let report = approximate_surface_plane_graph_xyz(&surface, [0., 0., 1.], 0., options).unwrap();
+    let result = report.outcome.unwrap();
+    assert!(result.xyz.len() > 2);
+    assert!(result.xyz_error_upper <= Q::from_float(options.max_xyz_error).unwrap());
+    for edge in result.xyz.windows(2) {
+        let mid: [Q; 3] = std::array::from_fn(|i| (&edge[0][i] + &edge[1][i]) / q(2));
+        let squared_error = (&mid[0] - mid[1].pow(2)).pow(2) + mid[2].pow(2);
+        assert!(squared_error <= result.xyz_error_upper.pow(2));
+    }
+    let limited = approximate_surface_plane_graph_xyz(
+        &surface,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn preserves_an_affine_xyz_section_as_one_exact_segment() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = surface(1, vec![0., 0., 1., 1.], &[-1., 1.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-22,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let result = approximate_surface_plane_graph_xyz(&patch, [0., 0., -1.], 0., options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    let half = Q::new(1.into(), 2.into());
+    assert_eq!(result.xyz, [[half.clone(), q(0), q(0)], [half, q(1), q(0)]]);
+    assert_eq!(result.xyz_error_upper, q(0));
+}
+
+#[test]
+fn stores_a_nonbinary_section_and_refuses_a_tolerance_below_rounding_error() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = surface(1, vec![0., 0., 1., 1.], &[-1., 2.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-12,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let stored = store_surface_plane_section_curve(&patch, [0., 0., 1.], 0., options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(stored.curve.degree, 1);
+    assert_eq!(stored.curve.domain(), [0., 1.]);
+    assert_eq!(stored.plane_residual_upper, q(0));
+    let exact = Q::new(1.into(), 3.into());
+    assert!(stored.curve.control_points.iter().all(|p| {
+        let delta = Q::from_float(p[0]).unwrap() - &exact;
+        delta.pow(2) <= stored.xyz_error_upper.pow(2) && p[2] == 0.
+    }));
+    let impossible = store_surface_plane_section_curve(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_xyz_error: 1e-20,
+            ..options
+        },
+    )
+    .unwrap();
+    assert!(matches!(impossible.outcome, Err(Refusal::NotRepresentable)));
+}
+
+#[test]
+fn projects_all_controls_to_the_plane_and_keeps_exact_integer_knots() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1. / 64.,
+        max_segments: 32,
+        max_work: WORK,
+    };
+    let report = store_surface_plane_section_curve(&patch, [0., 0., 1.], 0., options).unwrap();
+    let stored = report.outcome.unwrap();
+    let segments = stored.curve.control_points.len() - 1;
+    assert!(segments > 1);
+    assert_eq!(stored.curve.domain(), [0., segments as f64]);
+    assert!(stored.curve.knots.iter().all(|k| k.fract() == 0.));
+    assert_eq!(stored.plane_residual_upper, q(0));
+    assert!(stored.xyz_error_upper <= Q::from_float(options.max_xyz_error).unwrap());
+    let limited = store_surface_plane_section_curve(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn stores_an_exact_affine_pair_in_the_original_uv_clock() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = surface(1, vec![-2., -2., 4., 4.], &[-1., 1.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-20,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let report = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
+    let pair = report.outcome.unwrap();
+    assert_eq!(pair.pcurve.knots, pair.spatial.curve.knots);
+    assert_eq!(pair.pcurve.control_points, [vec![1., 0.], vec![1., 1.]]);
+    assert_eq!(
+        pair.spatial.curve.control_points,
+        [vec![0.5, 0., 0.], vec![0.5, 1., 0.]]
+    );
+    assert_eq!(pair.correspondence_tolerance, q(0));
+    let exhausted = store_surface_plane_section_pair(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+        0.,
+    )
+    .unwrap();
+    assert!(matches!(exhausted.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn verifies_the_lifted_gap_of_a_curved_pair_between_vertices() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1. / 64.,
+        max_segments: 32,
+        max_work: WORK,
+    };
+    let tolerance = 1. / 64.;
+    let pair = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, tolerance)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(pair.pcurve.knots, pair.spatial.curve.knots);
+    for edge in pair.pcurve.control_points.windows(2) {
+        let u = (edge[0][0] + edge[1][0]) / 2.;
+        let v = (edge[0][1] + edge[1][1]) / 2.;
+        assert!((u - v * v).abs() <= tolerance);
+    }
+    let exact = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
+    assert!(matches!(exact.outcome, Err(Refusal::UnprovedIdentity)));
+}
+
+#[test]
+fn splits_an_original_cell_into_closed_complementary_sign_regions() {
+    use nurbs_core::{
+        editing::exact_projective::UvAxis,
+        trim::trim_domain::{Location, TrimDomain, exact_loop_joins},
+    };
+    let mut patch = surface(1, vec![-2., -2., 4., 4.], &[-1., 1.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-12,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let report = split_surface_cell_by_plane(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
+    let split = report.outcome.unwrap();
+    for (loops, x, other) in [(&split.negative, 0., 2.), (&split.positive, 2., 0.)] {
+        assert_eq!(exact_loop_joins(loops).unwrap(), Some(true));
+        let domain = TrimDomain::new(&[loops.to_vec()], 1e-8).unwrap();
+        let inside = domain.classify_point([x, 0.5], 100).unwrap();
+        assert_eq!(inside.location, Location::Inside);
+        assert_eq!(inside.winding, Some(1));
+        assert_eq!(
+            domain.classify_point([other, 0.5], 100).unwrap().location,
+            Location::Outside
+        );
+    }
+    assert_eq!(
+        split.negative[0].control_points,
+        split.section.pcurve.control_points
+    );
+    let reversed = split_surface_cell_by_plane(&patch, [0., 0., -1.], 0., options, 0.)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(
+        reversed.negative[0].control_points,
+        split.positive[0].control_points
+    );
+    assert_eq!(
+        reversed.positive[0].control_points,
+        split.negative[0].control_points
+    );
+    let limited = split_surface_cell_by_plane(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+        0.,
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn closes_corner_to_corner_trims_and_rejects_a_boundary_only_section() {
+    use nurbs_core::{
+        editing::exact_projective::UvAxis,
+        trim::trim_domain::{Location, TrimDomain, exact_loop_joins},
+    };
+    let mut diagonal = surface(1, vec![0., 0., 1., 1.], &[0., -1.]);
+    diagonal.weights = vec![vec![1.; 2]; 2];
+    diagonal.control_points[0][1][2] = 1.;
+    diagonal.control_points[1][1][2] = 0.;
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::V,
+        max_xyz_error: 1e-12,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let split = split_surface_cell_by_plane(&diagonal, [0., 0., 1.], 0., options, 0.)
+        .unwrap()
+        .outcome
+        .unwrap();
+    for (loops, point) in [
+        (&split.negative, [0.75, 0.25]),
+        (&split.positive, [0.25, 0.75]),
+    ] {
+        assert_eq!(exact_loop_joins(loops).unwrap(), Some(true));
+        assert_eq!(loops[1].control_points.len(), 3);
+        let d = TrimDomain::new(&[loops.to_vec()], 1e-8)
+            .unwrap()
+            .classify_point(point, 100)
+            .unwrap();
+        assert_eq!(d.location, Location::Inside);
+        assert_eq!(d.winding, Some(1));
+    }
+    let mut edge = surface(1, vec![0., 0., 1., 1.], &[0., 1.]);
+    edge.weights = vec![vec![1.; 2]; 2];
+    let report = split_surface_cell_by_plane(
+        &edge,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            solve_axis: UvAxis::U,
+            ..options
+        },
+        1e-6,
+    )
+    .unwrap();
+    assert!(matches!(report.outcome, Err(Refusal::UnprovedIdentity)));
+}
+
+fn repeated_seam_patch() -> Surface {
+    Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![-2., -2., 5., 5.],
+        knots_v: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        control_points: [[-1., -2., -1., -3., -1.], [2., 2., 2., 3., 2.]]
+            .into_iter()
+            .enumerate()
+            .map(|(i, row)| {
+                row.into_iter()
+                    .enumerate()
+                    .map(|(j, z)| vec![i as f64, j as f64, z])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1.; 5]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+
+#[test]
+fn stitches_a_nonbinary_section_root_across_a_repeated_original_knot() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = repeated_seam_patch();
+    let options = SurfacePlaneGraphStripOptions {
+        solve_axis: UvAxis::U,
+        solved_span: 1,
+        transverse_spans: [2, 4],
+        max_normalized_width: 1e-19,
+        max_work: WORK,
+    };
+    let report = stitch_surface_plane_graph_strip(&patch, [0., 0., 1.], 0., options).unwrap();
+    let strip = report.outcome.unwrap();
+    assert_eq!(
+        strip.cells.iter().map(|cell| cell.span).collect::<Vec<_>>(),
+        [[1, 2], [1, 4]]
+    );
+    let [junction] = strip.junctions.as_slice() else {
+        panic!("{:?}", strip.junctions);
+    };
+    assert_eq!(junction.transverse, 1.);
+    let exact = Q::new(1.into(), 3.into());
+    assert!(junction.solved[0] <= exact && exact <= junction.solved[1]);
+    assert!(
+        &junction.solved[1] - &junction.solved[0]
+            <= q(7) * Q::from_float(options.max_normalized_width).unwrap()
+    );
+    let flipped = stitch_surface_plane_graph_strip(&patch, [0., 0., -1.], 0., options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(flipped.junctions, strip.junctions);
+    let limited = stitch_surface_plane_graph_strip(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneGraphStripOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn refuses_a_strip_whose_continuation_lacks_a_graph() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = repeated_seam_patch();
+    patch.control_points[0][4][2] = 1.;
+    let options = SurfacePlaneGraphStripOptions {
+        solve_axis: UvAxis::U,
+        solved_span: 1,
+        transverse_spans: [2, 4],
+        max_normalized_width: 1e-12,
+        max_work: WORK,
+    };
+    let report = stitch_surface_plane_graph_strip(&patch, [0., 0., 1.], 0., options).unwrap();
+    assert_eq!(report.outcome, Err(Refusal::UnprovedIdentity));
+}
+
+#[test]
+fn shares_one_world_vertex_at_a_repeated_knot_and_retains_the_xyz_error_bound() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = repeated_seam_patch();
+    let options = SurfacePlaneWorldStripOptions {
+        strip: SurfacePlaneGraphStripOptions {
+            solve_axis: UvAxis::U,
+            solved_span: 1,
+            transverse_spans: [2, 4],
+            max_normalized_width: 1e-10,
+            max_work: WORK,
+        },
+        max_xyz_error: 0.02,
+        max_segments_per_cell: 128,
+    };
+    let report = approximate_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).unwrap();
+    let strip = report.outcome.unwrap();
+    let [first, second] = strip.cell_vertices.as_slice() else {
+        panic!("{:?}", strip.cell_vertices);
+    };
+    let joint = first[1];
+    assert_eq!(joint, second[0]);
+    assert_eq!(first[0], 0);
+    assert_eq!(second[1] + 1, strip.xyz.len());
+    assert_eq!(strip.uv.len(), strip.xyz.len());
+    assert_eq!(strip.uv[joint][1], q(1));
+    assert_eq!(strip.uv.iter().filter(|p| p[1] == q(1)).count(), 1);
+    assert_eq!(strip.xyz[joint][1], q(2));
+    let expected = Q::new(1.into(), 3.into());
+    let squared = (&strip.xyz[joint][0] - expected).pow(2) + strip.xyz[joint][2].pow(2);
+    for bound in &strip.cell_error_upper {
+        assert!(squared <= bound.pow(2));
+        assert!(bound <= &Q::from_float(options.max_xyz_error).unwrap());
+    }
+    let limited = approximate_surface_plane_strip_xyz(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn produces_no_partial_polyline_if_a_later_cell_lacks_a_branch() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = repeated_seam_patch();
+    patch.control_points[0][4][2] = 1.;
+    let result = approximate_surface_plane_strip_xyz(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                solve_axis: UvAxis::U,
+                solved_span: 1,
+                transverse_spans: [2, 4],
+                max_normalized_width: 1e-8,
+                max_work: WORK,
+            },
+            max_xyz_error: 0.02,
+            max_segments_per_cell: 128,
+        },
+    )
+    .unwrap();
+    assert_eq!(result.outcome, Err(Refusal::UnprovedIdentity));
+}
+
+fn periodic_section_patch() -> Surface {
+    let ring = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.], [1., 0.], [0., 1.]];
+    Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: (-2..=6).map(f64::from).collect(),
+        control_points: [-1., 2.]
+            .into_iter()
+            .map(|z| ring.iter().map(|&[x, y]| vec![x, y, z]).collect())
+            .collect(),
+        weights: vec![vec![1.; 6]; 2],
+        periodic_u: false,
+        periodic_v: true,
+    }
+}
+
+fn periodic_section_options() -> SurfacePlaneWorldStripOptions {
+    SurfacePlaneWorldStripOptions {
+        strip: SurfacePlaneGraphStripOptions {
+            solve_axis: nurbs_core::editing::exact_projective::UvAxis::U,
+            solved_span: 1,
+            transverse_spans: [2, 5],
+            max_normalized_width: 1e-10,
+            max_work: WORK,
+        },
+        max_xyz_error: 0.05,
+        max_segments_per_cell: 64,
+    }
+}
+
+#[test]
+fn closes_a_full_period_with_one_spatial_seam_vertex_and_two_original_uv_ends() {
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let report = close_periodic_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).unwrap();
+    let closed = report.outcome.unwrap();
+    assert_eq!(closed.strip.cells.len(), 4);
+    assert_eq!(closed.xyz.first(), closed.xyz.last());
+    assert_eq!(closed.uv.first().unwrap()[1], q(0));
+    assert_eq!(closed.uv.last().unwrap()[1], q(4));
+    assert_eq!(closed.uv.first().unwrap()[0], closed.uv.last().unwrap()[0]);
+    assert_eq!(
+        &closed.xyz[0][..2],
+        &[Q::new(1.into(), 2.into()), Q::new(1.into(), 2.into())]
+    );
+    assert!(
+        closed
+            .cell_error_upper
+            .iter()
+            .all(|q| q <= &Q::from_float(options.max_xyz_error).unwrap())
+    );
+    let exhausted = close_periodic_surface_plane_strip_xyz(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(exhausted.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn rejects_a_partial_period_or_an_open_chart_as_a_closed_section() {
+    let mut patch = periodic_section_patch();
+    let options = periodic_section_options();
+    assert!(
+        close_periodic_surface_plane_strip_xyz(
+            &patch,
+            [0., 0., 1.],
+            0.,
+            SurfacePlaneWorldStripOptions {
+                strip: SurfacePlaneGraphStripOptions {
+                    transverse_spans: [2, 4],
+                    ..options.strip
+                },
+                ..options
+            }
+        )
+        .is_err()
+    );
+    patch.periodic_v = false;
+    assert!(close_periodic_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).is_err());
+}
+
+#[test]
+fn stores_closed_periodic_curve_pairs_with_exact_rounded_joins() {
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let report =
+        store_periodic_surface_plane_section(&patch, [0., 0., 1.], 0., options, 0.05).unwrap();
+    let stored = report.outcome.unwrap();
+    assert_eq!(stored.uv_period, q(4));
+    assert_eq!(stored.pieces.len(), 4);
+    for (i, piece) in stored.pieces.iter().enumerate() {
+        assert_eq!(piece.pcurve.knots, piece.spatial.curve.knots);
+        assert_eq!(piece.pcurve.control_points[0][1], i as f64);
+        assert_eq!(
+            piece.pcurve.control_points.last().unwrap()[1],
+            (i + 1) as f64
+        );
+        assert_eq!(piece.spatial.plane_residual_upper, q(0));
+        assert!(piece.spatial.xyz_error_upper <= Q::from_float(options.max_xyz_error).unwrap());
+        let next = &stored.pieces[(i + 1) % stored.pieces.len()];
+        assert_eq!(
+            piece.spatial.curve.control_points.last(),
+            next.spatial.curve.control_points.first()
+        );
+        if i + 1 < stored.pieces.len() {
+            assert_eq!(
+                piece.pcurve.control_points.last(),
+                next.pcurve.control_points.first()
+            );
+        }
+    }
+    let limited = store_periodic_surface_plane_section(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+        0.05,
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn refuses_a_periodic_pair_when_the_lifted_curve_has_nonzero_gap_at_zero_tolerance() {
+    let patch = periodic_section_patch();
+    let result = store_periodic_surface_plane_section(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        periodic_section_options(),
+        0.,
+    )
+    .unwrap();
+    assert!(matches!(result.outcome, Err(Refusal::UnprovedIdentity)));
+}
+
+#[test]
+fn builds_two_complementary_trim_loops_for_the_full_period() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain, exact_loop_joins};
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let report =
+        split_periodic_surface_strip_by_plane(&patch, [0., 0., 1.], 0., options, 0.05).unwrap();
+    let trimmed = report.outcome.unwrap();
+    assert_eq!(trimmed.section.uv_period, q(4));
+    for (curves, inside, outside) in [
+        (&trimmed.negative, [0.1, 1.5], [0.8, 1.5]),
+        (&trimmed.positive, [0.8, 1.5], [0.1, 1.5]),
+    ] {
+        assert_eq!(curves.len(), trimmed.section.pieces.len() + 1);
+        assert_eq!(exact_loop_joins(curves).unwrap(), Some(true));
+        let domain = TrimDomain::new(&[curves.clone()], 1e-8).unwrap();
+        let sample = domain.classify_point(inside, 10_000).unwrap();
+        assert_eq!(sample.location, Location::Inside);
+        assert_eq!(sample.winding, Some(1));
+        assert_eq!(
+            domain.classify_point(outside, 10_000).unwrap().location,
+            Location::Outside
+        );
+    }
+    let limited = split_periodic_surface_strip_by_plane(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+        0.05,
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn reverses_periodic_trim_labels_when_the_plane_normal_flips() {
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let positive = split_periodic_surface_strip_by_plane(&patch, [0., 0., 1.], 0., options, 0.05)
+        .unwrap()
+        .outcome
+        .unwrap();
+    let negative = split_periodic_surface_strip_by_plane(&patch, [0., 0., -1.], 0., options, 0.05)
+        .unwrap()
+        .outcome
+        .unwrap();
+    for (a, b) in positive.negative.iter().zip(&negative.positive) {
+        assert_eq!(a.control_points, b.control_points);
+    }
+    for (a, b) in positive.positive.iter().zip(&negative.negative) {
+        assert_eq!(a.control_points, b.control_points);
+    }
+}
+
+#[test]
+fn caps_a_stored_periodic_section_with_a_simple_exact_plane_chart() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain, exact_loop_joins};
+    let patch = periodic_section_patch();
+    let stored = store_periodic_surface_plane_section(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        periodic_section_options(),
+        0.05,
+    )
+    .unwrap()
+    .outcome
+    .unwrap();
+    let edges: Vec<_> = stored
+        .pieces
+        .into_iter()
+        .map(|piece| piece.spatial.curve)
+        .collect();
+    let report = cap_surface_plane_section(&edges, [0., 0., 1.], 0., 0., WORK).unwrap();
+    let cap = report.outcome.unwrap();
+    assert_eq!(cap.boundary_gap_upper, q(0));
+    assert_eq!(cap.face.projection.omitted_axis, 2);
+    assert_eq!(cap.face.projection.retained_axes, [0, 1]);
+    assert_eq!(exact_loop_joins(&cap.face.loops[0]).unwrap(), Some(true));
+    let proof = TrimDomain::new(&cap.face.loops, 1e-9)
+        .unwrap()
+        .classify_point([0., 0.], 10_000)
+        .unwrap();
+    assert_eq!(proof.location, Location::Inside);
+    assert_eq!(proof.winding, Some(1));
+    let flipped = cap_surface_plane_section(&edges, [0., 0., -1.], 0., 0., WORK)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(flipped.face.projection.retained_axes, [1, 0]);
+    assert_ne!(flipped.reversed, cap.reversed);
+    let limited =
+        cap_surface_plane_section(&edges, [0., 0., 1.], 0., 0., report.work_used - 1).unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn certifies_projection_gap_and_refuses_a_self_crossing_cap() {
+    use nurbs_core::curve::Curve;
+    let z = 1. / 3.;
+    let polygon = |points: &[[f64; 2]]| {
+        Curve::from_polyline(points.iter().map(|&[x, y]| vec![x, y, z]).collect()).unwrap()
+    };
+    let square = polygon(&[[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]]);
+    let report =
+        cap_surface_plane_section(&[square.clone()], [0., 0., 3.], 1., 1e-15, WORK).unwrap();
+    let cap = report.outcome.unwrap();
+    let third = Q::new(1.into(), 3.into());
+    assert_eq!(cap.face.projection.offset, third);
+    assert_eq!(cap.boundary_gap_upper, third - Q::from_float(z).unwrap());
+    assert!(matches!(
+        cap_surface_plane_section(&[square], [0., 0., 3.], 1., 0., WORK)
+            .unwrap()
+            .outcome,
+        Err(Refusal::UnprovedIdentity)
+    ));
+    let bow = polygon(&[[0., 0.], [1., 1.], [0., 1.], [1., 0.], [0., 0.]]);
+    assert!(matches!(
+        cap_surface_plane_section(&[bow], [0., 0., 3.], 1., 1e-15, WORK)
+            .unwrap()
+            .outcome,
+        Err(Refusal::UnprovedIdentity)
+    ));
+}
+
+fn square_ring(lo: [f64; 2], hi: [f64; 2]) -> [nurbs_core::curve::Curve; 1] {
+    use nurbs_core::curve::Curve;
+    let [x0, y0] = lo;
+    let [x1, y1] = hi;
+    [Curve::from_polyline(vec![
+        vec![x0, y0, 0.],
+        vec![x1, y0, 0.],
+        vec![x1, y1, 0.],
+        vec![x0, y1, 0.],
+        vec![x0, y0, 0.],
+    ])
+    .unwrap()]
+}
+
+#[test]
+fn builds_a_cap_with_two_oriented_holes_and_preserves_material_between_them() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain};
+    let outer = square_ring([0., 0.], [10., 10.]);
+    let a = square_ring([1., 1.], [3., 3.]);
+    let b = square_ring([6., 6.], [8., 8.]);
+    let rings = [outer.as_slice(), a.as_slice(), b.as_slice()];
+    let report = cap_surface_plane_section_with_holes(&rings, [0., 0., 1.], 0., 0., WORK).unwrap();
+    let cap = report.outcome.unwrap();
+    assert_eq!(cap.reversed, [false, true, true]);
+    assert_eq!(cap.face.loops.len(), 3);
+    assert_eq!(cap.boundary_gap_upper, q(0));
+    let domain = TrimDomain::new(&cap.face.loops, 1e-9).unwrap();
+    for point in [[2., 2.], [7., 7.]] {
+        assert_eq!(
+            domain.classify_point(point, 1000).unwrap().location,
+            Location::Outside
+        );
+    }
+    let material = domain.classify_point([5., 5.], 1000).unwrap();
+    assert_eq!(material.location, Location::Inside);
+    assert_eq!(material.winding, Some(1));
+    let limited =
+        cap_surface_plane_section_with_holes(&rings, [0., 0., 1.], 0., 0., report.work_used - 1)
+            .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn refuses_touching_exterior_and_nested_hole_boundaries() {
+    let outer = square_ring([0., 0.], [10., 10.]);
+    let test = |rings: &[&[nurbs_core::curve::Curve]]| {
+        assert!(matches!(
+            cap_surface_plane_section_with_holes(rings, [0., 0., 1.], 0., 0., WORK)
+                .unwrap()
+                .outcome,
+            Err(Refusal::UnprovedIdentity)
+        ));
+    };
+    let exterior = square_ring([11., 11.], [12., 12.]);
+    test(&[&outer, &exterior]);
+    let touching = square_ring([0., 1.], [2., 2.]);
+    test(&[&outer, &touching]);
+    let big_hole = square_ring([1., 1.], [5., 5.]);
+    let nested = square_ring([2., 2.], [3., 3.]);
+    test(&[&outer, &big_hole, &nested]);
+    let adjacent = square_ring([5., 2.], [7., 3.]);
+    test(&[&outer, &big_hole, &adjacent]);
+}
+
+#[test]
+fn arranges_disconnected_and_nested_rings_in_any_input_order() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain};
+    let island_hole = square_ring([4., 4.], [5., 5.]);
+    let mut disjoint = square_ring([20., 20.], [22., 22.]);
+    disjoint[0].control_points.reverse();
+    let hole = square_ring([2., 2.], [8., 8.]);
+    let island = square_ring([3., 3.], [6., 6.]);
+    let outer = square_ring([0., 0.], [10., 10.]);
+    let rings = [
+        island_hole.as_slice(),
+        disjoint.as_slice(),
+        hole.as_slice(),
+        island.as_slice(),
+        outer.as_slice(),
+    ];
+    let report = arrange_surface_plane_section_caps(&rings, [0., 0., 1.], 0., 0., WORK).unwrap();
+    let arrangement = report.outcome.unwrap();
+    assert_eq!(arrangement.parents, [Some(3), None, Some(4), Some(2), None]);
+    assert_eq!(
+        arrangement
+            .regions
+            .iter()
+            .map(|r| r.rings.clone())
+            .collect::<Vec<_>>(),
+        [vec![1], vec![3, 0], vec![4, 2]]
+    );
+    assert_eq!(arrangement.regions[0].cap.reversed, [true]);
+    let material = |point| {
+        arrangement
+            .regions
+            .iter()
+            .filter(|region| {
+                TrimDomain::new(&region.cap.face.loops, 1e-9)
+                    .unwrap()
+                    .classify_point(point, 1000)
+                    .unwrap()
+                    .location
+                    == Location::Inside
+            })
+            .count()
+    };
+    assert_eq!(material([21., 21.]), 1);
+    assert_eq!(material([1., 1.]), 1);
+    assert_eq!(material([7., 7.]), 0);
+    assert_eq!(material([3.5, 3.5]), 1);
+    assert_eq!(material([4.5, 4.5]), 0);
+    let limited =
+        arrange_surface_plane_section_caps(&rings, [0., 0., 1.], 0., 0., report.work_used - 1)
+            .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn refuses_crossing_or_touching_inputs_to_cap_arrangement() {
+    let first = square_ring([0., 0.], [2., 2.]);
+    for second in [
+        square_ring([1., 1.], [3., 3.]),
+        square_ring([2., 2.], [3., 3.]),
+    ] {
+        let result =
+            arrange_surface_plane_section_caps(&[&first, &second], [0., 0., 1.], 0., 0., WORK)
+                .unwrap();
+        assert!(matches!(result.outcome, Err(Refusal::UnprovedIdentity)));
+    }
+}

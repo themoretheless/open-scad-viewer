@@ -1,11 +1,12 @@
 //! Surface constructors: patches, lofts, section-driven and transition surfaces.
+pub mod original_graph_transition;
 pub mod boundary_fill;
 pub mod catenoid;
 pub mod coons;
 pub mod extrusion_patches;
 pub mod function_surface;
 pub mod gordon;
-pub mod grid_spline;
+pub use crate::foundation::grid_spline;
 pub mod gregory_patch;
 pub mod helicoid;
 pub mod hermite_patch;

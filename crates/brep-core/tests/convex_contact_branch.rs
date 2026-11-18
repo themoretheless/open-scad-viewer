@@ -1,8 +1,4 @@
-use brep_core::{
-    Model,
-    fillet_contact::{self, Contact, convex_branch as b},
-    region_replacement::{self as r, EdgeRadius},
-};
+use brep_core::{Model, fillet_contact::{self, Contact, convex_branch as b}, region_replacement::{self as r, EdgeRadius}};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn fixture() -> (Model, EdgeRadius, Surface, [Contact; 2]) {
     fixture_spans([[0.25, 0.5, 0.75]; 2])
@@ -127,9 +123,11 @@ fn partial_curved_branch_binds_to_oblique_edge_on_two_original_triangular_faces(
             r,
             &skin,
             [&c[0], &c[1]],
-            10000,
-            10000,
-            1000000
+            fillet_contact::branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
         )
         .unwrap()
         .decision,
@@ -141,10 +139,12 @@ fn partial_curved_branch_binds_to_oblique_edge_on_two_original_triangular_faces(
         r,
         &skin,
         [&c[0], &c[1]],
-        10000,
-        10000,
-        1000000,
-        100000,
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -170,10 +170,12 @@ fn opposite_carrier_stale_geometry_and_work_exhaustion_refuse_partial_ownership(
         r,
         &skin,
         [&c[0], &c[1]],
-        10000,
-        10000,
-        1000000,
-        0,
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 0,
+        },
     )
     .unwrap();
     assert_eq!(exhausted.decision, b::Decision::Unresolved);
@@ -190,10 +192,12 @@ fn opposite_carrier_stale_geometry_and_work_exhaustion_refuse_partial_ownership(
             r,
             &changed,
             [&c[0], &c[1]],
-            10000,
-            10000,
-            1000000,
-            100000
+            b::BranchBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+                max_uv_work: 100000,
+            },
         )
         .unwrap()
         .decision,
@@ -220,10 +224,12 @@ fn opposite_carrier_stale_geometry_and_work_exhaustion_refuse_partial_ownership(
         r,
         &skin,
         [&c[0], &c[1]],
-        10000,
-        10000,
-        1000000,
-        100000,
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
     )
     .unwrap();
     assert_eq!(proof.decision, b::Decision::Unresolved);
@@ -242,8 +248,19 @@ fn elevated_multispan_affine_source_trim_keeps_exact_owned_clock() {
         }
     }
     source.rebuild_topology_ids();
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 10000, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::BoundPartial, "{}", report.reason);
     assert_eq!(report.common_source_clock, Some([[0.25, 0.25], [0.75, 0.75]]));
 }
@@ -309,8 +326,19 @@ fn nonlinear_source_clocks_return_inverse_brackets_not_affine_guesses() {
             source.rebuild_topology_ids();
         }
         let before = source.clone();
-        let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-            10000, 10000, 1000000, 100000).unwrap();
+        let report = b::inspect(
+            &source,
+            0,
+            request,
+            &skin,
+            [&contacts[0], &contacts[1]],
+            b::BranchBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+                max_uv_work: 100000,
+            },
+        ).unwrap();
         assert_eq!(report.decision, b::Decision::BoundPartial, "{}", report.reason);
         assert!(report.contacts.iter().all(|c| c.source_clock.as_ref().is_some_and(|r| r.proven)));
         let inverse = report.common_source_clock.unwrap();
@@ -334,8 +362,19 @@ fn nonlinear_source_clocks_return_inverse_brackets_not_affine_guesses() {
             assert!(guessed < bounds[0] || guessed > bounds[1]);
         }
         assert_eq!(source, before);
-        let exhausted = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-            10000, 10000, 1000000, report.uv_work - 1).unwrap();
+        let exhausted = b::inspect(
+            &source,
+            0,
+            request,
+            &skin,
+            [&contacts[0], &contacts[1]],
+            b::BranchBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+                max_uv_work: report.uv_work - 1,
+            },
+        ).unwrap();
         assert_eq!(exhausted.decision, b::Decision::Unresolved);
         assert!(exhausted.common_source_clock.is_none());
     }
@@ -356,8 +395,19 @@ fn stationary_source_clock_never_inherits_inverse_admission() {
     source.rebuild_topology_ids();
     assert!(fillet_contact::topology::inspect_source_edge(&source, 0, request,
         10000, 10000, 1000000).unwrap().proven);
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 64, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 64,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::Unresolved);
     assert!(report.common_source_clock.is_none());
     assert!(report.cells <= 64 && report.uv_work <= 100000);
@@ -379,8 +429,19 @@ fn source_parameter_rounding_cannot_publish_overlapping_endpoint_brackets() {
         }
     }
     source.rebuild_topology_ids();
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 10000, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::Unresolved);
     assert!(report.common_source_clock.is_none());
 }
@@ -391,8 +452,19 @@ fn unequal_neighbor_contact_extents_intersect_in_original_nonlinear_edge_clock()
     use num_traits::FromPrimitive;
     let (source, request, skin, contacts) = nonlinear_from_parts(1.,
         fixture_spans([[0.25, 0.5, 0.75], [0.375, 0.5, 0.625]]));
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 10000, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::BoundPartial, "{}", report.reason);
     let common = report.common_source_clock.unwrap();
     let q = |x| Q::from_f64(x).unwrap();
@@ -412,9 +484,18 @@ fn nonlinear_contact_roots_author_one_shared_middle_edge_on_both_original_faces(
     for weight in [1., 2.] {
     let (source, request, skin, contacts) = nonlinear_fixture(weight);
     let before = source.clone();
-    let out = interval::between_contacts(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "owned-contact-root-interval", 1e-8,
-        Default::default()).unwrap();
+    let out = interval::between_contacts(
+        interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
+        "owned-contact-root-interval",
+        1e-8,
+        Default::default(),
+    ).unwrap();
     assert_eq!(source, before);
     assert_eq!(out.model().edges[out.middle_edge()].vertices, out.endpoints());
     assert_ne!(out.endpoint_identities()[0], out.endpoint_identities()[1]);
@@ -437,16 +518,35 @@ fn stale_contact_skin_and_exhausted_root_refinement_leave_source_unchanged() {
     let before = source.clone();
     let mut limits = interval::Limits::default();
     limits.branch_uv_work = 0;
-    assert!(interval::between_contacts(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "no-root-work", 1e-8, limits).is_err());
+    assert!(interval::between_contacts(
+        interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
+        "no-root-work",
+        1e-8,
+        limits,
+    ).is_err());
     for row in &mut skin.control_points {
         for point in row { point[2] += 1.; }
     }
     // A caller's stale/forged flag cannot qualify changed literal geometry.
     for c in &mut contacts { c.positions.proven = true; }
-    assert!(interval::between_contacts(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "stale-contact-root", 1e-8,
-        Default::default()).is_err());
+    assert!(interval::between_contacts(
+        interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
+        "stale-contact-root",
+        1e-8,
+        Default::default(),
+    ).is_err());
     assert_eq!(source, before);
 }
 
@@ -477,9 +577,19 @@ fn root_bound_contacts_cut_both_supports_and_select_the_middle_edge_material_sec
     for weight in [1., 2.] {
         let (source, request, skin, contacts) = nonlinear_fixture(weight);
         let before = source.clone();
-        let result = face_cut::plan_contact_retention(&source, 0, request, &skin,
-            [&contacts[0], &contacts[1]], "root-contact-material", 1e-8, Default::default(),
-            |roots| Ok(contact_material_paths(&source, request, &contacts, roots))).unwrap();
+        let result = face_cut::plan_contact_retention(
+            brep_core::edge_partition::contact_interval::EdgeContacts {
+                source: &source,
+                shell: 0,
+                request,
+                skin: &skin,
+                contacts: [&contacts[0], &contacts[1]],
+            },
+            "root-contact-material",
+            1e-8,
+            Default::default(),
+            |roots| Ok(contact_material_paths(&source, request, &contacts, roots)),
+        ).unwrap();
         assert_eq!(source, before);
         assert_eq!(result.plan().regions.len(), 2);
         assert_eq!(result.plan().model.faces.len(), source.faces.len() + 2);
@@ -502,17 +612,13 @@ fn contact_material_plan_rejects_missing_actual_contact_and_wrong_retained_side(
     use brep_core::face_cut;
     let (source, request, skin, contacts) = nonlinear_fixture(1.);
     let before = source.clone();
-    let missing = face_cut::plan_contact_retention(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "missing-actual-contact", 1e-8, Default::default(),
-        |roots| {
+    let missing = face_cut::plan_contact_retention(brep_core::edge_partition::contact_interval::EdgeContacts { source: &source, shell: 0, request: request, skin: &skin, contacts: [&contacts[0], &contacts[1]] }, "missing-actual-contact", 1e-8, Default::default(), |roots| {
             let mut paths = contact_material_paths(&source, request, &contacts, roots);
             paths[0].curves.remove(1);
             Ok(paths)
         });
     assert!(matches!(missing, Err(e) if e.message.contains("Actual complete contact curve")));
-    let wrong_side = face_cut::plan_contact_retention(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "wrong-contact-material", 1e-8, Default::default(),
-        |roots| {
+    let wrong_side = face_cut::plan_contact_retention(brep_core::edge_partition::contact_interval::EdgeContacts { source: &source, shell: 0, request: request, skin: &skin, contacts: [&contacts[0], &contacts[1]] }, "wrong-contact-material", 1e-8, Default::default(), |roots| {
             let mut paths = contact_material_paths(&source, request, &contacts, roots);
             for (side, path) in paths.iter_mut().enumerate() {
                 let model = roots.model();
@@ -590,9 +696,19 @@ fn closed_straight_end_caps_do_not_inherit_g2_admission_from_contact_roots() {
     use brep_core::face_cut;
     let (source, request, skin, contacts) = nonlinear_fixture(1.);
     let before = source.clone();
-    let retention = face_cut::plan_contact_retention(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "stop-cap-g2-control", 1e-8, Default::default(),
-        |roots| Ok(contact_material_paths(&source, request, &contacts, roots))).unwrap();
+    let retention = face_cut::plan_contact_retention(
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
+        "stop-cap-g2-control",
+        1e-8,
+        Default::default(),
+        |roots| Ok(contact_material_paths(&source, request, &contacts, roots)),
+    ).unwrap();
     let limits = r::EmbeddedPatchLimits {
         construction: Default::default(), linear_cells: 100_000,
         global: brep_core::boundary_embedding::Limits {
@@ -610,9 +726,11 @@ fn closed_straight_end_caps_do_not_inherit_g2_admission_from_contact_roots() {
     let support_co = plan.model.loops[retained.outer].coedges.iter()
         .find(|co| co.edge == cap_co.edge).unwrap();
     let seam = nurbs_core::surface_g2_pcurves::inspect(
-        &plan.model.edges[cap_co.edge].curve, [&support_co.pcurve, &cap_co.pcurve],
-        [&retained.surface, &cap.surface], [support_co.reversed, cap_co.reversed],
-        source.tolerance_mm, 1e-5, 1e-4, 100_000, 1_000_000).unwrap();
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &plan.model.edges[cap_co.edge].curve, pcurves: [&support_co.pcurve, &cap_co.pcurve], surfaces: [&retained.surface, &cap.surface], reversed: [support_co.reversed, cap_co.reversed] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: source.tolerance_mm, normal: 1e-5, curvature: 1e-4 },
+        100_000,
+        1_000_000,
+    ).unwrap();
     assert!(seam.positions.proven);
     assert_eq!(seam.geometric.decision, nurbs_core::surface_join::Decision::CorrespondenceExceedsTolerance);
     eprintln!("stop_cap_g2 edge={} normal_lower={:?} position_upper={:?}", cap_co.edge,
@@ -622,8 +740,18 @@ fn closed_straight_end_caps_do_not_inherit_g2_admission_from_contact_roots() {
     let patches = authored.patches.iter().map(|p| r::SewPatch {
         surface: &p.surface, loops: &p.loops, reversed: p.reversed,
     }).collect::<Vec<_>>();
-    match r::sew_g2_patch_set(&plan.model, &selected, &authored.vertices, &authored.edges,
-        &patches, "closed-c0-not-g2", 1e-8, limits.construction) {
+    match r::sew_g2_patch_set(
+        &plan.model,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
+        "closed-c0-not-g2",
+        1e-8,
+        limits.construction,
+    ) {
         Err(e) => {
             assert!(e.message.contains("G2 interfaces"), "{e:?}");
             assert!(e.message.contains("edge=") && e.message.contains("cells="),"{e:?}");
@@ -660,9 +788,19 @@ fn coplanar_retained_supports_do_not_inherit_a_sharp_endpoint_obstruction() {
     let split = face_cut::partition(&source, face, endpoints, &[segment], 1e-8, 100_000).unwrap();
     let request = EdgeRadius { edge: split.edges[0], radius_mm: 1. };
     let (source, request, skin, contacts) = fixture_for_edge(split.model, request, [[0.25,0.5,0.75];2], 0.125);
-    let retention = face_cut::plan_contact_retention(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "coplanar-end-control", 1e-8, Default::default(),
-        |roots| Ok(contact_material_paths(&source, request, &contacts, roots))).unwrap();
+    let retention = face_cut::plan_contact_retention(
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
+        "coplanar-end-control",
+        1e-8,
+        Default::default(),
+        |roots| Ok(contact_material_paths(&source, request, &contacts, roots)),
+    ).unwrap();
     let diagnostic = r::inspect_contact_end_normals(&retention).unwrap();
     assert!(!diagnostic.needs_expansion());
     assert!(diagnostic.ends.iter().all(|end|
@@ -674,9 +812,7 @@ fn coplanar_retained_supports_do_not_inherit_a_sharp_endpoint_obstruction() {
 fn endpoint_normal_witnesses_keep_source_face_roles_when_cut_order_reverses() {
     use brep_core::face_cut;
     let (source, request, skin, contacts) = nonlinear_fixture(1.);
-    let build = |reverse: bool| face_cut::plan_contact_retention(&source, 0, request, &skin,
-        [&contacts[0], &contacts[1]], "end-normal-role-order", 1e-8, Default::default(),
-        |roots| {
+    let build = |reverse: bool| face_cut::plan_contact_retention(brep_core::edge_partition::contact_interval::EdgeContacts { source: &source, shell: 0, request: request, skin: &skin, contacts: [&contacts[0], &contacts[1]] }, "end-normal-role-order", 1e-8, Default::default(), |roots| {
             let mut paths = contact_material_paths(&source, request, &contacts, roots);
             if reverse { paths.reverse(); }
             Ok(paths)
@@ -709,9 +845,19 @@ fn endpoint_obstruction_is_preserved_by_a_rigid_world_pose() {
             for c in &mut contacts { for p in &mut c.curve.control_points { pose(p); } }
             source.rebuild_topology_ids();
         }
-        let retention = face_cut::plan_contact_retention(&source, 0, request, &skin,
-            [&contacts[0], &contacts[1]], "posed-end-normal-control", 1e-8, Default::default(),
-            |roots| Ok(contact_material_paths(&source, request, &contacts, roots))).unwrap();
+        let retention = face_cut::plan_contact_retention(
+            brep_core::edge_partition::contact_interval::EdgeContacts {
+                source: &source,
+                shell: 0,
+                request,
+                skin: &skin,
+                contacts: [&contacts[0], &contacts[1]],
+            },
+            "posed-end-normal-control",
+            1e-8,
+            Default::default(),
+            |roots| Ok(contact_material_paths(&source, request, &contacts, roots)),
+        ).unwrap();
         let diagnostic = r::inspect_contact_end_normals(&retention).unwrap();
         assert!(diagnostic.needs_expansion());
         gaps.push(diagnostic.ends.iter().map(|e| e.unsigned_normal_gap_lower.unwrap()).collect::<Vec<_>>());
@@ -724,8 +870,17 @@ fn reversed_contact_traversal_preserves_original_shared_root_ownership() {
     for (source, request, skin, contacts) in [fixture(), nonlinear_fixture(1.), nonlinear_fixture(0.5)] {
     let before = source.clone();
     let base = brep_core::edge_partition::contact_interval::between_contacts(
-        &source,0,request,&skin,[&contacts[0],&contacts[1]],
-        "orientation-independent-roots",1e-8,Default::default()).unwrap();
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0],&contacts[1]],
+        },
+        "orientation-independent-roots",
+        1e-8,
+        Default::default(),
+    ).unwrap();
     for flags in [[true,false],[false,true],[true,true]] {
         let mut changed=contacts.clone();
         for side in 0..2 {
@@ -736,8 +891,17 @@ fn reversed_contact_traversal_preserves_original_shared_root_ownership() {
             }
         }
         let actual=brep_core::edge_partition::contact_interval::between_contacts(
-            &source,0,request,&skin,[&changed[0],&changed[1]],
-            "orientation-independent-roots",1e-8,Default::default()).unwrap();
+            brep_core::edge_partition::contact_interval::EdgeContacts {
+                source: &source,
+                shell: 0,
+                request,
+                skin: &skin,
+                contacts: [&changed[0],&changed[1]],
+            },
+            "orientation-independent-roots",
+            1e-8,
+            Default::default(),
+        ).unwrap();
         assert_eq!(actual.root_parameters(),base.root_parameters());
         assert_eq!(actual.model(),base.model());
         for side in 0..2 {
@@ -760,9 +924,19 @@ fn material_cuts_keep_literal_contacts_with_independent_reversed_traversals() {
             c[side].support_pcurve=c[side].support_pcurve.reverse().unwrap();
             c[side].fillet_pcurve=c[side].fillet_pcurve.reverse().unwrap();
         }}
-        let retained=brep_core::face_cut::plan_contact_retention(&source,0,request,&skin,
-            [&c[0],&c[1]],"reversed-material",1e-8,Default::default(),
-            |roots|Ok(contact_material_paths(&source,request,&c,roots))).unwrap();
+        let retained=brep_core::face_cut::plan_contact_retention(
+            brep_core::edge_partition::contact_interval::EdgeContacts {
+                source: &source,
+                shell: 0,
+                request,
+                skin: &skin,
+                contacts: [&c[0],&c[1]],
+            },
+            "reversed-material",
+            1e-8,
+            Default::default(),
+            |roots|Ok(contact_material_paths(&source,request,&c,roots)),
+        ).unwrap();
         for region in &retained.plan().regions {
             assert_eq!(region.discard_faces.len(),1);
             assert_eq!(region.retained_faces.len(),1);
@@ -781,9 +955,19 @@ fn unequal_contact_extents_use_fresh_partitions_and_keep_outside_edge_pieces() {
     let (source,request,skin,c)=nonlinear_from_parts(1.,
         fixture_spans([[0.25,0.5,0.75],[0.375,0.5,0.625]]));
     let before=source.clone();
-    let p=brep_core::face_cut::plan_contact_retention(&source,0,request,&skin,
-        [&c[0],&c[1]],"unequal-material-extents",1e-8,Default::default(),
-        |roots|Ok(contact_material_paths(&source,request,&c,roots))).unwrap();
+    let p=brep_core::face_cut::plan_contact_retention(
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&c[0],&c[1]],
+        },
+        "unequal-material-extents",
+        1e-8,
+        Default::default(),
+        |roots|Ok(contact_material_paths(&source,request,&c,roots)),
+    ).unwrap();
     assert_ne!(p.roots().branch().contacts[0].source_clock_interval,p.roots().root_parameters());
     for region in &p.plan().regions {
         for &edge in p.roots().partition().edges() {

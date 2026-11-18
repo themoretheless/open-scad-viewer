@@ -75,13 +75,10 @@ pub(crate) fn push_cs_overlap(
 /// Exact parameter-corner contact admission for curve/ruled-surface boxes.
 /// Curve-domain endpoints are admitted on distance alone; interior contacts
 /// need a transverse crossing so grazing corner touches stay unresolved.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn admit_cs_corner(
     curve: &Curve,
     surface: &Surface,
-    t: f64,
-    u: f64,
-    v: f64,
+    [t, u, v]: [f64; 3],
     options: Options,
     report: &mut Report<CurveRuledSurfaceComponent>,
 ) -> Result<bool> {

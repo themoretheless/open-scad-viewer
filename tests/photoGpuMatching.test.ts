@@ -1,22 +1,31 @@
-import {describe, expect, it, vi} from 'vitest'
-import {parseMatchingPayload, runGpuMatching} from '../src/services/photogrammetry/gpuMatching'
-import type {GpuComputeJob} from '../src/services/webgpuCompute'
+import { describe, expect, it, vi } from 'vitest'
+import { parseMatchingPayload, runGpuMatching } from '../src/app/photogrammetry/gpuMatching'
+import type { GpuComputeJob } from '../src/render/webgpuCompute'
 
-vi.mock('../src/services/webgpuCompute', () => ({
+vi.mock('../src/render/webgpuCompute', () => ({
   runGpuCompute: vi.fn(),
 }))
 
-import {runGpuCompute} from '../src/services/webgpuCompute'
+import { runGpuCompute } from '../src/render/webgpuCompute'
 
 /** Builds a minimal MAT1 blob matching the kernel's pack_payload layout. */
 function payload(): Uint8Array {
   const counts = [2, 3, 1]
-  const pairs: [number, number][] = [[0, 1], [0, 2]]
+  const pairs: [number, number][] = [
+    [0, 1],
+    [0, 2],
+  ]
   const bytes = new Uint8Array(4 * 1024)
   const view = new DataView(bytes.buffer)
   let at = 0
-  const u32 = (v: number) => { view.setUint32(at, v >>> 0, true); at += 4 }
-  const f32 = (v: number) => { view.setFloat32(at, v, true); at += 4 }
+  const u32 = (v: number) => {
+    view.setUint32(at, v >>> 0, true)
+    at += 4
+  }
+  const f32 = (v: number) => {
+    view.setFloat32(at, v, true)
+    at += 4
+  }
   u32(0x314d4154) // 'MAT1'
   u32(counts.length)
   u32(pairs.length)
@@ -26,7 +35,10 @@ function payload(): Uint8Array {
   for (const count of counts) {
     for (let i = 0; i < count * 128; i++) f32((seed += 0.001) % 1)
   }
-  for (const [a, b] of pairs) { u32(a); u32(b) }
+  for (const [a, b] of pairs) {
+    u32(a)
+    u32(b)
+  }
   return bytes.slice(0, at)
 }
 
@@ -38,7 +50,10 @@ describe('matching payload parser', () => {
     expect(parsed.featureCounts).toEqual([2, 3, 1])
     expect(parsed.featureOffset).toEqual([0, 2, 5])
     expect(parsed.descriptors.length).toBe(6 * 128)
-    expect(parsed.pairs).toEqual([[0, 1], [0, 2]])
+    expect(parsed.pairs).toEqual([
+      [0, 1],
+      [0, 2],
+    ])
   })
 
   it('rejects a bad magic and a bad descriptor stride', () => {
@@ -71,8 +86,10 @@ describe('gpu matching dispatch', () => {
 
     const first = job.dispatches[0]!
     expect(first.workgroups).toEqual([2 + 3, 1, 1])
-    const data=first.buffers[0]!.data!
-    const params=ArrayBuffer.isView(data)?new DataView(data.buffer,data.byteOffset,data.byteLength):new DataView(data as ArrayBuffer)
+    const data = first.buffers[0]!.data!
+    const params = ArrayBuffer.isView(data)
+      ? new DataView(data.buffer, data.byteOffset, data.byteLength)
+      : new DataView(data as ArrayBuffer)
     expect(params.getUint32(0, true)).toBe(2)
     expect(params.getUint32(4, true)).toBe(3)
     expect(params.getUint32(8, true)).toBe(0) // image 0 offset
@@ -84,8 +101,10 @@ describe('gpu matching dispatch', () => {
 
     const second = job.dispatches[1]!
     expect(second.workgroups).toEqual([2 + 1, 1, 1])
-    const data2=second.buffers[0]!.data!
-    const params2=ArrayBuffer.isView(data2)?new DataView(data2.buffer,data2.byteOffset,data2.byteLength):new DataView(data2 as ArrayBuffer)
+    const data2 = second.buffers[0]!.data!
+    const params2 = ArrayBuffer.isView(data2)
+      ? new DataView(data2.buffer, data2.byteOffset, data2.byteLength)
+      : new DataView(data2 as ArrayBuffer)
     expect(params2.getUint32(12, true)).toBe(5) // image 2 offset
 
     expect(result.length).toBe(2 * 12 + 3 * 8 + 2 * 12 + 1 * 8)

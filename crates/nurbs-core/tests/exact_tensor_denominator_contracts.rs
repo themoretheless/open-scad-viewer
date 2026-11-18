@@ -4,7 +4,7 @@
 use num_rational::BigRational as Q;
 use nurbs_core::{curve::Curve, editing::exact_knot_insertion as curve_edit};
 #[allow(dead_code)]
-#[path = "../src/core/bounded_rational.rs"]
+#[path = "../../nurbs-geometry/src/bounded_rational.rs"]
 pub(crate) mod bounded_rational;
 mod core {
     pub(crate) use crate::bounded_rational;

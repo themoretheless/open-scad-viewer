@@ -1,3 +1,4 @@
+#![allow(dead_code)] // shared by several test targets; each one uses a subset
 use super::Surface;
 /// C(q)=10(q^5,q^2+q/4), q=2u-1. Every authored pole is dyadic.
 /// X has a fourth-order critical projection at q=0, while Y'=5/2 there.

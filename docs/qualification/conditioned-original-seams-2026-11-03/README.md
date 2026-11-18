@@ -1,0 +1,15 @@
+# Conditioned original seams and internal central joins — 2026-11-03
+
+Status: partial native implementation; the bounded-profile corner is not admitted as a closed G2 body.
+
+The complete original-source seam comparison retains candidate coefficients in their original parameter span. Active source-cell intersections restrict the query domain without reauthoring coefficients on root-width bands. Original support traces are composed directly in that candidate clock and centered on a nearby actual candidate control point. Literal axial products may omit the stationary parameter only after checking their exact coefficient structure. Nonproducts retain the full original two-parameter expression.
+
+Positive derivative clocks scale first and second jets and their correlated residuals consistently. The rank-one extrusion tensor bound applies only to literal product jets. Whole-cell interval comparisons remain mandatory; point proposals cannot grant acceptance. Rejection witnesses must belong to the original source knot cell, including outward root-overlap bands. No geometry or requested tolerance is changed by this arithmetic conditioning.
+
+On the origin-zero 10-mm cube, radii 0.1/0.2/0.35 mm and central handle 1/256 mm, all six original exterior seams now pass. For curved seams 0/2/4, tensor-error upper bounds are respectively 9.130740943014994e-6, 5.531284232144345e-5 and 4.270361213962353e-6 mm^-1, below the unchanged relative tensor tolerance 1e-4. Each has zero pending cells. Plane seams 1/3/5 have zero tensor discrepancy.
+
+This is not a whole-body G2 certificate. All eight original central U joins reject with `CorrespondenceExceedsTolerance`, both without and with positive derivative conditioning. The first join at U=1/9 has a tensor-error lower bound above 238 mm^-1; several other joins already have a normal discrepancy. These are geometric counterexamples, not merely exhausted work. Independent row composition with incompatible cross-parameter speeds does not preserve the internal shape operator, even when exterior boundaries pass. A replacement central construction must reconcile the parameter jets of all rows and then pass fresh original-surface checks.
+
+Sewing retains the G2 gate and now identifies the exterior seam or interior knot and its normal/tensor bounds in the refusal. A regression checks that all six passing exterior seams cannot admit this internally defective corner. Source geometry must remain unchanged after the refused attempt. All 38 surface-G2 tests and 37 region-replacement tests passed (75 total), including that rejection and negative cases for altered curvature, zero speed, source-cell endpoint bands and subnormal departures from literal product structure.
+
+The absolute principal-curvature cap 10 mm^-1 is separate from the relative seam tensor tolerance. No new closed-body, cap, thickness, global self-intersection, WASM, worker, UI or STEP qualification is claimed. See `review.json` and `native-results.txt` for the exact native checks and source hashes.

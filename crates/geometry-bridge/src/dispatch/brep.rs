@@ -1,7 +1,28 @@
 //! Bridge operations of the `brep` family.
 use crate::*;
+#[path="brep_closed_ss.rs"]
+mod closed_ss;
 
 const OPS: &[&str] = &[
+    "brep_partition_closed_ss", "brep_partition_all_closed_ss",
+    "brep_audit_exact_periodic_trim_contour",
+    "brep_measure_exact_periodic_trim_range",
+    "brep_locate_exact_periodic_trim_contour_station",
+    "brep_enclose_exact_periodic_trim_contour_station",
+    "brep_divide_exact_periodic_trim_contour_by_length",
+    "brep_bound_exact_periodic_trim_patch_area",
+    "brep_measure_exact_periodic_trim_surface_area",
+    "brep_measure_exact_periodic_trim_surface_mass_properties",
+    "brep_measure_exact_periodic_trim_patch_set_mass_properties",
+    "brep_measure_exact_periodic_trim_patch_set_density",
+    "brep_measure_exact_periodic_trim_window_mass_properties",
+    "brep_bound_exact_periodic_trim_directional_area",
+    "brep_build_exact_periodic_trim_sheet",
+    "brep_build_exact_periodic_trim_sheet_with_bindings",
+    "brep_build_exact_periodic_trim_sheet_with_input_bindings",
+    "brep_qualify_periodic_band", "brep_intersect_periodic_stock_band",
+    "brep_qualify_isolated_ss_contact",
+    "brep_assemble_closed_ss_boolean", "brep_assemble_closed_ss_network_boolean",
     "brep_profile_normalize","brep_profile_cleanup","brep_nurbs_bezier_profiles_extrude",
     "minkowski_3d_certify",
     "minkowski_3d_verify",
@@ -77,6 +98,28 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_partition_closed_ss" => closed_ss::partition(v),
+        "brep_bound_exact_periodic_trim_directional_area" => brep::exact_periodic_trim_directional_area_request(&v),
+        "brep_measure_exact_periodic_trim_window_mass_properties" => brep::exact_periodic_trim_surface_window_mass_request(&v),
+        "brep_measure_exact_periodic_trim_patch_set_density" => brep::exact_periodic_trim_patch_set_density_request(&v),
+        "brep_measure_exact_periodic_trim_patch_set_mass_properties" => brep::exact_periodic_trim_patch_set_mass_request(&v),
+        "brep_measure_exact_periodic_trim_surface_mass_properties" => brep::exact_periodic_trim_surface_mass_properties_request(&v),
+        "brep_measure_exact_periodic_trim_surface_area" => brep::exact_periodic_trim_surface_area_request(&v),
+        "brep_bound_exact_periodic_trim_patch_area" => brep::exact_periodic_trim_patch_area_request(&v),
+        "brep_divide_exact_periodic_trim_contour_by_length" => brep::exact_periodic_trim_contour_division_request(&v),
+        "brep_enclose_exact_periodic_trim_contour_station" => brep::exact_periodic_trim_contour_station_bounds_request(&v),
+        "brep_locate_exact_periodic_trim_contour_station" => brep::exact_periodic_trim_contour_station_request(&v),
+        "brep_measure_exact_periodic_trim_range" => brep::exact_periodic_trim_range_length_request(&v),
+        "brep_audit_exact_periodic_trim_contour" => brep::exact_periodic_trim_contour_audit_request(&v),
+        "brep_build_exact_periodic_trim_sheet" => brep::exact_periodic_trim_sheet_request(&v),
+        "brep_build_exact_periodic_trim_sheet_with_input_bindings" => brep::exact_periodic_trim_sheet_input_bindings_request(&v),
+        "brep_build_exact_periodic_trim_sheet_with_bindings" => brep::exact_periodic_trim_sheet_bindings_request(&v),
+        "brep_qualify_periodic_band" => closed_ss::qualify_periodic_band(v),
+        "brep_intersect_periodic_stock_band" => closed_ss::intersect_periodic_stock_band(v),
+        "brep_qualify_isolated_ss_contact" => closed_ss::qualify_isolated_contact(v),
+        "brep_assemble_closed_ss_boolean" => closed_ss::assemble_boolean(v, false),
+        "brep_assemble_closed_ss_network_boolean" => closed_ss::assemble_boolean(v, true),
+        "brep_partition_all_closed_ss" => closed_ss::network(v),
         "brep_boundary_certificate" => cad_boundary_certificate::inspect(v),
         "brep_nurbs_bezier_profiles_extrude"=>extrude_profiles(v),
         "minkowski_3d_certify" | "minkowski_3d_verify" | "minkowski_nurbs_certify" | "minkowski_nurbs_verify" | "nurbs_source_atlas_certify" | "nurbs_source_atlas_verify" => cad_minkowski3d::dispatch(v),

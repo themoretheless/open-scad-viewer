@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0599",
+  "testedBase": "9751e1591efd2536addadcad28398676b844efb1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 198,
+  "scope": [
+    "Expose signed YZ, ZX and XY area bounds with hole subtraction and cell diagnostics.",
+    "Verify hole subtraction, coarse certified bounds, initial-cell shortages and unavailable faces through the binary ABI."
+  ],
+  "logSha256": "e096e9d3f1380f8de6ce6058adfef886e2027add95664cf8121faba0a1e86c20",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "8b594f13535cc151deaa94e16a88d94d3d9ce9e85fe6a783ac787921d36ba0b6",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "dcd74e32efe5b75251d98a5b2771ce8fe6dafdec1a69b7d58e2b0c87fd87cc83",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "701532924ec5e1d9fc7136e37917b74ff0118b130eb6907ea41fc8fdcc8c7f5e",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "a995bcc20392a3ebd05f983cd54fd89b12724cea6271f2dc71d857c608fe71bc"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

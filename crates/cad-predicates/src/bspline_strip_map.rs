@@ -1,5 +1,5 @@
 //! Authored-map proof, independent of source graph/inverse chart families.
-use crate::bspline_internal_jets::{Rational as Q, Series};
+use crate::bspline_internal_jets::{Rational as Q, Series, StripJets};
 use crate::bspline_strip_nonlinear as p;
 use crate::{
     Algebra, AuthoredScalar, BezierIdentity, BsplineParameterMap, Expansion, LeafRef,
@@ -102,37 +102,27 @@ pub(crate) fn span(
 }
 pub(crate) fn compare(
     ctx: &mut PredicateContext<'_>,
-    jets: &[Vec<Series>],
+    strips: StripJets<'_>,
     knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
     map: BsplineParameterMap<'_>,
-    scale: &Q,
-    order: usize,
     constant_position: bool,
 ) -> Result<BezierIdentity, Reason> {
-    compare_impl(
-        ctx,
-        jets,
-        knots,
-        degrees,
-        map,
-        scale,
-        order,
-        constant_position,
-        false,
-    )
+    compare_impl(ctx, strips, knots, map, constant_position, false)
 }
 fn compare_impl(
     ctx: &mut PredicateContext<'_>,
-    jets: &[Vec<Series>],
+    strips: StripJets<'_>,
     knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
     map: BsplineParameterMap<'_>,
-    scale: &Q,
-    order: usize,
     constant_position: bool,
     restriction: bool,
 ) -> Result<BezierIdentity, Reason> {
+    let StripJets {
+        jets,
+        degrees,
+        scale,
+        order,
+    } = strips;
     let u = [
         normalized(ctx, knots[0], jets[0].len(), degrees[0])?,
         normalized(ctx, knots[1], jets[1].len(), degrees[1])?,
@@ -375,12 +365,14 @@ fn mapped_curve_impl(
         }
         compare_impl(
             ctx,
-            &jets,
+            StripJets {
+                jets: &jets,
+                degrees,
+                scale: &one(),
+                order: 0,
+            },
             knots,
-            degrees,
             map,
-            &one(),
-            0,
             constant,
             restriction,
         )

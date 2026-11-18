@@ -1,27 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import {
-  geometryExportEligibility,
-  planGeometryPublication,
-} from '../src/services/buildPromotionPolicy'
+import { geometryExportEligibility, planGeometryPublication } from '../src/app/buildPromotionPolicy'
 
 const current = { buildGeneration: 4, source: 'sphere(5);' }
 
 describe('preview/full publication policy', () => {
   it('promotes an equivalent preview without requesting a duplicate full build', () => {
     expect(planGeometryPublication({ ...current, quality: 'preview', reduced: false }, current)).toEqual({
-      publish: true, effectiveQuality: 'full', requestFull: false, promoted: true,
+      publish: true,
+      effectiveQuality: 'full',
+      requestFull: false,
+      promoted: true,
     })
   })
 
   it('publishes a reduced preview and requests exactly one full continuation', () => {
     expect(planGeometryPublication({ ...current, quality: 'preview', reduced: true }, current)).toEqual({
-      publish: true, effectiveQuality: 'preview', requestFull: true, promoted: false,
+      publish: true,
+      effectiveQuality: 'preview',
+      requestFull: true,
+      promoted: false,
     })
   })
 
   it('publishes a current full result without another continuation', () => {
     expect(planGeometryPublication({ ...current, quality: 'full', reduced: false }, current)).toEqual({
-      publish: true, effectiveQuality: 'full', requestFull: false, promoted: false,
+      publish: true,
+      effectiveQuality: 'full',
+      requestFull: false,
+      promoted: false,
     })
   })
 
@@ -30,7 +36,10 @@ describe('preview/full publication policy', () => {
     { buildGeneration: current.buildGeneration, source: 'cube(1);' },
   ])('ignores a result outside the exact current target: %o', candidate => {
     expect(planGeometryPublication({ ...candidate, quality: 'preview', reduced: false }, current)).toEqual({
-      publish: false, effectiveQuality: null, requestFull: false, promoted: false,
+      publish: false,
+      effectiveQuality: null,
+      requestFull: false,
+      promoted: false,
     })
   })
 })

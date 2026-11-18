@@ -1,5 +1,5 @@
 use super::*;
-use crate::{numerics::curve_jets, surface_measure::jets};
+use crate::{distance::curve_jets, surface_measure::jets};
 fn derivative(
     pc: &Curve,
     s: &Surface,

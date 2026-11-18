@@ -1,0 +1,47 @@
+{
+  "status": "passed-focused-native",
+  "baseCommit": "bd63c4a63a0d0f00519876ed958080d6a33fd023",
+  "predicateTests": 24,
+  "nativeTests": 44,
+  "newTests": 14,
+  "sourceContract": "original positive-weight nonperiodic 3D C0 B-spline curve, degree 1..25; authored homogeneous quadric Q and up to 16 exact constant products",
+  "predicate": "rational_bspline_quadric_roots",
+  "nativeApi": "original_quadric_carrier_roots",
+  "proof": "Original homogeneous Bernstein power polynomial on clamped spans; exact original homogeneous derivatives and positive denominator clearing on general spans; H^T Q H plus authored constant products; exact scalar root isolation and multiplicities up to 50. No fitted poles or rounded radius squares.",
+  "verified": [
+    "sphere transverse roots, tangency, exterior absence, endpoints",
+    "cylinder and nonsymmetric cross-term matrix",
+    "original rational source weights/nonbinary roots",
+    "unclamped original B-spline span",
+    "exact rational circle coincidence",
+    "authored radius product distinct from rounded squared radius",
+    "degree-25 source and multiplicity-50 implicit endpoint root",
+    "natural source parameter boxes/world bounds",
+    "shared knot keeps distinct one-sided residual orders",
+    "span/global work budgets and coincidence retain missing isolated-root coverage",
+    "periodic/non-3D/discontinuous native source rejection"
+  ],
+  "rawWasmQualified": false,
+  "bridgeAvailable": false,
+  "finiteSurfaceUvAdmission": false,
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "installedPackageUpdated": false,
+  "sharedLibraryGate": "Not rerun; previous working-tree curvature test failure remains a separate unresolved qualification item.",
+  "remaining": [
+    "native bridge/client/Worker exposure and actual raw WASM qualification",
+    "match original target surface quadric identity and prove finite UV membership/all parameter branches",
+    "general freeform targets and surface/surface branch completeness",
+    "periodic/poles and coincident components",
+    "trim/Body/Boolean admission and production integration"
+  ],
+  "sourceSha256": {
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "efa8235d0b112968a3998ca08a52cad8859b44e690e76fb230ad2895506b099e",
+    "crates/cad-predicates/src/bspline_plane_roots/quadric.rs": "3b8d41e2a09a98ef27aa84dd7cb5e2aeb9cefae511c1432a37f388bd610cf1e7",
+    "crates/cad-predicates/tests/original_quadric_roots.rs": "322b03d0d746a70687cef8f9f11d698986887eb1d451734db6e13c27388172b6",
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "439c3688840a7cca1adc8336132d56f8d12b98ab3c2a8d789f4caa86fab9c8c6",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_carrier.rs": "31d5f3cb49557a8763619f12d44681b07d86a85b8d5edcdb4b085e91122af084",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_carrier/merge.rs": "c7b7f397fc0d5873476c9894bfe75a47544492b5a64b430f6e2e34ae523a237d",
+    "crates/nurbs-core/tests/original_quadric_carrier.rs": "901adc4064249d433762b2fd0d16b65315cd668f27945f99d5d568d213f894c7"
+  }
+}

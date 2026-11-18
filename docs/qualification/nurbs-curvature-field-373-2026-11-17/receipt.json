@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0373",
+  "testedBase": "a303fa26420a24a12008bf8a34c987417be0c204",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 74,
+  "scope": [
+    "Build a planar trimmed cap from a simple closed section edge chain with a continuous boundary gap certificate.",
+    "The dominant normal defines an exact support chart. Rational segment predicates and signed area certify a simple oriented cap loop. Affine lift bounds each entire edge by its endpoint gap."
+  ],
+  "logSha256": "e12c7268170c6dd184bba484986eb68c8fe9938183606868020ceab4bde876b0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "1210d6651d2645798c2252d87350accdded96141ed0f4066f0047ee149b1de00",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "7245c5a1d26b75a9c95911314902ced19c37ceb5c1eb1dfe8020e320f7590dbc",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "f2efad1751d3f13c69092fb4be0af3f398537d6f6dd02e8e5b5b15bd14f6369d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs": "a5e5d9fe765ff34521cb0e410910e8db9bf21031c1fa840fd966b0910660b202",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/nurbs-core/src/analysis/planar_trim_projection.rs": "fdc9dd186809cbd4770ca75512992de6312ee09c7699e14640719e23e0e7fe55"
+  }
+}

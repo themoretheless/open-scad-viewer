@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0522",
+  "testedBase": "3da3a921d32c7c923ce63ec96efbe08e8bc300ac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 101,
+  "scope": [
+    "Reconcile proportional boundary weights using one exact scale per strip before periodic assembly.",
+    "Reconcile the rational weights with one exact scale across each complete tensor and verify the internal joins and final wrap."
+  ],
+  "logSha256": "f433862b687d5668fe9f7041db476a2878e2b6f9deb6c587963257d0d17df3f7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "563d7cc18c8d544261d2e440f9bd2e500e2158e3a42687d19c75507f58b19c72",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "01ac88853d7be4b2571dfd4b0cbbea55b9b8ecb96033bdee965a96fcadebf60c"
+  }
+}

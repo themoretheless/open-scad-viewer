@@ -1,8 +1,5 @@
 //! Build and inspect a retained intersection graph without a JSON round trip.
-use brep_core::{
-    branch_graph_from_surface_intersection, rational_traces_from_branch_graph,
-    verify_general_ss_branch_graph,
-};
+use brep_core::{branch_graph_from_surface_intersection, rational_traces_from_branch_graph, verify_general_ss_branch_graph};
 use cad_predicates::ToleranceContext;
 use nurbs_core::{Result, ss_intersection::intersect_surface_surface_report, surface::Surface};
 fn plane(vertical: bool) -> Surface {

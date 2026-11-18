@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0390",
+  "testedBase": "1bbc2f66fbe4b43c227d0b48f2a03fb9e1293696",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 106,
+  "scope": [
+    "Expose capped candidate evidence and separate boundary verification failure from inward orientation.",
+    "Capping and solid admission share the strict builder path. Unproved candidates expose exact boundary diagnostics, nesting and orientation evidence without granting qualified material ownership."
+  ],
+  "logSha256": "a49c1fb1ba0a5bd7d0e18090407d217d842cffccb976d5bca24bd6d732823f59",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f3963266841247e3c7f7d28b697f3fc1230d7413dbbc903fe0418f29483598fe",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "1d4a63ac0b65dbbcbb213dd7ba572ed652295f55770f40d549e7e7177d1f04ea",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "18c1708a306ccffa38347b48d89ddd5660a6cebd44d7d6ced39f53f6931ea78d",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "895dc6a6e94ea518c99db2d8ce302a30fc546fb3a38d82b209869f08c0929dba",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "6ccee722b6040b12fe088e9e5aa2d026bc6296eb24f5f7e4e26fc5fb25d1f016",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1",
+    "crates/brep-core/tests/support/closed_solid_policy.rs": "b48784952be7e19ab14bba29e675e839fc126d6437bc589d472c8032fa4e0efb",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "ca352d481c2f10b053e8da4f888d9dd043e74032446bb2ea0a260af1913f2087",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a"
+  }
+}

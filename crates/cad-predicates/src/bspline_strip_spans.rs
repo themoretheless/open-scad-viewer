@@ -1,32 +1,32 @@
 //! Piecewise power coefficients from original homogeneous B-spline jet rows.
 //! All divisions and interval ordering are exact and debit the caller's ledger.
-use crate::bspline_internal_jets::{Rational as Q, Series};
+use crate::bspline_internal_jets::{Rational as Q, Series, StripJets};
 use crate::{
     Algebra, BezierIdentity, Expansion, LeafRef, PredicateContext, Reason, Sign, exact_inputs,
 };
 
 pub(crate) fn compare(
     ctx: &mut PredicateContext<'_>,
-    jets: &[Vec<Series>],
+    strips: StripJets<'_>,
     knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    scale: Q,
-    order: usize,
     propose: bool,
 ) -> Result<BezierIdentity, Reason> {
-    compare_search(ctx, jets, knots, degrees, scale, order, propose, false)
+    compare_search(ctx, strips, knots, propose, false)
 }
 
 pub(crate) fn compare_search(
     ctx: &mut PredicateContext<'_>,
-    jets: &[Vec<Series>],
+    strips: StripJets<'_>,
     knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    scale: Q,
-    order: usize,
     propose: bool,
     nonlinear_only: bool,
 ) -> Result<BezierIdentity, Reason> {
+    let StripJets {
+        jets,
+        degrees,
+        scale,
+        order,
+    } = strips;
     let mut normalized = Vec::new();
     let mut breaks: Vec<Q> = Vec::new();
     for side in 0..2 {
@@ -92,7 +92,7 @@ pub(crate) fn compare_search(
             jets,
             &normalized,
             degrees,
-            &scale,
+            scale,
             order,
         ) {
             Err(Reason::MissingProof) => {}
@@ -105,21 +105,11 @@ pub(crate) fn compare_search(
             jets,
             &normalized,
             degrees,
-            &scale,
+            scale,
             order,
         );
     }
-    let affine = compare_spans(
-        ctx,
-        jets,
-        &normalized,
-        degrees,
-        &breaks,
-        &scale,
-        order,
-        propose,
-        None,
-    )?;
+    let affine = compare_spans(ctx, strips, &normalized, &breaks, propose, None)?;
     if affine == BezierIdentity::Equal || order == 0 {
         return Ok(affine);
     }
@@ -143,7 +133,7 @@ pub(crate) fn compare_search(
                 jets,
                 &normalized,
                 degrees,
-                &scale,
+                scale,
                 order,
             );
         };
@@ -159,7 +149,7 @@ pub(crate) fn compare_search(
             jets,
             &normalized,
             degrees,
-            &scale,
+            scale,
             order,
         );
     }
@@ -175,7 +165,7 @@ pub(crate) fn compare_search(
                 jets,
                 &normalized,
                 degrees,
-                &scale,
+                scale,
                 order,
             );
         }
@@ -193,35 +183,28 @@ pub(crate) fn compare_search(
         }
     }
     // The B knots were nondecreasing and may repeat: zero spans grant no credit.
-    let mapped_proof = compare_spans(
-        ctx,
-        jets,
-        &normalized,
-        degrees,
-        &mapped,
-        &scale,
-        order,
-        propose,
-        Some(&ratio),
-    )?;
+    let mapped_proof = compare_spans(ctx, strips, &normalized, &mapped, propose, Some(&ratio))?;
     if mapped_proof == BezierIdentity::Equal {
         Ok(mapped_proof)
     } else {
-        super::bspline_strip_nonlinear::compare(ctx, jets, &normalized, degrees, &scale, order)
+        super::bspline_strip_nonlinear::compare(ctx, jets, &normalized, degrees, scale, order)
     }
 }
 
 fn compare_spans(
     ctx: &mut PredicateContext<'_>,
-    jets: &[Vec<Series>],
+    strips: StripJets<'_>,
     normalized: &[Vec<Q>],
-    degrees: [usize; 2],
     breaks: &[Q],
-    scale: &Q,
-    order: usize,
     propose: bool,
     map: Option<&Q>,
 ) -> Result<BezierIdentity, Reason> {
+    let StripJets {
+        jets,
+        degrees,
+        scale,
+        order,
+    } = strips;
     let one = Q::scalar(Expansion::scalar(1.));
     let d1 = if let Some(r) = map {
         r.sub(&one, ctx)?

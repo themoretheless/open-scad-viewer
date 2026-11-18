@@ -208,7 +208,7 @@ function artifactFingerprint() {
 }
 
 async function capture() {
-  const { parseOpenSCAD } = await import('../src/services/openscadParser.ts')
+  const { parseOpenSCAD } = await import('../src/language/openscadParser.ts')
   const { referenceCaptureLegacyOutcome, referenceLegacyMeshBytes, referenceLegacySceneBytes, referenceLegacySha256 } = await import('../tests/support/referenceLegacyDirectEvaluatorOracle.ts')
   const previous = previousOracle(), cases = {}
   for (const fixture of ORACLE_CASES) {

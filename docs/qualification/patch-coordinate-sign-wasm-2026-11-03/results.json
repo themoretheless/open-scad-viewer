@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "sourceCommit": "5d211d14d86fa7a4e5f6e4babe08ac86056198dc",
+  "artifact": {
+    "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/8e6d0a164ff4bfdecc0474fa041455a48158230752c20fd6d7367d128105654a.wasm",
+    "sha256": "8e6d0a164ff4bfdecc0474fa041455a48158230752c20fd6d7367d128105654a",
+    "bytes": 21613523
+  },
+  "independentCopy": true,
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 86,
+  "workers": {
+    "started": 76,
+    "terminated": 76
+  },
+  "commonRootAndSignFamilyCases": 28,
+  "frozenPredicateTests": {
+    "library": 158,
+    "commonRoot": 8,
+    "rootSign": 8,
+    "total": 174,
+    "status": "passed"
+  },
+  "sharedWorkingTreeLibraryFailureResolved": false,
+  "sharedFailureContext": "Previously observed failed exact-circle test belongs to concurrent untracked bezier_curvature_bound.rs/lib.rs edits; those changes are absent in this frozen build. This stage does not claim to fix the shared working-tree gate.",
+  "installedPackageUpdated": false,
+  "installedGeometryWasmSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "temporaryWorktreeRemoved": true,
+  "verified": [
+    "both sides of all four edges",
+    "negative determinant reflected patch",
+    "nonproportional irrational interior/exterior roots",
+    "exact coordinate sign tag accepted by real Worker protocol",
+    "common-root edge/corner and previous coupled UV families",
+    "auxiliary work sum and budget exhaustion remain fail-closed",
+    "input preservation and owned Worker termination"
+  ],
+  "remaining": [
+    "general curved/freeform target supports and tangencies",
+    "complete surface/surface branch enumeration",
+    "periodic/poles",
+    "trim/Body admission",
+    "installed-package provider/editor qualification",
+    "whole-library architecture/regression and parity qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "4998a14828ab274a74f8e8e73e43f9f0c965b6bc84d4106e4170f0d8ac9857ff",
+    "tools/browser-qualification/common-root-patch-fixtures.ts": "db05c10a71d92bf5a54f395b4489bd130815f4caf192ab83eff6b17a69158c5b",
+    "tools/browser-qualification/surface-self-intersection.ts": "dea1fcfd476c8158976e9c7e01755e6c116181dfafe200929347d1bab6a823da",
+    "tools/browser-qualification/surface-self-intersection.mjs": "a44855e24402b81616fdab3533c44693e28cfe6215ab3ece85d54eab08edaa1e",
+    "src/services/originalPatchContactsProtocol.ts": "8f9f6b5fb7b07ca18645e1e8bf075788392c3b5fb07848c0c49bb7397d8380ec"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0375",
+  "testedBase": "0e5e3f8c07ec1f5a896a3717e8b4d7dccb1a4299",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 78,
+  "scope": [
+    "Arrange disjoint and nested section rings into oriented planar cap regions under exact even-odd membership.",
+    "Exact pairwise crossing and containment tests define an immediate-parent tree independent of input order or winding. Even-depth rings define material caps, with odd-depth children as holes."
+  ],
+  "logSha256": "675f0f9ea6fb6205baba419cd04057e17bdcc5375750c872f672b97cf6a0d05c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "fa36a0b58e0b37d5ac132a118fa3fe7af38fa8565e6888204dcff4b7359a0ab2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "05a4121b0376434894d568049d6ae541d0801b4000335c87e94c8f4c71cfe2d1",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "1b4f0e88ff5f4b4f160700ee98e7901f6380063fbb048657565d14edfcb7eb47",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs": "60bb95c28e2efe7f24a94f1befc90d68fff506e51c6f2b60039e060ad89039ea",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes.rs": "473f87230493dfa46643b2c2777281a33afb4dfc2b0d2e8f29fe5112955c1cdc",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9"
+  }
+}

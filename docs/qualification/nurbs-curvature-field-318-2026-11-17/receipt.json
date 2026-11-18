@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0318",
+  "testedBase": "bdcce61c0737d0f13804185c4603ed43dde01809",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_trim_projection_contracts",
+    "--test",
+    "exact_shared_planar_projection_contracts",
+    "--test",
+    "exact_pcurve_lift_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Compose closed rational trim traces with their surfaces in a common exact Cartesian plane.",
+    "Exact common affine plane, closed trim traces, exact knot-cell cuts and binary64 curve storage. Boundary certificate only."
+  ],
+  "logSha256": "07fadcb6ec56fe0dba43ad9225bccac7faf93d4c7cbe95a805479409de963aba",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "20e96e40894bc2faaf237a950005621cb4a8441b33fddecfad385b7633d4760c",
+    "crates/nurbs-core/src/analysis/planar_trim_projection.rs": "fced5fc1be3df52cd12b0dd33feff1f679f3c375f121de2893d326a7d9ed8fe9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "b3ba9e5bdb336207749540a5078807b5071095f556207aa11d20c403a39c4c0f",
+    "crates/nurbs-core/tests/exact_planar_trim_projection_contracts.rs": "febaa77cf7e7952b511573711cd9991f206ddbc60ae15b25a6b658e903a3e569"
+  }
+}

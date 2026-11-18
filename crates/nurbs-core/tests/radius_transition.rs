@@ -43,9 +43,11 @@ fn different_radius_quarter_skins_join_with_whole_original_g2_and_radius_law() {
             &pcurve,
             direction,
             &candidate,
-            [1e-7, 1e-5, 1e-4],
-            100000 - cells,
-            2000000 - coefficients,
+            surface_collar::CollarBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000 - cells,
+                max_work: 2000000 - coefficients,
+            },
         )
         .unwrap();
         println!(
@@ -74,9 +76,11 @@ fn different_radius_quarter_skins_join_with_whole_original_g2_and_radius_law() {
             &edge_uv,
             [0., -1. - f64::EPSILON],
             surface,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            2000000
+            surface_collar::CollarBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_work: 2000000,
+            },
         )
         .is_err()
     );
@@ -237,9 +241,11 @@ fn a_signed_affine_cross_gain_preserves_physical_curvature_and_rejects_damage() 
             [0., gain],
             &built.patches[0],
             gain,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            2000000,
+            surface_collar::CollarBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_work: 2000000,
+            },
         )
         .unwrap();
         assert_eq!(
@@ -258,9 +264,11 @@ fn a_signed_affine_cross_gain_preserves_physical_curvature_and_rejects_damage() 
             [0., gain],
             &damaged,
             gain,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            2000000,
+            surface_collar::CollarBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_work: 2000000,
+            },
         )
         .unwrap();
         assert_ne!(
@@ -276,9 +284,11 @@ fn a_signed_affine_cross_gain_preserves_physical_curvature_and_rejects_damage() 
                 [0., -0.5],
                 &built.patches[0],
                 gain,
-                [1e-7, 1e-5, 1e-4],
-                100000,
-                2000000
+                surface_collar::CollarBudget {
+                    tolerances: [1e-7, 1e-5, 1e-4],
+                    max_cells: 100000,
+                    max_work: 2000000,
+                },
             )
             .is_err()
         );

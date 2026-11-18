@@ -147,9 +147,11 @@ impl MultiSweep<'_> {
                 return Ok(out);
             };
             let image = frame::control_values_from_owned_frame(
-                sweep.path,
-                sweep.scale,
-                sweep.affine_laws,
+                crate::sweeps::progressive_miter::authored_frame_certificate::ControlLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    affine: sweep.affine_laws,
+                },
                 &coordinates,
                 fraction,
                 max_cells - out.cells,

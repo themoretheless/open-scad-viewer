@@ -277,10 +277,7 @@ fn main() {
         assert!(self_facts.all_self_pairs_qualified());
         let automatic = args.get(4).is_some_and(|v| v == "retained-automatic");
         let expected_faces: Vec<_> = retained_facts.iter().map(|c| c.faces()).collect();
-        let r = wall::qualify_with_retained_gap_pass(
-            body,
-            5.99,
-            wall::Limits {
+        let r = wall::qualify_with_retained_gap_pass(body, 5.99, wall::WallLimits { limits: wall::Limits {
                 pairs: 378,
                 plane_controls: 10000,
                 normal_spans: 20000,
@@ -289,24 +286,19 @@ fn main() {
                     spans: 100000,
                 },
                 max_sine_squared: 1e-6,
-            },
-            self_facts.into_certificates(),
-            wall::NormalProductLimits {
+            }, products: wall::NormalProductLimits {
                 cells: 50000,
                 cells_per_pair: 128,
-            },
-            wall::FactoredNormalLimits {
+            }, factors: wall::FactoredNormalLimits {
                 exact_work: 100000000,
                 queries: 10000,
                 cells: 10000,
                 cells_per_pair: 128,
-            },
-            if automatic {
+            } }, self_facts.into_certificates(), wall::RetainedGapPass { certificates: if automatic {
                 Vec::new()
             } else {
                 retained_facts
-            },
-            if automatic {
+            }, limits: if automatic {
                 Some(wall::RetainedGapLimits {
                     cells: 100000,
                     spans: 100000,
@@ -319,8 +311,7 @@ fn main() {
                 })
             } else {
                 None
-            },
-        )
+            } })
         .unwrap();
         assert!(r.enumeration_complete);
         assert!(r.certificate.is_none());

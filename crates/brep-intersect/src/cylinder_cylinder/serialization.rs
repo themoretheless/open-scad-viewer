@@ -17,6 +17,7 @@ impl value_codec::Serialize for CylinderCylinderComponent {
                 let contact = match contact {
                     Contact::Transverse => "transverse",
                     Contact::Boundary => "boundary",
+                    Contact::Tangent { .. } => "tangent",
                 };
                 value_codec::json!({"kind":"line","curve":curve,"start":start,"end":end,
                     "direction":direction,"contact":contact,"firstUv":first_uv,"secondUv":second_uv,

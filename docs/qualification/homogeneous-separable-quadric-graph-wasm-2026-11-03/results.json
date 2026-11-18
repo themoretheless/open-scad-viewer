@@ -1,0 +1,42 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/2bf69a07a0f82f6f07cc4eb319fa081d74111de9e803cb3a4477c56fc608e73d.wasm",
+  "sha256": "2bf69a07a0f82f6f07cc4eb319fa081d74111de9e803cb3a4477c56fc608e73d",
+  "bytes": 21862124,
+  "sourceCommit": "42e1f84ca69558281fdac7b0855c021526abb939",
+  "status": "passed",
+  "abiCases": 199,
+  "graphCases": 85,
+  "workersStarted": 178,
+  "workersTerminated": 178,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "e84cddc95dd145c415e0ebf93365dc9e50a10269b8d33ea7a0bbee0c0021564a",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "a5a527846694631d8295f361249043f40bc1902d881405311d1758fa8aef5907",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "tools/browser-qualification/surface-self-intersection.mjs": "06ab3e5dba24fe9e9e89ef73843cb327fe383b3201f8fa6699ab8f49c48e3574",
+    "src/services/originalQuadricGraphProtocol.ts": "851293eede7ede2d589907a1a5fd040bd647099c5b6a7dae847f6640469bfb65"
+  },
+  "nativeReceipt": "docs/qualification/homogeneous-separable-quadric-graph-2026-11-03/results.json",
+  "observedTimings": {
+    "graph-homogeneous-separable-rotated-false-gauge-1": {
+      "abiMs": 10.974375000000236,
+      "workerMs": 14.5
+    },
+    "graph-homogeneous-separable-algebraic-edge-0": {
+      "abiMs": 3.2224999999998545,
+      "workerMs": 18
+    }
+  },
+  "timingScope": "Single-run observations, not repeat benchmark qualification. ABI request versus complete Worker call, excluding fixture checks.",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of nonplanar coupled single Bezier graph targets with exact independent nonlinear original boundary clocks. Rotations/gauges, six algebraic edges/corners, wrong original membership, zero predicate budget and ABI ULP refusal are checked.",
+  "remaining": [
+    "Multispan nonlinear boundary-clock identities",
+    "General joint coupled projected maps without independent clocks",
+    "Unordered boundary clock certificates and general UV precision",
+    "General freeform all branches",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}

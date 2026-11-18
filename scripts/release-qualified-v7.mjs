@@ -44,7 +44,7 @@ const implementation=[
  'crates/brep-core/src/analytic_features.rs','crates/brep-core/src/imprint_pipeline.rs',
  'crates/brep-core/src/operations.rs','crates/brep-core/src/lib.rs',
  'crates/geometry-bridge/src/lib.rs','crates/geometry-bridge/src/tests.rs',
- 'src/services/geometry/brep.ts','src/services/geometry/brepCapability.ts',
+ 'src/kernel/geometry/brep.ts','src/kernel/geometry/brepCapability.ts',
 ]
 const resetPolicy='false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID'
 const cells=[
@@ -124,7 +124,7 @@ for(const cell of cells){
   dependencies:dependencies.map(capability=>({capability,requiredMaturity:'Qualified'})),
   scope:{included:cell.included,excluded:cell.excluded},
   matrix:cell.rows.map(([id,expected])=>({id,expected,blocksQualification:true})),
-  bindings:{implementation,registry:'src/services/geometry/brepCapability.ts',evidenceJson:evidence},
+  bindings:{implementation,registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:evidence},
   evidence:{state:cell.qualified?'qualified':'not-executed',notes:cell.qualified
    ?['Native and bridge rows passed; only the explicit finite cell is qualified.','All excluded geometry remains typed-refused with no mesh/Manifold fallback.']
    :['No qualification run is claimed; the product seam refuses atomically.']},

@@ -1,5 +1,5 @@
-import {afterEach, expect, it, vi} from 'vitest'
-import {compileOptionalWasm, setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import { afterEach, expect, it, vi } from 'vitest'
+import { compileOptionalWasm, setOptionalWasmCompiler } from '../src/kernel/wasmCompilation'
 
 afterEach(() => {
   setOptionalWasmCompiler(undefined)
@@ -15,7 +15,7 @@ it('uses embedded bytes by default even when browser globals exist', async () =>
 })
 
 it('delegates only to an explicitly installed host compiler and can reset', async () => {
-  const module = new WebAssembly.Module(new Uint8Array([0,97,115,109,1,0,0,0]))
+  const module = new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]))
   const compiler = vi.fn().mockResolvedValue(module)
   setOptionalWasmCompiler(compiler)
   await expect(compileOptionalWasm('/wasm/test.wasm')).resolves.toBe(module)

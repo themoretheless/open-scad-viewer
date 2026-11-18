@@ -1,5 +1,5 @@
 //! Strict transport adapter; structural validation belongs to mechanics-core.
-use crate::{Result, Value, field, input, json, require_exact_fields};
+use crate::{Result, Value, array_field, field, input, json, require_exact_fields};
 use mechanics_core::truss::{MAX_MEMBERS, MAX_NODES, Member, Model};
 use mechanics_core::truss_loads::{Wrench, distribute};
 use std::collections::BTreeSet;
@@ -57,7 +57,7 @@ fn assemble_loads(v: &Value, nodes: &[[f64; 3]]) -> Result<Vec<[f64; 3]>> {
 
 /// Parse and field-check the `members` array (budget checked by the caller).
 fn members(v: &Value) -> Result<Vec<Member>> {
-    let arr = v["members"].as_array().unwrap();
+    let arr = array_field(v, "members")?;
     let mut members = Vec::with_capacity(arr.len());
     for member in arr {
         require_exact_fields(member, &["nodes", "youngMpa", "areaMm2"], "truss member")?;
@@ -214,7 +214,7 @@ pub(crate) fn modal(v: Value) -> Result<Value> {
             nodes_mm: field(&v, "nodesMm")?,
             members,
             restrained: field(&v, "restrained")?,
-            forces_n: vec![[0.; 3]; v["nodesMm"].as_array().unwrap().len()],
+            forces_n: vec![[0.; 3]; array_field(&v, "nodesMm")?.len()],
         },
         &field::<Vec<f64>>(&v, "densitiesTMm3")?,
         crate::mass_model(&v["massModel"])?,
@@ -316,9 +316,7 @@ pub(crate) fn topology(v: Value) -> Result<Value> {
     let members = members(&v)?;
     let nodes_mm = field::<Vec<[f64; 3]>>(&v, "nodesMm")?;
     let restrained = field::<Vec<[bool; 3]>>(&v, "restrained")?;
-    let cases = v["cases"]
-        .as_array()
-        .unwrap()
+    let cases = array_field(&v, "cases")?
         .iter()
         .map(|case| {
             let has_forces = case.get("forcesN").is_some();

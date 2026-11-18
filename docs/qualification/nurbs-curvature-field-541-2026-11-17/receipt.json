@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0541",
+  "testedBase": "c1f02833c9ea41d599bc3666e1b6c8915ab81b1e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 139,
+  "scope": [
+    "Integrate the algebraic UV area of a representable closed shortest-step lift.",
+    "Lift the closed sample loop, require equality of its lifted endpoints, and accumulate the signed rational shoelace area."
+  ],
+  "logSha256": "aac80b61770972f7b6f39e9dbff09a0136a236cc81ffe2541808b2259d735267",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1555eaf31a832c62f4f545d2f477ba3429e972dd44860fb9678df0a42f393431",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "b141b2547d3df8853bd172ec393f0d7ccf861c2c000806e31da1066d748cb5df"
+  }
+}

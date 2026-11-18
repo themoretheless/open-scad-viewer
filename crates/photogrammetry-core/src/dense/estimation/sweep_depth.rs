@@ -1,20 +1,25 @@
 use super::*;
+use crate::dense::plane::{DepthGrid, DepthRange, ReferenceView};
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn sweep_depth(
-    gray: &GrayImage,
-    reference: &Camera,
+    view: ReferenceView<'_>,
     sources: &mut [Source],
-    width: usize,
-    height: usize,
-    step: f64,
-    near: f64,
-    far: f64,
-    ranges: Option<&SweepRanges>,
+    grid: DepthGrid,
+    range: DepthRange<'_>,
     options: &DenseOptions,
     diagnostics: &mut DenseDiagnostics,
     row_progress: &mut impl FnMut(usize) -> Result<()>,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
+    let ReferenceView {
+        gray,
+        camera: reference,
+    } = view;
+    let DepthGrid {
+        width,
+        height,
+        step,
+    } = grid;
+    let DepthRange { near, far, ranges } = range;
     let hypotheses = hypothesis_grid(near, far, options.depth_hypotheses);
     let inverse_span = 1. / near - 1. / far;
     let patch_side = options.patch_radius * 2 + 1;
@@ -23,17 +28,23 @@ pub(super) fn sweep_depth(
     #[cfg(feature = "gpu")]
     if options.acceleration.is_gpu() {
         if let Some(maps) = gpu_sweep_single(
-            gray,
-            reference,
+            ReferenceView {
+                gray,
+                camera: reference,
+            },
             sources,
-            width,
-            height,
-            step,
-            &hypotheses[..options.depth_hypotheses],
-            ranges,
-            near,
+            DepthGrid {
+                width,
+                height,
+                step,
+            },
+            InverseDepthBins {
+                hypotheses: &hypotheses[..options.depth_hypotheses],
+                ranges,
+                near,
+                inverse_span,
+            },
             far,
-            inverse_span,
             options,
         ) {
             count_gpu_work(diagnostics, width, height, sources.len(), options);

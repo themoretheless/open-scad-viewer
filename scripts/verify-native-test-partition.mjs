@@ -2,12 +2,43 @@
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {spawnSync} from 'node:child_process'
-import {existsSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync} from 'node:fs'
-import {resolve} from 'node:path'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
+import {relative, resolve} from 'node:path'
 import {fileURLToPath, pathToFileURL} from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const sha = value => createHash('sha256').update(value).digest('hex')
+const NON_RUST_FENCES = new Set([
+  'ignore',
+  'text',
+  'plain',
+  'plaintext',
+  'sh',
+  'bash',
+  'shell',
+  'console',
+  'xml',
+  'svg',
+  'html',
+  'json',
+  'toml',
+  'yaml',
+  'yml',
+  'md',
+  'markdown',
+  'sql',
+  'c',
+  'cpp',
+  'glsl',
+  'wgsl',
+])
+
 export function nativeTestCatalog(text) {
   const cases = new Set()
   let target
@@ -26,6 +57,76 @@ export function nativeTestCatalog(text) {
     }
   }
   return cases
+}
+
+export function compiledTestTargets(jsonLines, workspaceRoot = root) {
+  const seen = new Set()
+  const targets = []
+  for (const line of jsonLines.split(/\r?\n/u)) {
+    if (!line.startsWith('{')) continue
+    const msg = JSON.parse(line)
+    if (msg.reason !== 'compiler-artifact' || !msg.profile?.test || !msg.executable) continue
+    if (seen.has(msg.executable)) continue
+    seen.add(msg.executable)
+    const srcPath = msg.target?.src_path
+      ? relative(workspaceRoot, msg.target.src_path).replaceAll('\\', '/')
+      : msg.target?.name ?? 'test'
+    targets.push({srcPath, executable: msg.executable})
+  }
+  return targets
+}
+
+export function hasRunnableDoctest(source) {
+  let inFence = false
+  for (const line of source.split(/\r?\n/u)) {
+    const doc = /^\s*\/\/[!/](.*)$/u.exec(line)
+    if (!doc) {
+      inFence = false
+      continue
+    }
+    const fence = /^\s*```(.*)$/u.exec(doc[1])
+    if (!fence) continue
+    if (inFence) {
+      inFence = false
+      continue
+    }
+    const tags = fence[1]
+      .trim()
+      .split(/[\s,]+/u)
+      .filter(Boolean)
+      .map(tag => tag.toLowerCase())
+    if (tags.length === 0 || !tags.some(tag => NON_RUST_FENCES.has(tag))) return true
+    inFence = true
+  }
+  return false
+}
+
+function walkRustSources(dir, out = []) {
+  if (!existsSync(dir)) return out
+  for (const entry of readdirSync(dir, {withFileTypes: true})) {
+    const full = resolve(dir, entry.name)
+    if (entry.isDirectory()) walkRustSources(full, out)
+    else if (entry.isFile() && entry.name.endsWith('.rs')) out.push(full)
+  }
+  return out
+}
+
+export function cratesWithRunnableDoctests(cratesDir = resolve(root, 'crates')) {
+  const packages = []
+  for (const entry of readdirSync(cratesDir, {withFileTypes: true})) {
+    if (!entry.isDirectory() || entry.name === 'vendor') continue
+    const manifestPath = resolve(cratesDir, entry.name, 'Cargo.toml')
+    if (!existsSync(manifestPath)) continue
+    const manifest = readFileSync(manifestPath, 'utf8')
+    const pkgMatch = /\[package\][\s\S]*?^\s*name\s*=\s*"([^"]+)"/mu.exec(manifest)
+    if (!pkgMatch) continue
+    if (/\[lib\][\s\S]*?^\s*doctest\s*=\s*false/mu.test(manifest)) continue
+    const files = walkRustSources(resolve(cratesDir, entry.name, 'src'))
+    if (files.some(file => hasRunnableDoctest(readFileSync(file, 'utf8')))) {
+      packages.push(pkgMatch[1])
+    }
+  }
+  return packages.sort()
 }
 
 export function verifyNativePartition(fullText, serialText, parallelText) {
@@ -47,6 +148,59 @@ export function verifyNativePartition(fullText, serialText, parallelText) {
     selector: 'aag', qualificationClaim: 'none'}
 }
 
+function collectWorkspaceCatalogs(paths) {
+  const env = {...process.env, CARGO_TERM_COLOR: 'never'}
+  const build = spawnSync(
+    'cargo',
+    ['test', '--locked', '--manifest-path', 'crates/Cargo.toml', '--workspace', '--no-run', '--message-format=json'],
+    {cwd: root, env, encoding: 'utf8', maxBuffer: 1 << 27},
+  )
+  assert(!build.error && build.status === 0, `Test build failed: ${build.error ?? build.stderr ?? build.status}`)
+  const targets = compiledTestTargets(build.stdout, root)
+  assert(targets.length > 0, 'No compiled test binaries reported by Cargo')
+  const docPackages = cratesWithRunnableDoctests()
+  const binarySelections = [
+    ['--list'],
+    ['aag', '--list'],
+    ['--skip', 'aag', '--list'],
+  ]
+  const docSelections = [
+    ['--', '--list'],
+    ['aag', '--', '--list'],
+    ['--', '--skip', 'aag', '--list'],
+  ]
+  for (let i = 0; i < paths.length; i++) {
+    const chunks = []
+    for (const target of targets) {
+      const res = spawnSync(target.executable, binarySelections[i], {
+        cwd: root,
+        env,
+        encoding: 'utf8',
+        maxBuffer: 1 << 26,
+      })
+      assert(
+        !res.error && res.status === 0,
+        `Binary catalog failed (${target.executable}): ${res.error ?? res.stderr ?? res.status}`,
+      )
+      chunks.push(`     Running ${target.srcPath} (${target.executable})\n${res.stdout}`)
+    }
+    if (docPackages.length > 0) {
+      const pkgArgs = docPackages.flatMap(pkg => ['-p', pkg])
+      const docRes = spawnSync(
+        'cargo',
+        ['test', '--locked', '--manifest-path', 'crates/Cargo.toml', ...pkgArgs, '--doc', ...docSelections[i]],
+        {cwd: root, env, encoding: 'utf8', maxBuffer: 1 << 26},
+      )
+      assert(
+        !docRes.error && docRes.status === 0,
+        `Doctest catalog failed: ${docRes.error ?? docRes.stderr ?? docRes.status}`,
+      )
+      chunks.push(docRes.stderr, docRes.stdout)
+    }
+    writeFileSync(paths[i], chunks.join(''), {flag: 'wx'})
+  }
+}
+
 function main(args) {
   let paths, output
   if (args[0] === '--existing') {
@@ -58,15 +212,7 @@ function main(args) {
     mkdirSync(directory, {recursive: true})
     paths = ['full', 'serial', 'parallel'].map(name => resolve(directory, `${name}.log`))
     output = resolve(directory, 'partition.json')
-    const base = ['test', '--locked', '--manifest-path', 'crates/Cargo.toml', '--workspace']
-    const selections = [['--', '--list'], ['aag', '--', '--list'], ['--', '--skip', 'aag', '--list']]
-    for (let i = 0; i < paths.length; i++) {
-      const fd = openSync(paths[i], 'wx')
-      let result
-      try { result = spawnSync('cargo', [...base, ...selections[i]], {cwd: root, env: {...process.env, CARGO_TERM_COLOR: 'never'}, stdio: ['ignore', fd, fd]}) }
-      finally {closeSync(fd)}
-      assert(!result.error && result.status === 0, `Catalog failed: ${paths[i]}; ${result.error ?? result.status}`)
-    }
+    collectWorkspaceCatalogs(paths)
   }
   assert(!existsSync(output), 'Refusing to replace catalog evidence')
   const bytes = paths.map(p => readFileSync(p))

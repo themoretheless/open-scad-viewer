@@ -1,12 +1,14 @@
 import {compactRuntimeChunks} from './scripts/compact-runtime-chunks.mjs'
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { svetPlugin } from './scripts/svet-vite-plugin.mjs'
 import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
+import { localEditorBridge } from './scripts/local-editor-bridge'
+import { pwaBuildPlugin } from './scripts/pwa-build.mjs'
 
 // Keep readable names for budgeted payloads and workers; content hashes identify
 // smaller lazy chunks without repeating long module names in every import URL.
 function runtimeChunkFileName(chunk: {name: string}) {
-  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools)$/.test(chunk.name)
+  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools|codemirrorView|geometryBuildEngine|profileIntersections|wasmStreaming|workerHandlerRuntime)$/.test(chunk.name)
     ? 'assets/[name]-[hash].js' : 'assets/[hash].js'
 }
 
@@ -17,7 +19,7 @@ function runtimeChunkFileName(chunk: {name: string}) {
 // entry preload list.
 export default defineConfig({
   define: { __G1_SHARED_GEOMETRY_MODULE__: 'false' },
-  plugins: [compactWgslPlugin(),vue(),compactRuntimeChunks()],
+  plugins: [compactWgslPlugin(),svetPlugin(),compactRuntimeChunks(),pwaBuildPlugin(),localEditorBridge()],
   worker: { plugins:()=>[compactRuntimeChunks()], format: 'es', rollupOptions: { output: { chunkFileNames: runtimeChunkFileName, manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.
     if (/src[\\/]services[\\/](wasmPacking|wasmBase91|wasmBrotliPacking)\.ts$/.test(id)) return 'worker-wasm-packing'
@@ -46,7 +48,7 @@ export default defineConfig({
             // Shared shell translations and helpers have their own cacheable module.
             // Keep their dependencies in their existing groups.
             { name: 'app-shell', test: /src[\\/](appHelpers\.ts|i18n[\\/]appStrings\.ts)$/, includeDependenciesRecursively: false },
-            { name: 'forma-ui', test: /src[\\/](forma[\\/].+\.ts|ui[\\/].+\.ui|components[\\/]FormaRegion\.vue)/, includeDependenciesRecursively: false },
+            { name: 'forma-ui', test: /src[\\/](forma[\\/].+\.ts|ui[\\/].+\.ui|components[\\/]FormaRegion\.svt)/, includeDependenciesRecursively: false },
             { name: 'geometry-kernel-bytes', test: /src[\\/]generated[\\/]geometry-kernels[\\/]bytes/ },
             { name: 'language-kernel-bytes', test: /src[\\/]generated[\\/]language-kernel[\\/]bytes/ },
             { name: 'harfbuzz-bytes', test: /src[\\/]generated[\\/]harfbuzz[\\/]bytes/ },
@@ -64,29 +66,30 @@ export default defineConfig({
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
             // Keep the two worker result protocols as separate shared contracts.
-            { name: 'cad-result-protocol', test: /src[\\/]services[\\/](mainSolidProtocol(?:[\\/]|\.ts$)|mainSolidWorker(Client|Transport)\.ts$)/, includeDependenciesRecursively: false },
-            { name: 'geometry-result-protocol', test: /src[\\/]services[\\/]geometryWorkerProtocol(?:[\\/]|\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'cad-result-protocol', test: /src[\\/](?:services|kernel)[\\/](mainSolidProtocol(?:[\\/]|\.ts$)|mainSolidWorker(Client|Transport)\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'geometry-result-protocol', test: /src[\\/](?:services|kernel)[\\/]geometryWorkerProtocol(?:[\\/]|\.ts$)/, includeDependenciesRecursively: false },
             // Cache the viewport state owner and its pure helpers together.
             // Their dependencies keep their existing kernel/runtime groups.
             { name: 'direct-viewport', test: /src[\\/]features[\\/]directModeler[\\/](useViewportLayerAndPolygons(?:[\\/]|\.ts$)|helpers\.ts$)/, includeDependenciesRecursively: false },
             { name: 'direct-commands', test: /src[\\/]features[\\/]directModeler[\\/]use(CommandPalette|Primitives)\.ts$/, includeDependenciesRecursively: false },
-            { name: 'runout-controls', test: /src[\\/]components[\\/]RunoutControls\.vue(?:\?|$)/, includeDependenciesRecursively: false },
-            { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.vue(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'runout-controls', test: /src[\\/]components[\\/]RunoutControls\.svt(?:\?|$)/, includeDependenciesRecursively: false },
+            { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.svt(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
             { name: 'sweep-viewport-evidence', test: /src[\\/]services[\\/]sweepViewportEvidence\.ts$/, includeDependenciesRecursively: false },
             { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
             // The declarative command inventory is shared by the entry and help panels.
             // Result validation is shared by the CAD client and worker adapters.
             // Keep its dependencies independently cacheable instead of merging
             // the full validator into the client lifecycle chunk.
-            { name: 'main-solid-protocol', test: /src[\\/]services[\\/]mainSolidProtocol\.ts$/, includeDependenciesRecursively: false },
-            { name: 'main-solid-results', test: /src[\\/]services[\\/]mainSolidProtocol[\\/]mainSolidResult\.ts$/, includeDependenciesRecursively: false },
+            { name: 'main-solid-protocol', test: /src[\\/](?:services|kernel)[\\/]mainSolidProtocol\.ts$/, includeDependenciesRecursively: false },
+            { name: 'main-solid-results', test: /src[\\/](?:services|kernel)[\\/]mainSolidProtocol[\\/]mainSolidResult\.ts$/, includeDependenciesRecursively: false },
+            { name: 'cad-validators', test: /src[\\/]services[\\/](solid(Distance|SelfIntersection|FaceContacts|BoundaryAgreement|WholeWall|MaterialVolume|MaterialWall)|nurbs(OffsetContactQualification|OffsetEnvelopeFit|OffsetDeviation|ProfileBridgeChords)|expressionShell(Inspection)?|sourceBody(Archive)?)\.ts$/, includeDependenciesRecursively: false },
             { name: 'command-registry', test: /src[\\/]services[\\/]commandRegistry\.ts$/, includeDependenciesRecursively: false },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
             { name: 'editor-controls', test: /src[\\/](composables[\\/]useEditor(Formatting|Resize)|services[\\/](codeFormat|editorBlocks))\.ts$/ },
             // Keep the Vue facade and its script/template submodules together.
             // Splitting only the facade creates a cyclic, uninitialized export.
-            { name: 'main-sketch-tools', test: /src[\\/]features[\\/]MainSketchTools\.vue(?:\?|$)/, includeDependenciesRecursively: false },
+            { name: 'main-sketch-tools', test: /src[\\/]features[\\/]MainSketchTools\.svt(?:\?|$)/, includeDependenciesRecursively: false },
             {
               // Direct-modeling helpers are shared by lazy CAD panels; they must
               // not capture the geometry kernel they reference.
@@ -103,7 +106,8 @@ export default defineConfig({
             { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpu[A-Z][A-Za-z]*|webgpuRenderer[\\/]gpuPasses)\.ts$|crates[\\/]compute-core[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
             { name: 'renderer-resources', test: /src[\\/]services[\\/](pipelineFactory|textureResources|uniformFill)\.ts$/, includeDependenciesRecursively: false },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
-            { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
+            { name: 'zod', test: /node_modules[\\/]zod/ },
+            { name: 'svet', test: /src[\\/]forma[\\/]svet/ },
           ],
         },
       },

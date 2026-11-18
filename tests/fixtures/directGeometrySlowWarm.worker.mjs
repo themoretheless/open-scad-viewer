@@ -2,7 +2,7 @@ import {workerData} from 'node:worker_threads'
 import {register} from 'tsx/esm/api'
 
 register()
-const {defaultGeometryKernel} = await import('../../src/services/cadGeometryKernel.ts')
+const {defaultGeometryKernel} = await import('../../src/kernel/cadGeometryKernel.ts')
 const warm = defaultGeometryKernel.warm.bind(defaultGeometryKernel)
 let pending
 defaultGeometryKernel.warm = () => {

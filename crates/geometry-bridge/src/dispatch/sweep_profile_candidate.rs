@@ -1,7 +1,6 @@
 //! Original-source candidate constructions, without solid admission claims.
 use crate::*;
-pub(super) fn build(mut v:Value)->Result<Value> {
-            use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+pub(super) fn build(v: Value) -> Result<Value> {
             let automatic_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_auto_body"));
             let annular_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_annular_body")||automatic_mode);
             if annular_mode {
@@ -12,102 +11,9 @@ pub(super) fn build(mut v:Value)->Result<Value> {
                     if v.get(key).is_some() {return Err(input("Annular progressive body requires original source, not supplied geometry/proofs"));}
                 }
             }
-            let orientation = match field::<String>(&v, "orientation")?.as_str() {
-                "rmf" => Orientation::RotationMinimizing,
-                "fixed" | "authored" => Orientation::Fixed,
-                "fixed_normal" => Orientation::FixedNormal,
-                "frenet" => Orientation::Frenet,
-                "corrected_frenet" => Orientation::CorrectedFrenet,
-                _ => {
-                    return Err(Error::new(
-                        "BREP_RATIONAL_SWEEP_REFUSED",
-                        "Unknown orientation",
-                    ));
-                }
-            };
-            let spacing = match field::<String>(&v, "spacing")?.as_str() {
-                "parameter" => Spacing::Parameter,
-                "arc_length" => Spacing::ArcLength {
-                    tolerance: field(&v, "length_tolerance")?,
-                    max_cells: field(&v, "length_max_cells")?,
-                },
-                _ => return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED", "Unknown spacing")),
-            };
-            let options = Options {
-                normal: field(&v, "normal")?,
-                orientation,
-                spacing,
-                initial_sections: field(&v, "initial_sections")?,
-                max_sections: field(&v, "max_sections")?,
-                max_deviation: field(&v, "max_deviation")?,
-            };
-            let loops = field::<Vec<Vec<Curve>>>(&v, "loops")?;
-            let path = field::<Curve>(&v, "path")?;
-            let scale = field::<Curve>(&v, "scale")?;
-            let twist = field::<Curve>(&v, "twist")?;
-            let axes = optional_field::<Curve>(&v, "axis_scale")?;
-            let center = optional_field::<Curve>(&v, "center_law")?;
-            let guide = optional_field::<Curve>(&v, "orientation_guide")?;
-            let contact = optional_field::<f64>(&v, "contact_parameter")?;
-            let contact_profile = optional_field::<usize>(&v, "contact_profile")?;
-            if contact.is_some() && guide.is_none()
-                || contact_profile.is_some() && contact.is_none()
-            {
-                return Err(Error::new(
-                    "BREP_RATIONAL_SWEEP_REFUSED",
-                    "Contact anchor requires orientation guide and parameter",
-                ));
-            }
-            let authored = field::<String>(&v, "orientation")? == "authored";
-            if authored && guide.is_some() {
-                return Err(Error::new(
-                    "BREP_RATIONAL_SWEEP_REFUSED",
-                    "Orientation guide cannot be combined with authored frames",
-                ));
-            }
-            let frame_axis = if authored {
-                Some(field::<Curve>(&v, "frame_axis")?)
-            } else {
-                None
-            };
-            let frame_normal = if authored {
-                Some(field::<Curve>(&v, "frame_normal")?)
-            } else {
-                None
-            };
-            let default_axes = nurbs_core::progressive_sweep::constant_vector_law([1.; 3])?;
-            let default_center = nurbs_core::progressive_sweep::constant_vector_law([0.; 3])?;
-            let affine = if authored || guide.is_some() || axes.is_some() || center.is_some() {
-                Some((
-                    axes.as_ref().unwrap_or(&default_axes),
-                    center.as_ref().unwrap_or(&default_center),
-                ))
-            } else {
-                None
-            };
-            let options = if authored {
-                Options {
-                    orientation: Orientation::Fixed,
-                    ..options
-                }
-            } else {
-                options
-            };
-            let tolerance = optional_field::<f64>(&v, "cap_correction_tolerance")?;
-            let quantum = optional_field::<f64>(&v, "cap_correction_quantum")?;
-            let max_work = optional_field::<u64>(&v, "cap_correction_max_work")?;
-            if tolerance.is_none() && (quantum.is_some() || max_work.is_some()) {
-                return Err(Error::new(
-                    "BREP_RATIONAL_SWEEP_REFUSED",
-                    "Cap correction requires a displacement tolerance",
-                ));
-            }
-            let correction =
-                tolerance.map(|tolerance| brep_core::analytic::EndpointCapCorrection {
-                    tolerance,
-                    quantum: quantum.unwrap_or(2_f64.powi(-40)),
-                    max_work: max_work.unwrap_or(1000000),
-                });
+            let inputs = crate::dispatch::nurbs::ProgressiveProfileInputs::parse(&v)?;
+            let options = inputs.options;
+            let correction = crate::dispatch::nurbs::parse_cap_correction(&v)?;
             let circle_tolerance=optional_field::<f64>(&v,"circle_correction_tolerance")?;
             let circle_quantum=optional_field::<f64>(&v,"circle_correction_quantum")?;
             let circle_work=optional_field::<u64>(&v,"circle_correction_max_work")?;
@@ -117,30 +23,10 @@ pub(super) fn build(mut v:Value)->Result<Value> {
             let profile_correction=circle_tolerance.map(|tolerance|brep_core::analytic::EndpointCapCorrection {
                 tolerance,quantum:circle_quantum.unwrap_or(2_f64.powi(-40)),max_work:circle_work.unwrap_or(1000000),
             });
-            let rmf_steps = optional_field::<usize>(&v, "rmf_transport_steps")?;
-            let rmf_cells = optional_field::<usize>(&v, "error_max_cells")?;
-            let rmf_products = optional_field::<usize>(&v, "error_max_products")?;
-            let rmf_policy = match (rmf_steps, rmf_cells, rmf_products) {
-                (None, None, None) => None,
-                (Some(steps), Some(cells), Some(products))
-                    if field::<String>(&v, "orientation")? == "rmf" =>
-                {
-                    Some((steps, cells, products))
-                }
-                _ => {
-                    return Err(Error::new(
-                        "BREP_RATIONAL_SWEEP_REFUSED",
-                        "Spatial RMF policy requires unguided RMF and three proof budgets",
-                    ));
-                }
-            };
-            let guidance=guide.as_ref().map(|g|(g,contact.map(|p|(contact_profile.unwrap_or(0),p))));
+            let rmf_policy = crate::dispatch::nurbs::parse_rmf_policy(&v, &inputs.orientation)?;
             let owned=if annular_mode {
                 let construct=if automatic_mode {brep_core::analytic::progressive_profile_body_with_automatic_caps}else{brep_core::analytic::progressive_profile_body_with_annular_caps};
-                Some(construct(
-                    &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
-                    guidance,options,correction,profile_correction,rmf_policy,
-                    brep_core::retained_annular_cap::reference_filling::Limits {
+                Some(construct(inputs.laws(), options, brep_core::analytic::ProgressiveBodyPolicy { correction, profile_correction, rmf_policy }, brep_core::retained_annular_cap::reference_filling::Limits {
                         exact_work:optional_field(&v,"annular_cap_max_work")?.unwrap_or(1000000),
                         products:optional_field(&v,"annular_cap_max_products")?.unwrap_or(100000),
                         trim_pairs:optional_field(&v,"annular_cap_max_pairs")?.unwrap_or(10000),
@@ -148,16 +34,12 @@ pub(super) fn build(mut v:Value)->Result<Value> {
                         trim_domain_cells:1000000,spans:1024,linear_cells:100000,
                         contacts:brep_core::face_contacts::Limits {pairs:10000,cells:100000,domain_cells:1000000,
                             cells_per_pair:1000,domain_cells_per_pair:10000},
-                    },
-                )?)
+                    })?)
             }else{None};
             let legacy=if annular_mode {None}else{
-                Some(brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(
-                    &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
-                    guidance,options,correction,profile_correction,rmf_policy,
-                )?)
+                Some(brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(inputs.laws(), options, brep_core::analytic::ProgressiveBodyPolicy { correction, profile_correction, rmf_policy })?)
             };
-            let result=owned.as_ref().map(|body|body.evidence()).or(legacy.as_ref()).unwrap();
+            let result=owned.as_ref().map(|body|body.evidence()).or(legacy.as_ref()).expect("exactly one of the annular (owned) and legacy constructors runs");
             // Replay the complete original constructor, never caller-authored sections,
             // retained geometry or a scalar certificate. The base receipt stays separate.
             let station_reconstruction=if v["op"].as_str().is_some_and(|op|op.ends_with("_reconstruct_stations")) {

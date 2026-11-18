@@ -1,6 +1,6 @@
-import { ref, shallowRef } from 'vue'
-import type { MainSolidJob, MainSolidProgress, MainSolidResults } from '../services/mainSolidProtocol'
-import type { MainSolidWorkerClient } from '../services/mainSolidWorkerClient'
+import { ref, shallowRef } from 'svet'
+import type { MainSolidJob, MainSolidProgress, MainSolidResults } from '../kernel/mainSolidProtocol'
+import type { MainSolidWorkerClient } from '../kernel/mainSolidWorkerClient'
 
 /** Shared UI lifecycle for cancellable CAD jobs. Only the current generation may
  * publish progress, commit a result, or report an error. */
@@ -11,7 +11,7 @@ export function useMainSolidTask(worker: MainSolidWorkerClient) {
   let generation = 0
 
   async function run<K extends MainSolidJob['kind']>(
-    job: Extract<MainSolidJob, {kind: K}>,
+    job: Extract<MainSolidJob, { kind: K }>,
     accept: (result: MainSolidResults[K]) => void,
     reject: (error: unknown) => void,
   ): Promise<boolean> {
@@ -22,7 +22,9 @@ export function useMainSolidTask(worker: MainSolidWorkerClient) {
     progress.value = null
     try {
       const result = await worker.run(job, {
-        onProgress: value => { if (current === generation) progress.value = value },
+        onProgress: value => {
+          if (current === generation) progress.value = value
+        },
       })
       if (current !== generation) return false
       accept(result)
@@ -54,5 +56,5 @@ export function useMainSolidTask(worker: MainSolidWorkerClient) {
     worker.dispose()
   }
 
-  return {pending, progress, kind, run, cancel, dispose}
+  return { pending, progress, kind, run, cancel, dispose }
 }

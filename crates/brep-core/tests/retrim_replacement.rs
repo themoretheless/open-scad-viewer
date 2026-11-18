@@ -1,9 +1,6 @@
 #[path = "../examples/support/curved_trim_fixture.rs"]
 mod fixture;
-use brep_core::{
-    feature_ops::retrim::{self, Limits},
-    watertight,
-};
+use brep_core::{feature_ops::retrim::{self, Limits}, watertight};
 use nurbs_core::{patches, surface::Surface};
 fn cutter() -> Surface {
     let square = [1., -2., 4.];

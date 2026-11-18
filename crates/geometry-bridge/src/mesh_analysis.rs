@@ -8,6 +8,60 @@ pub struct SolidAnalysis {
     edges: mesh_topology::edges::SemanticEdges,
 }
 
+#[derive(Clone)]
+struct ZRigidAnalysisTemplate {
+    origin_id: u32,
+    normal_bits: u64,
+    edge_bits: u64,
+    rot_xy: [f64; 4],
+    trans: [f64; 3],
+    mesh: crate::mesh::RenderMesh,
+    edges: mesh_topology::edges::SemanticEdges,
+}
+
+thread_local! {
+    static Z_RIGID_TEMPLATE: std::cell::RefCell<Option<ZRigidAnalysisTemplate>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+fn transform_render_mesh_from_template(
+    tpl: &ZRigidAnalysisTemplate,
+    target: &crate::mesh::ZRigidProvenance,
+) -> crate::mesh::RenderMesh {
+    // Relative rotation: R_rel = R_target * R_tpl^T
+    let r00 = target.rot_xy[0] * tpl.rot_xy[0] + target.rot_xy[1] * tpl.rot_xy[1];
+    let r01 = target.rot_xy[0] * tpl.rot_xy[2] + target.rot_xy[1] * tpl.rot_xy[3];
+    let r10 = target.rot_xy[2] * tpl.rot_xy[0] + target.rot_xy[3] * tpl.rot_xy[1];
+    let r11 = target.rot_xy[2] * tpl.rot_xy[2] + target.rot_xy[3] * tpl.rot_xy[3];
+    let tx = target.trans[0] - (r00 * tpl.trans[0] + r01 * tpl.trans[1]);
+    let ty = target.trans[1] - (r10 * tpl.trans[0] + r11 * tpl.trans[1]);
+    let tz = target.trans[2] - tpl.trans[2];
+    let mut vertices = Vec::with_capacity(tpl.mesh.vertices.len());
+    for v in tpl.mesh.vertices.chunks_exact(6) {
+        let px = v[0] as f64;
+        let py = v[1] as f64;
+        let pz = v[2] as f64;
+        let nx = v[3] as f64;
+        let ny = v[4] as f64;
+        let nz = v[5];
+        vertices.extend([
+            (r00 * px + r01 * py + tx) as f32,
+            (r10 * px + r11 * py + ty) as f32,
+            (pz + tz) as f32,
+            (r00 * nx + r01 * ny) as f32,
+            (r10 * nx + r11 * ny) as f32,
+            nz,
+        ]);
+    }
+    crate::mesh::RenderMesh {
+        vertices,
+        indices: tpl.mesh.indices.clone(),
+        merge_from: tpl.mesh.merge_from.clone(),
+        merge_to: tpl.mesh.merge_to.clone(),
+        face_ids: tpl.mesh.face_ids.clone(),
+    }
+}
+
 /// Analyze the same f32 display buffers the host publishes, while they are
 /// still in the kernel. Merge pairs preserve the source solid's topology.
 pub fn analyze_solid(
@@ -16,6 +70,33 @@ pub fn analyze_solid(
     edge_cosine: f64,
     leaf_size: usize,
 ) -> crate::Result<SolidAnalysis> {
+    let prov = crate::mesh::solid_z_rigid_provenance(id)?;
+    let normal_bits = normal_cosine.to_bits();
+    let edge_bits = edge_cosine.to_bits();
+    if let Some(target) = prov {
+        let cached = Z_RIGID_TEMPLATE.with(|slot| {
+            slot.borrow()
+                .as_ref()
+                .filter(|tpl| {
+                    tpl.origin_id == target.origin_id
+                        && tpl.normal_bits == normal_bits
+                        && tpl.edge_bits == edge_bits
+                })
+                .map(|tpl| {
+                    (
+                        transform_render_mesh_from_template(tpl, &target),
+                        mesh_topology::edges::SemanticEdges {
+                            indices: tpl.edges.indices.clone(),
+                            diagnostics: tpl.edges.diagnostics.clone(),
+                        },
+                    )
+                })
+        });
+        if let Some((mesh, edges)) = cached {
+            let bvh = mesh_query::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
+            return Ok(SolidAnalysis { mesh, bvh, edges });
+        }
+    }
     let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
     let bvh = mesh_query::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
     let edges = mesh_topology::edges::extract_semantic_edges(
@@ -26,13 +107,29 @@ pub fn analyze_solid(
         false,
         edge_cosine,
     );
+    if let Some(target) = prov {
+        Z_RIGID_TEMPLATE.with(|slot| {
+            *slot.borrow_mut() = Some(ZRigidAnalysisTemplate {
+                origin_id: target.origin_id,
+                normal_bits,
+                edge_bits,
+                rot_xy: target.rot_xy,
+                trans: target.trans,
+                mesh: mesh.clone(),
+                edges: mesh_topology::edges::SemanticEdges {
+                    indices: edges.indices.clone(),
+                    diagnostics: edges.diagnostics.clone(),
+                },
+            });
+        });
+    }
     Ok(SolidAnalysis { mesh, bvh, edges })
 }
 
 // Jobs own their display buffers and pinned BVH future. No linear-memory view
 // or source-solid borrow survives a step on the host. IDs never get recycled:
 // cancelling a stale job cannot drop a newer one.
-type AnalysisFuture = std::pin::Pin<Box<dyn std::future::Future<Output = SolidAnalysis>>>;
+type AnalysisFuture = std::pin::Pin<Box<dyn std::future::Future<Output = crate::Result<SolidAnalysis>>>>;
 #[derive(Default)]
 struct AnalysisJobs {
     next: u32,
@@ -65,10 +162,43 @@ pub fn start_solid_analysis(
             .checked_add(1)
             .ok_or_else(|| crate::input("Solid analysis job IDs exhausted"))?;
         crate::mesh::check_analysis_triangle_budget(id, MAX_ANALYSIS_TRIANGLES)?;
-        let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
+        let prov = crate::mesh::solid_z_rigid_provenance(id)?;
+        let normal_bits = normal_cosine.to_bits();
+        let edge_bits = edge_cosine.to_bits();
+        let cached = prov.and_then(|target| {
+            Z_RIGID_TEMPLATE.with(|slot| {
+                slot.borrow()
+                    .as_ref()
+                    .filter(|tpl| {
+                        tpl.origin_id == target.origin_id
+                            && tpl.normal_bits == normal_bits
+                            && tpl.edge_bits == edge_bits
+                    })
+                    .map(|tpl| {
+                        (
+                            transform_render_mesh_from_template(tpl, &target),
+                            mesh_topology::edges::SemanticEdges {
+                                indices: tpl.edges.indices.clone(),
+                                diagnostics: tpl.edges.diagnostics.clone(),
+                            },
+                        )
+                    })
+            })
+        });
+        // Render preparation runs inside the job through the same cooperative
+        // start/step path as `kernel_jobs`, so it yields between batches.
+        let (cached, render) = match cached {
+            Some((mesh, edges)) => (Some((mesh, edges)), None),
+            None => (None, Some(crate::mesh::render_buffers_job(id, normal_cosine)?)),
+        };
         jobs.jobs[slot_idx] = Some((
             next,
             Box::pin(async move {
+                let (mesh, cached_edges) = match (cached, render) {
+                    (Some((mesh, edges)), _) => (mesh, Some(edges)),
+                    (None, Some(render)) => (render.await?, None),
+                    (None, None) => unreachable!("either a template or a render job"),
+                };
                 let bvh = mesh_query::build_mesh_bvh_cooperative(
                     &mesh.vertices,
                     &mesh.indices,
@@ -76,6 +206,9 @@ pub fn start_solid_analysis(
                     leaf_size,
                 )
                 .await;
+                if let Some(edges) = cached_edges {
+                    return Ok(SolidAnalysis { mesh, bvh, edges });
+                }
                 // Let the host observe cancellation before entering edge extraction,
                 // which also yields internally. No partial result has been published.
                 let mut yielded = false;
@@ -96,7 +229,23 @@ pub fn start_solid_analysis(
                     edge_cosine,
                 )
                 .await;
-                SolidAnalysis { mesh, bvh, edges }
+                if let Some(target) = prov {
+                    Z_RIGID_TEMPLATE.with(|slot| {
+                        *slot.borrow_mut() = Some(ZRigidAnalysisTemplate {
+                            origin_id: target.origin_id,
+                            normal_bits,
+                            edge_bits,
+                            rot_xy: target.rot_xy,
+                            trans: target.trans,
+                            mesh: mesh.clone(),
+                            edges: mesh_topology::edges::SemanticEdges {
+                                indices: edges.indices.clone(),
+                                diagnostics: edges.diagnostics.clone(),
+                            },
+                        });
+                    });
+                }
+                Ok(SolidAnalysis { mesh, bvh, edges })
             }),
         ));
         jobs.next = next;
@@ -114,13 +263,13 @@ pub fn step_solid_analysis(id: u32) -> crate::Result<usize> {
             .iter()
             .position(|slot| matches!(slot, Some((job_id, _)) if *job_id == id))
             .ok_or_else(|| crate::input("Unknown or completed solid analysis job"))?;
-        let future = &mut jobs.jobs[slot_idx].as_mut().unwrap().1;
+        let future = &mut jobs.jobs[slot_idx].as_mut().expect("position() matched a Some slot").1;
         let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
         match future.as_mut().poll(&mut cx) {
             std::task::Poll::Pending => Ok(0),
             std::task::Poll::Ready(result) => {
                 jobs.jobs[slot_idx] = None;
-                Ok(store(AnalysisBuffers::Solid(result)))
+                Ok(store(AnalysisBuffers::Solid(result?)))
             }
         }
     })
@@ -175,17 +324,23 @@ pub enum AnalysisBuffers {
         degenerate_triangles: Vec<u32>,
         non_manifold_vertices: Vec<u32>,
         isolated_vertices: Vec<u32>,
-        /// [vertex_count, triangle_count, component_count, flags]
+        zero_area_triangles: Vec<u32>,
+        sliver_triangles: Vec<u32>,
+        /// [vertex_count, triangle_count, component_count, flags,
+        ///  manifold_component_count, non_orientable_components]
         /// flags bit 0: strict manifold; bit 1: manifold with boundary.
-        summary: [u32; 4],
+        summary: [u32; 6],
     },
     /// manifold-core repair output mesh plus stats
     /// [welded_vertices, removed_degenerates, flipped_triangles, residual_flags,
-    ///  split_vertices, filled_holes, filled_triangles, mode].
+    ///  split_vertices, filled_holes, filled_triangles, mode,
+    ///  removed_isolated_vertices]. `vertex_remap`: input vertex -> output
+    /// vertex (`u32::MAX` = removed), empty unless isolated removal was asked.
     ManifoldRepair {
         positions: Vec<f64>,
         indices: Vec<u32>,
-        stats: [u32; 8],
+        vertex_remap: Vec<u32>,
+        stats: [u32; 9],
     },
     /// manifold-core metrics: flat per-component records plus summary counts.
     ManifoldMetrics {
@@ -199,6 +354,25 @@ pub enum AnalysisBuffers {
         /// [vertex_count, triangle_count, edge_count, euler_characteristic
         /// (i32 bits), component_count, flags, 0, 0]
         /// flags bit 0: watertight.
+        summary: [u32; 8],
+    },
+    /// manifold-core diagnostics.
+    ManifoldDiagnostics {
+        /// Flat `[i, j]` intersecting triangle pairs.
+        intersection_pairs: Vec<u32>,
+        /// Triangles whose thickness sample is below the threshold.
+        thin_triangles: Vec<u32>,
+        /// 4 u32 per close shell pair: [component_a, component_b,
+        /// triangle_a, triangle_b].
+        clearance_pairs: Vec<u32>,
+        /// [min_thickness, max_thickness, min_gap, volume, mass, com x3,
+        /// inertia x9 (row-major)] (NaN when undefined), then one distance
+        /// per clearance pair.
+        floats: Vec<f64>,
+        /// [candidate_pairs, flags, thickness_samples, thickness_missed,
+        ///  component_count, min_thickness_triangle + 1 (0 = none),
+        ///  min_gap_triangle + 1 (0 = none), 0]
+        /// flags bit 0: intersection list truncated; bit 1: mass present.
         summary: [u32; 8],
     },
     /// manifold-ops boolean output mesh plus kernel stats.
@@ -258,6 +432,14 @@ pub fn store(result: AnalysisBuffers) -> usize {
 /// 6/7 merge-to, 8/9 face ids (all u32).
 /// Solid: Render slots 0..=9, 10/11 BVH bounds (f32), 12/13 BVH nodes,
 /// 14/15 BVH triangles, 16/17 edge indices (u32), 18..=21 diagnostic counters.
+fn ptr_len<T>(slice: &[T]) -> [usize; 2] {
+    [slice.as_ptr() as usize, slice.len()]
+}
+
+fn pair_slot(pairs: &[[usize; 2]], slot: u32) -> Option<usize> {
+    pairs.as_flattened().get(slot as usize).copied()
+}
+
 pub fn field(handle: usize, slot: u32) -> usize {
     RESULTS.with(|results| {
         let results = results.borrow();
@@ -265,70 +447,50 @@ pub fn field(handle: usize, slot: u32) -> usize {
             return 0;
         };
         match result {
-            AnalysisBuffers::Transparency(t) => match slot {
-                0 => t.planes.as_ptr() as usize,
-                1 => t.planes.len(),
-                2 => t.links.as_ptr() as usize,
-                3 => t.links.len(),
-                4 => t.owners.as_ptr() as usize,
-                5 => t.owners.len(),
-                6 => t.vertices.as_ptr() as usize,
-                7 => t.vertices.len(),
-                8..=11 => t.summary[(slot - 8) as usize],
-                _ => 0,
-            },
-            AnalysisBuffers::SurfaceGroups { ids } => match slot {
-                0 => ids.as_ptr() as usize,
-                1 => ids.len(),
-                _ => 0,
-            },
-            AnalysisBuffers::Bytes { bytes } => match slot {
-                0 => bytes.as_ptr() as usize,
-                1 => bytes.len(),
-                _ => 0,
-            },
+            AnalysisBuffers::Transparency(t) => pair_slot(
+                &[
+                    ptr_len(&t.planes),
+                    ptr_len(&t.links),
+                    ptr_len(&t.owners),
+                    ptr_len(&t.vertices),
+                ],
+                slot,
+            )
+            .or_else(|| t.summary.get(slot.checked_sub(8)? as usize).copied())
+            .unwrap_or(0),
+            AnalysisBuffers::SurfaceGroups { ids } => pair_slot(&[ptr_len(ids)], slot).unwrap_or(0),
+            AnalysisBuffers::Bytes { bytes } => pair_slot(&[ptr_len(bytes)], slot).unwrap_or(0),
             AnalysisBuffers::Export {
                 positions,
                 indices,
                 normals,
-            } => match slot {
-                0 => positions.as_ptr() as usize,
-                1 => positions.len(),
-                2 => indices.as_ptr() as usize,
-                3 => indices.len(),
-                4 => normals.as_ptr() as usize,
-                5 => normals.len(),
-                _ => 0,
-            },
-            AnalysisBuffers::Placement { positions, indices } => match slot {
-                0 => positions.as_ptr() as usize,
-                1 => positions.len(),
-                2 => indices.as_ptr() as usize,
-                3 => indices.len(),
-                _ => 0,
-            },
+            } => pair_slot(
+                &[ptr_len(positions), ptr_len(indices), ptr_len(normals)],
+                slot,
+            )
+            .unwrap_or(0),
+            AnalysisBuffers::Placement { positions, indices } => {
+                pair_slot(&[ptr_len(positions), ptr_len(indices)], slot).unwrap_or(0)
+            }
             AnalysisBuffers::Bvh {
                 bounds,
                 nodes,
                 triangles,
-            } => match slot {
-                0 => bounds.as_ptr() as usize,
-                1 => bounds.len(),
-                2 => nodes.as_ptr() as usize,
-                3 => nodes.len(),
-                4 => triangles.as_ptr() as usize,
-                5 => triangles.len(),
-                _ => 0,
-            },
+            } => pair_slot(
+                &[ptr_len(bounds), ptr_len(nodes), ptr_len(triangles)],
+                slot,
+            )
+            .unwrap_or(0),
             AnalysisBuffers::Edges {
                 indices,
                 diagnostics,
-            } => match slot {
-                0 => indices.as_ptr() as usize,
-                1 => indices.len(),
-                2..=5 => diagnostics[slot as usize - 2] as usize,
-                _ => 0,
-            },
+            } => pair_slot(&[ptr_len(indices)], slot)
+                .or_else(|| {
+                    diagnostics
+                        .get(slot.checked_sub(2)? as usize)
+                        .map(|&v| v as usize)
+                })
+                .unwrap_or(0),
             AnalysisBuffers::Render(mesh) => render_field(mesh, slot),
             AnalysisBuffers::ManifoldCheck {
                 boundary_edges,
@@ -337,124 +499,145 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 degenerate_triangles,
                 non_manifold_vertices,
                 isolated_vertices,
+                zero_area_triangles,
+                sliver_triangles,
                 summary,
-            } => match slot {
-                0 => boundary_edges.as_ptr() as usize,
-                1 => boundary_edges.len(),
-                2 => non_manifold_edges.as_ptr() as usize,
-                3 => non_manifold_edges.len(),
-                4 => orientation_edges.as_ptr() as usize,
-                5 => orientation_edges.len(),
-                6 => degenerate_triangles.as_ptr() as usize,
-                7 => degenerate_triangles.len(),
-                8 => non_manifold_vertices.as_ptr() as usize,
-                9 => non_manifold_vertices.len(),
-                10 => isolated_vertices.as_ptr() as usize,
-                11 => isolated_vertices.len(),
-                12..=15 => summary[slot as usize - 12] as usize,
-                _ => 0,
-            },
+            } => pair_slot(
+                &[
+                    ptr_len(boundary_edges),
+                    ptr_len(non_manifold_edges),
+                    ptr_len(orientation_edges),
+                    ptr_len(degenerate_triangles),
+                    ptr_len(non_manifold_vertices),
+                    ptr_len(isolated_vertices),
+                    ptr_len(zero_area_triangles),
+                    ptr_len(sliver_triangles),
+                ],
+                slot,
+            )
+            .or_else(|| {
+                summary
+                    .get(slot.checked_sub(16)? as usize)
+                    .map(|&v| v as usize)
+            })
+            .unwrap_or(0),
             AnalysisBuffers::ManifoldRepair {
                 positions,
                 indices,
+                vertex_remap,
                 stats,
-            } => match slot {
-                0 => positions.as_ptr() as usize,
-                1 => positions.len(),
-                2 => indices.as_ptr() as usize,
-                3 => indices.len(),
-                4..=11 => stats[slot as usize - 4] as usize,
-                _ => 0,
-            },
+            } => pair_slot(
+                &[ptr_len(positions), ptr_len(indices), ptr_len(vertex_remap)],
+                slot,
+            )
+                .or_else(|| {
+                    stats
+                        .get(slot.checked_sub(6)? as usize)
+                        .map(|&v| v as usize)
+                })
+                .unwrap_or(0),
             AnalysisBuffers::ManifoldMetrics {
                 component_stats,
                 component_floats,
                 floats,
                 summary,
-            } => match slot {
-                0 => component_stats.as_ptr() as usize,
-                1 => component_stats.len(),
-                2 => component_floats.as_ptr() as usize,
-                3 => component_floats.len(),
-                4 => floats.as_ptr() as usize,
-                5 => floats.len(),
-                6..=13 => summary[slot as usize - 6] as usize,
-                _ => 0,
-            },
+            } => pair_slot(
+                &[
+                    ptr_len(component_stats),
+                    ptr_len(component_floats),
+                    ptr_len(floats),
+                ],
+                slot,
+            )
+            .or_else(|| {
+                summary
+                    .get(slot.checked_sub(6)? as usize)
+                    .map(|&v| v as usize)
+            })
+            .unwrap_or(0),
+            AnalysisBuffers::ManifoldDiagnostics {
+                intersection_pairs,
+                thin_triangles,
+                clearance_pairs,
+                floats,
+                summary,
+            } => pair_slot(
+                &[
+                    ptr_len(intersection_pairs),
+                    ptr_len(thin_triangles),
+                    ptr_len(clearance_pairs),
+                    ptr_len(floats),
+                ],
+                slot,
+            )
+            .or_else(|| {
+                summary
+                    .get(slot.checked_sub(8)? as usize)
+                    .map(|&v| v as usize)
+            })
+            .unwrap_or(0),
             AnalysisBuffers::ManifoldBoolean {
                 positions,
                 indices,
                 floats,
                 stats,
-            } => match slot {
-                0 => positions.as_ptr() as usize,
-                1 => positions.len(),
-                2 => indices.as_ptr() as usize,
-                3 => indices.len(),
-                4 => floats.as_ptr() as usize,
-                5 => floats.len(),
-                6..=13 => stats[slot as usize - 6] as usize,
-                _ => 0,
-            },
-            AnalysisBuffers::Solid(result) => match slot {
-                0..=9 => render_field(&result.mesh, slot),
-                10 => result.bvh.bounds.as_ptr() as usize,
-                11 => result.bvh.bounds.len(),
-                12 => result.bvh.nodes.as_ptr() as usize,
-                13 => result.bvh.nodes.len(),
-                14 => result.bvh.triangles.as_ptr() as usize,
-                15 => result.bvh.triangles.len(),
-                16 => result.edges.indices.as_ptr() as usize,
-                17 => result.edges.indices.len(),
-                18 => result.edges.diagnostics.boundary as usize,
-                19 => result.edges.diagnostics.crease as usize,
-                20 => result.edges.diagnostics.non_manifold as usize,
-                21 => result.edges.diagnostics.degenerate as usize,
-                _ => 0,
-            },
-            AnalysisBuffers::SmoothTriangleList { positions, normals } => match slot {
-                0 => positions.as_ptr() as usize,
-                1 => positions.len(),
-                2 => normals.as_ptr() as usize,
-                3 => normals.len(),
-                _ => 0,
-            },
-            AnalysisBuffers::VertexNormals { vertices } => match slot {
-                0 => vertices.as_ptr() as usize,
-                1 => vertices.len(),
-                _ => 0,
-            },
+            } => pair_slot(&[ptr_len(positions), ptr_len(indices), ptr_len(floats)], slot)
+                .or_else(|| {
+                    stats
+                        .get(slot.checked_sub(6)? as usize)
+                        .map(|&v| v as usize)
+                })
+                .unwrap_or(0),
+            AnalysisBuffers::Solid(result) => solid_field(result, slot),
+            AnalysisBuffers::SmoothTriangleList { positions, normals } => {
+                pair_slot(&[ptr_len(positions), ptr_len(normals)], slot).unwrap_or(0)
+            }
+            AnalysisBuffers::VertexNormals { vertices } => {
+                pair_slot(&[ptr_len(vertices)], slot).unwrap_or(0)
+            }
             AnalysisBuffers::ExpandedDisplayMesh {
                 vertices,
                 indices,
                 floats,
-            } => match slot {
-                0 => vertices.as_ptr() as usize,
-                1 => vertices.len(),
-                2 => indices.as_ptr() as usize,
-                3 => indices.len(),
-                4 => floats.as_ptr() as usize,
-                5 => floats.len(),
-                _ => 0,
-            },
+            } => pair_slot(&[ptr_len(vertices), ptr_len(indices), ptr_len(floats)], slot)
+                .unwrap_or(0),
         }
     })
 }
 
-fn render_field(mesh: &crate::mesh::RenderMesh, slot: u32) -> usize {
+fn solid_field(result: &SolidAnalysis, slot: u32) -> usize {
     match slot {
-        0 => mesh.vertices.as_ptr() as usize,
-        1 => mesh.vertices.len(),
-        2 => mesh.indices.as_ptr() as usize,
-        3 => mesh.indices.len(),
-        4 => mesh.merge_from.as_ptr() as usize,
-        5 => mesh.merge_from.len(),
-        6 => mesh.merge_to.as_ptr() as usize,
-        7 => mesh.merge_to.len(),
-        8 => mesh.face_ids.as_ptr() as usize,
-        9 => mesh.face_ids.len(),
+        0..=9 => render_field(&result.mesh, slot),
+        10..=17 => pair_slot(
+            &[
+                ptr_len(&result.bvh.bounds),
+                ptr_len(&result.bvh.nodes),
+                ptr_len(&result.bvh.triangles),
+                ptr_len(&result.edges.indices),
+            ],
+            slot - 10,
+        )
+        .unwrap_or(0),
+        18 => result.edges.diagnostics.boundary as usize,
+        19 => result.edges.diagnostics.crease as usize,
+        20 => result.edges.diagnostics.non_manifold as usize,
+        21 => result.edges.diagnostics.degenerate as usize,
         _ => 0,
     }
+}
+
+fn render_field(mesh: &crate::mesh::RenderMesh, slot: u32) -> usize {
+    pair_slot(
+        &[
+            ptr_len(&mesh.vertices),
+            ptr_len(&mesh.indices),
+            ptr_len(&mesh.merge_from),
+            ptr_len(&mesh.merge_to),
+            ptr_len(&mesh.face_ids),
+        ],
+        slot,
+    )
+    .unwrap_or(0)
 }
 
 pub fn free(handle: usize) {
@@ -464,6 +647,18 @@ pub fn free(handle: usize) {
             *slot = None;
         }
     });
+}
+
+/// Consume a stored render result (tests compare it with the one-shot path).
+#[cfg(test)]
+pub(crate) fn take_render(handle: usize) -> Option<crate::mesh::RenderMesh> {
+    RESULTS.with(|results| {
+        let mut results = results.borrow_mut();
+        match handle.checked_sub(1).and_then(|i| results.get_mut(i)).map(Option::take) {
+            Some(Some(AnalysisBuffers::Render(mesh))) => Some(mesh),
+            _ => None,
+        }
+    })
 }
 
 #[cfg(test)]
@@ -492,6 +687,7 @@ mod cooperative_tests {
         crate::mesh::dispatch(json!({"action":"delete", "ids":[id]})).unwrap();
     }
     fn start(id: u32) -> u32 {
+        Z_RIGID_TEMPLATE.with(|slot| *slot.borrow_mut() = None);
         start_solid_analysis(id, 0.6, 0.8, 8).unwrap()
     }
     fn live() -> usize {
@@ -623,20 +819,9 @@ mod cooperative_tests {
             };
             assert_eq!(actual.mesh.vertices, expected.mesh.vertices);
             assert_eq!(actual.mesh.indices, expected.mesh.indices);
-            assert_eq!(
-                actual
-                    .bvh
-                    .bounds
-                    .iter()
-                    .map(|x| x.to_bits())
-                    .collect::<Vec<_>>(),
-                expected
-                    .bvh
-                    .bounds
-                    .iter()
-                    .map(|x| x.to_bits())
-                    .collect::<Vec<_>>()
-            );
+            let actual_bits: Vec<_> = actual.bvh.bounds.iter().map(|x| x.to_bits()).collect();
+            let expected_bits: Vec<_> = expected.bvh.bounds.iter().map(|x| x.to_bits()).collect();
+            assert_eq!(actual_bits, expected_bits);
             assert_eq!(actual.bvh.nodes, expected.bvh.nodes);
             assert_eq!(actual.bvh.triangles, expected.bvh.triangles);
             assert_eq!(actual.edges.indices, expected.edges.indices);

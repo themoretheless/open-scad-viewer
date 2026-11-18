@@ -1,8 +1,5 @@
 //! Whole authored UV-face guards, independent of sewing/solid admission.
-use brep_core::{
-    Coedge, Edge, Face, FaceUse, Loop, Shell, Vertex, face_curvature as c,
-    face_domain::{self, BoxDecision},
-};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Shell, Vertex, face_curvature as c, face_domain::{self, BoxDecision}};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn main() {
     let args = std::env::args().collect::<Vec<_>>();

@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0554",
+  "testedBase": "7897be00af2563c3d7b5e2be1c3caafd4a8805de",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 165,
+  "scope": [
+    "Export rational lifted components with holes translated into the same UV chart.",
+    "Reuse the certified contour forest and translate every hole vertex exactly into its outer component chart."
+  ],
+  "logSha256": "0ef29e77757b7e982106c97b6a4b4b84dbc888c8b2747625df41a41e6d089b6d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c85fcae077eccb6c68eb02c657fc6b3d1d592a19e63bf14e43b2a968c15536db",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "738059fe5c0d9d112a38e0cd188fda9aca514133081dd060a26f598440e65c76"
+  }
+}

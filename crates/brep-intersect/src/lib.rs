@@ -3,7 +3,15 @@
 //! the model and reported through the `nurbs-intersect` report schema. The
 //! sphere–sphere pair still lives in `brep-core` beside the analytic
 //! Booleans that consume it directly and is re-exported here.
-use nurbs_core::{Result, curve::Curve};
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
+use nurbs_core::{Error, Result, curve::Curve};
+
+#[inline]
+pub(crate) fn invalid(message: impl Into<String>) -> Error {
+    Error::new("BREP_INTERSECTION_INVALID_INPUT", message)
+}
 use nurbs_intersect::*;
 use nurbs_intersect::vec3::norm;
 use std::f64::consts::{FRAC_PI_2 as QUARTER, TAU};
@@ -23,6 +31,7 @@ mod plane_torus;
 mod sphere_cone;
 mod sphere_cylinder;
 mod sphere_torus;
+mod implicit_trace;
 mod torus_torus;
 pub use cone_cone::{ConeConeComponent, intersect_cone_cone};
 pub use cone_torus::{ConeTorusComponent, intersect_cone_torus};
@@ -34,7 +43,11 @@ pub use plane_sphere::{PlanePatchCurve, PlaneSphereComponent, intersect_plane_sp
 pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_torus};
 pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
 pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder};
-pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
+pub use sphere_torus::{
+    LIFT_TOLERANCE, SphereTorusComponent, TRACE_TOLERANCE, intersect_sphere_torus,
+    cone_torus_boolean, cylinder_drill_boolean, cylinder_torus_boolean, sphere_cone_boolean, sphere_cylinder_boolean,
+    sphere_torus_boolean,
+};
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 pub use brep_core::intersections::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
 

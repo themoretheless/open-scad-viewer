@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0368",
+  "testedBase": "4eae1b3f7a031e8f35cefc0a20d166c2a7c98ca3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 64,
+  "scope": [
+    "Certify a continuous section graph across consecutive original knot cells using exact one-sided seam polynomials.",
+    "The two one-sided homogeneous polynomials agree at each shared knot. A unique shared root is bracketed in the original solved clock, including repeated knots and nonbinary roots."
+  ],
+  "logSha256": "36bce942e3a5801e33dff48f78e6b70496c8f50aeeb1ba030b48327a23a5014e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "eb8851259835ef7f25c312ab1e011e8058e474e8ca9138df77f742e2faa15f40",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "af2dc36f93251a09d1c290d0db9e56507781cbf445101c16650c37b5506a5de2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "f7e3cb295f80e4dfebba985897b0fa1d520d9bdadae85455add45400199e5837",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs": "bb3808229dd97daf252fd6144749bb6d390e139941e40f94869b1013a2621146",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/stitch.rs": "7fa2e6e821b9b374b82205256f6192a36b71921a8f9827b6798a6a9f86ecd5f5",
+    "crates/nurbs-geometry/src/curve.rs": "b6d24031f1965d1a5f948b1bab14f483f205ed92b339445b611d24dc2f870b8d",
+    "crates/nurbs-geometry/src/surface.rs": "72eb813b80dab1daa1afb5bd0e94b650b687f31a4247cda8610cfd63b0a8a669"
+  }
+}

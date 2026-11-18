@@ -6,6 +6,23 @@ pub(in super::super) enum FrameSource<'a> {
     AuthoredGuide(&'a crate::curve::Curve,&'a crate::curve::Curve),
     Guide(&'a crate::curve::Curve),
 }
+/// Authored frame laws applied at a station: longitudinal and transverse frame laws, scale, twist
+/// and optional affine laws.
+#[derive(Clone, Copy)]
+pub struct FrameLaws<'a> {
+    pub longitudinal: &'a crate::curve::Curve,
+    pub transverse: &'a crate::curve::Curve,
+    pub scale: &'a crate::curve::Curve,
+    pub twist: &'a crate::curve::Curve,
+    pub affine: Option<(&'a crate::curve::Curve, &'a crate::curve::Curve)>,
+}
+/// Scale and twist laws of a station frame, with optional affine laws.
+#[derive(Clone, Copy)]
+pub struct StationLaws<'a> {
+    pub scale: &'a crate::curve::Curve,
+    pub twist: &'a crate::curve::Curve,
+    pub affine: Option<(&'a crate::curve::Curve, &'a crate::curve::Curve)>,
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     pub status: Status,
@@ -20,6 +37,20 @@ pub struct Report {
     pub reason: Option<&'static str>,
     pub(super) distribute_holonomy: bool,
     pub(super) sites: Option<Vec<[f64; 3]>>,
+}
+/// Interval enclosures of a station's local affine law: per-axis profile
+/// scale and the center offset in the rotated local frame.
+#[derive(Clone, Copy, Debug)]
+pub struct StationAffine {
+    pub axes: [[f64; 2]; 3],
+    pub center: [[f64; 2]; 3],
+}
+impl StationAffine {
+    /// Unit axis scale and zero center.
+    pub const IDENTITY: Self = Self {
+        axes: [[1., 1.]; 3],
+        center: [[0., 0.]; 3],
+    };
 }
 impl Report {
     pub(in super::super) fn without_distributed_holonomy(mut self)->Self {
@@ -136,15 +167,16 @@ impl Report {
         scale: [f64; 2],
         twist: [f64; 2],
     ) -> Result<Option<VectorEnclosure>> {
-        self.station_point_affine(edge,fraction,authored,scale,twist,[[1.,1.];3],[[0.,0.];3])
+        self.station_point_affine(edge,fraction,authored,scale,twist,StationAffine::IDENTITY)
     }
     /// Local affine law convention: uniform scale multiplies axis-scaled
     /// profile offsets; the center is added in the rotated local frame before
     /// the same miter projection as the profile. Axial center uses the tangent.
     pub fn station_point_affine(
         &self,edge:usize,fraction:[f64;2],authored:[f64;3],scale:[f64;2],twist:[f64;2],
-        axes:[[f64;2];3],center:[[f64;2];3],
+        affine:StationAffine,
     )->Result<Option<VectorEnclosure>> {
+        let StationAffine{axes,center}=affine;
         check(
             authored.iter().all(|x| x.is_finite()),
             "Station profile point must be finite",
@@ -201,14 +233,29 @@ impl Report {
         twist: &crate::curve::Curve,
         max_cells: usize,
     ) -> Result<Option<VectorEnclosure>> {
-        self.station_with_affine_laws(edge,fraction,authored,scale,twist,None,max_cells)
+        self.station_with_affine_laws(
+            edge,
+            fraction,
+            authored,
+            StationLaws {
+                scale,
+                twist,
+                affine: None,
+            },
+            max_cells,
+        )
     }
     /// Optional XYZ axis/center laws use their own authored domains and share
     /// one component-cell budget. Scalar scale/twist budgets remain separate.
     pub fn station_with_affine_laws(
-        &self,edge:usize,fraction:[f64;2],authored:[f64;3],scale:&crate::curve::Curve,
-        twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        authored:[f64;3],
+        laws: StationLaws<'_>,
+        max_cells:usize,
     )->Result<Option<VectorEnclosure>> {
+        let StationLaws { scale, twist, affine } = laws;
         let Some(traversal) = self.traversal(edge, fraction)? else {
             return Ok(None);
         };
@@ -224,7 +271,7 @@ impl Report {
             let axes=super::super::vector_certificate::certify_values_traversal(axes,traversal,max_cells,true)?;
             let center=super::super::vector_certificate::certify_values_traversal(center,traversal,max_cells-axes.cells,false)?;
             let (Some(axes),Some(center))=(axes.value,center.value) else {return Ok(None);};
-            self.station_point_affine(edge,fraction,authored,s,t,axes,center)
+            self.station_point_affine(edge,fraction,authored,s,t,StationAffine{axes,center})
         } else {
             self.station_point(edge, fraction, authored, s, t)
         }
@@ -253,17 +300,31 @@ impl Report {
     /// expressed in the initial profile frame; local Z must be zero. Frame,
     /// twist and scale laws share one cell budget. Miter projection continues
     /// to use the path tangent and its endpoint planes, not the frame axis.
-    pub fn station_local_authored_frame(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,max_cells:usize)->Result<Option<VectorEnclosure>> {
-        self.station_local_authored_frame_affine(edge,fraction,local,longitudinal,transverse,scale,twist,None,max_cells)
-    }
-    pub fn station_local_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize)->Result<Option<VectorEnclosure>> {
-        self.station_frame_affine(edge,fraction,local,FrameSource::Authored(longitudinal,transverse),scale,twist,affine,max_cells)
+    pub fn station_local_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<VectorEnclosure>> {
+        let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
+        self.station_frame_affine(
+            edge,
+            fraction,
+            local,
+            FrameSource::Authored(longitudinal,transverse),
+            StationLaws {
+                scale,
+                twist,
+                affine,
+            },
+            max_cells,
+        )
     }
     pub(in super::super) fn station_frame_affine(
-        &self, edge:usize, fraction:[f64;2], local:VectorEnclosure,
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        local:VectorEnclosure,
         source:FrameSource<'_>,
-        scale:&crate::curve::Curve, twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
+        laws: StationLaws<'_>,
+        max_cells:usize,
     )->Result<Option<VectorEnclosure>> {
+        let StationLaws { scale, twist, affine } = laws;
         check(local.iter().flatten().all(|x|x.is_finite()) && local[2]==[0.,0.],"Authored miter local profile must be finite and planar")?;
         let Some(traversal)=self.traversal(edge,fraction)? else {return Ok(None);};
         let frame=match source {
@@ -300,17 +361,31 @@ impl Report {
     /// Authored-frame interpolation remainder over an entire edge subinterval.
     /// Includes moving frame, twist, scale and the full path-miter field.
     /// Derivative rates map normalized traversal to the local interval.
-    pub fn interpolation_upper_authored_frame(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,max_cells:usize)->Result<Option<f64>> {
-        self.interpolation_upper_authored_frame_affine(edge,fraction,local,longitudinal,transverse,scale,twist,None,max_cells)
-    }
-    pub fn interpolation_upper_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize)->Result<Option<f64>> {
-        self.interpolation_upper_frame_affine(edge,fraction,local,FrameSource::Authored(longitudinal,transverse),scale,twist,affine,max_cells)
+    pub fn interpolation_upper_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<f64>> {
+        let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
+        self.interpolation_upper_frame_affine(
+            edge,
+            fraction,
+            local,
+            FrameSource::Authored(longitudinal,transverse),
+            StationLaws {
+                scale,
+                twist,
+                affine,
+            },
+            max_cells,
+        )
     }
     pub(in super::super) fn interpolation_upper_frame_affine(
-        &self,edge:usize,fraction:[f64;2],local:VectorEnclosure,
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        local:VectorEnclosure,
         source:FrameSource<'_>,
-        scale:&crate::curve::Curve,twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
+        laws: StationLaws<'_>,
+        max_cells:usize,
     )->Result<Option<f64>> {
+        let StationLaws { scale, twist, affine } = laws;
         check(local.iter().flatten().all(|x|x.is_finite()) && local[2]==[0.,0.],"Authored miter local profile must be finite and planar")?;
         let Some(traversal)=self.traversal(edge,fraction)? else {return Ok(None);};
         let frame=match source {
@@ -390,13 +465,28 @@ impl Report {
         twist: &crate::curve::Curve,
         max_cells: usize,
     ) -> Result<Option<f64>> {
-        self.interpolation_upper_affine(edge,fraction,authored,scale,twist,None,max_cells)
+        self.interpolation_upper_affine(
+            edge,
+            fraction,
+            authored,
+            StationLaws {
+                scale,
+                twist,
+                affine: None,
+            },
+            max_cells,
+        )
     }
     /// Outward derivative remainder including XYZ axis scale and local center.
     pub fn interpolation_upper_affine(
-        &self,edge:usize,fraction:[f64;2],authored:[f64;3],scale:&crate::curve::Curve,
-        twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        authored:[f64;3],
+        laws: StationLaws<'_>,
+        max_cells:usize,
     )->Result<Option<f64>> {
+        let StationLaws { scale, twist, affine } = laws;
         check(
             authored.iter().all(|x| x.is_finite()),
             "Profile point must be finite",

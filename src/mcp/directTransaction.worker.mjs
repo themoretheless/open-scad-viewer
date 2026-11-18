@@ -1,4 +1,4 @@
 import './registerRawSourceImports.mjs'
-import {register} from 'tsx/esm/api'
+import { register } from 'tsx/esm/api'
 register()
 await import('./directTransaction.worker.ts')

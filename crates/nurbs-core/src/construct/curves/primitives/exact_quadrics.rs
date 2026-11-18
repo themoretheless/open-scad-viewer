@@ -4,12 +4,10 @@ use crate::{
     core::bounded_rational::{Error, Work},
     surface::Surface,
 };
-use num_rational::BigRational as Q;
 mod proof;
-mod template;
 #[cfg(test)]
 mod tests;
-use template::Template;
+use super::exact_circle::Template;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {

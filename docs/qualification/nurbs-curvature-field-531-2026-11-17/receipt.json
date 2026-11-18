@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0531",
+  "testedBase": "c1f79e2339c40b2c91e7c14647859edb2b0d4776",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 119,
+  "scope": [
+    "Prove literal cyclic repeat periods in the full weighted tensor and retain the shortest supported cycle.",
+    "Require exact rational knot translations and literal repeats of all tensor controls and weights before truncating the repeated turns."
+  ],
+  "logSha256": "586ebc7559ef99f167fc10f0fced621f39ea3a8ac51ec369084723328c00f4b0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0297428e0b13c4509124ae848f3e6997bb4f73a500a0177b173e0e0ba3b2dfa1",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "be635154c766998f1e35537010e39a7fe56f06ef245c06805fddfc743c4ee2a9"
+  }
+}

@@ -1,13 +1,4 @@
 //! Deterministic photo reconstruction. Algorithms use Rust std only; host owns codecs and UI.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 pub mod bundle;
 pub mod calibration;
 pub mod camera;
@@ -531,3 +522,5 @@ mod point_cloud_filter_tests {
 
 #[cfg(test)]
 mod integration_tests;
+#[cfg(test)]
+mod camera_model_tests;

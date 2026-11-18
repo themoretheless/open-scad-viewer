@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { SceneController } from '../src/services/sceneController'
+import { SceneController } from '../src/app/sceneController'
 
-const mesh = (entityId: string): MeshData => ({ entityId } as MeshData)
+const mesh = (entityId: string): MeshData => ({ entityId }) as MeshData
 
 describe('SceneController', () => {
   it('owns publication, selection, visibility and isolation as one invariant-safe snapshot', () => {
@@ -19,7 +19,12 @@ describe('SceneController', () => {
 
     controller.applyRendererSelection(1, true, { meshIndex: 1 })
     controller.setVisibility(1, false)
-    expect(controller.state).toMatchObject({ selectedIndex: null, selectedHit: null, isolated: false, visibility: [true, false] })
+    expect(controller.state).toMatchObject({
+      selectedIndex: null,
+      selectedHit: null,
+      isolated: false,
+      visibility: [true, false],
+    })
     expect(listener).toHaveBeenCalledTimes(3)
   })
 
@@ -32,7 +37,16 @@ describe('SceneController', () => {
       isolated: false,
     })
     controller.applyRendererHover({ meshIndex: 1 })
-    controller.setMeasurement({ points: [[0, 0, 0], [1, 0, 0]], distance: 1 }, true)
+    controller.setMeasurement(
+      {
+        points: [
+          [0, 0, 0],
+          [1, 0, 0],
+        ],
+        distance: 1,
+      },
+      true,
+    )
     controller.setSection({ enabled: true, axis: 'x', offset: 4, initialized: true })
     expect(controller.state).toMatchObject({
       hoveredHit: { meshIndex: 1 },

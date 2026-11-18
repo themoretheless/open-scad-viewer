@@ -2,8 +2,8 @@ import {multispanFirst,multispanSecond} from '../tests/fixtures/bezier-region-ca
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {minkowskiL,minkowskiKernel,minkowskiFrame,minkowskiSquare,minkowskiNeck,zeroJetRegion,retracedLine,monotoneStationary,spanFirst,spanSecond,rationalKnotFirst,rationalKnotSecond,polygonWire,retracingImageFirst,retracingImageSecond,cuspImageFirst,cuspImageSecond} from '../tests/fixtures/minkowski-cases'
 const bytes=readFileSync(process.argv[2]??'public/wasm/geometry-kernel.wasm'),wasm=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any
 const calls:any[]=[],proofs:any[]=[],models:any[]=[]

@@ -3,7 +3,10 @@
 use crate::{Error, Result, curve::Curve, interval_eval::Interval as I, surface::Surface};
 type Poly = Vec<Vec<I>>;
 mod jet_difference;
-pub use jet_difference::{G2Report, JetReport, inspect_g2, inspect_g2_opposite_cross, inspect_g2_cross_frame, inspect_jets};
+pub use jet_difference::{
+    CollarBudget, G2Report, JetReport, inspect_g2, inspect_g2_cross_frame,
+    inspect_g2_opposite_cross, inspect_jets,
+};
 pub(crate) use jet_difference::{graph_difference_bounds,graph_difference_bounds_cartesian};
 #[path="surface_collar/jet_difference/world_difference.rs"]
 mod world_difference;

@@ -4,12 +4,12 @@ import {createHash} from 'node:crypto'
 import {mkdir,readFile,writeFile} from 'node:fs/promises'
 import {resolve} from 'node:path'
 import identity from '../src/generated/geometry-kernels/identity'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {solidExactEdgeFeature} from '../src/services/solidExactEdgeFeature'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
-import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 
 assert(process.argv[2],'Provide a new qualification output directory')
 const output=resolve(process.argv[2]);await mkdir(output)

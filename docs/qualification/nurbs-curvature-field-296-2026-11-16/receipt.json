@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0296",
+  "testedBase": "a3b6a6b5dc64274341cbfe6cf831f2d1003ef0f7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_seam_isolation_contracts",
+    "--test",
+    "exact_pcurve_seam_contracts",
+    "--test",
+    "exact_pcurve_chart_contracts",
+    "--test",
+    "exact_mobius_trimmed_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 10,
+  "scope": [
+    "Isolate each original rational pcurve seam contact in a certified absolute-parameter bracket, with exact crossing parity.",
+    "One-sided endpoints and coincident spans remain explicit. Single-root brackets have exact width bounds; an unresolved binary64 bracket refuses the whole request."
+  ],
+  "logSha256": "ed2d0d6a8c29a949d49681b8c2aee991a1f68966386f21a1d8e650ff2ac93bc7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "d8b48f1e6ef336eb14f00aae87eff8ccc79d8b3364e2b35192413dd005c54146",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "9251ec37acab10bc8f609e8fdc5599255994d858bf336a99d32ae74f9f347bb1",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs": "2e9308a3fc15078311a968723bc94ee66673ad825db570823ffe9bcee48c89c9",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "571d1bfd62ac7ba6cc7274c9cb9d3a3fe0f5e0d7a2caad7c65cefc93c700fd04",
+    "crates/nurbs-core/tests/exact_pcurve_seam_isolation_contracts.rs": "19e309ec227f49e6b4d1343655f2832e55cc4c19d018772b88c6d696e09261ef"
+  }
+}

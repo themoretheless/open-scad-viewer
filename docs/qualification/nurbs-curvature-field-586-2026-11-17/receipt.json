@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0586",
+  "testedBase": "130a0a804913e83e2749efceabc56e4050df7771",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 163,
+  "scope": [
+    "Enclose all original vertex stations in contour order under one shared cell budget.",
+    "Verify cumulative lengths at all original vertices through reversed seam splits, full source coverage, and atomic budget refusal."
+  ],
+  "logSha256": "f7775ef0e0cce491cdcf3a8303d92352d9fce5d94d48e79e8c1ad0cc4e52b5fa",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "d8be1d9109b17f57da0192cf6d8ee728fe56b489508173e4b975d2c53b6323f4",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "7fdd91b4047f39a33e1ce3583283899fb32a72925ea036e134a3989c2fca74a6"
+  }
+}

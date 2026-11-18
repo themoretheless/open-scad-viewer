@@ -1,19 +1,19 @@
-import {readFileSync} from 'node:fs'
-import {brotliCompressSync, constants} from 'node:zlib'
-import {describe, expect, it} from 'vitest'
+import { readFileSync } from 'node:fs'
+import { brotliCompressSync, constants } from 'node:zlib'
+import { describe, expect, it } from 'vitest'
 import geometryBytes from '../src/generated/geometry-kernels/bytes'
 import decoderBytes from '../src/generated/wasm-brotli/bytes'
 import photogrammetryBytes from '../src/generated/photogrammetry/bytes'
-import {unpackWasmBase64} from '../src/services/wasmPacking'
-import {unpackBrotliWasm, unpackBrotliWasmBase64} from '../src/services/wasmBrotliPacking'
-import {encodeBase85, decodeBase85} from '../scripts/wasm-base85.mjs'
-import {encodeVariableBase93,encodeSeptBase118} from '../scripts/wasm-base91.mjs'
-import {verifyPackedWasmChunk} from '../scripts/verify-packed-wasm.mjs'
+import { unpackWasmBase64 } from '../src/kernel/wasmPacking'
+import { unpackBrotliWasm, unpackBrotliWasmBase64 } from '../src/kernel/wasmBrotliPacking'
+import { encodeBase85, decodeBase85 } from '../scripts/wasm-base85.mjs'
+import { encodeVariableBase93, encodeSeptBase118 } from '../scripts/wasm-base91.mjs'
+import { verifyPackedWasmChunk } from '../scripts/verify-packed-wasm.mjs'
 
 function pack(data: Uint8Array, quality = 11): Uint8Array {
   const header = Buffer.alloc(4)
   header.writeUInt32LE(data.length)
-  return Buffer.concat([header, brotliCompressSync(data, {params: {[constants.BROTLI_PARAM_QUALITY]: quality}})])
+  return Buffer.concat([header, brotliCompressSync(data, { params: { [constants.BROTLI_PARAM_QUALITY]: quality } })])
 }
 
 describe('synchronous Brotli WASM packages', () => {
@@ -21,26 +21,44 @@ describe('synchronous Brotli WASM packages', () => {
     const original = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])
     const split = Math.floor(original.length / 2)
     const chunks = [original.subarray(0, split), original.subarray(split)]
-    const compressed = chunks.map(chunk => brotliCompressSync(chunk, {params: {[constants.BROTLI_PARAM_QUALITY]: 5}}))
+    const compressed = chunks.map(chunk =>
+      brotliCompressSync(chunk, { params: { [constants.BROTLI_PARAM_QUALITY]: 5 } }),
+    )
     const header = Buffer.alloc(21)
-    header.writeUInt32LE(original.length + 0x80000000); header[4] = 2
+    header.writeUInt32LE(original.length + 0x80000000)
+    header[4] = 2
     chunks.forEach((chunk, i) => {
       header.writeUInt32LE(chunk.length, 5 + 8 * i)
       header.writeUInt32LE(compressed[i].length, 9 + 8 * i)
     })
     const packed = Buffer.concat([header, ...compressed])
     expect(Buffer.from(unpackBrotliWasm(packed))).toEqual(original)
-    expect(verifyPackedWasmChunk(`export default '${encodeVariableBase93(packed)}'`, original, 'sections')).toBe(original.length)
+    expect(verifyPackedWasmChunk(`export default '${encodeVariableBase93(packed)}'`, original, 'sections')).toBe(
+      original.length,
+    )
     for (const change of [
-      (b: Buffer) => { b[4] = 0 },
-      (b: Buffer) => { b[4] = 9 },
-      (b: Buffer) => { b.writeUInt32LE(0, 5) },
-      (b: Buffer) => { b.writeUInt32LE(0xffffffff, 9) },
-      (b: Buffer) => { b.writeUInt32LE(1, 13) },
+      (b: Buffer) => {
+        b[4] = 0
+      },
+      (b: Buffer) => {
+        b[4] = 9
+      },
+      (b: Buffer) => {
+        b.writeUInt32LE(0, 5)
+      },
+      (b: Buffer) => {
+        b.writeUInt32LE(0xffffffff, 9)
+      },
+      (b: Buffer) => {
+        b.writeUInt32LE(1, 13)
+      },
     ]) {
-      const invalid = Buffer.from(packed); change(invalid)
+      const invalid = Buffer.from(packed)
+      change(invalid)
       expect(() => unpackBrotliWasm(invalid)).toThrow()
-      expect(() => verifyPackedWasmChunk(`export default '${encodeVariableBase93(invalid)}'`, original, 'sections')).toThrow()
+      expect(() =>
+        verifyPackedWasmChunk(`export default '${encodeVariableBase93(invalid)}'`, original, 'sections'),
+      ).toThrow()
     }
     expect(() => unpackBrotliWasm(packed.subarray(0, 12))).toThrow()
     expect(() => unpackBrotliWasm(packed.subarray(0, -1))).toThrow()
@@ -49,7 +67,7 @@ describe('synchronous Brotli WASM packages', () => {
 
   it('round-trips compact literals through both build-time and Rust decoders', () => {
     for (let length = 0; length < 100; length++) {
-      const data = Uint8Array.from({length}, (_, i) => (i * 97 + length) & 255)
+      const data = Uint8Array.from({ length }, (_, i) => (i * 97 + length) & 255)
       expect(decodeBase85(encodeBase85(data))).toEqual(data)
       const packageBytes = pack(data, length % 12)
       const text = encodeBase85(packageBytes)
@@ -62,16 +80,25 @@ describe('synchronous Brotli WASM packages', () => {
     const bytes = pack(new Uint8Array())
     const encoded = encodeBase85(bytes)
     const padded = new Uint8Array(Math.ceil(bytes.length / 4) * 4)
-    padded.set(bytes); padded[padded.length - 1] = 1
-    const noncanonical = encoded.slice(0,9) + encodeBase85(padded).slice(9)
-    for (const invalid of [noncanonical, encoded.slice(0,-1), encoded+'00000', 'b85:00005#####00000', 'b85:000050000~00000']) {
+    padded.set(bytes)
+    padded[padded.length - 1] = 1
+    const noncanonical = encoded.slice(0, 9) + encodeBase85(padded).slice(9)
+    for (const invalid of [
+      noncanonical,
+      encoded.slice(0, -1),
+      encoded + '00000',
+      'b85:00005#####00000',
+      'b85:000050000~00000',
+    ]) {
       expect(() => decodeBase85(invalid)).toThrow()
       expect(() => unpackBrotliWasmBase64(invalid)).toThrow()
     }
     const excessive = bytes.slice()
-    new DataView(excessive.buffer,excessive.byteOffset,excessive.byteLength).setUint32(0,16 * 1024 * 1024 + 1,true)
+    new DataView(excessive.buffer, excessive.byteOffset, excessive.byteLength).setUint32(0, 20 * 1024 * 1024 + 1, true)
     expect(() => unpackBrotliWasmBase64(encodeBase85(excessive))).toThrow()
-    expect(() => unpackBrotliWasmBase64('b85:'+'0'.repeat(6 + Math.ceil((8*1024*1024+4)/4)*5))).toThrow(/input limit/)
+    expect(() => unpackBrotliWasmBase64('b85:' + '0'.repeat(6 + Math.ceil((8 * 1024 * 1024 + 4) / 4) * 5))).toThrow(
+      /input limit/,
+    )
   })
 
   it('round-trips reference-encoded dictionary, overlapping and binary streams', () => {
@@ -79,11 +106,12 @@ describe('synchronous Brotli WASM packages', () => {
       new Uint8Array(),
       new TextEncoder().encode('Compression transformation dictionary information international. '.repeat(400)),
       new Uint8Array(65536),
-      Uint8Array.from({length: 65536}, (_, i) => (i * 17 + i % 7) & 255),
+      Uint8Array.from({ length: 65536 }, (_, i) => (i * 17 + (i % 7)) & 255),
     ]
-    for (const data of samples) for (const quality of [0, 5, 11]) {
-      expect(unpackBrotliWasm(pack(data, quality))).toEqual(data)
-    }
+    for (const data of samples)
+      for (const quality of [0, 5, 11]) {
+        expect(unpackBrotliWasm(pack(data, quality))).toEqual(data)
+      }
   })
 
   it('decodes the exact generated kernel bytes and preserves its exports', () => {
@@ -95,14 +123,20 @@ describe('synchronous Brotli WASM packages', () => {
     expect(WebAssembly.Module.exports(module)).toEqual(WebAssembly.Module.exports(new WebAssembly.Module(original)))
     expect(WebAssembly.Module.exports(module).some(entry => entry.name === 'abi_request')).toBe(true)
     const literal = `export default '${geometryBytes}'`
-    expect(verifyPackedWasmChunk(literal,original,'geometry')).toBe(original.length)
-    expect(() => verifyPackedWasmChunk(literal+literal,original,'geometry')).toThrow(/exactly one/)
+    expect(verifyPackedWasmChunk(literal, original, 'geometry')).toBe(original.length)
+    expect(() => verifyPackedWasmChunk(literal + literal, original, 'geometry')).toThrow(/exactly one/)
   })
 
   it('rejects truncated, trailing, concatenated and incorrectly sized packages', () => {
     const data = new TextEncoder().encode('A complete Brotli stream. '.repeat(100))
     const packed = pack(data)
-    for (const invalid of [packed.subarray(0, 4), packed.subarray(0, -1), packed.subarray(0, packed.length / 2), Buffer.concat([packed, Buffer.from([0])]), Buffer.concat([packed, packed.subarray(4)])]) {
+    for (const invalid of [
+      packed.subarray(0, 4),
+      packed.subarray(0, -1),
+      packed.subarray(0, packed.length / 2),
+      Buffer.concat([packed, Buffer.from([0])]),
+      Buffer.concat([packed, packed.subarray(4)]),
+    ]) {
       expect(() => unpackBrotliWasm(invalid)).toThrow()
     }
     for (const size of [data.length - 1, data.length + 1]) {
@@ -116,12 +150,22 @@ describe('synchronous Brotli WASM packages', () => {
   it('checks host input/output caps and enforces the decoder memory maximum', () => {
     expect(() => unpackBrotliWasm(new Uint8Array(8 * 1024 * 1024 + 5))).toThrow(/input limit/)
     const outputOverflow = pack(new Uint8Array())
-    new DataView(outputOverflow.buffer, outputOverflow.byteOffset, outputOverflow.byteLength).setUint32(0, 16 * 1024 * 1024 + 1, true)
+    new DataView(outputOverflow.buffer, outputOverflow.byteOffset, outputOverflow.byteLength).setUint32(
+      0,
+      20 * 1024 * 1024 + 1,
+      true,
+    )
     expect(() => unpackBrotliWasm(outputOverflow)).toThrow(/output limit/)
-    expect(() => unpackBrotliWasmBase64('A'.repeat(4 * Math.ceil((8 * 1024 * 1024 + 4) / 3) + 1))).toThrow(/input limit/)
+    expect(() => unpackBrotliWasmBase64('A'.repeat(4 * Math.ceil((8 * 1024 * 1024 + 4) / 3) + 1))).toThrow(
+      /input limit/,
+    )
     const module = new WebAssembly.Module(unpackWasmBase64(decoderBytes))
     expect(WebAssembly.Module.imports(module)).toEqual([])
-    const runtime = new WebAssembly.Instance(module).exports as {memory: WebAssembly.Memory; prepare(size: number): number; decode(size: number): bigint}
+    const runtime = new WebAssembly.Instance(module).exports as {
+      memory: WebAssembly.Memory
+      prepare(size: number): number
+      decode(size: number): bigint
+    }
     expect(runtime.prepare(4 * 1024 * 1024 + 1)).toBe(0)
     expect(runtime.decode(16 * 1024 * 1024 + 1)).toBe(0n)
     expect(() => runtime.memory.grow(1025 - runtime.memory.buffer.byteLength / 65536)).toThrow(RangeError)
@@ -133,21 +177,39 @@ describe('synchronous Brotli WASM packages', () => {
     expect(first).toEqual(Uint8Array.from([1, 2, 3]))
   })
 
-  it('decodes photogrammetry to its original WASM artifact without changing the math kernel', () => {
-    const original = readFileSync(new URL('../crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm', import.meta.url))
+  it('decodes photogrammetry to the published raw WASM artifact', () => {
+    const original = readFileSync(new URL('../public/wasm/photogrammetry.wasm', import.meta.url))
     const decoded = unpackBrotliWasmBase64(photogrammetryBytes)
     expect(Buffer.compare(Buffer.from(decoded), original)).toBe(0)
     expect(WebAssembly.Module.imports(new WebAssembly.Module(decoded))).toEqual([])
   })
 })
 
-it('decodes sept literals through the bounded Brotli dispatcher and refuses malformed frames',()=>{
- for(const length of [0,1,6,7,255,4096]){
-  const data=Uint8Array.from({length},(_,i)=>(i*137)&255),packed=pack(data),text=encodeSeptBase118(packed)
-  expect(unpackBrotliWasmBase64(text)).toEqual(data)
-  expect(()=>unpackBrotliWasmBase64(text.slice(0,-1))).toThrow()
-  expect(()=>unpackBrotliWasmBase64(text+'!!!!!!!')).toThrow()
- }
- const overflow=pack(new Uint8Array());new DataView(overflow.buffer,overflow.byteOffset,overflow.byteLength).setUint32(0,16*1024*1024+1,true)
- expect(()=>unpackBrotliWasmBase64(encodeSeptBase118(overflow))).toThrow('output limit')
+it('decodes sept literals through the bounded Brotli dispatcher and refuses malformed frames', () => {
+  for (const length of [0, 1, 6, 7, 255, 4096]) {
+    const data = Uint8Array.from({ length }, (_, i) => (i * 137) & 255),
+      packed = pack(data),
+      text = encodeSeptBase118(packed)
+    expect(unpackBrotliWasmBase64(text)).toEqual(data)
+    expect(() => unpackBrotliWasmBase64(text.slice(0, -1))).toThrow()
+    expect(() => unpackBrotliWasmBase64(text + '!!!!!!!')).toThrow()
+  }
+  const overflow = pack(new Uint8Array())
+  new DataView(overflow.buffer, overflow.byteOffset, overflow.byteLength).setUint32(0, 20 * 1024 * 1024 + 1, true)
+  expect(() => unpackBrotliWasmBase64(encodeSeptBase118(overflow))).toThrow('output limit')
+})
+
+it('decodes an above-16-MiB package through independently bounded streams', () => {
+  const chunks = [Buffer.alloc(9 * 1024 * 1024, 49), Buffer.alloc(9 * 1024 * 1024, 50)]
+  const compressed = chunks.map(chunk => brotliCompressSync(chunk, { params: { [constants.BROTLI_PARAM_QUALITY]: 0 } }))
+  const header = Buffer.alloc(21)
+  header.writeUInt32LE(18 * 1024 * 1024 + 0x80000000)
+  header[4] = 2
+  chunks.forEach((chunk, i) => {
+    header.writeUInt32LE(chunk.length, 5 + 8 * i)
+    header.writeUInt32LE(compressed[i].length, 9 + 8 * i)
+  })
+  const decoded = unpackBrotliWasm(Buffer.concat([header, ...compressed]))
+  expect(Buffer.from(decoded).equals(Buffer.concat(chunks))).toBe(true)
+  expect(() => unpackBrotliWasm(pack(Buffer.alloc(17 * 1024 * 1024), 0))).toThrow(/stream output limit/)
 })

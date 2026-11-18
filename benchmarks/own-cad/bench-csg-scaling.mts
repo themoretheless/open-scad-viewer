@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import os from 'node:os'
 import { parseArgs } from 'node:util'
-import { parseOpenSCAD } from '../../src/services/openscadParser'
+import { parseOpenSCAD } from '../../src/language/openscadParser'
 
 const polygonArea = (radius: number, segments: number) => segments / 2 * radius * radius * Math.sin(2 * Math.PI / segments)
 
@@ -61,7 +61,7 @@ if (!Number.isInteger(sampleCount) || sampleCount < 1 || sampleCount > 50 || !Nu
 const out = values.out
 const selected = positionals.length ? positionals : Object.keys(cases)
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
-const inputPaths = ['benchmarks/own-cad/bench-csg-scaling.mts', 'src/services/openscadParser.ts', 'src/services/cadKernelOps.ts', 'src/services/geometry/meshAnalysis.ts', 'src/services/geometry/kernel.ts', 'src/generated/geometry-kernels/bytes.ts', 'src/generated/geometry-kernels/kernel_bg.wasm', 'src/generated/wasm-brotli/bytes.ts', 'src/generated/language-kernel/bytes.ts']
+const inputPaths = ['benchmarks/own-cad/bench-csg-scaling.mts', 'src/language/openscadParser.ts', 'src/kernel/cadKernelOps.ts', 'src/kernel/geometry/meshAnalysis.ts', 'src/kernel/geometry/kernel.ts', 'src/generated/geometry-kernels/bytes.ts', 'src/generated/geometry-kernels/kernel_bg.wasm', 'src/generated/wasm-brotli/bytes.ts', 'src/generated/language-kernel/bytes.ts']
 const fingerprints = () => inputPaths.map(path => ({ path, sha256: hash(readFileSync(path)) }))
 const files = fingerprints()
 const source = { head: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), files }

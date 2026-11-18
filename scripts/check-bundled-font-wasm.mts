@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
-import { encodeBinary, decodeBinary } from '../src/services/valueBinaryCodec.ts'
+import { encodeBinary, decodeBinary } from '../src/core/valueBinaryCodec.ts'
+/** Decoded ABI payload; its shape is asserted at runtime by this script. */
+type Wire = ReturnType<typeof JSON.parse>
 const [before, after, directory] = process.argv.slice(2)
 assert(before && after && directory)
 const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='297mm' height='210mm' viewBox='0 0 297 210'><path d='M10 10 L20 20' fill='none' stroke='black'/><text x='10' y='30'>Latin 123 Деталь</text></svg>"
@@ -11,14 +13,14 @@ async function pdf(path: string) {
   const bytes = readFileSync(path), module = await WebAssembly.compile(bytes)
   assert.deepEqual(WebAssembly.Module.imports(module), [])
   const instance = await WebAssembly.instantiate(module, {})
-  const w = instance.exports as any
+  const w = instance.exports as unknown as {memory:WebAssembly.Memory;abi_alloc(n:number):number;abi_free(p:number,n:number):void;abi_request(op:number,p:number,n:number):bigint}
   const data = encodeBinary({ op: 'drawing_pdf', sheets: [svg, svg] }), ptr = w.abi_alloc(data.length)
   new Uint8Array(w.memory.buffer,ptr,data.length).set(data)
   const start=performance.now()
   try {
     const packed=w.abi_request(0,ptr,data.length), p=Number(packed&0xffffffffn), n=Number(packed>>32n)
     try {
-      const reply:any=decodeBinary(new Uint8Array(w.memory.buffer,p,n))
+      const reply:Wire=decodeBinary(new Uint8Array(w.memory.buffer,p,n))
       assert.equal(reply.ok,true,JSON.stringify(reply.error))
       assert.equal(typeof reply.value,'string')
       assert(reply.value.includes('/FontFile2') && reply.value.includes('/Count 2') && reply.value.includes('0414'))

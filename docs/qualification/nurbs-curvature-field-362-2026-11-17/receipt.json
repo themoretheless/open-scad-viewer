@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0362",
+  "testedBase": "d66bb806f6c28ecc629dd4d9346962f97382d6ee",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 55,
+  "scope": [
+    "Sample the unique per-cell surface-plane branch at exact rational transverse parameters.",
+    "Exact Bernstein restriction and rational bisection enclose each certified root in the normalized knot cell, including nonbinary sample parameters and exact edge roots."
+  ],
+  "logSha256": "0f37866538ae71d2ba2bd2bf46f5c8aed63d5c2d51c25f85383d2ad143babf8c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "1edc2ad44777f727d26f41cc212f2df20ed65d6bdf8fee87ee2acca6b75fcb87",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "ab650d8feded777d21d1a206424960507d14c99b704fa6f5430b94ec8d0d9856",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "3d4ffb0f5061c16c871a6d138d422bf531b9ceb32625a897d5b61b1fdd07be9b",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs": "d31eed5df1ea6aa68a23402a74e2040d73f6b48ab13d89196ce73ba7b938a312",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs": "2201188bde07fd799f59f107f73bfc5fc9284b456d8d9895d16484ea23c0d824"
+  }
+}

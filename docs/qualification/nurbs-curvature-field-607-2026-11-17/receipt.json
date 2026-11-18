@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0607",
+  "testedBase": "d7e22cca1b1740bb541056e83c8fee24c175f697",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 192,
+  "scope": [
+    "Integrate retained surface area inside a selected UV rectangle clipped against the active knot domain.",
+    "Verify clipped knot spans across a seam, partial holes, disjoint windows, and intersection with the active support."
+  ],
+  "logSha256": "d0518b303d7f086b424e51d6f4a1f9bc7b37f1db5720d37c1c168a9d77bf90b8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8fa3219cada70fc98bfec4e159c92fced65073054f36de8fecf573fbe636e740",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "51e844e836f58412bb081eb46ff4b4a0480b7a933f52d81bb426d0bd66f57723"
+  }
+}

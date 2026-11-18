@@ -1,0 +1,45 @@
+{
+  "status": "passed-focused-shared-library-gate-failed",
+  "baseCommit": "ccec02c070682bcef989a234b42f69f911b2d9f0",
+  "focusedPredicateTests": 16,
+  "coreBridgeRegressionTests": 96,
+  "integerOracleCombinations": 128,
+  "sharedLibrary": {
+    "passed": 162,
+    "failed": 1,
+    "failure": "bezier_curvature_bound::tests::an_exact_rational_circle_qualifies_on_the_limit_in_different_gauges",
+    "actual": "Indeterminate(PrecisionExhausted)",
+    "expected": "Within",
+    "sourceState": "Concurrent untracked bezier_curvature_bound.rs and modified lib.rs; neither changed by this stage",
+    "sourceSha256": "889b8eedf26a16951109a1dada6ac187f7aad92db402578b2dfde7a822eecc87"
+  },
+  "algorithm": "Unique closed first-root count; exact gcd for zero; explicit endpoint handling; signed pseudo-remainder Sturm-Tarski sequence for P and derivative(P)*Q. No numeric algebraic-root separation.",
+  "reference": "https://doi.org/10.1007/s10817-017-9424-6",
+  "verified": [
+    "positive/negative/zero at irrational and nonbinary algebraic roots",
+    "distinct nearby roots",
+    "multiple first roots with higher-degree query",
+    "signed first-polynomial orientation",
+    "original rational weights and unclamped knots",
+    "closed endpoints and singleton intervals",
+    "exact sign of subnormal query below f64 evaluation quantum",
+    "resource/nonunique-root refusal"
+  ],
+  "sourcePolynomialChange": "Exact unit plane coefficients copy or negate original expansion; common positive scaling precedes clamped Bernstein polynomial conversion, preserving sign and roots without relaxing arithmetic guards.",
+  "notYetIntegrated": [
+    "affine-patch edge sign expressions",
+    "near-edge interior/exterior classification",
+    "bridge/client proof metadata",
+    "new actual WASM/Chromium qualification"
+  ],
+  "installedPackageUpdated": false,
+  "sourceSha256": {
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "b277db1272f6e148a0a1c8949fd9daaca29315cc45b3da4bf6874a04ea20d412",
+    "crates/cad-predicates/src/bspline_plane_roots/common.rs": "c6d2d7e905d89e562bd81c03d35e7a4dd382fb092f7c2ff725bdda3287841a0a",
+    "crates/cad-predicates/src/bspline_plane_roots/polynomial.rs": "a7d8cdd86e403c9fad56d8d67d63626c43f1f853650be359a9f3da9a0ed49b8b",
+    "crates/cad-predicates/src/bspline_plane_roots/sign.rs": "dcf14dd7f831afbd3aee59469492c4e5c72b11eb82d18ae5bc6dd4ee419cddde",
+    "crates/cad-predicates/src/planar_bezier_common_root.rs": "026fe3cb22ec04a74a1cbc68a18b64971b5b77bf74644899bda0525247688771",
+    "crates/cad-predicates/src/planar_bezier_roots.rs": "b51b0edad491eb370da717027f048e81cc9cb512b84874e1651acad25134d5b3",
+    "crates/cad-predicates/tests/original_plane_root_sign.rs": "85efcd8d07269f160ee4fee2a271ec5edf42fef2b2d6446e27f01503c5d85969"
+  }
+}

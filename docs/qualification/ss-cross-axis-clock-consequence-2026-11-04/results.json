@@ -1,0 +1,14 @@
+{
+  "distinct_tests_passed": 36,
+  "source_sha256": {
+    "crates/brep-core/tests/root_model.rs": "310d9a5c20cb019506c04c090df9e95ef295599bda346f3a00815eaab71d2642",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "bb480d50db705fd1cd018a34606d5f1a7f42661d3d00c8cd12145f716d8817c9",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/clock_consequence.rs": "6c9bb05213b5b48c52b03655c0d958c450b4186ede7bdf642fa4d4b9c9f1dace",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/groebner.rs": "0d1e599f13b40968978c7ceacaf6bf5c1f50cc63cabc822c1b1dba557cb5fd9d",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "0ba26db624d7bde4241cec32ffda9a5783e5d69ad7cfd87a7893165413fae293",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point/cross_axis.rs": "f123a05cfec9103042895cdc354afac2bd16797f4e0cb68c935b7c226c75009f",
+    "crates/nurbs-core/tests/ss_affine_point_charts.rs": "cf7878d779d7453b4c644a6aeb9f3b227b7f2f8e5b05e3df20f8f2930451685a"
+  },
+  "scope": "Sufficient exact original-equation clock-consequence proof for cross-free-axis SS endpoint identity and paired BRep junctions",
+  "remaining": "Arbitrary localized/radical branch identity, cross-source junctions, generated third-face constraints, complete arrangements/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

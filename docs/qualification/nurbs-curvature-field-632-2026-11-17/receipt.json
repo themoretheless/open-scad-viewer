@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0632",
+  "testedBase": "27fb2a7cc0622abef1539b61cefc7e7b05371e96",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 265,
+  "scope": [
+    "Expose density-weighted patch-set mass, centroid and inertia via outer-contour assignments.",
+    "Check out-of-order contour mapping, analytic density-weighted mass, center and inertia, rejection of invalid assignments, and no output on incomplete coverage."
+  ],
+  "logSha256": "1cc2fcf3a784710d30ce174e4a5c9f27566cb3ed1f4f87e54c447b0f2c1d9b3b",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "e2bd65f2ff30d112c4e739eb2ac5eed86569dc703b0a5f5a23fb954ee9673bde",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "6de485980238c74044c3e83f3e535fa0daece01da5694162852173a9be563796",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "3119a0c7e8c99aa00a695dca34c650531b93459008d39f29a1f47c947ec610f0"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

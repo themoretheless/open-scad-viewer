@@ -1,102 +1,87 @@
-import { CURRENT_MESH_MANIFEST, OFFICIAL_LANGUAGE_SUMMARY, executionCommonShape, officialRunInputShape, officialToolErrorResultSchema, sourceSelectorFields, toolErrorResultSchema, utf8Encoder } from '../createServer'
-import type { OfficialToolRunInput } from '../createServer'
+import {
+  OFFICIAL_LANGUAGE_SUMMARY,
+  artifactUri,
+  buildUri,
+  independentArtifactUri,
+  modelRevisionUri,
+  modelUri,
+  officialArtifactUri,
+  sha256,
+} from '../server/contracts'
+import { sourceSelectorFields, utf8Encoder } from './schemas/commonSchemas'
+import { meshExecutionSchemaForManifest, toolErrorResultSchema } from './schemas/executionAndBuildSchemas'
+import {
+  officialRunInputShape,
+  officialToolErrorResultSchema,
+  type OfficialToolRunInput,
+} from './schemas/officialSchemas'
+import { validateIndependentProjectInput } from './schemas/independentSchemas'
 import type { GeometryAnalysis } from '../geometryService'
 import type { GeometryEngineRegistrySnapshot, GeometryExecutionDescriptor } from '../../core/geometryExecution'
 import type { IndependentArtifactSummary } from '../independentArtifactCache'
-import { OFFICIAL_OPENSCAD_EXPORT_FORMATS, OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES, officialOpenScadProjectPathsConflict } from '../officialOpenScadRuntimeProtocol'
-import { OPENSCAD_PROJECT_MAX_TOTAL_BYTES } from '../../services/openScadProject'
+import {
+  OFFICIAL_OPENSCAD_EXPORT_FORMATS,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
+  officialOpenScadProjectPathsConflict,
+} from '../officialOpenScadRuntimeProtocol'
 import type { OfficialArtifactSummary } from '../officialArtifactCache'
-import type { OfficialOpenScadCapabilities, OfficialOpenScadCheckResult, OfficialOpenScadExportResult, OfficialOpenScadRunOptions } from '../officialOpenScadRuntimeService'
+import type {
+  OfficialOpenScadCapabilities,
+  OfficialOpenScadCheckResult,
+  OfficialOpenScadExportResult,
+  OfficialOpenScadRunOptions,
+} from '../officialOpenScadRuntimeService'
 import { ResourceNotFoundError } from '@modelcontextprotocol/server'
 import { validateModelId } from '../modelStore'
 import type { StoredModel, StoredModelRevision } from '../modelStore'
-import { createHash } from 'node:crypto'
 import { staticEngineManifestToWire } from '../engineManifest'
 import { z } from 'zod/v4'
 
+export {
+  artifactUri,
+  buildUri,
+  independentArtifactUri,
+  meshExecutionSchemaForManifest,
+  modelRevisionUri,
+  modelUri,
+  officialArtifactUri,
+  sha256,
+  validateIndependentProjectInput,
+}
+
 export function officialToolInputSchema<T extends z.ZodRawShape>(extra: T) {
-  return z.object({ ...officialRunInputShape, ...extra }).strict().superRefine((input, context) => {
-    const project = input as unknown as {
-      source: string
-      files: Array<{ path: string; text?: string; data_base64?: string }>
-    }
-    const paths = new Set<string>()
-    let bytes = utf8Encoder.encode(project.source).byteLength
-    for (const [index, file] of project.files.entries()) {
-      if ([...paths].some(path => officialOpenScadProjectPathsConflict(path, file.path))) {
+  return z
+    .object({ ...officialRunInputShape, ...extra })
+    .strict()
+    .superRefine((input, context) => {
+      const project = input as unknown as {
+        source: string
+        files: Array<{ path: string; text?: string | undefined; data_base64?: string | undefined }>
+      }
+      const paths = new Set<string>()
+      let bytes = utf8Encoder.encode(project.source).byteLength
+      for (const [index, file] of project.files.entries()) {
+        if ([...paths].some(path => officialOpenScadProjectPathsConflict(path, file.path))) {
+          context.addIssue({
+            code: 'custom',
+            path: ['files', index, 'path'],
+            message: 'Project file paths must not duplicate or contain one another',
+          })
+        }
+        paths.add(file.path)
+        bytes +=
+          file.text !== undefined
+            ? utf8Encoder.encode(file.text).byteLength
+            : Buffer.from(file.data_base64!, 'base64').byteLength
+      }
+      if (bytes > OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES) {
         context.addIssue({
           code: 'custom',
-          path: ['files', index, 'path'],
-          message: 'Project file paths must not duplicate or contain one another',
+          path: ['files'],
+          message: `Project must not exceed ${OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES} bytes`,
         })
       }
-      paths.add(file.path)
-      bytes += file.text !== undefined
-        ? utf8Encoder.encode(file.text).byteLength
-        : Buffer.from(file.data_base64!, 'base64').byteLength
-    }
-    if (bytes > OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES) {
-      context.addIssue({
-        code: 'custom',
-        path: ['files'],
-        message: `Project must not exceed ${OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES} bytes`,
-      })
-    }
-  })
-}
-
-export function meshExecutionSchemaForManifest(
-  manifest: typeof CURRENT_MESH_MANIFEST,
-) {
-  return z.object({
-    ...executionCommonShape,
-    language_contract: z.literal('legacy/current'),
-    engine_class: z.literal(manifest.engineClass),
-    engine_key: z.literal(manifest.engineKey),
-    kernel_fingerprint: z.literal(manifest.kernelFingerprint),
-    semantic_program_version: z.literal(manifest.semanticProgramVersion),
-    capability_manifest_version: z.literal(manifest.capabilityManifestVersion),
-    manifest_digest: z.literal(manifest.manifestDigest),
-    representation: z.literal('mesh'),
-    evidence: z.enum(['planned', 'runtime']),
-    effective_limits: z.object({
-      sourceCharacters: z.literal(250_000),
-      triangles: z.literal(750_000),
-    }),
-  })
-}
-
-export function validateIndependentProjectInput(
-  input: {
-    source: string
-    files: Array<{ path: string; text?: string; data_base64?: string }>
-  },
-  context: z.core.$RefinementCtx,
-): void {
-  const paths = new Set<string>(['main.scad'])
-  let bytes = utf8Encoder.encode(input.source).byteLength
-  for (const [index, file] of input.files.entries()) {
-    if (paths.has(file.path)) {
-      context.addIssue({
-        code: 'custom',
-        path: ['files', index, 'path'],
-        message: file.path === 'main.scad'
-          ? 'main.scad is reserved for the source entrypoint'
-          : 'Project file paths must be unique',
-      })
-    }
-    paths.add(file.path)
-    bytes += file.text !== undefined
-      ? utf8Encoder.encode(file.text).byteLength
-      : Buffer.from(file.data_base64!, 'base64').byteLength
-  }
-  if (bytes > OPENSCAD_PROJECT_MAX_TOTAL_BYTES) {
-    context.addIssue({
-      code: 'custom',
-      path: ['files'],
-      message: `Project must not exceed ${OPENSCAD_PROJECT_MAX_TOTAL_BYTES} bytes`,
     })
-  }
 }
 
 export function toolOutputSchema<T extends z.ZodType>(success: T) {
@@ -109,47 +94,23 @@ export function officialToolOutputSchema<T extends z.ZodType>(success: T) {
 
 export function selectorSchema<T extends z.ZodRawShape>(extra: T) {
   return z.union([
-    z.object({
-      ...extra,
-      source: sourceSelectorFields.source.unwrap(),
-      model_id: z.never().optional(),
-      revision: z.never().optional(),
-    }).strict(),
-    z.object({
-      ...extra,
-      source: z.never().optional(),
-      model_id: sourceSelectorFields.model_id.unwrap(),
-      revision: sourceSelectorFields.revision,
-    }).strict(),
+    z
+      .object({
+        ...extra,
+        source: sourceSelectorFields.source.unwrap(),
+        model_id: z.never().optional(),
+        revision: z.never().optional(),
+      })
+      .strict(),
+    z
+      .object({
+        ...extra,
+        source: z.never().optional(),
+        model_id: sourceSelectorFields.model_id.unwrap(),
+        revision: sourceSelectorFields.revision,
+      })
+      .strict(),
   ])
-}
-
-export function sha256(data: string | Uint8Array): string {
-  return createHash('sha256').update(data).digest('hex')
-}
-
-export function modelUri(id: string): string {
-  return `openscad://models/${encodeURIComponent(id)}`
-}
-
-export function modelRevisionUri(id: string, revision: number): string {
-  return `${modelUri(id)}/revisions/${revision}`
-}
-
-export function buildUri(id: string): string {
-  return `openscad://builds/${encodeURIComponent(id)}`
-}
-
-export function artifactUri(id: string): string {
-  return `openscad://artifacts/${encodeURIComponent(id)}`
-}
-
-export function independentArtifactUri(id: string): string {
-  return `openscad://independent-artifacts/${id}`
-}
-
-export function officialArtifactUri(id: string): string {
-  return `openscad://official-artifacts/${id}`
 }
 
 export function officialRunOptions(
@@ -159,9 +120,7 @@ export function officialRunOptions(
   return {
     files: input.files.map(file => ({
       path: file.path,
-      data: file.text !== undefined
-        ? file.text
-        : new Uint8Array(Buffer.from(file.data_base64!, 'base64')),
+      data: file.text !== undefined ? file.text : new Uint8Array(Buffer.from(file.data_base64!, 'base64')),
     })),
     experimentalFeatures: input.experimental_features,
     defines: input.defines,
@@ -255,7 +214,7 @@ export function officialExportToWire(result: OfficialOpenScadExportResult) {
 
 export function officialArtifactToWire(
   artifact: OfficialArtifactSummary,
-  format: typeof OFFICIAL_OPENSCAD_EXPORT_FORMATS[number],
+  format: (typeof OFFICIAL_OPENSCAD_EXPORT_FORMATS)[number],
 ) {
   return {
     id: artifact.id,
@@ -291,7 +250,11 @@ export function resourceVariable(uri: URL, value: string | string[] | undefined)
 
 export function resourceId(uri: URL, value: string | string[] | undefined): string {
   const id = resourceVariable(uri, value)
-  try { validateModelId(id) } catch { throw new ResourceNotFoundError(uri.href) }
+  try {
+    validateModelId(id)
+  } catch {
+    throw new ResourceNotFoundError(uri.href)
+  }
   return id
 }
 

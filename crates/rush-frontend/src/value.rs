@@ -52,6 +52,7 @@ impl<T: IntoJson> IntoJson for Option<T> {
 }
 macro_rules! json {
  ([]) => {value_codec::Value::Array(Vec::new())};
+ ({}) => {value_codec::Value::Object(value_codec::Map::new())};
  ({$($fields:tt)*}) => {{ let mut object=value_codec::Map::new();json!(@fields object; $($fields)*);value_codec::Value::Object(object) }};
  ([$($v:expr),* $(,)?]) => {value_codec::Value::Array(vec![$(json!($v)),*])};
  ([$($items:tt)*]) => {{ let mut items=Vec::<value_codec::Value>::new();json!(@items items; $($items)*);value_codec::Value::Array(items) }};

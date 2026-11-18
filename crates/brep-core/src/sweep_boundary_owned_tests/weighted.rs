@@ -57,18 +57,9 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
         cells: 100000,
         exact_work: 1000000,
     };
-    let attempt = construct_with_ideal_atlas(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
-        limits(),
-        ideal,
-    )
-    .unwrap();
+    let accuracy = SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 };
+    let same_source = SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] };
+    let attempt = construct_with_ideal_atlas(same_source, [&retained[0], &retained[1]], accuracy, limits(), ideal).unwrap();
     let body = match attempt {
         Attempt::Certified(body) => body,
         Attempt::Refused(r) => panic!(
@@ -90,23 +81,12 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
     assert!(r.regularity.as_ref().unwrap().all_faces_regular && r.volume.as_ref().unwrap().proven);
     assert_eq!(body.model().bodies.len(), 1);
     assert!(r.boundary_error_upper.unwrap() <= 0.05);
-    let strong = construct_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
-        limits(),
-        ideal.projection,
-        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+    let strong = construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), ideal.projection, nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
             order: 2,
             cells: 100000,
             exact_work: 1000000,
             products: 1000000,
-        },
-    )
+        })
     .unwrap();
     let strong = match strong {
         OriginalSmoothBodyAttempt::Certified(body) => body,
@@ -172,13 +152,17 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
     );
     let run = |other: &LoftCap, budget| {
         construct_with_ideal_atlas(
-            &sweep,
-            &[4],
-            5,
-            [&source, other],
+            SweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 5,
+                source_caps: [&source, other],
+            },
             [&retained[0], &equivalent_retained],
-            1e-8,
-            0.05,
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             limits(),
             budget,
         )
@@ -234,13 +218,17 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
         normalized_ideal.cells, normalized_ideal.exact_work, normalized_report.boundary_error_upper
     );
     let short = construct_with_ideal_atlas(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
+        SweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 5,
+            source_caps: [&source, &source],
+        },
         [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
         limits(),
         IdealLimits { cells: 0, ..ideal },
     )

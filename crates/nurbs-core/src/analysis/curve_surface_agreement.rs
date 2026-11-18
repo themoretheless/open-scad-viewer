@@ -4,9 +4,22 @@ mod trimmed_boundary;
 mod exact_trimmed;
 pub use exact_trimmed::verify_exact_trimmed;
 mod point_lift;
+mod product_iso;
+mod boundary_coefficients;
+mod vertical_boundary;
+mod rational_boundary_residual;
+mod affine_bspline_lift;
+mod oriented_bezier;
 pub use point_lift::verify_exact_point;
 use crate::distance_bounds::{Interval, box_distance};
 use crate::{Result, check, curve::Curve, surface::Surface};
+/// A 3D curve, its pcurve and the surface that carries it.
+#[derive(Clone, Copy)]
+struct CurveOnSurface<'a> {
+    curve: &'a Curve,
+    pcurve: &'a Curve,
+    surface: &'a Surface,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
@@ -24,31 +37,8 @@ pub struct Report {
     pub witness_distance: Option<[f64; 2]>,
 }
 
-pub(crate) fn curve_bounds(c: &Curve, t: Interval) -> Result<Vec<Interval>> {
-    let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; c.control_points[0].len()];
-    for span in c.degree..c.control_points.len() {
-        if c.knots[span] >= c.knots[span + 1] {
-            continue;
-        }
-        let lo = t.lo.max(c.knots[span]);
-        let hi = t.hi.min(c.knots[span + 1]);
-        if lo > hi {
-            continue;
-        }
-        for (out, b) in bounds.iter_mut().zip(crate::curve_distance::enclosure(
-            c,
-            span,
-            Interval::new(lo, hi)?,
-        )?) {
-            out[0] = out[0].min(b.lo);
-            out[1] = out[1].max(b.hi);
-        }
-    }
-    bounds
-        .into_iter()
-        .map(|[lo, hi]| Interval::new(lo, hi))
-        .collect()
-}
+/// Moved to `curve_distance` so layer-2 code can use it (ADR 0012); kept here for callers.
+pub(crate) use crate::curve_distance::curve_bounds;
 
 pub(crate) fn mapped(c: &Curve, t: Interval, reversed: bool) -> Result<Interval> {
     mapped_range(c.domain(), t, reversed)
@@ -136,6 +126,14 @@ pub fn verify_on(
     c: &Curve, p: &Curve, s: &Surface, reversed: bool,
     source_interval: [f64;2], tolerance: f64, max_cells: usize,
 ) -> Result<Report> {
+    let report=verify_on_direct(c,p,s,reversed,source_interval,tolerance,max_cells)?;
+    let curve=CurveOnSurface{curve:c,pcurve:p,surface:s};
+    oriented_bezier::retry(curve,reversed,source_interval,tolerance,max_cells,report)
+}
+fn verify_on_direct(
+    c: &Curve, p: &Curve, s: &Surface, reversed: bool,
+    source_interval: [f64;2], tolerance: f64, max_cells: usize,
+) -> Result<Report> {
     c.validate()?;
     p.validate()?;
     s.validate()?;
@@ -160,6 +158,35 @@ pub fn verify_on(
         witness: None,
         witness_distance: None,
     };
+    if source_interval==p.domain() {
+        if let Some(upper)=product_iso::upper(c,p,s,reversed)? {
+            if upper<=tolerance {
+                report.status=Status::WithinTolerance;
+                report.cells=1;
+                return Ok(report);
+            }
+        }
+        let mut rational_work=rational_boundary_residual::Work::new(max_cells);
+        if rational_boundary_residual::rational_plane_within(c,p,s,reversed,tolerance,
+            &mut rational_work)==Some(true) {
+            report.status=Status::WithinTolerance;report.cells=1;return Ok(report);
+        }
+        if rational_boundary_residual::affine_within(c,p,s,reversed,tolerance,
+            &mut rational_work)==Some(true) {
+            report.status=Status::WithinTolerance;report.cells=1;return Ok(report);
+        }
+        if let Some(boundary)=boundary_coefficients::inspect(c,p,s,reversed,tolerance,max_cells)? {
+            if boundary.status==Status::WithinTolerance || boundary.cells==max_cells {return Ok(boundary);}
+            report.cells=boundary.cells;
+        }
+        if report.cells<max_cells {
+            if let Some(mut boundary)=vertical_boundary::inspect(c,p,s,reversed,tolerance,max_cells-report.cells)? {
+                boundary.cells+=report.cells;
+                if boundary.status==Status::WithinTolerance || boundary.cells==max_cells {return Ok(boundary);}
+                report.cells=boundary.cells;
+            }
+        }
+    }
     // Keep the common parameter correlated before trying Cartesian boxes.
     // An unavailable or numerically inconclusive optional bound falls back to
     // the full-span interval traversal; it never turns into a success.
@@ -171,7 +198,7 @@ pub fn verify_on(
     if let Ok(Some(upper)) = complete_bound {
         if upper <= tolerance {
             report.status = Status::WithinTolerance;
-            report.cells = 1;
+            report.cells += 1;
             return Ok(report);
         }
     }
@@ -190,14 +217,20 @@ pub fn verify_on(
             let (sum,e1)=add(a,b);let (value,e2)=add(sum,-t);
             (sum.is_finite() && value.is_finite() && e1==0. && e2==0.).then_some(value)
         };
+        let affine_pcurve = !reversed && p.degree==1 && p.control_points.len()==2 && p.weights[0]==p.weights[1];
         let aligned=if reversed {
             c.degree==p.degree && c.knots.len()==p.knots.len()
                 && c.knots.iter().rev().zip(&p.knots).all(|(&t,&u)|exact_mirror(t)==Some(u))
-        }else{c.degree==p.degree && c.knots==p.knots};
+        }else{affine_pcurve || (c.degree==p.degree && c.knots==p.knots)};
         if aligned {
             let mut complete=true;
-            for i in p.degree..p.control_points.len() {
-                let ends=[p.knots[i],p.knots[i+1]];
+            // A single affine pcurve has no internal clock break. Retain the
+            // original WORLD curve's literal knots even when its degree and
+            // basis differ from that pcurve. These cells cover the complete
+            // unchanged physical relation; no rounded normalized roots.
+            let partition=if affine_pcurve {c} else {p};
+            for i in partition.degree..partition.control_points.len() {
+                let ends=[partition.knots[i],partition.knots[i+1]];
                 if ends[0]==ends[1] {continue;}
                 if report.cells==max_cells {return Ok(report);}
                 report.cells+=1;
@@ -205,7 +238,25 @@ pub fn verify_on(
                     [Interval::point(exact_mirror(ends[0]).unwrap()),Interval::point(exact_mirror(ends[1]).unwrap())]
                 }else{ends.map(Interval::point)};
                 let upper=crate::curve_surface_composition::upper_mapped_cell(c,p,s,edge_ends,ends.map(Interval::point));
-                if !matches!(upper,Ok(Some(upper)) if upper<=tolerance) {complete=false;break;}
+                if !matches!(upper,Ok(Some(upper)) if upper<=tolerance) {
+                    // Outward endpoint mapping can touch the neighbouring
+                    // surface chart. Bound short CLOSED end bands separately,
+                    // leaving the full interior correlated on its own chart.
+                    // The proposed partition grants nothing by itself.
+                    let width=ends[1]-ends[0];
+                    let x=ends[0]+width*2f64.powi(-28);
+                    let y=ends[1]-width*2f64.powi(-28);
+                    let mut proved=affine_pcurve && ends[0]<x && x<y && y<ends[1];
+                    if proved {
+                        for cell in [[ends[0],x],[x,y],[y,ends[1]]] {
+                            if report.cells==max_cells {return Ok(report);}
+                            report.cells+=1;
+                            let bound=crate::curve_surface_composition::upper_mapped_cell(c,p,s,cell.map(Interval::point),cell.map(Interval::point));
+                            if !matches!(bound,Ok(Some(upper)) if upper<=tolerance) {proved=false;break;}
+                        }
+                    }
+                    if !proved {complete=false;break;}
+                }
             }
             if complete {report.status=Status::WithinTolerance;return Ok(report);}
         }
@@ -284,6 +335,12 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
         // decline such a basis, so it must not preempt this stronger proof.
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        if let Some(identity)=affine_bspline_lift::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        if s.periodic_u || s.periodic_v {
+            if let Some(identity) = trimmed_boundary::verify(c, p, s, reversed, c.domain(), p.domain(), max_work)? {
+                return Ok(Some(identity));
+            }
+        }
     }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
         && knots[..=degree].iter().all(|x|*x==knots[degree])
@@ -566,6 +623,9 @@ pub fn lift(
         return Ok(out);
     }
     let mut candidates = Vec::new();
+    if let Some(c)=product_iso::candidate(p,s)? {
+        candidates.push((LiftMethod::IsoparametricProposal,c));
+    }
     let mut extended_tensor = None;
     // An affine support can retain the original pcurve degree and poles.
     // Prefer that compact proposal; the same full original-source admission
@@ -625,6 +685,7 @@ pub fn lift(
             let last = c.control_points.len() - 1;
             c.control_points[0] = ps[0].to_vec();
             c.control_points[last] = ps[1].to_vec();
+            product_iso::author_owned_station(&mut c,p,s,ps)?;
         }
         let evidence = verify(&c, p, s, false, tolerance, max_cells - out.cells)?;
         out.cells += evidence.cells;

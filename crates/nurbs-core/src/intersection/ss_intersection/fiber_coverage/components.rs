@@ -43,6 +43,12 @@ pub struct FiberSeparation {
     pub axis: usize,
     pub intervals: [[f64; 2]; 2],
 }
+
+#[derive(Clone, Debug, PartialEq)]
+struct GraphFiberSeparation {
+    charts: [usize; 2],
+    common_root_box: Box4,
+}
 #[derive(Clone, Debug)]
 pub struct QualifiedFiberComponents {
     coverage: QualifiedMixedFiberCoverage,
@@ -51,6 +57,7 @@ pub struct QualifiedFiberComponents {
     points: Vec<FiberPointConnection>,
     components: Vec<Vec<usize>>,
     separations: Vec<FiberSeparation>,
+    graph_separations: Vec<GraphFiberSeparation>,
     rectangles: usize,
     max_rectangles: usize,
 }
@@ -81,6 +88,7 @@ impl QualifiedFiberComponents {
         check(
             self.components == fresh.components
                 && self.separations == fresh.separations
+                && self.graph_separations == fresh.graph_separations
                 && self.rectangles == fresh.rectangles
                 && self.transitions.len() == fresh.transitions.len()
                 && self.points.len() == fresh.points.len()
@@ -102,6 +110,7 @@ pub struct FiberComponentsResult {
     components: Option<QualifiedFiberComponents>,
     reason: &'static str,
     rectangles: usize,
+    unresolved_pair: Option<[usize; 2]>,
 }
 impl FiberComponentsResult {
     pub fn components(&self) -> Option<&QualifiedFiberComponents> {
@@ -128,6 +137,28 @@ fn root_box(f: &QualifiedFiber) -> Option<Box4> {
         }
     }
     Some(box4)
+}
+
+fn point_box_in_charts(first: &QualifiedFiber, second: &QualifiedFiber, domain: Box4, axis: usize) -> bool {
+    let contains = |k: usize, range: [f64; 2]| {
+        [first, second].iter().all(|chart| {
+            let [lo, hi] = chart.domain()[k];
+            lo <= range[0] && range[0] <= range[1] && range[1] <= hi
+        })
+    };
+    let paired = (axis + 2) % 4;
+    if !(0..4).filter(|&k| k != paired).all(|k| contains(k, domain[k])) {
+        return false;
+    }
+    if contains(paired, domain[paired]) {
+        return true;
+    }
+    // The solver may need room across a chart boundary for strict inclusion.
+    // Exact affine projection still puts the root's matching coordinate in
+    // both original charts. Every other coordinate stays in their common box.
+    mixed::AffineGraphExclusion::new(first.source())
+        .and_then(|proof| proof.matching_parameter(axis, domain[axis][0]))
+        .is_ok_and(|mapped| contains(paired, mapped))
 }
 /// Prove connected components of the complete original PARAMETER root set.
 /// Every chart root graph is compact and connected by original uniform
@@ -158,6 +189,7 @@ pub fn connect_mixed_fiber_cover(
         components: None,
         reason: "original-coverage-replay-unproven",
         rectangles: 0,
+        unresolved_pair: None,
     };
     let mut work = Work {
         used: 0,
@@ -186,12 +218,8 @@ pub fn connect_mixed_fiber_cover(
                     spec.domain[k].iter().all(|v| v.is_finite())
                         && spec.domain[k][0] <= spec.domain[k][1]
                         && (k == axis || spec.domain[k][0] < spec.domain[k][1])
-                        && spec.charts.iter().all(|&i| {
-                            fs[i].domain()[k][0] <= spec.domain[k][0]
-                                && spec.domain[k][1] <= fs[i].domain()[k][1]
-                        })
-                }),
-                "Point bridge must lie in both original charts with exactly one fixed coordinate",
+                }) && point_box_in_charts(&fs[spec.charts[0]], &fs[spec.charts[1]], spec.domain, axis),
+                "Point bridge must prove membership in both original charts with one fixed coordinate",
             )?;
             let axis = [
                 FiberAxis::FirstU,
@@ -245,14 +273,39 @@ pub fn connect_mixed_fiber_cover(
     out.rectangles = work.used;
     out.reason = "cross-component-root-contact-unproven";
     let mut separations = Vec::new();
+    let mut graph_separations = Vec::new();
+    let mut affine = None;
     for i in 0..fs.len() {
         for j in i + 1..fs.len() {
             if labels[i] != labels[j] {
                 let (Some(a), Some(b)) = (root_box(&fs[i]), root_box(&fs[j])) else {
+                    out.unresolved_pair = Some([i, j]);
                     return Ok(out);
                 };
                 let Some(axis) = (0..4).find(|&k| a[k][1] < b[k][0] || b[k][1] < a[k][0]) else {
-                    return Ok(out);
+                    if work.used == work.max {
+                        out.unresolved_pair = Some([i, j]);
+                        return Ok(out);
+                    }
+                    let common_root_box = std::array::from_fn(|k| {
+                        [a[k][0].max(b[k][0]), a[k][1].min(b[k][1])]
+                    });
+                    let projection = affine.get_or_insert_with(|| {
+                        mixed::AffineGraphExclusion::new(fs[i].source()).ok()
+                    });
+                    let allowance = (work.max - work.used).min(128);
+                    let (separated, used) = projection.as_ref().map_or((false, 1), |proof| {
+                        proof.excludes_subdivided(common_root_box, allowance)
+                            .unwrap_or((false, allowance))
+                    });
+                    work.used += used;
+                    out.rectangles = work.used;
+                    if !separated {
+                        out.unresolved_pair = Some([i, j]);
+                        return Ok(out);
+                    }
+                    graph_separations.push(GraphFiberSeparation { charts: [i, j], common_root_box });
+                    continue;
                 };
                 separations.push(FiberSeparation {
                     charts: [i, j],
@@ -274,6 +327,7 @@ pub fn connect_mixed_fiber_cover(
         points,
         components,
         separations,
+        graph_separations,
         rectangles: work.used,
         max_rectangles,
     });

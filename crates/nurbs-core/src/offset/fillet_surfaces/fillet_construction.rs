@@ -347,7 +347,7 @@ pub(super) fn build_report(
         }
         // Result boundary: no section with non-finite control points leaves.
         for p in &curve.control_points {
-            crate::foundation::guards::require_finite_slice(p, "section_control_points")?;
+            crate::numerics::guards::require_finite_slice(p, "section_control_points")?;
         }
         sections.push(curve);
     }

@@ -4,21 +4,9 @@ use nurbs_core::{
     surface::Surface,
     surface_offset::contact_curve::{self as world, FitLimits as L, FitStop as Stop, Limits},
 };
-fn plane() -> Surface {
-    Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
-            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
-        ],
-        weights: vec![vec![1.; 2]; 2],
-        periodic_u: false,
-        periodic_v: false,
-    }
-}
+#[path = "common/unit_plane.rs"]
+mod unit_plane;
+use unit_plane::plane;
 fn proof() -> Limits {
     Limits {
         cells: 100000,
@@ -40,8 +28,10 @@ fn nonunit_contact_clock_has_an_independent_complete_world_error_bound() {
     let saved = (a.clone(), b.clone());
     let limits = L::default();
     let r = world::fit(
-        [&a, &b],
-        [0.2, -0.2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2, -0.2],
+        },
         0,
         [3., 6.],
         [0.1, 0.3],
@@ -60,12 +50,8 @@ fn nonunit_contact_clock_has_an_independent_complete_world_error_bound() {
     );
     let fresh = world::certify(
         c,
-        [&a, &b],
-        [0.2, -0.2],
-        0,
-        [3., 6.],
-        [0.1, 0.3],
-        [[-0.6, 1.6], [0.1, 0.3]],
+        nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.2, -0.2] },
+        world::ContactDomain { axis: 0, drive: [3., 6.], free: [0.1, 0.3], second: [[-0.6, 1.6], [0.1, 0.3]] },
         1e-8,
         proof(),
     )
@@ -94,8 +80,10 @@ fn curved() -> [Surface; 2] {
 fn nonlinear_world_contact_refines_degree_and_covers_the_literal_rounded_curve() {
     let s = curved();
     let r = world::fit(
-        s.each_ref(),
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: s.each_ref(),
+            distances: [0.1; 2],
+        },
         1,
         [0.35, 0.55],
         [0.88, 0.96],
@@ -109,12 +97,8 @@ fn nonlinear_world_contact_refines_degree_and_covers_the_literal_rounded_curve()
     assert!(c.degree > 1);
     let fresh = world::certify(
         c,
-        s.each_ref(),
-        [0.1; 2],
-        1,
-        [0.35, 0.55],
-        [0.88, 0.96],
-        [[0.07, 0.22], [0.3, 0.6]],
+        nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: s.each_ref(), distances: [0.1; 2] },
+        world::ContactDomain { axis: 1, drive: [0.35, 0.55], free: [0.88, 0.96], second: [[0.07, 0.22], [0.3, 0.6]] },
         1e-7,
         proof(),
     )
@@ -139,12 +123,8 @@ fn matching_endpoints_cannot_admit_a_world_curve_with_interior_drift() {
     };
     let r = world::certify(
         &c,
-        [&a, &b],
-        [0.2, -0.2],
-        0,
-        [0., 1.],
-        [0.1, 0.3],
-        [[0.2, 0.8], [0.1, 0.3]],
+        nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.2, -0.2] },
+        world::ContactDomain { axis: 0, drive: [0., 1.], free: [0.1, 0.3], second: [[0.2, 0.8], [0.1, 0.3]] },
         1e-7,
         proof(),
     )
@@ -186,8 +166,10 @@ fn each_work_limit_and_insufficient_degree_publish_no_world_curve() {
         ),
     ] {
         let r = world::fit(
-            s.each_ref(),
-            [0.1; 2],
+            uv::OffsetFaces {
+                surfaces: s.each_ref(),
+                distances: [0.1; 2],
+            },
             1,
             [0.35, 0.55],
             [0.88, 0.96],
@@ -219,8 +201,10 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
     b.weights.extend([vec![1.; 2], vec![1.; 2]]);
     b.knots_u = vec![0., 0., 1., 2., 3., 3.];
     let r = world::fit(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.35, 0.39],
         [0.25, 0.35],
@@ -231,8 +215,10 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
     .unwrap();
     assert_eq!(r.stop, Stop::Certified);
     let pair = uv::fit_branch(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.35, 0.39],
         [0.25, 0.35],
@@ -265,13 +251,8 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
     let parameter = uv::certify(
         &wrong,
         1,
-        [&a, &b],
-        [0.2; 2],
-        0,
-        [0.35, 0.39],
-        [0.25, 0.35],
-        [[0.30, 0.44], [0.15, 0.25]],
-        128,
+        uv::OffsetFaces { surfaces: [&a, &b], distances: [0.2; 2] },
+        uv::ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 128 },
         1e-8,
         100000,
         8,
@@ -287,8 +268,10 @@ fn absent_nonisolated_and_wrong_clock_inputs_never_provide_world_authority() {
         p[2] = 3.;
     }
     let absent = world::fit(
-        [&a, &b],
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.1; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -300,8 +283,10 @@ fn absent_nonisolated_and_wrong_clock_inputs_never_provide_world_authority() {
     assert_eq!(absent.stop, Stop::NoContact);
     assert!(absent.curve.is_none());
     let same = world::fit(
-        [&a, &a],
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &a],
+            distances: [0.1; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -322,14 +307,10 @@ fn absent_nonisolated_and_wrong_clock_inputs_never_provide_world_authority() {
     assert!(
         world::certify(
             &c,
-            [&a, &b],
-            [0.1; 2],
-            0,
-            [0.2, 0.8],
-            [0.1, 0.9],
-            [[0.1, 0.9]; 2],
+            nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.1; 2] },
+            world::ContactDomain { axis: 0, drive: [0.2, 0.8], free: [0.1, 0.9], second: [[0.1, 0.9]; 2] },
             1e-7,
-            proof()
+            proof(),
         )
         .is_err()
     );

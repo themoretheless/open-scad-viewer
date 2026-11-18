@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { compileRushGraph } from '../src/services/rushGraph'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushGraph } from '../src/language/rushGraph'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 
 const header = '// @rush/1\n'
 const compile = (source: string) => compileRushFrontend(header + source)
@@ -37,8 +37,7 @@ show box([size,3,4])`
   validate(result < 8).message("Bounded local")
   ret result
 }`
-    expect(compile(definition + '\nshow box([double(2),1,1])').source)
-      .toBe(compile('show box([4,1,1])').source)
+    expect(compile(definition + '\nshow box([double(2),1,1])').source).toBe(compile('show box([4,1,1])').source)
     expect(() => compile(definition + '\nshow box([double(0),1,1])')).toThrow('Positive argument')
     expect(() => compile(definition + '\nshow box([double(4),1,1])')).toThrow('Bounded local')
   })
@@ -65,8 +64,7 @@ fn checked value: int -> int
   requirePositive(value)
   ret value
 `
-    expect(compile(definition + 'show box([checked(2),1,1])').source)
-      .toBe(compile('show box([2,1,1])').source)
+    expect(compile(definition + 'show box([checked(2),1,1])').source).toBe(compile('show box([2,1,1])').source)
     expect(() => compile(definition + 'show box([checked(0),1,1])')).toThrow('Void helper failed')
     expect(() => compile(definition + 'requirePositive(0)\nshow box([1,1,1])')).toThrow('Void helper failed')
   })
@@ -81,10 +79,8 @@ fn part value: int -> Geometry
   guard(value)
   ret box([1,1,1])
 `
-    expect(compile(definition + 'show box([1 ? 2 : checked(0),1,1])').source)
-      .toBe(compile('show box([2,1,1])').source)
-    expect(compile(definition + 'show 0 ? part(0) : box([2,1,1])').source)
-      .toBe(compile('show box([2,1,1])').source)
+    expect(compile(definition + 'show box([1 ? 2 : checked(0),1,1])').source).toBe(compile('show box([2,1,1])').source)
+    expect(compile(definition + 'show 0 ? part(0) : box([2,1,1])').source).toBe(compile('show box([2,1,1])').source)
     expect(() => compile(definition + 'show box([0 ? 2 : checked(0),1,1])')).toThrow('Selected helper only')
     expect(() => compile(definition + 'show 1 ? part(0) : box([2,1,1])')).toThrow('Selected helper only')
   })
@@ -111,8 +107,7 @@ show box([size,1,1])`
   assert(value > 0).message("Empty function result")
   ret []
 `
-    expect(compile(definition + 'show box([empty(1).count()+1,1,1])').source)
-      .toBe(compile('show box([1,1,1])').source)
+    expect(compile(definition + 'show box([empty(1).count()+1,1,1])').source).toBe(compile('show box([1,1,1])').source)
     expect(() => compile(definition + 'show box([empty(0).count()+1,1,1])')).toThrow('Empty function result')
     const branch = `values = match 1
   _ =>
@@ -165,8 +160,9 @@ show box([values.count()+1,1,1])`
   yield value
 show box([values.sum(),1,1])`
     expect(compile(source).source).toBe(compile('show box([1,1,1])').source)
-    expect(() => compile(source.replace('break if value == 2', 'break if value == 9')))
-      .toThrow('Before break only while active')
+    expect(() => compile(source.replace('break if value == 2', 'break if value == 9'))).toThrow(
+      'Before break only while active',
+    )
   })
 
   it('runs named function checks inside LINQ callbacks for every selected item', () => {
@@ -174,11 +170,13 @@ show box([values.sum(),1,1])`
   assert(value > 0).message("LINQ item")
   ret value * 2
 `
-    expect(compile(definition + 'show box([[1,2].select(x => double(x)).sum(),1,1])').source)
-      .toBe(compile('show box([6,1,1])').source)
+    expect(compile(definition + 'show box([[1,2].select(x => double(x)).sum(),1,1])').source).toBe(
+      compile('show box([6,1,1])').source,
+    )
     expect(() => compile(definition + 'show box([[1,0].select(x => double(x)).sum(),1,1])')).toThrow('LINQ item')
-    expect(compile(definition + 'show box([[0,2].where(x => x > 0).select(x => double(x)).sum(),1,1])').source)
-      .toBe(compile('show box([4,1,1])').source)
+    expect(compile(definition + 'show box([[0,2].where(x => x > 0).select(x => double(x)).sum(),1,1])').source).toBe(
+      compile('show box([4,1,1])').source,
+    )
   })
 
   it('runs named function checks inside repeat callbacks with each instance index', () => {
@@ -186,8 +184,9 @@ show box([values.sum(),1,1])`
   assert(index < 2).message("Repeat instance")
   ret box([1,1,1]).translate([index*3,0,0])
 `
-    expect(compile(definition + 'show repeat(2, i => part(i))').source)
-      .toBe(compile('show repeat(2, i => box([1,1,1]).translate([i*3,0,0]))').source)
+    expect(compile(definition + 'show repeat(2, i => part(i))').source).toBe(
+      compile('show repeat(2, i => box([1,1,1]).translate([i*3,0,0]))').source,
+    )
     expect(() => compile(definition + 'show repeat(3, i => part(i))')).toThrow('Repeat instance')
   })
 
@@ -201,8 +200,9 @@ show box([values.sum(),1,1])`
   ret box([2,3,4])
 `
     expect(compile(definition + usage).source).toBe(compile('show sphere(1)').source)
-    expect(() => compile(definition.replace('assert(true)', 'assert(false)') + usage))
-      .toThrow('Discarded geometry call')
+    expect(() => compile(definition.replace('assert(true)', 'assert(false)') + usage)).toThrow(
+      'Discarded geometry call',
+    )
   })
 
   it('keeps assertions when a discarded function returns transformed geometry', () => {
@@ -211,10 +211,10 @@ show box([values.sum(),1,1])`
   body = box([2,3,4])
   ret body.translate([10,0,0]).scale([1,1,2])
 `
-    expect(compile(definition + 'part()\nshow sphere(1)').source)
-      .toBe(compile('show sphere(1)').source)
-    expect(() => compile(definition.replace('assert(true)', 'assert(false)') + 'part()\nshow sphere(1)'))
-      .toThrow('Discarded transformed body')
+    expect(compile(definition + 'part()\nshow sphere(1)').source).toBe(compile('show sphere(1)').source)
+    expect(() => compile(definition.replace('assert(true)', 'assert(false)') + 'part()\nshow sphere(1)')).toThrow(
+      'Discarded transformed body',
+    )
   })
 
   it('evaluates only the selected returned geometry branch when its result is discarded', () => {
@@ -229,10 +229,8 @@ fn matched choice: int -> Geometry
     _ => box([1,1,1])
 `
     for (const name of ['conditional', 'matched']) {
-      expect(compile(definition + `${name}(0)\nshow sphere(1)`).source)
-        .toBe(compile('show sphere(1)').source)
-      expect(() => compile(definition + `${name}(1)\nshow sphere(1)`))
-        .toThrow('Discarded selected branch')
+      expect(compile(definition + `${name}(0)\nshow sphere(1)`).source).toBe(compile('show sphere(1)').source)
+      expect(() => compile(definition + `${name}(1)\nshow sphere(1)`)).toThrow('Discarded selected branch')
     }
   })
 
@@ -248,8 +246,9 @@ show box([size,size,size])`
     const compiled = compile(source)
     expect(compiled.source).toBe(compile('show box([2,2,2])').source)
     expect(compiled.constraint_report.filter(check => check.message === 'One scalar call')).toHaveLength(1)
-    expect(compileRushGraph(compiled.document).constraint_report
-      .filter(check => check.message === 'One scalar call')).toHaveLength(1)
+    expect(
+      compileRushGraph(compiled.document).constraint_report.filter(check => check.message === 'One scalar call'),
+    ).toHaveLength(1)
     expect(() => compile(source.replace('outer(2)', 'outer(0)'))).toThrow('One scalar call')
   })
 })
@@ -272,8 +271,9 @@ show part.scale([1,1,2])`
     const built = await build(source)
     expect(built.meshes).toHaveLength(1)
     expect(built.volume).toBeCloseTo(48)
-    await expect(build(source.replace('approximately(4mm)', 'approximately(8mm)')))
-      .rejects.toThrow('Intermediate height')
+    await expect(build(source.replace('approximately(4mm)', 'approximately(8mm)'))).rejects.toThrow(
+      'Intermediate height',
+    )
   })
 
   it('checks a local hidden body even when its function returns a number', async () => {
@@ -284,8 +284,9 @@ show part.scale([1,1,2])`
   ret height * 2
 show box([1mm,1mm,checkedHeight(4mm)])`
     expect((await build(source)).volume).toBeCloseTo(8)
-    await expect(build(source.replace('approximately(height)', 'approximately(height + 1mm)')))
-      .rejects.toThrow('Hidden local height')
+    await expect(build(source.replace('approximately(height)', 'approximately(height + 1mm)'))).rejects.toThrow(
+      'Hidden local height',
+    )
   })
 
   it('builds geometry assertion targets from discarded calls without adding them to the scene', async () => {
@@ -298,8 +299,7 @@ show box([1,1,1])`
     const built = await build(source)
     expect(built.meshes).toHaveLength(1)
     expect(built.volume).toBeCloseTo(1)
-    await expect(build(source.replace('hasBodies(1)', 'hasBodies(2)')))
-      .rejects.toThrow('Discarded target geometry')
+    await expect(build(source.replace('hasBodies(1)', 'hasBodies(2)'))).rejects.toThrow('Discarded target geometry')
   })
 
   it('checks function-local geometry before a later transformation', async () => {
@@ -309,8 +309,9 @@ show box([1,1,1])`
   ret body.scale([1,1,2])
 show part(4mm)`
     expect((await build(source)).volume).toBeCloseTo(48)
-    await expect(build(source.replace('approximately(height)', 'approximately(height * 2)')))
-      .rejects.toThrow('Local body height')
+    await expect(build(source.replace('approximately(height)', 'approximately(height * 2)'))).rejects.toThrow(
+      'Local body height',
+    )
   })
 
   it('does not build or check geometry from unselected conditional and match branches', async () => {
@@ -325,10 +326,10 @@ show part(4mm)`
     ]) {
       expect((await build(definition + selected)).volume).toBeCloseTo(2)
     }
-    await expect(build(definition + 'show 1 ? checked(2) : box([2,1,1])'))
-      .rejects.toThrow('Selected geometry only')
-    await expect(build(definition + 'show match 1\n  1 => checked(2)\n  _ => box([2,1,1])'))
-      .rejects.toThrow('Selected geometry only')
+    await expect(build(definition + 'show 1 ? checked(2) : box([2,1,1])')).rejects.toThrow('Selected geometry only')
+    await expect(build(definition + 'show match 1\n  1 => checked(2)\n  _ => box([2,1,1])')).rejects.toThrow(
+      'Selected geometry only',
+    )
   })
 
   it('resolves local geometry and expected dimensions for every foreach iteration', async () => {
@@ -340,8 +341,9 @@ show parts`
     const built = await build(source)
     expect(built.meshes).toHaveLength(3)
     expect(built.volume).toBeCloseTo(6)
-    await expect(build(source.replace('approximately(height)', 'approximately(1mm)')))
-      .rejects.toThrow('Loop-local height')
+    await expect(build(source.replace('approximately(height)', 'approximately(1mm)'))).rejects.toThrow(
+      'Loop-local height',
+    )
   })
 
   it('skips geometry checks after foreach continue and break', async () => {
@@ -353,8 +355,9 @@ show parts`
   yield local.translate([height*3,0,0])
 show parts`
     expect((await build(source)).meshes).toHaveLength(2)
-    await expect(build(source.replace('approximately(height * 1mm)', 'approximately(1mm)')))
-      .rejects.toThrow('Active geometry iteration')
+    await expect(build(source.replace('approximately(height * 1mm)', 'approximately(1mm)'))).rejects.toThrow(
+      'Active geometry iteration',
+    )
   })
 
   it('keeps geometry assertions before break on the terminating item without checking later items', async () => {
@@ -381,8 +384,9 @@ show [parts, box([1,1,1])]`
       const built = await build(definition + output)
       expect(built.meshes).toHaveLength(meshes)
       expect(built.volume).toBeCloseTo(3)
-      await expect(build(definition.replace('approximately((index+1)*1mm)', 'approximately(1mm)') + output))
-        .rejects.toThrow('Callback geometry')
+      await expect(
+        build(definition.replace('approximately((index+1)*1mm)', 'approximately(1mm)') + output),
+      ).rejects.toThrow('Callback geometry')
     }
   })
 

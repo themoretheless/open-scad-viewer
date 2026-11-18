@@ -1,7 +1,5 @@
 //! Reproducible exact-source diagnostic; an error is unproven, never a pass.
-use brep_core::{
-    feature_ops::full_round_curved::build, profile_certificate::material_relation::Limits,
-};
+use brep_core::{feature_ops::full_round_curved::build, profile_certificate::material_relation::Limits};
 use nurbs_core::curve::Curve;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let weight = std::env::args()

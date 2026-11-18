@@ -1,0 +1,42 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/389a22c2fc5d0eaf0f09ecca6a27c18888e7fa72398ae02e5efcab3e54f35c34.wasm",
+  "sha256": "389a22c2fc5d0eaf0f09ecca6a27c18888e7fa72398ae02e5efcab3e54f35c34",
+  "bytes": 21856814,
+  "sourceCommit": "980c64842cb30ad4ecb3236108c9881482ace51d",
+  "status": "passed",
+  "abiCases": 186,
+  "graphCases": 73,
+  "workersStarted": 166,
+  "workersTerminated": 166,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "f6740a17ebee5a1bc71825b218e7c5daee1c4cdd2cac5616c8cb0a1411ceb6a5",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "a9d21f0592f794657e3db96aa5da397d5a3e8b9b416fabc869c5fcad766e3f54",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "tools/browser-qualification/surface-self-intersection.mjs": "7c6b3d2ef21177e7be1bf90fb705f1eb26f2766e92aaa5a17d188ae48e68dae5",
+    "src/services/originalQuadricGraphProtocol.ts": "92fd629b00b21a322c37794540726882ff514d574cf25fcf79bbf1715db2f9c0"
+  },
+  "nativeReceipt": "docs/qualification/multispan-homogeneous-affine-graph-2026-11-03/results.json",
+  "observedTimings": {
+    "graph-multispan-homogeneous-rotated-false-gauge-1": {
+      "abiMs": 5.747208999999884,
+      "workerMs": 10.200000017881393
+    },
+    "graph-multispan-homogeneous-algebraic-edge": {
+      "abiMs": 6.47483299999999,
+      "workerMs": 10.400000005960464
+    }
+  },
+  "timingScope": "Single-run observations, not repeat benchmark qualification. ABI request versus complete Worker call, excluding fixture checks.",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of original positive-factor nonplanar coupled multi-span graph targets with a certified global homogeneous affine projection. Internal knot contact, axis rotation/gauge, algebraic outer edge, wrong original membership, zero predicate budget and ABI ULP refusal are checked.",
+  "remaining": [
+    "General coupled multispan maps without homogeneous affine projection",
+    "General noncanceled nonplanar coupled weights",
+    "General UV precision qualification",
+    "General freeform all branches",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}

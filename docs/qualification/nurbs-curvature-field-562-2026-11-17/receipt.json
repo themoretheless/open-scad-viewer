@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0562",
+  "testedBase": "4e8539c9c4b756bc1155b6f9fc1f6dc46beaa014",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "cad-step",
+    "--test",
+    "exact_periodic_trim_binding_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_periodic_trim_step_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Retain original contour identities across trim chart extraction, hole nesting, and edge subdivision.",
+    "Each input contour resolves to a persistent face and wire ID and an outer/hole role after a validated build."
+  ],
+  "logSha256": "68d29565c66249114702cf517d60fcca42b123915a120f23f94ef02d91418600",
+  "sourceSha256": {
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "63e3ae8936cdd060990f39bec4bd0f3110624eb9740be271945b0e3f3d372653",
+    "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs": "d66bd89122e3900a1cf977752ab3b96630ed8517029f96c12544ea76bbf500d1"
+  }
+}

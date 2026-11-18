@@ -85,7 +85,7 @@ before compilation, including optional network loading. See the
 [artifact integrity contract and startup measurements](docs/design/wasm-artifact-integrity-2026-09-20.md).
 An artifact identity is not a qualification record.
 
-The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). Two kernels ship: the geometry kernel, and a language kernel with the OpenSCAD and RushGraph frontends that loads only when source is compiled. The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust uses floating `nightly` via `rust-toolchain.toml`.
+The standard npm dev command prepares the archived qualified WASM and verifies its runtime manifest before starting Vite. Use `npm run build:geometry` explicitly when working on Rust kernels; rebuilt candidate artifacts need matching qualification before the application admits them. The npm build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). Two kernels ship: the geometry kernel, and a language kernel with the OpenSCAD and RushGraph frontends that loads only when source is compiled. The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust uses floating `nightly` via `rust-toolchain.toml`.
 
 ## Authored B-rep modeling
 
@@ -290,6 +290,22 @@ Example MCP client configuration (replace the repository path):
   }
 }
 ```
+
+To open a catalog model in a running local editor, open the OpenSCADA tab
+served by `npm run dev` or `npm run preview` and keep it visible. Then call
+`openscad_open_in_editor` from the stdio MCP server with `model_id` and,
+optionally, `revision` and `port`. For example:
+
+```json
+{"model_id":"<catalog id>","revision":0,"port":5173}
+```
+
+The command loads the source into the current workspace, starts a full build,
+and selects **Parameters**. The tool returns `opened` after the tab acknowledges
+the editor change. The build completes separately. By default the tool connects
+to port 5173 on the same computer. Set `OPENSCADA_EDITOR_PORT` in the MCP
+server environment for a different default. A static deployment does not
+provide the local bridge.
 
 Available tools:
 
@@ -586,7 +602,7 @@ subprocess lifetime, and session-local artifact cache.
   protocol, MEMFS child, fail-closed subprocess supervisor, and MCP-facing
   execution service. `scripts/official-openscad-runtime.mjs` is the explicit
   checksum-verifying installer; it is never part of the browser graph.
-- `src/App.vue`: workspace UI, file actions, settings, stale/error state, and
+- `src/App.svt`: workspace UI, file actions, settings, stale/error state, and
   viewer controls.
 - `tests/`: mathematical and geometry golden tests plus protocol, contract-
   boundary, publication, visibility, camera, and recovery unit tests.
@@ -799,19 +815,9 @@ The TypeScript host layers are decomposed by single responsibility (SOLID / DRY 
   - `src/parser/expressionEvaluator.ts` — expression evaluation, OpenSCAD 2021.01 lexical/dynamic scope resolution, built-in function dispatch, and DXF dimension/cross queries.
   - `src/parser/assetEvaluator.ts` — bounded VFS asset evaluators (`makeText`, `makeImport`, `makeSurface`, `compatibilityDxfProfile`).
   - `src/parser/geometryEvaluator.ts` — 2D/3D primitives, transforms, Booleans, hulls, Minkowski sums, and linear/rotational extrusions.
-- **MCP Server (`src/mcp/server/*` & `src/mcp/createServer.ts`)**:
+- **MCP Server (`src/mcp/createServer.ts`, `src/mcp/createServer/*`)**:
+  - `src/mcp/createServer/createOpenScadMcpServer.ts` — tool, resource and prompt registration, Zod schemas and wire mappers.
   - `src/mcp/server/contracts.ts` — server instructions, host isolation contracts (`MCP_GEOMETRY_HOST_CONTRACT`), URI builders, and surrogate-safe string truncation (`truncateWellFormed`).
-  - `src/mcp/server/schemas.ts` — Zod input/output schemas for all MCP tools.
-  - `src/mcp/server/wireMappers.ts` — wire-format mappers for models, builds, diagnostics, and comparison reports.
-  - `src/mcp/server/registerTools.ts` & `src/mcp/server/registerResourcesAndPrompts.ts` — modular registration of catalog/engine tools, resources, and prompts.
-- **OpenSCAD Asset Importers (`src/importers/*` & `src/services/openScadImport.ts`)**:
-  - `src/importers/types.ts` — import budgets, contracts, `OpenScadProjectAssetError`, and 2D/3D mesh/polygon builders.
-  - `src/importers/stlOffImporter.ts` — ASCII/binary STL and OFF parsers (`parseOpenScadStl`, `parseOpenScadOff`, `triangulateFace3D`).
-  - `src/importers/xmlAndArchive.ts` — entity-safe XML parser (`parseXml`), CRC32, ZIP/ZIP64/GZIP decoders (`unzip3mf`, `gunzipAmf`), and AMF/3MF model parsers.
-  - `src/importers/dxfImporter.ts` — DXF section/group readers, contour stitcher, `dxf_dim`/`dxf_cross` metadata resolvers, and `buildDxfQueryPaths`.
-- **Semantic Program Lowerer & Validator (`src/semantic/*`, `src/services/openscadSemanticLowerer.ts` & `src/services/semanticProgramValidator.ts`)**:
-  - `src/semantic/schemaPrimitives.ts` — `SemanticProgramValidationError` and primitive schema/node/operation/template validators.
-  - `src/semantic/occurrenceValidator.ts` — occurrence hierarchy, module activation anchors, `children()` continuation edges, and output-reference validators.
-  - `src/semantic/lowererBuilder.ts` — `SemanticProgramBuilder`, `registerOperations`, and O(V+E) postorder DAG canonicalizer (`canonicalizeCompletedDag`).
-  - `src/semantic/lowererExpressionEval.ts` — expression evaluator, built-in function dispatcher, compatibility argument binder, and AST module/function collectors.
-  - `src/semantic/lowererGeometryOps.ts` — affine matrices, color/segment resolution, 2D/3D primitive constructors, and `dxf_linear_extrude` / `dxf_rotate_extrude` lowering.
+- **OpenSCAD Asset Importers (`src/services/openScadImport.ts`, `src/services/openScadImport/*`)**: import budgets and contracts, ASCII/binary STL and OFF, entity-safe XML, ZIP/ZIP64/GZIP, AMF/3MF and DXF readers with `dxf_dim`/`dxf_cross` metadata.
+- **Semantic Program Lowerer & Validator (`src/services/openscadSemanticLowerer*`, `src/services/semanticProgramValidator*`)**: schema, occurrence and output-reference validation, expression evaluation and geometry lowering.
+  - `src/semantic/lowererBuilder.ts` — `SemanticProgramBuilder`, `registerOperations`, and O(V+E) postorder DAG canonicalizer (`canonicalizeCompletedDag`); currently used by tests only.

@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0646",
+  "testedBase": "64b34c9466448161ef828cb696d5229370116ed7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 287,
+  "scope": [
+    "Return the signed first mass moment about the query plane alongside the center distance.",
+    "Check the analytic signed first moment through the compiled ABI, orientation reversal and unavailable coverage."
+  ],
+  "logSha256": "d4e30497bb202aad3d6c471ad3f869d1fe2094a65032e196497f6629accfa44d",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "42e35a596b17e322a72b30d23629950fe9da16631212195b31c414cc0b70cd72",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "ad0dd8aec8997c549d0f498ddbff5e9473d576e1a814794307067258f3f37efb",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "6c5acc6a940cb3330177c729da3c575f9ccf01a1b0dde8040eddee635de6d550"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

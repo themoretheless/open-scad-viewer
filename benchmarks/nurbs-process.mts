@@ -16,11 +16,11 @@ const hash = (value: string | Uint8Array) => createHash('sha256').update(value).
 const inputs = [
   'benchmarks/nurbs-process.mts', 'benchmarks/nurbs-process-fixtures.ts',
   'src/mcp/rushGraphNurbsRuntime.ts', 'src/mcp/ownNurbsProcess.ts',
-  'src/services/rushGraphNurbsKernel.ts', 'src/services/rushGraphNurbs.ts',
-  'src/services/geometry/kernel.ts', 'src/generated/geometry-kernels/bytes.ts',
+  'src/language/rushGraphNurbsKernel.ts', 'src/language/rushGraphNurbs.ts',
+  'src/kernel/geometry/kernel.ts', 'src/generated/geometry-kernels/bytes.ts',
   'src/generated/language-kernel/bytes.ts',
-  'src/generated/wasm-brotli/bytes.ts', 'src/services/wasmBrotliPacking.ts',
-  'src/services/wasmPacking.ts', 'crates/Cargo.toml', 'scripts/build-wasm-brotli.mjs',
+  'src/generated/wasm-brotli/bytes.ts', 'src/kernel/wasmBrotliPacking.ts',
+  'src/kernel/wasmPacking.ts', 'crates/Cargo.toml', 'scripts/build-wasm-brotli.mjs',
 ]
 async function fingerprints() {
   return Promise.all(inputs.map(async path => ({ path, sha256: hash(await readFile(resolve(root, path))) })))

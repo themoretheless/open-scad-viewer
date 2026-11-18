@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0637",
+  "testedBase": "6b37df2582cf7980b724ff8c0330e5f09214712b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 234,
+  "scope": [
+    "Project piece centers before weighted extremization to preserve cancellation across Cartesian axes.",
+    "Check oblique cancellation, subnormal and maximal normal scales, interval masses and positions, and invalid normal rejection."
+  ],
+  "logSha256": "59e1afea283efd89d8a69a1c93d15608d9acea766ffdb9a11f17cd6d1758e01a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "258e368bcf1a165e3bf52aa3799e290c2f43eae9b35154e7f5acdbeaaee1c369",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "452f924cad26b106a10c03d0e97080fc79ff387b65b384d8ac204e1693da956f"
+  }
+}

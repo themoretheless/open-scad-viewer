@@ -1,10 +1,11 @@
-import { onUnmounted, ref, watch } from 'vue'
-import { parseDirectDocument, serializeDirectDocument } from '../../services/directModeling'
-import { xyPlane } from '../../services/directSketchGeometry'
+import { onUnmounted, ref, watch } from 'svet'
+import { parseDirectDocument, serializeDirectDocument } from '../../app/directModeling'
+import { xyPlane } from '../../app/directSketchGeometry'
 import { download } from './helpers'
 import type { UseFileExchangeOptions } from './useFileExchange'
 
-type SvgExchangeOptions = Pick<UseFileExchangeOptions,
+type SvgExchangeOptions = Pick<
+  UseFileExchangeOptions,
   | 'props'
   | 'label'
   | 'document'
@@ -12,7 +13,7 @@ type SvgExchangeOptions = Pick<UseFileExchangeOptions,
   | 'isRestoreDisposed'
   | 'error'
   | 'history'
-  | 'commit'
+  | 'commitInWorker'
   | 'operation'
   | 'advancedOp'
   | 'subtract'
@@ -37,7 +38,7 @@ export function useSvgExchange(options: SvgExchangeOptions) {
     isRestoreDisposed,
     error,
     history,
-    commit,
+    commitInWorker,
     operation,
     advancedOp,
     subtract,
@@ -84,10 +85,10 @@ export function useSvgExchange(options: SvgExchangeOptions) {
       generation = getSaveGeneration()
     svgBusy.value = true
     error.value = ''
-    let worker: import('../../services/svgWorkerClient').SvgWorkerClient | undefined
+    let worker: import('../../exchange/svgWorkerClient').SvgWorkerClient | undefined
     try {
       if (file.size > 4 * 1024 * 1024) throw Error('SVG exceeds 4 MiB.')
-      const { createSvgWorkerClient } = await import('../../services/svgWorkerClient')
+      const { createSvgWorkerClient } = await import('../../exchange/svgWorkerClient')
       const text = await file.text()
       if (controller.signal.aborted) return
       worker = createSvgWorkerClient()
@@ -103,33 +104,44 @@ export function useSvgExchange(options: SvgExchangeOptions) {
             'SVG contour exceeds 512 vertices. Simplify the source profile.',
           ),
         )
-      const next = history.document
-      const ids = result.contours.map(points => {
-        const id = crypto.randomUUID()
-        next.sketches.push({
-          id,
-          name: `${file.name.slice(0, 70)} · ${next.sketches.length + 1}`,
-          closed: true,
-          points,
-        })
-        return id
-      })
-      commit(parseDirectDocument(serializeDirectDocument(next)))
-      operation.value = null
-      advancedOp.value = null
-      subtract.value = null
-      activePlane.value = xyPlane()
-      workplaneOutline.value = []
-      selection.value = ids[0]
-      extraSelection.value = ids.slice(1)
-      mode.value = '2d'
-      sketchPaneOpen.value = true
-      fit('2d')
-      setNotice(
-        label(
-          'SVG импортирован. Для отверстий выдавливайте выбранные контуры вместе.',
-          'SVG imported. Extrude the selected contours together to retain holes.',
-        ) + (result.warnings.length ? ' ' + result.warnings.join(' ') : ''),
+      const contours = result.contours
+      let ids: string[] = []
+      await commitInWorker(
+        () => {
+          const next = history.document
+          ids = contours.map(points => {
+            const id = crypto.randomUUID()
+            next.sketches.push({
+              id,
+              name: `${file.name.slice(0, 70)} · ${next.sketches.length + 1}`,
+              closed: true,
+              points,
+            })
+            return id
+          })
+          return parseDirectDocument(serializeDirectDocument(next))
+        },
+        () => {
+          operation.value = null
+          advancedOp.value = null
+          subtract.value = null
+          activePlane.value = xyPlane()
+          workplaneOutline.value = []
+          selection.value = ids[0]!
+          extraSelection.value = ids.slice(1)
+          mode.value = '2d'
+          sketchPaneOpen.value = true
+          fit('2d')
+          setNotice(
+            label(
+              'SVG импортирован. Для отверстий выдавливайте выбранные контуры вместе.',
+              'SVG imported. Extrude the selected contours together to retain holes.',
+            ) + (result.warnings.length ? ' ' + result.warnings.join(' ') : ''),
+          )
+        },
+        message => {
+          if (!controller.signal.aborted) error.value = message
+        },
       )
     } catch (e) {
       if (!controller.signal.aborted) error.value = e instanceof Error ? e.message : String(e)
@@ -152,9 +164,9 @@ export function useSvgExchange(options: SvgExchangeOptions) {
     svgController = controller
     const mesh = structuredClone(body.mesh)
     error.value = ''
-    let worker: import('../../services/svgWorkerClient').SvgWorkerClient | undefined
+    let worker: import('../../exchange/svgWorkerClient').SvgWorkerClient | undefined
     try {
-      const { createSvgWorkerClient } = await import('../../services/svgWorkerClient')
+      const { createSvgWorkerClient } = await import('../../exchange/svgWorkerClient')
       if (controller.signal.aborted) return
       worker = createSvgWorkerClient()
       const vertices = new Float32Array(mesh.positions.length * 2)

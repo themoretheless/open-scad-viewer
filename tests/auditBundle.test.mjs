@@ -12,10 +12,13 @@ test('counts emitted bytes separately from repeated original sources', async () 
     await writeFile(path.join(directory, 'index.html'), 'test')
     for (const name of ['main', 'worker']) {
       await writeFile(path.join(directory, 'assets', `${name}.js`), 'abc')
-      await writeFile(path.join(directory, 'assets', `${name}.js.map`), JSON.stringify({
-        sources: ['../../src/shared.ts', '../../src/shared.ts', '../../src/transformed.ts'],
-        sourcesContent: ['hello', 'hello', name],
-      }))
+      await writeFile(
+        path.join(directory, 'assets', `${name}.js.map`),
+        JSON.stringify({
+          sources: ['../../src/shared.ts', '../../src/shared.ts', '../../src/transformed.ts'],
+          sourcesContent: ['hello', 'hello', name],
+        }),
+      )
     }
     const report = await auditBundle(directory)
     assert.equal(report.totalAssetBytes, 10)

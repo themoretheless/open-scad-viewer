@@ -12,11 +12,11 @@ import {
   normalizeOpenScadProjectPath,
   resolveOpenScadProjectPath,
   type OpenScadProjectFileInput,
-} from '../src/services/openScadProject'
+} from '../src/language/openScadProject'
 
 function expectProjectError(
   operation: () => unknown,
-  code: typeof OPENSCAD_PROJECT_ERROR_CODES[number],
+  code: (typeof OPENSCAD_PROJECT_ERROR_CODES)[number],
 ): OpenScadProjectError {
   try {
     operation()
@@ -28,15 +28,10 @@ function expectProjectError(
   throw new Error(`Expected ${code}`)
 }
 
-function minimalProject(
-  extraFiles: readonly OpenScadProjectFileInput[] = [],
-): OpenScadProject {
+function minimalProject(extraFiles: readonly OpenScadProjectFileInput[] = []): OpenScadProject {
   return new OpenScadProject({
     entrypoint: 'main.scad',
-    files: [
-      { kind: 'source', path: 'main.scad', source: 'include <lib/part.scad>\npart();' },
-      ...extraFiles,
-    ],
+    files: [{ kind: 'source', path: 'main.scad', source: 'include <lib/part.scad>\npart();' }, ...extraFiles],
   })
 }
 
@@ -58,11 +53,7 @@ describe('OpenSCAD ProjectBundle/VFS v2', () => {
       byteLength: expect.any(Number),
       sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     })
-    expect(project.list().map(file => file.path)).toEqual([
-      'assets/part.stl',
-      'lib/caf\u00e9.scad',
-      'main.scad',
-    ])
+    expect(project.list().map(file => file.path)).toEqual(['assets/part.stl', 'lib/caf\u00e9.scad', 'main.scad'])
     expect(project.sha256).toBe(reordered.sha256)
     expect(project.read('assets/part.stl')).toMatchObject({
       kind: 'blob',
@@ -107,46 +98,50 @@ describe('OpenSCAD ProjectBundle/VFS v2', () => {
     ]) {
       expectProjectError(() => normalizeOpenScadProjectPath(path), 'E_PROJECT_INVALID_PATH')
     }
-    expectProjectError(
-      () => resolveOpenScadProjectPath('main.scad', '../secret.scad'),
-      'E_PROJECT_PATH_ESCAPE',
-    )
+    expectProjectError(() => resolveOpenScadProjectPath('main.scad', '../secret.scad'), 'E_PROJECT_PATH_ESCAPE')
     for (const specifier of ['/secret.scad', 'a//b.scad', 'https://example.test/a.scad', '..']) {
-      expectProjectError(
-        () => resolveOpenScadProjectPath('lib/main.scad', specifier),
-        'E_PROJECT_INVALID_PATH',
-      )
+      expectProjectError(() => resolveOpenScadProjectPath('lib/main.scad', specifier), 'E_PROJECT_INVALID_PATH')
     }
   })
 
   it('detects duplicate paths after Unicode canonicalization', () => {
-    const error = expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: '' },
-        { kind: 'source', path: 'lib/caf\u00e9.scad', source: '' },
-        { kind: 'source', path: 'lib/cafe\u0301.scad', source: '' },
-      ],
-    }), 'E_PROJECT_DUPLICATE_PATH')
+    const error = expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [
+            { kind: 'source', path: 'main.scad', source: '' },
+            { kind: 'source', path: 'lib/caf\u00e9.scad', source: '' },
+            { kind: 'source', path: 'lib/cafe\u0301.scad', source: '' },
+          ],
+        }),
+      'E_PROJECT_DUPLICATE_PATH',
+    )
     expect(error.details).toEqual({ path: 'lib/caf\u00e9.scad' })
   })
 
   it('requires a source entrypoint that exists in the admitted snapshot', () => {
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'missing.scad',
-      files: [{ kind: 'source', path: 'main.scad', source: '' }],
-    }), 'E_PROJECT_ENTRYPOINT_MISSING')
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [{ kind: 'blob', path: 'main.scad', data: new Uint8Array() }],
-    }), 'E_PROJECT_ENTRYPOINT_NOT_SOURCE')
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'missing.scad',
+          files: [{ kind: 'source', path: 'main.scad', source: '' }],
+        }),
+      'E_PROJECT_ENTRYPOINT_MISSING',
+    )
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [{ kind: 'blob', path: 'main.scad', data: new Uint8Array() }],
+        }),
+      'E_PROJECT_ENTRYPOINT_NOT_SOURCE',
+    )
   })
 
   it('copies binary input and every binary read while freezing structural snapshots', () => {
     const input = new Uint8Array([4, 5, 6])
-    const project = minimalProject([
-      { kind: 'blob', path: 'part.stl', data: input },
-    ])
+    const project = minimalProject([{ kind: 'blob', path: 'part.stl', data: input }])
     input[0] = 99
 
     const first = project.read('part.stl')
@@ -184,52 +179,78 @@ describe('OpenSCAD ProjectBundle/VFS v2', () => {
     expect(unicode.byteLength).toBe(4)
     expect(unicode.readEntrypoint().byteLength).toBe(4)
 
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [{ kind: 'source', path: 'main.scad', source: 'bad\ud800' }],
-    }), 'E_PROJECT_INVALID_SOURCE')
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [{ kind: 'blob', path: 'main.scad', data: [1, 2, 3] as unknown as Uint8Array }],
-    }), 'E_PROJECT_INVALID_BLOB')
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [{ kind: 'source', path: 'main.scad', source: 'bad\ud800' }],
+        }),
+      'E_PROJECT_INVALID_SOURCE',
+    )
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [{ kind: 'blob', path: 'main.scad', data: [1, 2, 3] as unknown as Uint8Array }],
+        }),
+      'E_PROJECT_INVALID_BLOB',
+    )
   })
 
   it('enforces file-count, per-source, per-blob, and aggregate byte limits', () => {
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: Array.from({ length: OPENSCAD_PROJECT_MAX_FILES + 1 }, (_, index) => ({
-        kind: 'source' as const,
-        path: `${index}.scad`,
-        source: '',
-      })),
-    }), 'E_PROJECT_FILE_COUNT_LIMIT')
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: Array.from({ length: OPENSCAD_PROJECT_MAX_FILES + 1 }, (_, index) => ({
+            kind: 'source' as const,
+            path: `${index}.scad`,
+            source: '',
+          })),
+        }),
+      'E_PROJECT_FILE_COUNT_LIMIT',
+    )
 
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [{
-        kind: 'source',
-        path: 'main.scad',
-        source: 'x'.repeat(OPENSCAD_PROJECT_MAX_SOURCE_BYTES + 1),
-      }],
-    }), 'E_PROJECT_SOURCE_BYTES_LIMIT')
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [
+            {
+              kind: 'source',
+              path: 'main.scad',
+              source: 'x'.repeat(OPENSCAD_PROJECT_MAX_SOURCE_BYTES + 1),
+            },
+          ],
+        }),
+      'E_PROJECT_SOURCE_BYTES_LIMIT',
+    )
 
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: '' },
-        { kind: 'blob', path: 'oversized.bin', data: new Uint8Array(OPENSCAD_PROJECT_MAX_BLOB_BYTES + 1) },
-      ],
-    }), 'E_PROJECT_BLOB_BYTES_LIMIT')
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [
+            { kind: 'source', path: 'main.scad', source: '' },
+            { kind: 'blob', path: 'oversized.bin', data: new Uint8Array(OPENSCAD_PROJECT_MAX_BLOB_BYTES + 1) },
+          ],
+        }),
+      'E_PROJECT_BLOB_BYTES_LIMIT',
+    )
 
     const halfPlusOne = Math.floor(OPENSCAD_PROJECT_MAX_TOTAL_BYTES / 2) + 1
-    expectProjectError(() => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: '' },
-        { kind: 'blob', path: 'left.bin', data: new Uint8Array(halfPlusOne) },
-        { kind: 'blob', path: 'right.bin', data: new Uint8Array(halfPlusOne) },
-      ],
-    }), 'E_PROJECT_TOTAL_BYTES_LIMIT')
+    expectProjectError(
+      () =>
+        new OpenScadProject({
+          entrypoint: 'main.scad',
+          files: [
+            { kind: 'source', path: 'main.scad', source: '' },
+            { kind: 'blob', path: 'left.bin', data: new Uint8Array(halfPlusOne) },
+            { kind: 'blob', path: 'right.bin', data: new Uint8Array(halfPlusOne) },
+          ],
+        }),
+      'E_PROJECT_TOTAL_BYTES_LIMIT',
+    )
   })
 
   it('publishes one frozen, unique typed-error inventory', () => {

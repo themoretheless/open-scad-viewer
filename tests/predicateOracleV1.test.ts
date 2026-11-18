@@ -21,15 +21,9 @@ import {
 describe('G0.7 independent predicate oracle', () => {
   it('orient2dExact matches CCW / CW / collinear', () => {
     const z = rational(0)
-    expect(
-      orient2dExact(z, z, rational(1), z, rational(0), rational(1)),
-    ).toBe(1)
-    expect(
-      orient2dExact(z, z, rational(0), rational(1), rational(1), z),
-    ).toBe(-1)
-    expect(
-      orient2dExact(z, z, rational(2), z, rational(4), z),
-    ).toBe(0)
+    expect(orient2dExact(z, z, rational(1), z, rational(0), rational(1))).toBe(1)
+    expect(orient2dExact(z, z, rational(0), rational(1), rational(1), z)).toBe(-1)
+    expect(orient2dExact(z, z, rational(2), z, rational(4), z)).toBe(0)
   })
 
   it('orient2dFilter agrees on easy cases and stays indeterminate near zero', () => {
@@ -107,12 +101,30 @@ describe('predicate oracle arithmetic boundaries', () => {
 
   it('encloses each rounded arithmetic operation, including overflow and underflow', () => {
     const pairs: readonly (readonly [Interval, Interval])[] = [
-      [{ lo: min, hi: min }, { lo: min, hi: min }],
-      [{ lo: -min, hi: min }, { lo: -min, hi: min }],
-      [{ lo: max, hi: max }, { lo: max, hi: max }],
-      [{ lo: max, hi: max }, { lo: -max, hi: -max }],
-      [{ lo: 1, hi: 1 }, { lo: 2 ** -54, hi: 2 ** -54 }],
-      [{ lo: -(2 ** 600), hi: 2 ** 600 }, { lo: -(2 ** -600), hi: 2 ** -600 }],
+      [
+        { lo: min, hi: min },
+        { lo: min, hi: min },
+      ],
+      [
+        { lo: -min, hi: min },
+        { lo: -min, hi: min },
+      ],
+      [
+        { lo: max, hi: max },
+        { lo: max, hi: max },
+      ],
+      [
+        { lo: max, hi: max },
+        { lo: -max, hi: -max },
+      ],
+      [
+        { lo: 1, hi: 1 },
+        { lo: 2 ** -54, hi: 2 ** -54 },
+      ],
+      [
+        { lo: -(2 ** 600), hi: 2 ** 600 },
+        { lo: -(2 ** -600), hi: 2 ** -600 },
+      ],
     ]
     for (const [a, b] of pairs) {
       const sum = addInterval(a, b)

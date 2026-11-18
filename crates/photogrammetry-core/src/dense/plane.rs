@@ -233,27 +233,39 @@ fn at_depth_with_slope(q: V3, ray: V3, inverse_depth: f64) -> V3 {
 // One bounded local refinement step for a single pixel. Returns whether the
 // pixel's hypothesis strictly improved, for the optional adaptive budget.
 #[allow(clippy::too_many_arguments)]
-fn refine_pixel(
-    patch: Option<&Patch>,
-    reference: &Camera,
-    sources: &mut [Source<'_>],
-    planes: &mut [Hypothesis],
-    coarse: &[(f64, f64, f64)],
+/// Inputs of the propagation sweep that stay fixed for every pixel and pass.
+#[derive(Clone, Copy)]
+struct RefineContext<'a> {
+    reference: &'a Camera,
+    options: &'a DenseOptions,
+    /// Per-pixel coarse (inverse depth along the ray, score, plane offset).
+    coarse: &'a [(f64, f64, f64)],
     width: usize,
-    x: usize,
-    y: usize,
     step: f64,
     ray_step: f64,
     low: f64,
     high: f64,
     interval: f64,
+}
+/// One propagation pass: its index, proposal budget, sweep direction and early-exit policy.
+#[derive(Clone, Copy)]
+struct RefinePass {
     pass: usize,
     budget: usize,
     reverse: bool,
     adaptive: bool,
-    options: &DenseOptions,
+}
+fn refine_pixel(
+    patch: Option<&Patch>,
+    sources: &mut [Source<'_>],
+    planes: &mut [Hypothesis],
+    context: RefineContext<'_>,
+    pass: RefinePass,
+    [x, y]: [usize; 2],
     diagnostics: &mut DenseDiagnostics,
 ) -> bool {
+    let RefineContext { reference, options, coarse, width, step, ray_step, low, high, interval } = context;
+    let RefinePass { pass, budget, reverse, adaptive } = pass;
     let Some(patch) = patch else {
         return false;
     };
@@ -364,20 +376,38 @@ fn refine_pixel(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Reference image and its camera.
+#[derive(Clone, Copy)]
+pub(crate) struct ReferenceView<'a> {
+    pub gray: &'a GrayImage,
+    pub camera: &'a Camera,
+}
+/// Depth-map raster: size and pixel step in reference-image pixels.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct DepthGrid {
+    pub width: usize,
+    pub height: usize,
+    pub step: f64,
+}
+/// Depth search range, optionally narrowed per pixel by (low, high) inverse-depth bounds.
+#[derive(Clone, Copy)]
+pub(crate) struct DepthRange<'a> {
+    pub near: f64,
+    pub far: f64,
+    pub ranges: Option<&'a (Vec<f64>, Vec<f64>)>,
+}
 pub(super) fn estimate(
-    gray: &GrayImage,
-    reference: &Camera,
+    view: ReferenceView<'_>,
     sources: &mut [Source<'_>],
-    width: usize,
-    height: usize,
-    step: f64,
-    near: f64,
-    far: f64,
-    ranges: Option<&(Vec<f64>, Vec<f64>)>,
+    grid: DepthGrid,
+    range: DepthRange<'_>,
     options: &DenseOptions,
     diagnostics: &mut DenseDiagnostics,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
+    let ReferenceView { gray, camera: reference } = view;
+    let DepthGrid { width, height, step } = grid;
+    let DepthRange { near, far, ranges } = range;
     let count = width * height;
     let mut planes = vec![Hypothesis::default(); count];
     // Precompute centered reference patches once per pixel instead of
@@ -478,6 +508,7 @@ pub(super) fn estimate(
     }
     let red_black = options.red_black_propagation;
     let adaptive = options.adaptive_refine_budget;
+    let context = RefineContext { reference, options, coarse: &coarse, width, step, ray_step, low, high, interval };
     for (pass, &budget) in pass_budget.iter().enumerate() {
         let mut pass_improved = false;
         if red_black {
@@ -497,23 +528,11 @@ pub(super) fn estimate(
                         }
                         pass_improved |= refine_pixel(
                             patches[y * width + x].as_ref(),
-                            reference,
                             sources,
                             &mut planes,
-                            &coarse,
-                            width,
-                            x,
-                            y,
-                            step,
-                            ray_step,
-                            low,
-                            high,
-                            interval,
-                            pass,
-                            budget,
-                            reverse,
-                            adaptive,
-                            options,
+                            context,
+                            RefinePass { pass, budget, reverse, adaptive },
+                            [x, y],
                             diagnostics,
                         );
                     }
@@ -528,23 +547,11 @@ pub(super) fn estimate(
                     let x = if reverse { width - 1 - column } else { column };
                     pass_improved |= refine_pixel(
                         patches[y * width + x].as_ref(),
-                        reference,
                         sources,
                         &mut planes,
-                        &coarse,
-                        width,
-                        x,
-                        y,
-                        step,
-                        ray_step,
-                        low,
-                        high,
-                        interval,
-                        pass,
-                        budget,
-                        reverse,
-                        adaptive,
-                        options,
+                        context,
+                        RefinePass { pass, budget, reverse, adaptive },
+                        [x, y],
                         diagnostics,
                     );
                 }
@@ -620,15 +627,10 @@ mod tests {
                 rays: [[0.; 3]; 25],
             }];
             estimate(
-                &gray,
-                &camera,
+                ReferenceView { gray: &gray, camera: &camera },
                 &mut sources,
-                16,
-                16,
-                1.,
-                2.,
-                8.,
-                None,
+                DepthGrid { width: 16, height: 16, step: 1. },
+                DepthRange { near: 2., far: 8., ranges: None },
                 options,
                 &mut DenseDiagnostics::default(),
                 &mut |_, _, _| true,

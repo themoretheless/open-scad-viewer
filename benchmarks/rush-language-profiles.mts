@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { compileWasmArtifact } from '../src/services/wasmArtifact'
-import { encodeBinary } from '../src/services/valueBinaryCodec'
-import { decodePacked, writeLinear } from '../src/services/wasmHost'
-import { prepareGraphRust, warmLanguageKernel } from '../src/services/languages/kernel'
+import { compileWasmArtifact } from '../src/kernel/wasmArtifact'
+import { encodeBinary } from '../src/core/valueBinaryCodec'
+import { decodePacked, writeLinear } from '../src/kernel/wasmHost'
+import { prepareGraphRust, warmLanguageKernel } from '../src/language/languages/kernel'
 
 const { values } = parseArgs({ options: { baseline: { type: 'string' }, candidate: { type: 'string' } } })
 assert.ok(values.baseline && values.candidate, 'Pass --baseline and --candidate optimized language WASM paths')

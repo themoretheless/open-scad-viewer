@@ -1,9 +1,6 @@
 #[path = "../examples/support/corner_close_fixture.rs"]
 mod fixture;
-use brep_core::{
-    corner_close,
-    wall_opposition::{self, Decision},
-};
+use brep_core::{corner_close, wall_opposition::{self, Decision}};
 #[test]
 fn shell_orientation_and_trimmed_normals_identify_the_complete_floor_set() {
     let (source, uses, options) = fixture::fixture_extended();
@@ -13,9 +10,11 @@ fn shell_orientation_and_trimmed_normals_identify_the_complete_floor_set() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let floor = out
@@ -67,7 +66,17 @@ fn shell_orientation_and_trimmed_normals_identify_the_complete_floor_set() {
     assert!(rotation.selection_complete);
     assert_eq!(rotation.candidate_faces, floor);
     let automatic = brep_core::wall_clearance::inspect_shell(
-        &out.model, 0, out.face, -0.5, 2.9, 1e-7, 1e-8, 100000, 1000000,
+        &out.model,
+        0,
+        out.face,
+        -0.5,
+        brep_core::wall_clearance::ClearanceLimits {
+            required_mm: 2.9,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_domain_cells: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(automatic.selection.candidate_faces, floor);
@@ -88,7 +97,20 @@ fn unresolved_normals_stay_candidates_and_never_disappear_with_zero_work() {
     assert_eq!(r.candidate_faces.len(), 5);
     assert_eq!(r.cells, 0);
     let automatic =
-        brep_core::wall_clearance::inspect_shell(&m, 0, 0, -0.5, 1., 1e-7, 1e-8, 0, 0).unwrap();
+        brep_core::wall_clearance::inspect_shell(
+            &m,
+            0,
+            0,
+            -0.5,
+            brep_core::wall_clearance::ClearanceLimits {
+                required_mm: 1.,
+                tolerance_mm: 1e-7,
+                tolerance_uv: 1e-8,
+                max_cells: 0,
+                max_domain_cells: 0,
+            },
+        )
+        .unwrap();
     assert!(!automatic.selection.selection_complete && automatic.candidate_clearance.is_none());
     assert!(
         r.faces
@@ -104,21 +126,7 @@ mod rolling_fixture;
 fn multispan_skin_normals_exclude_joined_faces_and_caps_without_claiming_wall_pairing() {
     let f = rolling_fixture::build_variable_rolling_automatic();
     let field = f.radius_field;
-    let q = brep_core::contact_graft::attach_radius_tangent_qualified(
-        &f.source,
-        &f.patch,
-        &f.mapping,
-        &f.targets,
-        &[1, 3],
-        [field, [0., 1., 0., 0.], field],
-        field,
-        1e-8,
-        1e-7,
-        1e-5,
-        100000,
-        1000000,
-        2000000,
-    )
+    let q = brep_core::contact_graft::attach_radius_tangent_qualified(&f.source, &f.patch, brep_core::contact_graft::GraftTopology { vertices: &f.mapping, targets: &f.targets, patch_contacts: &[1, 3] }, brep_core::contact_graft::RadiusLaw { center: [field, [0., 1., 0., 0.], field], radius: field }, brep_core::contact_graft::RadiusTolerance { uv: 1e-8, radius_mm: 1e-7, normal: 1e-5 }, brep_core::contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
     .unwrap();
     let model = &q.qualified.graft.model;
     let source = q.qualified.graft.patch_face;
@@ -145,11 +153,13 @@ fn multispan_skin_normals_exclude_joined_faces_and_caps_without_claiming_wall_pa
         model,
         source,
         &selection.candidate_faces,
-        1.,
-        1e-7,
-        1e-8,
-        2000,
-        20000,
+        brep_core::wall_clearance::ClearanceLimits {
+            required_mm: 1.,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 2000,
+            max_domain_cells: 20000,
+        },
     )
     .unwrap();
     assert!(clearance.coverage_complete);

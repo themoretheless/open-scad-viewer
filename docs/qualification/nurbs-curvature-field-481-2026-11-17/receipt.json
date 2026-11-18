@@ -1,0 +1,40 @@
+{
+  "id": "NURBS-0481",
+  "testedBase": "8d0e61ffda8befe7c0db1041a9a6641e004c5aac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 286,
+  "scope": [
+    "Clip spatial paths to closed rational Boolean extrusions, retaining wall and cap contacts.",
+    "Invert the affine sweep on each span. Intersect the closed height interval with exact planar footprint intervals, preserving isolated cap and wall contacts."
+  ],
+  "logSha256": "ef61c29c1a1617d79f5506ca6ae2f6cf226a4facc3ee08e9a54b010dc6672629",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "01ba58f53439e7b14de69f68f9a82faf661d7606525319f9a303b27bd6be3f66",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "84327644ae234b7f25b4bf54a2cd073da48b5c613a36dd37b8aa332177b83ecb",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "28fee3ab15fbee188b0948ea02df1dc5d260fcfdc05b5dacefc8665bd68bd2e9",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs": "27039be60533eeb18d24fe2eaf9a694e7ded6f93962295d15e39f1a641c0a92b"
+  }
+}

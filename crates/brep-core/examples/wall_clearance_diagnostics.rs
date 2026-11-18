@@ -12,7 +12,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model: brep_core::Model =
         value_codec::from_str(&std::fs::read_to_string(root.join("model.json"))?)?;
     let r = brep_core::wall_clearance::inspect_shell(
-        &model, 0, face, -0.5, 1., 1e-7, 1e-8, 100000, 1000000,
+        &model,
+        0,
+        face,
+        -0.5,
+        brep_core::wall_clearance::ClearanceLimits {
+            required_mm: 1.,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_domain_cells: 1000000,
+        },
     )?;
     let selection=r.selection.faces.iter().map(|f|value_codec::json!({"face":f.face,"decision":format!("{:?}",f.decision),"dotBounds":f.dot_bounds})).collect::<Vec<_>>();
     let distance=r.candidate_clearance.as_ref().map(|c|value_codec::json!({"lowerMm":c.lower_bound_mm,"upperMm":c.upper_bound_mm,"decision":format!("{:?}",c.decision),"converged":c.converged,"coverageComplete":c.coverage_complete,"pendingFaces":c.pending_faces}));

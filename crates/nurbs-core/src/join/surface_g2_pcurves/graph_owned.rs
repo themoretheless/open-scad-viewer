@@ -61,9 +61,11 @@ pub fn inspect_owned_graph(
         p,
         s,
         [false; 2],
-        tolerances,
-        max_cells,
-        max_exact,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
         max_coefficients,
     )
 }
@@ -74,11 +76,10 @@ pub fn inspect_owned_graph_oriented(
     p: [&Curve; 2],
     s: [&Surface; 2],
     reversed: [bool; 2],
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
+    budget: crate::surface_g2_pcurves::G2Budget,
     max_coefficients: usize,
 ) -> Result<OwnedGraphInspection> {
+        let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     check(
         tolerances.iter().all(|x| x.is_finite() && *x > 0.)
             && tolerances[1] <= 2.
@@ -331,9 +332,11 @@ mod tests {
                 pcurves,
                 [&s, &s],
                 reversed,
-                [1e-7, 1e-5, 1e-4],
-                1000,
-                100000,
+                crate::surface_g2_pcurves::G2Budget {
+                    tolerances: [1e-7, 1e-5, 1e-4],
+                    max_cells: 1000,
+                    max_exact: 100000,
+                },
                 100_000_000,
             )
             .unwrap();
@@ -350,9 +353,11 @@ mod tests {
             [&p, &backward],
             [&s, &s],
             [false; 2],
-            [1e-7, 1e-5, 1e-4],
-            1000,
-            100000,
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 1000,
+                max_exact: 100000,
+            },
             100_000_000,
         )
         .unwrap();

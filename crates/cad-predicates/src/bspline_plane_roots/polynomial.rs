@@ -1,14 +1,60 @@
 //! Original-span polynomial from exact homogeneous derivatives; no fitted data.
 use super::*;
+/// One active span of an exact rational B-spline: homogeneous control
+/// coordinates `x` (4 per control), knots `uv`, control count `n`, degree and span.
+#[derive(Clone, Copy)]
+pub(super) struct ExactSpan<'a> {
+    pub x: &'a [Expansion],
+    pub uv: &'a [f64],
+    pub n: usize,
+    pub degree: usize,
+    pub span: usize,
+}
 pub(super) fn original_polynomial(
     ctx: &mut PredicateContext<'_>,
-    x: &[Expansion],
-    uv: &[f64],
-    n: usize,
-    degree: usize,
-    span: usize,
+    spline: ExactSpan<'_>,
     plane: &[Expansion; 4],
 ) -> Result<Vec<Expansion>, Reason> {
+    let ExactSpan {
+        x,
+        uv,
+        n,
+        degree,
+        span,
+    } = spline;
+    if uv[span - degree + 1] == uv[span] && uv[span + degree] == uv[span + 1] {
+        let mut residuals = Vec::new();
+        for i in span - degree..=span {
+            let mut value = plane[3].negated();
+            for axis in 0..3 {
+                if plane[axis].sign() == Sign::Zero {
+                    continue;
+                }
+                // Exact unit coefficients need no floating product. In
+                // particular ±1 times an authored subnormal is the original
+                // exact expansion (or its negation), not a guarded splitter.
+                let coordinate = &x[i * 4 + axis];
+                let term = if plane[axis].sub(&Expansion::scalar(1.), ctx)?.sign() == Sign::Zero {
+                    coordinate.clone()
+                } else if plane[axis].add(&Expansion::scalar(1.), ctx)?.sign() == Sign::Zero {
+                    coordinate.negated()
+                } else {
+                    coordinate.mul(&plane[axis], ctx)?
+                };
+                value = value.add(&term, ctx)?;
+            }
+            residuals.push(value);
+        }
+        // A common positive power-of-two scale preserves the exact sign and
+        // zeros. Apply it BEFORE Bernstein differentiation/weight products so
+        // subnormal authored residuals need not underflow during cancellation.
+        Expansion::normalize_common(&mut residuals, ctx)?;
+        for (j, value) in residuals.iter_mut().enumerate() {
+            *value = value.mul(&x[(span - degree + j) * 4 + 3], ctx)?;
+        }
+        Expansion::normalize_common(&mut residuals, ctx)?;
+        return power(&residuals, ctx);
+    }
     let knots = &x[n * 4..n * 4 + uv.len()];
     let h = series(&x[..n * 4], knots, degree, span, &knots[span], degree, ctx)?;
     let width = knots[span + 1].sub(&knots[span], ctx)?;

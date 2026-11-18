@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0582",
+  "testedBase": "9be90a1b2120f009e750619e1f0d083d9d5c4a7f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 157,
+  "scope": [
+    "Enclose clipped 3D lengths across the seam using exact clock mapping and one cell budget.",
+    "Verify both input directions, seam endpoint ownership, exact clock conversion, and all-or-none coverage with a cell budget."
+  ],
+  "logSha256": "bd5f61c910abebf3d5347519f5e9215f7a224ca74258624986fd980d3d27bb58",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "734e014ace1c4ea421e8f32294859bab2252b86608d86473b101cff8ad8b66e0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c37e7274c48601c6dcde5c497d72fc904b3d732d0e8a00346917badd058f2fdf",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ac9fd5dc75eda7870256ce9358431d9ce6246cdb312993bb610f642b4c42ba0f"
+  }
+}

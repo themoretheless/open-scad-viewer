@@ -3,7 +3,8 @@ use super::*;
 /// Elevate an admitted Bezier-le3 patch (or already-uniform bicubic) to R1 bicubic.
 /// Keeps the historical bilinear 1×1 elevation path; deg 2 and mixed use Bernstein
 /// elevation on U then V until 3×3.
-pub(super) fn as_uniform_bicubic(surface: &Surface) -> Option<Surface> {
+#[doc(hidden)]
+pub fn as_uniform_bicubic(surface: &Surface) -> Option<Surface> {
     if is_uniform_bicubic_positive(surface) {
         return Some(surface.clone());
     }

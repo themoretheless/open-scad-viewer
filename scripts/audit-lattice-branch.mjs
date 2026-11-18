@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto'
 import ts from 'typescript'
 
 const commit='7b3afccf379aead6151c7ceaf9b633e40eb62924'
-const paths=['src/services/latticeStrengthScenario.ts','src/services/latticeTrussFea.ts','src/services/latticePrintSettings.ts']
+const paths=['src/services/latticeStrengthScenario.ts','src/services/latticeTrussFea.ts','src/fabrication/latticePrintSettings.ts']
 const sources=paths.map(path=>execFileSync('git',['show',`${commit}:${path}`],{encoding:'utf8'}))
 function evaluate(source,require) {
   const exports={}

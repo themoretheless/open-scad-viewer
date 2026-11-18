@@ -2,12 +2,11 @@
 //! inclusions with an invertible preconditioner and contraction certify roots.
 //! Unresolved cells remain explicit; this module does not classify solid volume.
 use crate::{
-    check,
+    Result, check,
     distance_bounds::Interval as I,
     resource,
     surface::Surface,
     surface_distance::{interpolate, rectangle_bounds},
-    Result,
 };
 type Net = Vec<Vec<[I; 2]>>;
 #[derive(Clone, Debug)]
@@ -154,12 +153,12 @@ fn split_line_at(mut row: Vec<[I; 2]>, t: f64) -> Result<[Vec<[I; 2]>; 2]> {
     right.reverse();
     Ok([left, right])
 }
-fn split(net: &Net, axis: usize) -> Result<[Net; 2]> {
+fn split(net: &Net, axis: usize, fraction: f64) -> Result<[Net; 2]> {
     let (nu, nv) = (net.len(), net[0].len());
     let mut out = [net.clone(), net.clone()];
     if axis == 0 {
         for v in 0..nv {
-            let pair = split_line_at((0..nu).map(|u| net[u][v]).collect(), 0.375)?;
+            let pair = split_line_at((0..nu).map(|u| net[u][v]).collect(), fraction)?;
             for side in 0..2 {
                 for u in 0..nu {
                     out[side][u][v] = pair[side][u]
@@ -168,7 +167,7 @@ fn split(net: &Net, axis: usize) -> Result<[Net; 2]> {
         }
     } else {
         for u in 0..nu {
-            let pair = split_line_at(net[u].clone(), 0.375)?;
+            let pair = split_line_at(net[u].clone(), fraction)?;
             for side in 0..2 {
                 out[side][u] = pair[side].clone()
             }
@@ -192,18 +191,21 @@ enum Verdict {
 // Rounded endpoints would silently move a certified/excluded cell. Stop with
 // explicit unresolved coverage when the next dyadic split is not representable.
 fn exact_split(lo: f64, hi: f64) -> Option<f64> {
+    exact_split_at(lo, hi, 0.375)
+}
+fn exact_split_at(lo: f64, hi: f64, fraction: f64) -> Option<f64> {
     fn sum_error(a: f64, b: f64, sum: f64) -> f64 {
         let z = sum - a;
         (a - (sum - z)) + (b - z)
     }
     let width = hi - lo;
-    let part = width * 0.375;
+    let part = width * fraction;
     let mid = lo + part;
     if !width.is_finite()
         || !mid.is_finite()
         || width < f64::MIN_POSITIVE * 18014398509481984.
         || sum_error(hi, -lo, width) != 0.
-        || width.mul_add(0.375, -part) != 0.
+        || width.mul_add(fraction, -part) != 0.
         || sum_error(lo, part, mid) != 0.
         || mid <= lo
         || mid >= hi
@@ -436,11 +438,17 @@ fn isolate(
         // A dyadic asymmetric split keeps common mid-plane roots inside cells.
         // Roots on any actual cell boundary still require strict certification;
         // changing the split never turns an unresolved root into an exclusion.
-        let Some(mid) = exact_split(lo, hi) else {
+        // If the asymmetric recipe no longer has exact binary endpoints,
+        // an exact half split may still exist. The coefficient net must use
+        // the SAME fraction as the certified domain partition.
+        let Some((mid, fraction)) = exact_split(lo, hi)
+            .map(|m| (m, 0.375))
+            .or_else(|| exact_split_at(lo, hi, 0.5).map(|m| (m, 0.5)))
+        else {
             report.unresolved.push(unresolved_domain(&cell)?);
             continue;
         };
-        let [left, right] = split(&cell.net, axis)?;
+        let [left, right] = split(&cell.net, axis, fraction)?;
         for (net, range) in [(left, [lo, mid]), (right, [mid, hi])] {
             let mut domain = cell.domain;
             domain[axis] = range;

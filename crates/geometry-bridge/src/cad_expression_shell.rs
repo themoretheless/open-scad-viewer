@@ -19,25 +19,37 @@ fn shell_limits(v: &Value) -> Result<native::ShellReplayLimits> {
             side_spans: field(b, "sideSpans")?,
         },
         projection: field(v, "projection")?,
-        cut_spans_per_section: field(v, "cutSpansPerSection")?,
-        mapping_cells_per_section: field(v, "mappingCellsPerSection")?,
-        fragments_per_section: field(v, "fragmentsPerSection")?,
         controls: field(v, "controls")?,
-        join_cells: field(v, "joinCells")?,
-        join_spans: field(v, "joinSpans")?,
-        exterior_drivers: field(v, "exteriorDrivers")?,
-        collapsed_ends: field(v, "collapsedEnds")?,
-        subdivisions: field(v, "subdivisions")?,
-        quotient_cells: field(v, "quotientCells")?,
-        retained_cells: field(v, "retainedCells")?,
-        retained_spans: field(v, "retainedSpans")?,
-        transition_cells: field(v, "transitionCells")?,
-        transition_spans: field(v, "transitionSpans")?,
-        exact_work_per_rail: field(v, "exactWorkPerRail")?,
-        drivers_per_rail: field(v, "driversPerRail")?,
-        fragments_per_rail: field(v, "fragmentsPerRail")?,
-        outer_exact_work: field(v, "outerExactWork")?,
-        outer_drivers: field(v, "outerDrivers")?,
+        section: native::ShellSectionLimits {
+            cut_spans: field(v, "cutSpansPerSection")?,
+            mapping_cells: field(v, "mappingCellsPerSection")?,
+            fragments: field(v, "fragmentsPerSection")?,
+        },
+        join: native::ShellJoinLimits {
+            cells: field(v, "joinCells")?,
+            spans: field(v, "joinSpans")?,
+            exterior_drivers: field(v, "exteriorDrivers")?,
+        },
+        quotient: native::ShellQuotientLimits {
+            collapsed_ends: field(v, "collapsedEnds")?,
+            subdivisions: field(v, "subdivisions")?,
+            cells: field(v, "quotientCells")?,
+        },
+        patches: native::ShellPatchLimits {
+            retained_cells: field(v, "retainedCells")?,
+            retained_spans: field(v, "retainedSpans")?,
+            transition_cells: field(v, "transitionCells")?,
+            transition_spans: field(v, "transitionSpans")?,
+        },
+        rail: native::ShellRailLimits {
+            exact_work: field(v, "exactWorkPerRail")?,
+            drivers: field(v, "driversPerRail")?,
+            fragments: field(v, "fragmentsPerRail")?,
+        },
+        outer: native::ShellOuterLimits {
+            exact_work: field(v, "outerExactWork")?,
+            drivers: field(v, "outerDrivers")?,
+        },
         shell_uses: field(v, "shellUses")?,
     })
 }
@@ -143,8 +155,16 @@ fn restore_inner(v: Value, inspect: bool) -> Result<Value> {
                 let radius:nurbs_core::curve::Curve=field(r,"radius")?;
                 let tolerance:f64=field(r,"toleranceMm")?;
                 let checked=shell.assembly().patch().rails().face().qualify_radius_coefficients(
-                    &centers,&radius,field(r,"lawDomains")?,tolerance,
-                    field(r,"controls")?,field(r,"spans")?,field(r,"coefficientWork")?)?;
+                    brep_core::source_profile_body::RadiusLawRefs {
+                        centers: &centers,
+                        radius: &radius,
+                        law_domains: field(r,"lawDomains")?,
+                    },
+                    tolerance,
+                    field(r,"controls")?,
+                    field(r,"spans")?,
+                    field(r,"coefficientWork")?,
+                )?;
                 let bound=checked.bound.as_ref();
                 result["radiusCheck"]=json!({"version":1,"qualified":checked.certificate.is_some(),
                     "violationQualified":bound.and_then(|b|b.error_lower).is_some_and(|e|e>tolerance),
@@ -272,9 +292,16 @@ fn restore_inner(v: Value, inspect: bool) -> Result<Value> {
                         if !v["alignedChordCheck"].is_null() {
                             let limits=&v["alignedChordCheck"];
                             let checked=geometry.qualify_trimmed_minimum_aligned_chords(
-                                field(limits,"minimumMm")?,field(limits,"maxSineSquared")?,
-                                field(limits,"toleranceUv")?,field(limits,"controls")?,
-                                field(limits,"cells")?,field(limits,"spans")?,field(limits,"domainCells")?)?;
+                                field(limits,"minimumMm")?,
+                                field(limits,"maxSineSquared")?,
+                                brep_core::source_profile_body::WallScanLimits {
+                                    tolerance_uv: field(limits,"toleranceUv")?,
+                                    controls: field(limits,"controls")?,
+                                    max_cells: field(limits,"cells")?,
+                                    max_spans: field(limits,"spans")?,
+                                    max_domain_cells: field(limits,"domainCells")?,
+                                },
+                            )?;
                             result["alignedChordCheck"]=json!({"version":1,
                                 "qualified":checked.certificate.is_some(),"report":checked.report,
                                 "wholeThicknessQualified":false,"solidQualified":false});

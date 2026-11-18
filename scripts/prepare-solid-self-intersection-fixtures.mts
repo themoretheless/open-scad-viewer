@@ -1,7 +1,7 @@
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
 import {resolve} from 'node:path'
-import {tessellateNurbsBrep,createBrepBox,composeStepV9Occurrences,type NurbsBrep} from '../src/services/geometry/brep'
+import {tessellateNurbsBrep,createBrepBox,composeStepV9Occurrences,type NurbsBrep} from '../src/kernel/geometry/brep'
 const directory=resolve(process.argv[2]??'/tmp/solid-self-intersection-fixtures')
 mkdirSync(directory,{recursive:true})
 

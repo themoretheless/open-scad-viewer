@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {createBrepTube,partialAnnularPreview,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
-import {solidPartialAnnularPreview} from '../src/services/solidPartialAnnularPreview'
+import {createBrepTube,partialAnnularPreview,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {solidPartialAnnularPreview} from '../src/kernel/solidPartialAnnularPreview'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const base=createBrepTube(20,5,6),a=.37,b=-.61

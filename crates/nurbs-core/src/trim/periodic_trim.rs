@@ -709,6 +709,7 @@ pub fn verify_lifted_region(
 #[path = "periodic_trim/seam_partition.rs"]
 mod seam_partition;
 pub use seam_partition::split_verified;
+pub use seam_partition::SeamSplitLimits;
 pub use seam_partition::split_approximated;
 
 #[path = "periodic_trim/seam_connectivity.rs"]

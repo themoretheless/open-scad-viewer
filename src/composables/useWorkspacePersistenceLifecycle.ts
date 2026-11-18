@@ -1,13 +1,13 @@
-import { computed, nextTick, ref, type ComputedRef, type Ref } from 'vue'
+import { computed, nextTick, ref, type ComputedRef, type Ref } from 'svet'
 import { replaceSharedRecoveryHash, STORAGE_NOTICE_THROTTLE_MS } from '../appHelpers'
 import type { Language } from '../i18n/appStrings'
 import {
   updateWorkspaceDocument,
   workspaceDocumentsEqual,
   type WorkspaceDocumentSnapshot,
-} from '../services/workspaceDocument'
-import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from '../services/workspacePersistence'
-import type { WebGPURenderer } from '../services/webgpuRenderer'
+} from '../app/workspaceDocument'
+import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from '../app/workspacePersistence'
+import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseWorkspacePersistenceLifecycleOptions {
   initialWorkspaceDurable: boolean
@@ -70,9 +70,7 @@ export function useWorkspacePersistenceLifecycle(
     translate,
   } = options
 
-  const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
-    initialWorkspaceDurable ? 'saved' : 'error',
-  )
+  const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(initialWorkspaceDurable ? 'saved' : 'error')
   const workspaceConflict = ref(workspacePersistence.hasConflict)
   const savingBrowser = ref(false)
   const storageFailureDetail = ref('')
@@ -170,7 +168,7 @@ export function useWorkspacePersistenceLifecycle(
     const snapshot = workspaceDocument.value
     workspacePersistenceStatus.value = 'saving'
     updateBeforeUnloadGuard()
-    let saved = false
+    let saved: boolean
     try {
       if (retryIndexedDb) {
         const result = await workspacePersistence.retry(snapshot)
@@ -202,8 +200,7 @@ export function useWorkspacePersistenceLifecycle(
           replaceSharedRecoveryHash(code.value)
         }
       }
-      workspacePersistenceStatus.value =
-        durableWorkspaceGeneration >= workspaceEditGeneration ? 'saved' : 'saving'
+      workspacePersistenceStatus.value = durableWorkspaceGeneration >= workspaceEditGeneration ? 'saved' : 'saving'
     } else {
       workspacePersistenceStatus.value = 'error'
       reportStorageFailure()
@@ -312,19 +309,13 @@ export function useWorkspacePersistenceLifecycle(
   }
 
   function handleBeforeUnload(event: BeforeUnloadEvent) {
-    if (
-      durableWorkspaceGeneration >= workspaceEditGeneration &&
-      workspacePersistenceStatus.value !== 'error'
-    )
-      return
+    if (durableWorkspaceGeneration >= workspaceEditGeneration && workspacePersistenceStatus.value !== 'error') return
     event.preventDefault()
     event.returnValue = ''
   }
 
   function updateBeforeUnloadGuard() {
-    const needed =
-      durableWorkspaceGeneration < workspaceEditGeneration ||
-      workspacePersistenceStatus.value === 'error'
+    const needed = durableWorkspaceGeneration < workspaceEditGeneration || workspacePersistenceStatus.value === 'error'
     if (needed && !beforeUnloadAttached) {
       window.addEventListener('beforeunload', handleBeforeUnload)
       beforeUnloadAttached = true

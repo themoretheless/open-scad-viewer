@@ -4,15 +4,9 @@
 //!
 //! Language compilation lives in `languages-bridge`; this crate executes
 //! typed geometry and has no language frontend dependency.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
+// Adapters should turn bad input into typed errors (refactor plan L6). The remaining calls rely on
+// internal invariants; the crate's `clippyUnwrap` pin counts them and may only go down.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub mod brep;
 mod miter_smoothness;
 mod polygon_station_body;
@@ -22,6 +16,7 @@ mod sweep_viewport;
 pub use math_core::Acceleration;
 pub mod brep_attestation;
 mod brep_display;
+mod viewer_lod;
 mod brep_exact_full_round;
 pub mod brep_envelope;
 pub mod brep_execution_plan;
@@ -54,6 +49,8 @@ mod cad_client_geometry;
 mod cad_diagnostics;
 mod cad_dimensions;
 mod cad_display;
+mod step_lod0;
+mod step_scene;
 mod cad_draft;
 mod cad_edge_edit;
 mod cad_full_round_exact;
@@ -103,6 +100,7 @@ pub mod intersections;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
 mod mesh;
+pub(crate) mod kernel_jobs;
 pub mod mesh_analysis;
 mod mesh_display;
 mod mesh_editor;
@@ -141,6 +139,32 @@ use value_codec::{Value, json};
 
 use bridge_codec::{Deserialize, Routed, Router, Serialize, response};
 pub use math_core::{Error, Result};
+/// `brep_core::boolean`, falling back to the certified curved families of
+/// `brep-intersect` (off-axis sphere x torus, cylinder, frustum; cylinder or
+/// frustum x torus; a cylinder drilled through planar caps, in that order)
+/// when the core refuses the
+/// pair as unsupported. Any fallback refusal returns the core's error.
+pub(crate) fn curved_boolean(
+    a: &brep_core::Model,
+    b: &brep_core::Model,
+    operation: &str,
+) -> Result<brep_core::Model> {
+    match brep_core::boolean(a, b, operation) {
+        Err(error)
+            if matches!(error.code, "BREP_UNSUPPORTED_OPERATION" | "BREP_NURBS_BOOLEAN_UNPROVED") =>
+        {
+            brep_intersect::sphere_torus_boolean(a, b, operation)
+                .or_else(|_| brep_intersect::sphere_cylinder_boolean(a, b, operation))
+                .or_else(|_| brep_intersect::sphere_cone_boolean(a, b, operation))
+                .or_else(|_| brep_intersect::cylinder_torus_boolean(a, b, operation))
+                .or_else(|_| brep_intersect::cone_torus_boolean(a, b, operation))
+                .or_else(|_| brep_intersect::cylinder_drill_boolean(a, b, operation))
+                .map_err(|_| error)
+        }
+        other => other,
+    }
+}
+
 fn input(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
@@ -188,6 +212,8 @@ fn dispatch_local(mut v: Value) -> Result<Value> {
 pub use request_codec::execute;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod progressive_annular_tests;
 
 mod cad_mesh_buffer;
 pub use cad_mesh_buffer::{CadMeshBuffer, import_cad_mesh};

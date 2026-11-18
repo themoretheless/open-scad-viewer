@@ -1,0 +1,6 @@
+{
+  "result": 16641867,
+  "verified": true,
+  "installedPackageUpdated": false,
+  "scope": "Private packed literal decodes byte-for-byte to exact candidate; no production profile admission or Worker/editor qualification"
+}

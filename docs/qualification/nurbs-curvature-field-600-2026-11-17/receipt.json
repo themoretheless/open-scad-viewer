@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0600",
+  "testedBase": "152f25e4526a2b4dff4753fa19fc836d20e0b239",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 182,
+  "scope": [
+    "Enclose the signed area projection along a finite nonzero normal with exact scale reduction.",
+    "Verify an oblique projection with holes, orientation reversal, extreme normal scales, invalid normals, and cell limits."
+  ],
+  "logSha256": "44b8165f2d9e6f1d4377f3ca46dc23bcf3191e70626f5178966ced133ae5f01f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "81df23b34ed62b1cfcbe988d2c7563f1e5d78450792e6d1fa1164754b0abc669",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9da9defe25dadc4ead4e527db6fafc04ef8647a625f41ba4148ba2a8d295c36e"
+  }
+}

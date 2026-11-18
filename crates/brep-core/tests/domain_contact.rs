@@ -22,8 +22,18 @@ fn bounded_search_requalifies_original_supports_and_shares_work() {
             [&c[i].support_pcurve,&c[i].fillet_pcurve],[s,r.fillet.surface.as_ref().unwrap()],
             [false;2],1e-6,100000,1000000).unwrap().proven);
     }
-    assert_eq!(brep_core::fillet_radius::inspect([&a,&b],r.fillet.surface.as_ref().unwrap(),
-        [&c[0],&c[1]],&RadiusLaw::Constant(1.),[1.,1.],1e-6,100000,1000000).unwrap().decision,
+    assert_eq!(brep_core::fillet_radius::inspect(
+        [&a,&b],
+        r.fillet.surface.as_ref().unwrap(),
+        [&c[0],&c[1]],
+        brep_core::fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [1.,1.],
+            tolerance_mm: 1e-6,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    ).unwrap().decision,
         brep_core::fillet_radius::Decision::WithinTolerance);
     let none=fillet_contact::build_g2_on_domains([&a,&b],domains,1.,&FilletOptions::default(),1e-6,0,0).unwrap();
     assert_eq!(none.status,Status::UnresolvedContacts);

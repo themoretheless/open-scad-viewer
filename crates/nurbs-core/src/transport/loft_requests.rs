@@ -15,14 +15,43 @@ if matches!(op.as_str(), "surface_auto_guided_loft" | "surface_auto_guided_loft_
         let parameter_tolerance=optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8);
         let mut result=if op=="surface_auto_guided_loft_cartesian" {
             if let Some(controls)=control_tangents(&v)? {
-                loft_alignment::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&controls,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+                loft_alignment::interpolate_cartesian_with_control_tangents(
+                    sections,
+                    &parameters,
+                    &guides,
+                    &controls,
+                    loft_alignment::AlignmentLimits {
+                        budget,
+                        parameter_tolerance,
+                        max_cells: field(&v,"maxCells")?,
+                        max_map_evaluations: field(&v,"maxMapEvaluations")?,
+                    },
+                )?
             } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-                loft_alignment::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&targets,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+                loft_alignment::interpolate_cartesian_with_tangents(
+                    sections,
+                    &parameters,
+                    &guides,
+                    &targets,
+                    loft_alignment::AlignmentLimits {
+                        budget,
+                        parameter_tolerance,
+                        max_cells: field(&v,"maxCells")?,
+                        max_map_evaluations: field(&v,"maxMapEvaluations")?,
+                    },
+                )?
             } else {
-                loft_alignment::interpolate_cartesian_with_parameter_tolerance(sections,&parameters,&guides,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+                loft_alignment::interpolate_cartesian_with_parameter_tolerance(
+                    sections,
+                    &parameters,
+                    &guides,
+                    loft_alignment::AlignmentLimits {
+                        budget,
+                        parameter_tolerance,
+                        max_cells: field(&v,"maxCells")?,
+                        max_map_evaluations: field(&v,"maxMapEvaluations")?,
+                    },
+                )?
             }
         } else {
             loft_alignment::interpolate_with_parameter_tolerance(sections,&parameters,&guides,budget,parameter_tolerance)?
@@ -64,14 +93,43 @@ if matches!(op.as_str(), "surface_guided_loft_cartesian") {
         let max_cells=field(&v,"maxCells")?;
         let max_map_evaluations=field(&v,"maxMapEvaluations")?;
         let (surface,curves,tangents)=if let Some(controls)=control_tangents(&v)? {
-            guided_loft::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&guide_parameters,
-                &controls,tolerance,max_cells,max_map_evaluations)?
+            guided_loft::interpolate_cartesian_with_control_tangents(
+                sections,
+                &parameters,
+                &guides,
+                &guide_parameters,
+                &controls,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance,
+                    max_cells,
+                    max_map_evaluations,
+                },
+            )?
         } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-            guided_loft::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&guide_parameters,
-                &targets,tolerance,max_cells,max_map_evaluations)?
+            guided_loft::interpolate_cartesian_with_tangents(
+                sections,
+                &parameters,
+                &guides,
+                &guide_parameters,
+                &targets,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance,
+                    max_cells,
+                    max_map_evaluations,
+                },
+            )?
         } else {
-            let (surface,curves)=guided_loft::interpolate_cartesian(sections,&parameters,&guides,&guide_parameters,
-                tolerance,max_cells,max_map_evaluations)?;
+            let (surface,curves)=guided_loft::interpolate_cartesian(
+                sections,
+                &parameters,
+                &guides,
+                &guide_parameters,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance,
+                    max_cells,
+                    max_map_evaluations,
+                },
+            )?;
             (surface,curves,Vec::new())
         };
         let original_sections=if let Some(mappings)=mappings.as_ref() {
@@ -111,9 +169,30 @@ if matches!(op.as_str(), "surface_gordon_cartesian") {
         let max_cells=field::<usize>(&v,"maxCells")?;
         let max_map_evaluations=field::<usize>(&v,"maxMapEvaluations")?;
         let (surface,curves,tangents)=if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-            gordon::patch_cartesian_with_tangents(&u,&guides,&pu,&pv,&targets,tolerance,max_cells,max_map_evaluations)?
+            gordon::patch_cartesian_with_tangents(
+                &u,
+                &guides,
+                &pu,
+                &pv,
+                &targets,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance,
+                    max_cells,
+                    max_map_evaluations,
+                },
+            )?
         } else {
-            let (surface,curves)=gordon::patch_cartesian(&u,&guides,&pu,&pv,tolerance,max_cells,max_map_evaluations)?;
+            let (surface,curves)=gordon::patch_cartesian(
+                &u,
+                &guides,
+                &pu,
+                &pv,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance,
+                    max_cells,
+                    max_map_evaluations,
+                },
+            )?;
             (surface,curves,Vec::new())
         };
         return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-gordon",

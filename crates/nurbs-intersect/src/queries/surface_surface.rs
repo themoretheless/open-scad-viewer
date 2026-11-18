@@ -169,8 +169,7 @@ pub fn surface_surface(
                         break;
                     }
                     clipped.dedup_by(|a, b| a.0 == b.0);
-                    if clipped.len() > 1 && clipped.first().unwrap().0 == clipped.last().unwrap().0
-                    {
+                    if clipped.len() > 1 && clipped[0].0 == clipped[clipped.len() - 1].0 {
                         clipped.pop();
                     }
                     polygon = clipped;
@@ -234,7 +233,7 @@ pub fn surface_surface(
                     });
                     continue;
                 }
-                (polygon[0].0, polygon.last().unwrap().0)
+                (polygon[0].0, polygon[polygon.len() - 1].0)
             }
             _ => {
                 report.unresolved(domain.clone(), UnresolvedReason::UnsupportedSurface);
@@ -316,7 +315,7 @@ pub fn surface_surface(
             continue;
         }
         if low == high || start == end {
-            let (first, second, residual) = sample.unwrap();
+            let Some((first, second, residual)) = sample else { continue };
             report.components.push(SurfaceSurfaceComponent::Point {
                 first,
                 second,

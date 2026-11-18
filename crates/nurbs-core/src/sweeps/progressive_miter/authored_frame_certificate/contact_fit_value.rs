@@ -11,23 +11,30 @@ pub struct ContactFitValueReport {
 
 /// Original contact control value with explicit coordinate/anchor premises.
 pub fn certify_contact_control_value(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    q:[[f64;2];3],anchor:[f64;2],traversal:[f64;2],max_cells:usize,
-)->Result<ControlValueReport>{
-    let batch=certify_contact_control_values(path,guide,scale,twist,affine,&[q],anchor,traversal,max_cells)?;
+    laws: super::ContactLaws<'_>,
+    q: [[f64; 2]; 3],
+    anchor: [f64; 2],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValueReport> {
+    let batch=certify_contact_control_values(laws, &[q], anchor, traversal, max_cells)?;
     Ok(ControlValueReport {status:batch.status,cells:batch.cells,value:batch.values.map(|v|v[0]),reason:batch.reason})
 }
 /// Shared source-law/frame/fit work; no partial control union on exhaustion.
 pub fn certify_contact_control_values(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],anchor:[f64;2],traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+    laws: super::ContactLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    anchor: [f64; 2],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValuesReport> {
+    let super::ContactLaws { path, guide, scale, twist, affine } = laws;
     twist.validate()?;
     check(
         twist.control_points.iter().all(|p| p[0] == 0.),
         "Contact control requires zero twist",
     )?;
-    let (fit,source_path,offset) = contact_fit_value_at_prepared(path,guide,scale,affine,anchor,traversal,traversal,traversal,true,max_cells)?;
+    let (fit,source_path,offset) = contact_fit_value_at_prepared(path, guide, scale, affine, super::ContactTraversal { anchor, path: traversal, guide: traversal, law: traversal, same_parameter: true }, max_cells)?;
     if fit.status != Status::Certified {
         return Ok(ControlValuesReport {
             status: Status::Unresolved,
@@ -41,9 +48,7 @@ pub fn certify_contact_control_values(
     frame.cells += fit.cells;
     let fit = fit.value.unwrap();
     super::trajectory::control_values_with_prepared_path(
-        path,
-        scale,
-        affine,
+        super::ControlLaws { path, scale, affine },
         qs,
         traversal,
         max_cells,
@@ -73,21 +78,30 @@ fn certify_contact_fit_value_with_path(
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<(ContactFitValueReport,Option<[[f64;2];3]>)> {
-    contact_fit_value_at(path,guide,scale,affine,anchor,traversal,traversal,traversal,true,max_cells)
+    contact_fit_value_at(path, guide, scale, affine, super::ContactTraversal { anchor, path: traversal, guide: traversal, law: traversal, same_parameter: true }, max_cells)
 }
 /// Source path, source rail and authored laws can have independent parameters.
 /// Width follows the constructor's norm(G-P), not its projected normal.
 pub(super) fn contact_fit_value_at(
-    path:&Curve,guide:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,anchor:[f64;2],
-    path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    path: &Curve,
+    guide: &Curve,
+    scale: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    traversal: super::ContactTraversal,
+    max_cells: usize,
 )->Result<(ContactFitValueReport,Option<[[f64;2];3]>)>{
-    let (fit,position,_)=contact_fit_value_at_prepared(path,guide,scale,affine,anchor,path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
+    let (fit,position,_)=contact_fit_value_at_prepared(path,guide,scale,affine,traversal,max_cells)?;
     Ok((fit,position))
 }
 pub(super) fn contact_fit_value_at_prepared(
-    path:&Curve,guide:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,anchor:[f64;2],
-    path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    path: &Curve,
+    guide: &Curve,
+    scale: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    traversal: super::ContactTraversal,
+    max_cells: usize,
 )->Result<(ContactFitValueReport,Option<[[f64;2];3]>,Option<[[f64;2];3]>)>{
+    let super::ContactTraversal { anchor, path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
     let anchor = I::new(anchor[0], anchor[1])?;
     check(anchor.lo > 0., "Contact anchor width must be positive")?;
     super::super::validate_law(scale, true)?;
@@ -213,11 +227,7 @@ mod tests {
             let mut twist = scale.clone();
             twist.control_points = vec![vec![0.; 3]; 2];
             let value = certify_contact_control_value(
-                &path,
-                &guide,
-                &scale,
-                &twist,
-                Some((&axes, &center)),
+                ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes, &center)) },
                 [[1., 1.], [3., 3.], [4., 4.]],
                 [2., 2.],
                 [t, t],
@@ -236,11 +246,7 @@ mod tests {
                 assert!(xyz[k][1] - xyz[k][0] < 1e-9);
             }
             let limited = certify_contact_control_value(
-                &path,
-                &guide,
-                &scale,
-                &twist,
-                Some((&axes, &center)),
+                ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes, &center)) },
                 [[1., 1.], [3., 3.], [4., 4.]],
                 [2., 2.],
                 [t, t],
@@ -273,12 +279,46 @@ fn shared_control_values_preserve_each_original_enclosure_and_charge_sources_onc
     let twist=Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![0.;3];2],weights:vec![1.;2],periodic:false};
     let qs=[[[1.,1.],[0.,0.],[0.,0.]],[[2.,2.],[3.,3.],[4.,4.]]];
     for contact in [false,true] {
-        let batch=if contact {certify_contact_control_values(&path,&guide,&scale,&twist,None,&qs,[2.,2.],[0.25,0.5],1000)} else {certify_path_guide_control_values(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],1000)}.unwrap();
+        let batch=if contact {certify_contact_control_values(
+            ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None },
+            &qs,
+            [2.,2.],
+            [0.25,0.5],
+            1000,
+        )} else {certify_path_guide_control_values(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            &guide,
+            &qs,
+            [0.25,0.5],
+            1000,
+        )}.unwrap();
         assert_eq!(batch.status,Status::Certified);
         let values=batch.values.as_ref().unwrap();
         let mut separate_cells=0;
         for (i,&q) in qs.iter().enumerate() {
-            let single=if contact {certify_contact_control_value(&path,&guide,&scale,&twist,None,q,[2.,2.],[0.25,0.5],1000)} else {certify_path_guide_control_value(&path,&guide,&scale,&twist,None,q,[0.25,0.5],1000)}.unwrap();
+            let single=if contact {certify_contact_control_value(
+                ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None },
+                q,
+                [2.,2.],
+                [0.25,0.5],
+                1000,
+            )} else {certify_path_guide_control_value(
+                super::ProfileLaws {
+                    path: &path,
+                    scale: &scale,
+                    twist: &twist,
+                    affine: None,
+                },
+                &guide,
+                q,
+                [0.25,0.5],
+                1000,
+            )}.unwrap();
             assert_eq!(values[i],single.value.unwrap());
             assert_eq!(batch.cells,single.cells);
             separate_cells+=single.cells;
@@ -288,7 +328,24 @@ fn shared_control_values_preserve_each_original_enclosure_and_charge_sources_onc
             }
         }
         assert!(batch.cells<separate_cells);
-        let short=if contact {certify_contact_control_values(&path,&guide,&scale,&twist,None,&qs,[2.,2.],[0.25,0.5],batch.cells-1)} else {certify_path_guide_control_values(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1)}.unwrap();
+        let short=if contact {certify_contact_control_values(
+            ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None },
+            &qs,
+            [2.,2.],
+            [0.25,0.5],
+            batch.cells-1,
+        )} else {certify_path_guide_control_values(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            &guide,
+            &qs,
+            [0.25,0.5],
+            batch.cells-1,
+        )}.unwrap();
         assert_eq!(short.status,Status::Unresolved);
         assert!(short.values.is_none());
     }
@@ -313,15 +370,34 @@ fn cached_contact_path_matches_uncached_affine_transport() {
             let mut frame=certify_path_guide_values(&path,&guide,&twist,traversal,1000-fit.cells).unwrap();
             frame.cells+=fit.cells;
             let fit_value=fit.value.unwrap();
-            let uncached=super::trajectory::control_values_with_fit(&path,&scale,affine,&qs,traversal,1000,frame,Some(I::new(fit_value[0],fit_value[1]).unwrap())).unwrap();
-            let cached=certify_contact_control_values(&path,&guide,&scale,&twist,affine,&qs,[2.,2.],traversal,1000).unwrap();
+            let uncached=super::trajectory::control_values_with_fit(
+                super::ControlLaws { path: &path, scale: &scale, affine },
+                &qs,
+                traversal,
+                1000,
+                frame,
+                Some(I::new(fit_value[0],fit_value[1]).unwrap()),
+            ).unwrap();
+            let cached=certify_contact_control_values(
+                ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine },
+                &qs,
+                [2.,2.],
+                traversal,
+                1000,
+            ).unwrap();
             assert_eq!(cached.status,Status::Certified);
             assert_eq!(cached.values,uncached.values);
             let source=vector_certificate::certify_values_traversal(&path,traversal,1000,false).unwrap();
             // Translation plus the prepared frame position and guide offset
             // each reuse an already-owned original value enclosure.
             assert_eq!(uncached.cells-cached.cells,3*source.cells);
-            let exhausted=certify_contact_control_values(&path,&guide,&scale,&twist,affine,&qs,[2.,2.],traversal,cached.cells-1).unwrap();
+            let exhausted=certify_contact_control_values(
+                ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine },
+                &qs,
+                [2.,2.],
+                traversal,
+                cached.cells-1,
+            ).unwrap();
             assert_eq!(exhausted.status,Status::Unresolved);
             assert!(exhausted.values.is_none());
         }
@@ -334,8 +410,8 @@ fn equal_interval_boxes_do_not_imply_shared_contact_parameter() {
     let guide=crate::primitives::line([1.,0.,0.],[1.,0.,10.]).unwrap();
     let scale=crate::sweeps::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap();
     let range=[0.25,0.5];
-    let independent=contact_fit_value_at(&path,&guide,&scale,None,[1.,1.],range,range,range,false,1000).unwrap().0;
-    let shared=contact_fit_value_at(&path,&guide,&scale,None,[1.,1.],range,range,range,true,1000).unwrap().0;
+    let independent=contact_fit_value_at(&path, &guide, &scale, None, super::ContactTraversal { anchor: [1.,1.], path: range, guide: range, law: range, same_parameter: false }, 1000).unwrap().0;
+    let shared=contact_fit_value_at(&path, &guide, &scale, None, super::ContactTraversal { anchor: [1.,1.], path: range, guide: range, law: range, same_parameter: true }, 1000).unwrap().0;
     assert_eq!(independent.status,Status::Certified);
     assert_eq!(shared.status,Status::Certified);
     let independently_reachable=2.5_f64.hypot(1.);

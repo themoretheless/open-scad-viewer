@@ -74,19 +74,18 @@ pub fn binary_bspline_quadric_with_constant_products_identity(
         let kv=raw[kv_start..].iter().map(|&x|Expansion::scalar(x)).collect::<Vec<_>>();
         for iu in p..nu {
             ctx.charge(1)?;if raw[ku_start+iu]>=raw[ku_start+iu+1] {continue;}
+            // Restrict the independent u basis ONCE for all original v
+            // channels, retaining one common homogeneous gauge across them.
+            let mut base=Vec::new();
+            for i in iu-p..=iu {
+                let mut row=Vec::new();
+                for j in 0..nv {let a=&raw[(i*nv+j)*4..(i*nv+j)*4+4];let w=Expansion::scalar(a[3]);for &x in &a[..3]{row.push(Expansion::scalar(x).mul(&w,ctx)?);}row.push(w);}
+                base.push(row);
+            }
+            let u=extract(base,&ku,p,iu,ctx)?;
             for iv in v..nv {
-                ctx.charge(1)?;if raw[kv_start+iv]>=raw[kv_start+iv+1] {continue;}
-                let mut base=Vec::new();
-                for i in iu-p..=iu {
-                    let mut row=Vec::new();
-                    for j in iv-v..=iv {
-                        let a=&raw[(i*nv+j)*4..(i*nv+j)*4+4];let w=Expansion::scalar(a[3]);
-                        for &x in &a[..3] {row.push(Expansion::scalar(x).mul(&w,ctx)?);}row.push(w);
-                    }
-                    base.push(row);
-                }
-                let u=extract(base,&ku,p,iu,ctx)?;
-                let base=(0..=v).map(|j|(0..=p).flat_map(|i|u[i][4*j..4*j+4].iter().cloned()).collect()).collect();
+                ctx.charge(1)?;if raw[kv_start+iv]>=raw[kv_start+iv+1]{continue;}
+                let base=(iv-v..=iv).map(|j|(0..=p).flat_map(|i|u[i][4*j..4*j+4].iter().cloned()).collect()).collect();
                 let uv=extract(base,&kv,v,iv,ctx)?;
                 let mut h=Vec::new();
                 for axis in 0..4 {

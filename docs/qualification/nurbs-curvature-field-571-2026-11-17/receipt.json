@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0571",
+  "testedBase": "7ea53f6fc7d377513712d420c997a7745abda410",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_binding_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "Clip a directed original interval into exact persistent edge parameter ranges.",
+    "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal."
+  ],
+  "logSha256": "a1e82a7f18bdcb36bb4545a8c2134ca15c333c256b2794aadc61f9658480c75c",
+  "sourceSha256": {
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "e595a71f8b5cfa98e08dd892031a3f761dbe889fe5584ef34708f12d85481fca",
+    "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs": "2dae850d00e53ebc7f0c58478daf94a4d149f9eeef7d9bf89c85db5410261ee0"
+  }
+}

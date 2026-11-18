@@ -162,29 +162,16 @@ impl Sweep<'_> {
     pub fn inspect_wall_geometry(
         &self,
         sections: &[Vec<Curve>],
-        clearance: f64,
-        distance_tolerance: f64,
-        max_injectivity_cells: usize,
-        max_pairs: usize,
-        max_pair_cells: usize,
+        limits: crate::sweep_wall_audit::WallAuditLimits,
     ) -> Result<crate::sweep_wall_audit::Report> {
         let (walls, shared) = self.retained_wall_charts(sections)?;
-        crate::sweep_wall_audit::inspect(
-            &walls,
-            &shared,
-            clearance,
-            distance_tolerance,
-            max_injectivity_cells,
-            max_pairs,
-            max_pair_cells,
-        )
+        crate::sweep_wall_audit::inspect(&walls, &shared, limits)
     }
     /// Explicit closed-loop partition establishes profile-side ownership.
     /// No shared-boundary declaration is inferred between different loops.
     pub fn inspect_wall_geometry_with_loops(
         &self, sections: &[Vec<Curve>], loop_sizes: &[usize],
-        clearance: f64, distance_tolerance: f64,
-        max_injectivity_cells: usize, max_pairs: usize, max_pair_cells: usize,
+        limits: crate::sweep_wall_audit::WallAuditLimits,
     ) -> Result<crate::sweep_wall_audit::Report> {
         check((1..=16).contains(&loop_sizes.len())
             && loop_sizes.iter().all(|n| *n > 0 && *n <= self.profiles.len())
@@ -235,8 +222,7 @@ impl Sweep<'_> {
         }
         shared.sort_unstable();
         shared.dedup();
-        crate::sweep_wall_audit::inspect(&walls, &shared, clearance,
-            distance_tolerance, max_injectivity_cells, max_pairs, max_pair_cells)
+        crate::sweep_wall_audit::inspect(&walls, &shared, limits)
     }
     fn retained_wall_charts(
         &self,
@@ -374,9 +360,30 @@ impl Sweep<'_> {
                             let remainder=if self.frame_laws.is_some() || self.orientation_guide.is_some() {
                                 let source=self.frame_source().unwrap();
                                 let Some(local)=frame.profile_local_enclosure(authored)? else {return Ok(None);};
-                                frame.interpolation_upper_frame_affine(edge,[a.lo,b.hi],local,source,self.scale,self.twist,self.affine_laws,law_cells)?
+                                frame.interpolation_upper_frame_affine(
+                                    edge,
+                                    [a.lo,b.hi],
+                                    local,
+                                    source,
+                                    crate::sweeps::progressive_miter::frame_certificate::StationLaws {
+                                        scale: self.scale,
+                                        twist: self.twist,
+                                        affine: self.affine_laws,
+                                    },
+                                    law_cells,
+                                )?
                             } else {
-                                frame.interpolation_upper_affine(edge,[a.lo,b.hi],authored,self.scale,self.twist,self.affine_laws,law_cells)?
+                                frame.interpolation_upper_affine(
+                                    edge,
+                                    [a.lo,b.hi],
+                                    authored,
+                                    crate::sweeps::progressive_miter::frame_certificate::StationLaws {
+                                        scale: self.scale,
+                                        twist: self.twist,
+                                        affine: self.affine_laws,
+                                    },
+                                    law_cells,
+                                )?
                             };
                             let Some(remainder)=remainder else {return Ok(None);};
                             let mut endpoint = 0_f64;
@@ -384,9 +391,30 @@ impl Sweep<'_> {
                                 let ideal=if self.frame_laws.is_some() || self.orientation_guide.is_some() {
                                 let source=self.frame_source().unwrap();
                                     let Some(local)=frame.profile_local_enclosure(authored)? else {return Ok(None);};
-                                    frame.station_frame_affine(edge,[f.lo,f.hi],local,source,self.scale,self.twist,self.affine_laws,law_cells)?
+                                    frame.station_frame_affine(
+                                        edge,
+                                        [f.lo,f.hi],
+                                        local,
+                                        source,
+                                        crate::sweeps::progressive_miter::frame_certificate::StationLaws {
+                                            scale: self.scale,
+                                            twist: self.twist,
+                                            affine: self.affine_laws,
+                                        },
+                                        law_cells,
+                                    )?
                                 } else {
-                                    frame.station_with_affine_laws(edge,[f.lo,f.hi],authored,self.scale,self.twist,self.affine_laws,law_cells)?
+                                    frame.station_with_affine_laws(
+                                        edge,
+                                        [f.lo,f.hi],
+                                        authored,
+                                        crate::sweeps::progressive_miter::frame_certificate::StationLaws {
+                                            scale: self.scale,
+                                            twist: self.twist,
+                                            affine: self.affine_laws,
+                                        },
+                                        law_cells,
+                                    )?
                                 };
                                 let Some(ideal)=ideal else {return Ok(None);};
                                 let stored =

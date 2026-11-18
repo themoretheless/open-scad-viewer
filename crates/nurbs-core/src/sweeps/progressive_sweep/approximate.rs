@@ -275,7 +275,13 @@ impl MultiSweep<'_> {
         }else{None};
         let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_pose.as_mut(),shared_chord.as_ref())?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,authored_error::SharedProofs{
+                length:shared_length.as_ref(),
+                guide:shared_guide.as_ref(),
+                rmf:shared_rmf.as_ref(),
+                pose:shared_pose.as_mut(),
+                chord:shared_chord.as_ref(),
+            })?;
             cells+=level.report.error_certificate_cells;
             products+=level.report.decomposition_products;
             check(
@@ -360,11 +366,29 @@ pub fn approximate_affine_profiles(
 }
 
 /// Original closed spatial RMF error policy, shared across all profiles.
+/// Path, scale and twist laws of a sweep, with optional affine laws.
+#[derive(Clone, Copy)]
+pub struct SweepLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// Transport steps, cells and products allowed for a spatial rotation-minimizing frame.
+#[derive(Clone, Copy, Debug)]
+pub struct RmfTransport {
+    pub steps: usize,
+    pub max_cells: usize,
+    pub max_products: usize,
+}
 pub fn approximate_spatial_rmf_profiles(
-    profiles: &[Curve], path: &Curve, scale: &Curve, twist: &Curve,
-    affine: Option<(&Curve, &Curve)>, options: Options,
-    transport_steps: usize, max_cells: usize, max_products: usize,
+    profiles: &[Curve],
+    laws: SweepLaws<'_>,
+    options: Options,
+    transport: RmfTransport,
 ) -> Result<MultiApproximation> {
+    let SweepLaws { path, scale, twist, affine } = laws;
+    let RmfTransport { steps: transport_steps, max_cells, max_products } = transport;
     let sweep = MultiSweep::new(profiles, path, scale, twist, options)?;
     let sweep = if let Some((axes, center)) = affine {
         sweep.with_affine_laws(axes, center)?
@@ -373,17 +397,24 @@ pub fn approximate_spatial_rmf_profiles(
 }
 
 /// Complete authored frames, simultaneous affine laws and aggregate admission.
+/// Laws of an authored-frame sweep with required affine laws: path, scale, twist, the
+/// longitudinal and transverse frame laws, and the affine axis scale and center.
+#[derive(Clone, Copy)]
+pub struct AuthoredSweepLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub longitudinal: &'a Curve,
+    pub transverse: &'a Curve,
+    pub axis_scale: &'a Curve,
+    pub center: &'a Curve,
+}
 pub fn approximate_authored_profiles(
     profiles: &[Curve],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    longitudinal: &Curve,
-    transverse: &Curve,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: AuthoredSweepLaws<'_>,
     mut options: Options,
 ) -> Result<MultiApproximation> {
+    let AuthoredSweepLaws { path, scale, twist, longitudinal, transverse, axis_scale, center } = laws;
     options.orientation = Orientation::Fixed;
     collect_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
@@ -395,14 +426,17 @@ pub fn approximate_authored_profiles(
 /// Shared guide-normal correspondence with simultaneous affine laws.
 pub fn approximate_guided_profiles(
     profiles: &[Curve],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    guide: &Curve,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: ContactSweepLaws<'_>,
     options: Options,
 ) -> Result<MultiApproximation> {
+    let ContactSweepLaws {
+        path,
+        scale,
+        twist,
+        guide,
+        axis_scale,
+        center,
+    } = laws;
     collect_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
             .with_orientation_guide(guide)?
@@ -411,18 +445,31 @@ pub fn approximate_guided_profiles(
 }
 
 /// Contact fit shared by every profile using one authored reference anchor.
+/// Laws of a guided contact sweep: path, scale, twist, the contact guide, and the affine axis scale
+/// and center laws.
+#[derive(Clone, Copy)]
+pub struct ContactSweepLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub guide: &'a Curve,
+    pub axis_scale: &'a Curve,
+    pub center: &'a Curve,
+}
+/// The profile and its curve parameter that touch the guide.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactAnchor {
+    pub profile_index: usize,
+    pub parameter: f64,
+}
 pub fn approximate_contact_profiles(
     profiles: &[Curve],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    guide: &Curve,
-    profile_index: usize,
-    parameter: f64,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: ContactSweepLaws<'_>,
+    anchor: ContactAnchor,
     options: Options,
 ) -> Result<MultiApproximation> {
+    let ContactSweepLaws { path, scale, twist, guide, axis_scale, center } = laws;
+    let ContactAnchor { profile_index, parameter } = anchor;
     collect_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
             .with_contact_guide(guide, profile_index, parameter)?

@@ -455,13 +455,21 @@ fn graph_difference_bounds_frame(base:[I;5],delta:[I;5],max_work:usize,cartesian
     Ok((bound,w.used))
 }
 pub struct G2Report {
-    pub decision: crate::surface_join::Decision,
-    pub orientation: Option<crate::surface_g2::Orientation>,
+    pub decision: crate::analysis::surface_boundary::Decision,
+    pub orientation: Option<crate::analysis::surface_boundary::Orientation>,
     /// Whole-seam upper bounds exist only after complete admission.
     pub upper: Option<[f64; 3]>,
     pub witness_parameter: Option<f64>,
     pub cells: usize,
     pub coefficient_work: usize,
+}
+/// Position, normal and curvature tolerances with the cell and coefficient
+/// work budgets of one collar G2 seam proof.
+#[derive(Clone, Copy, Debug)]
+pub struct CollarBudget {
+    pub tolerances: [f64; 3],
+    pub max_cells: usize,
+    pub max_work: usize,
 }
 /// Fresh original-coefficient G2 proof for an actual collar in the composed
 /// basis. Exact original composition is correlated with candidate jets, not
@@ -472,13 +480,9 @@ pub fn inspect_g2(
     pcurve: &Curve,
     direction: [f64; 2],
     candidate: &Surface,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
 ) -> Result<G2Report> {
-    inspect_g2_frame(
-        source, pcurve, direction, candidate, tolerances, max_cells, max_work, 1.,
-    )
+    inspect_g2_frame(source, pcurve, direction, candidate, budget, 1.)
 }
 /// Compare the actual candidate V=0 seam with its transverse jet frame reversed.
 /// Source direction still enters the original retained chart; no source point
@@ -489,13 +493,9 @@ pub fn inspect_g2_opposite_cross(
     pcurve: &Curve,
     direction: [f64; 2],
     candidate: &Surface,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
 ) -> Result<G2Report> {
-    inspect_g2_frame(
-        source, pcurve, direction, candidate, tolerances, max_cells, max_work, -1.,
-    )
+    inspect_g2_frame(source, pcurve, direction, candidate, budget, -1.)
 }
 /// Compare a V=0 seam in the signed affine transverse frame v=gain*s.
 /// Every order-b transverse jet is multiplied by the exact-real gain^b
@@ -507,25 +507,24 @@ pub fn inspect_g2_cross_frame(
     direction: [f64; 2],
     candidate: &Surface,
     cross_gain: f64,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
 ) -> Result<G2Report> {
-    inspect_g2_frame(
-        source, pcurve, direction, candidate, tolerances, max_cells, max_work, cross_gain,
-    )
+    inspect_g2_frame(source, pcurve, direction, candidate, budget, cross_gain)
 }
 fn inspect_g2_frame(
     source: &Surface,
     pcurve: &Curve,
     direction: [f64; 2],
     candidate: &Surface,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
     cross_gain: f64,
 ) -> Result<G2Report> {
-    use crate::surface_join::Decision;
+    let CollarBudget {
+        tolerances,
+        max_cells,
+        max_work,
+    } = budget;
+    use crate::analysis::surface_boundary::Decision;
     source.validate()?;
     pcurve.validate()?;
     candidate.validate()?;
@@ -567,9 +566,9 @@ fn inspect_g2_frame(
                 .mul(I::point(direction[0]))?,
         )?;
     let orientation = if determinant.lo > 0. {
-        crate::surface_g2::Orientation::Same
+        crate::analysis::surface_boundary::Orientation::Same
     } else if determinant.hi < 0. {
-        crate::surface_g2::Orientation::Opposite
+        crate::analysis::surface_boundary::Orientation::Opposite
     } else {
         return Ok(report);
     };
@@ -703,8 +702,8 @@ fn inspect_g2_frame(
     report.decision = Decision::WithinTolerance;
     report.orientation = Some(if cross_gain < 0. {
         match orientation {
-            crate::surface_g2::Orientation::Same => crate::surface_g2::Orientation::Opposite,
-            crate::surface_g2::Orientation::Opposite => crate::surface_g2::Orientation::Same,
+            crate::analysis::surface_boundary::Orientation::Same => crate::analysis::surface_boundary::Orientation::Opposite,
+            crate::analysis::surface_boundary::Orientation::Opposite => crate::analysis::surface_boundary::Orientation::Same,
         }
     } else {
         orientation

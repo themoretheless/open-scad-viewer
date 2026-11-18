@@ -57,7 +57,17 @@ fn naca2412_camber_positive_and_curve_fits() {
     let (peak, slope) = naca4_camber(0.4, 0.02, 0.4);
     assert!((peak - 0.02).abs() < 1e-12);
     assert!(slope.abs() < 0.06);
-    let curve = naca4(2412, 1., true, 120, 3, 24).unwrap();
+    let curve = naca4(
+        2412,
+        NacaFit {
+            chord: 1.,
+            closed_te: true,
+            samples: 120,
+            degree: 3,
+            controls: 24,
+        },
+    )
+    .unwrap();
     curve.validate().unwrap();
     // Upper surface near mid-chord lies above the chord line.
     let mut saw_upper = false;
@@ -87,7 +97,19 @@ fn naca5_solver_matches_tabulated_transition() {
     // Position 0.10c -> m = 0.1260 (tabulated).
     let solved = naca5_camber(0.10, 0.02).unwrap();
     assert!((solved.transition - 0.1260).abs() < 1e-3);
-    let curve = naca5(0.15, 0.02, 0.12, 1., true, 120, 3, 24).unwrap();
+    let curve = naca5(
+        0.15,
+        0.02,
+        0.12,
+        NacaFit {
+            chord: 1.,
+            closed_te: true,
+            samples: 120,
+            degree: 3,
+            controls: 24,
+        },
+    )
+    .unwrap();
     curve.validate().unwrap();
 }
 

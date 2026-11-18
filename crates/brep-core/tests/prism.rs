@@ -1,8 +1,4 @@
-use brep_core::{
-    Model,
-    analysis::mass_properties,
-    prism::{extrude, recognize},
-};
+use brep_core::{Model, analysis::mass_properties, prism::{extrude, recognize}};
 use nurbs_core::curve::Curve;
 fn line(a: [f64; 2], b: [f64; 2]) -> Curve {
     Curve {

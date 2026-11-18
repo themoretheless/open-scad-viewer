@@ -1,7 +1,7 @@
 //! Immutable native picking snapshots. Upload once, query repeatedly, dispose.
 //! Handles are monotonic within one runtime and never identify a reused slot.
 use super::{Result, Value, field, input};
-use mesh_query::{bvh, bvh_query};
+use mesh_query::{bvh, bvh_query, bvh_range};
 use std::collections::{BTreeMap, BTreeSet};
 use value_codec::json;
 
@@ -27,6 +27,18 @@ impl Registry {
         indices: Vec<u32>,
         stride: usize,
         leaf: usize,
+    ) -> Result<u64> {
+        self.insert_with(vertices, indices, stride, leaf, false)
+    }
+    /// `sah` selects the binned SAH builder; the default median builder is
+    /// the one covered by the TypeScript parity fixture.
+    pub fn insert_with(
+        &mut self,
+        vertices: Vec<f32>,
+        indices: Vec<u32>,
+        stride: usize,
+        leaf: usize,
+        sah: bool,
     ) -> Result<u64> {
         if !(3..=256).contains(&stride) || !(1..=64).contains(&leaf) {
             return Err(input("Invalid picking mesh stride or leaf size"));
@@ -61,7 +73,11 @@ impl Registry {
             .next
             .checked_add(1)
             .ok_or_else(|| input("Picking handle space exhausted"))?;
-        let tree = bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
+        let tree = if sah {
+            mesh_query::build_mesh_bvh_sah(&vertices, &indices, stride, leaf)
+        } else {
+            bvh::build_mesh_bvh(&vertices, &indices, stride, leaf)
+        };
         self.meshes.insert(
             handle,
             Mesh {
@@ -83,6 +99,11 @@ impl Registry {
             .ok_or_else(|| input("Unknown or disposed picking snapshot"))?;
         self.bytes -= mesh.charge;
         Ok(())
+    }
+    fn mesh(&self, handle: u64) -> Result<&Mesh> {
+        self.meshes
+            .get(&handle)
+            .ok_or_else(|| input("Unknown or disposed picking snapshot"))
     }
     pub fn query(
         &self,
@@ -133,11 +154,17 @@ fn bound(v: &Value, name: &str, fallback: f64) -> Result<f64> {
 pub fn dispatch(v: Value) -> Result<Value> {
     match v["action"].as_str() {
         Some("create") => REGISTRY.with(|registry| {
-            let id = registry.borrow_mut().insert(
+            let sah = match v.get("builder").and_then(Value::as_str) {
+                None | Some("median") => false,
+                Some("sah") => true,
+                Some(_) => return Err(input("Unknown picking BVH builder")),
+            };
+            let id = registry.borrow_mut().insert_with(
                 field(&v, "vertices")?,
                 field(&v, "indices")?,
                 field(&v, "stride")?,
                 field(&v, "leafSize")?,
+                sah,
             )?;
             Ok(json!({"handle":id.to_string()}))
         }),
@@ -173,6 +200,43 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 })
             })
         }
+        Some("overlap") => REGISTRY.with(|registry| {
+            let registry = registry.borrow();
+            let m = registry.mesh(handle(&v)?)?;
+            let ids = bvh_range::overlap_aabb(
+                &m.tree,
+                &m.vertices,
+                &m.indices,
+                m.stride,
+                field(&v, "min")?,
+                field(&v, "max")?,
+            )
+            .map_err(|_| input("Invalid native picking tree"))?;
+            Ok(json!({"triangles":ids}))
+        }),
+        Some("withinRadius") | Some("nearest") => REGISTRY.with(|registry| {
+            let registry = registry.borrow();
+            let m = registry.mesh(handle(&v)?)?;
+            let found = if v["action"] == "nearest" {
+                let k: usize = field(&v, "k")?;
+                if k > 4096 {
+                    return Err(input("Nearest-triangle budget exceeded"));
+                }
+                bvh_range::nearest(&m.tree, &m.vertices, &m.indices, m.stride, field(&v, "point")?, k)
+            } else {
+                bvh_range::within_radius(
+                    &m.tree,
+                    &m.vertices,
+                    &m.indices,
+                    m.stride,
+                    field(&v, "center")?,
+                    field(&v, "radius")?,
+                )
+            }
+            .map_err(|_| input("Invalid native picking tree"))?;
+            Ok(json!({"neighbors":found.iter().map(|n| json!({"triangleIndex":n.triangle,
+                "distance":n.distance,"point":n.point})).collect::<Vec<_>>()}))
+        }),
         _ => Err(input("Unknown picking snapshot action")),
     }
 }
@@ -193,6 +257,30 @@ mod tests {
         assert_eq!(dispatch(query.clone()).unwrap()["t"].as_f64(), Some(2.));
         dispatch(json!({"action":"dispose","handle":id})).unwrap();
         assert!(dispatch(query).is_err());
+    }
+    #[test]
+    fn volume_queries_and_sah_builder_answer_through_the_protocol() {
+        for builder in ["median", "sah"] {
+            let created = dispatch(json!({"action":"create","builder":builder,
+                "vertices":[0,0,0,1,0,0,0,1,0, 5,0,0,6,0,0,5,1,0],
+                "indices":[0,1,2,3,4,5],"stride":3,"leafSize":1}))
+            .unwrap();
+            let id = created["handle"].clone();
+            let overlap = dispatch(json!({"action":"overlap","handle":id,
+                "min":[4,-1,-1],"max":[7,2,1]}))
+            .unwrap();
+            assert_eq!(overlap["triangles"], json!([1]));
+            let near = dispatch(json!({"action":"nearest","handle":id,"point":[0.2,0.2,1],"k":1})).unwrap();
+            assert_eq!(near["neighbors"][0]["triangleIndex"], json!(0));
+            assert_eq!(near["neighbors"][0]["distance"].as_f64(), Some(1.));
+            let within = dispatch(json!({"action":"withinRadius","handle":id,
+                "center":[3,0.5,0],"radius":10})).unwrap();
+            assert_eq!(within["neighbors"].as_array().unwrap().len(), 2);
+            assert!(dispatch(json!({"action":"nearest","handle":id,"point":[0,0,0],"k":5000})).is_err());
+            dispatch(json!({"action":"dispose","handle":id})).unwrap();
+        }
+        assert!(dispatch(json!({"action":"create","builder":"x","vertices":[],"indices":[],
+            "stride":3,"leafSize":1})).is_err());
     }
     #[test]
     fn snapshot_queries_reuse_owned_buffers_and_reject_disposed_handles() {

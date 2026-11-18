@@ -166,7 +166,7 @@ pub fn execute(v: Value) -> Result<Value> {
                 .insert("op".into(), json!("brep_profile_author"));
             if kind == "circle-analytic" {
                 args.as_object_mut()
-                    .unwrap()
+                    .expect("args was checked to be an object above")
                     .insert("kind".into(), json!("circle"));
             }
             region(super::brep_profile::dispatch(args)?)

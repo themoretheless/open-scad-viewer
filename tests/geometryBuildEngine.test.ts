@@ -1,4 +1,4 @@
-import {ACTIVE_GEOMETRY_MANIFEST_VERSIONS} from '../src/core/geometryExecution'
+import { ACTIVE_GEOMETRY_MANIFEST_VERSIONS } from '../src/core/geometryExecution'
 import { GEOMETRY_MANIFEST_ARCHIVE as CAD_MANIFESTS } from '../src/core/geometryExecution'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -11,7 +11,7 @@ import {
   GeometryProviderContractError,
   GeometryManifestRevocationRegistry,
   type GeometryBackendProvider,
-} from '../src/services/geometryBuildEngine'
+} from '../src/kernel/geometryBuildEngine'
 import {
   computeGeometryManifestDigest,
   GEOMETRY_MANIFEST_ARCHIVE,
@@ -38,12 +38,14 @@ describe('GeometryBuildEngine', () => {
         { languageContract: 'openscad-viewer/brep-1', engineClass: 'brep', fallback: 'never' },
       ],
     })
-    expect(registry.engines.map(engine => ({
-      engineClass: engine.engineClass,
-      permanent: engine.permanent,
-      availability: engine.availability,
-      isolation: engine.isolation,
-    }))).toEqual([
+    expect(
+      registry.engines.map(engine => ({
+        engineClass: engine.engineClass,
+        permanent: engine.permanent,
+        availability: engine.availability,
+        isolation: engine.isolation,
+      })),
+    ).toEqual([
       {
         engineClass: 'mesh',
         permanent: true,
@@ -65,52 +67,67 @@ describe('GeometryBuildEngine', () => {
       availability: 'unavailable',
       unavailableReason: expect.stringContaining('No qualified runtime provider'),
     })
-    expect(() => new GeometryBuildEngine([{
-      engineClass: 'brep',
-      engineKey: 'rust-brep-reserved-v1',
-      kernelFingerprint: 'not-deployed',
-      capabilityManifestVersion: 'brep-contract-v1',
-      warm: vi.fn().mockResolvedValue(undefined),
-      build: vi.fn(),
-    } as unknown as GeometryBackendProvider])).toThrow(/unqualified geometry provider/)
-    expect(() => new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: 'unexpected-build',
-      kernelFingerprint: 'unexpected-build',
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build: vi.fn(),
-    }])).toThrow(/identity does not match/)
+    expect(
+      () =>
+        new GeometryBuildEngine([
+          {
+            engineClass: 'brep',
+            engineKey: 'rust-brep-reserved-v1',
+            kernelFingerprint: 'not-deployed',
+            capabilityManifestVersion: 'brep-contract-v1',
+            warm: vi.fn().mockResolvedValue(undefined),
+            build: vi.fn(),
+          } as unknown as GeometryBackendProvider,
+        ]),
+    ).toThrow(/unqualified geometry provider/)
+    expect(
+      () =>
+        new GeometryBuildEngine([
+          {
+            engineClass: 'mesh',
+            engineKey: 'unexpected-build',
+            kernelFingerprint: 'unexpected-build',
+            capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+            warm: vi.fn().mockResolvedValue(undefined),
+            build: vi.fn(),
+          },
+        ]),
+    ).toThrow(/identity does not match/)
   })
 
   it('admits only a complete qualified manifest', () => {
-    expect(geometryProviderAdmissionForManifest(
-      GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
-    )).toMatchObject({ allowed: true, mode: 'qualified' })
-    expect(geometryProviderAdmissionForManifest(
-      GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'],
-    )).toMatchObject({
+    expect(geometryProviderAdmissionForManifest(GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'])).toMatchObject({
+      allowed: true,
+      mode: 'qualified',
+    })
+    expect(geometryProviderAdmissionForManifest(GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'])).toMatchObject({
       allowed: false,
       mode: 'denied',
       reasonCode: 'qualification-incomplete',
     })
-    expect(geometryProviderAdmissionForManifest({
-      ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
-      manifestDigest: '0'.repeat(64),
-    })).toMatchObject({
+    expect(
+      geometryProviderAdmissionForManifest({
+        ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
+        manifestDigest: '0'.repeat(64),
+      }),
+    ).toMatchObject({
       allowed: false,
       mode: 'denied',
       reasonCode: 'manifest-integrity-failed',
     })
 
-    expect(geometryProviderAdmissionForManifest({
-      ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
-      displayName: 'tampered while retaining the admitted digest',
-    })).toMatchObject({ allowed: false, reasonCode: 'manifest-integrity-failed' })
-    expect(geometryProviderAdmissionForManifest({
-      ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
-      unexpectedEvidence: true,
-    } as unknown as GeometryEngineStaticManifest)).toMatchObject({
+    expect(
+      geometryProviderAdmissionForManifest({
+        ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
+        displayName: 'tampered while retaining the admitted digest',
+      }),
+    ).toMatchObject({ allowed: false, reasonCode: 'manifest-integrity-failed' })
+    expect(
+      geometryProviderAdmissionForManifest({
+        ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
+        unexpectedEvidence: true,
+      } as unknown as GeometryEngineStaticManifest),
+    ).toMatchObject({
       allowed: false,
       reasonCode: 'manifest-integrity-failed',
     })
@@ -152,20 +169,24 @@ describe('GeometryBuildEngine', () => {
       deployment: 'not-deployed',
       manifestDigest: '0'.repeat(64),
     } satisfies GeometryEngineStaticManifest
-    expect(geometryProviderAdmissionForManifest({
-      ...unsignedNotDeployable,
-      manifestDigest: computeGeometryManifestDigest(unsignedNotDeployable),
-    })).toMatchObject({ allowed: false, reasonCode: 'runtime-not-deployable' })
+    expect(
+      geometryProviderAdmissionForManifest({
+        ...unsignedNotDeployable,
+        manifestDigest: computeGeometryManifestDigest(unsignedNotDeployable),
+      }),
+    ).toMatchObject({ allowed: false, reasonCode: 'runtime-not-deployable' })
 
     const unsignedDependencyIncomplete = {
       ...qualified,
       dependency: { ...qualified.dependency, sbomSha256: null },
       manifestDigest: '0'.repeat(64),
     } satisfies GeometryEngineStaticManifest
-    expect(geometryProviderAdmissionForManifest({
-      ...unsignedDependencyIncomplete,
-      manifestDigest: computeGeometryManifestDigest(unsignedDependencyIncomplete),
-    })).toMatchObject({
+    expect(
+      geometryProviderAdmissionForManifest({
+        ...unsignedDependencyIncomplete,
+        manifestDigest: computeGeometryManifestDigest(unsignedDependencyIncomplete),
+      }),
+    ).toMatchObject({
       allowed: false,
       reasonCode: 'dependency-attestation-incomplete',
     })
@@ -194,23 +215,23 @@ describe('GeometryBuildEngine', () => {
   it('advertises a provider as unavailable when its readiness check fails', async () => {
     const build = vi.fn()
     const warm = vi.fn().mockRejectedValue(new Error('private readiness detail'))
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm,
-      build,
-    }])
+    const engine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm,
+        build,
+      },
+    ])
 
     expect((await engine.capabilities()).engines[0]).toMatchObject({
       engineClass: 'mesh',
       availability: 'unavailable',
       unavailableReason: 'The qualified provider failed its runtime readiness check.',
     })
-    await expect(engine.buildSource('cube(1);', request)).rejects.toBeInstanceOf(
-      GeometryEngineUnavailableError,
-    )
+    await expect(engine.buildSource('cube(1);', request)).rejects.toBeInstanceOf(GeometryEngineUnavailableError)
     await engine.capabilities()
     expect(warm).toHaveBeenCalledTimes(1)
     expect(build).not.toHaveBeenCalled()
@@ -218,14 +239,16 @@ describe('GeometryBuildEngine', () => {
 
   it('bounds a hung readiness check and reuses its single in-flight attempt', async () => {
     const warm = vi.fn(() => new Promise<void>(() => undefined))
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm,
-      build: vi.fn(),
-    }])
+    const engine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm,
+        build: vi.fn(),
+      },
+    ])
 
     const startedAt = performance.now()
     expect((await engine.capabilities()).engines[0]).toMatchObject({
@@ -243,30 +266,41 @@ describe('GeometryBuildEngine', () => {
     vi.useFakeTimers()
     try {
       let ready!: () => void
-      const warm = vi.fn(() => new Promise<void>(resolve => { ready = resolve }))
-      const engine = new GeometryBuildEngine([{
-        engineClass: 'mesh',
-        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-        warm,
-        build: vi.fn(),
-      }])
+      const warm = vi.fn(
+        () =>
+          new Promise<void>(resolve => {
+            ready = resolve
+          }),
+      )
+      const engine = new GeometryBuildEngine([
+        {
+          engineClass: 'mesh',
+          engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+          kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+          capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+          warm,
+          build: vi.fn(),
+        },
+      ])
       const first = engine.capabilities()
       await vi.advanceTimersByTimeAsync(251)
       expect((await first).engines[0]).toMatchObject({
-        availability: 'unavailable', unavailableReason: expect.stringContaining('exceeded 250 ms'),
+        availability: 'unavailable',
+        unavailableReason: expect.stringContaining('exceeded 250 ms'),
       })
       expect((await engine.capabilities()).engines[0].availability).toBe('unavailable')
       expect(warm).toHaveBeenCalledTimes(1)
       ready()
       await vi.advanceTimersByTimeAsync(0)
       expect((await engine.capabilities()).engines[0]).toMatchObject({
-        availability: 'available', unavailableReason: null,
+        availability: 'available',
+        unavailableReason: null,
       })
       expect(warm).toHaveBeenCalledTimes(1)
       expect(vi.getTimerCount()).toBe(0)
-    } finally { vi.useRealTimers() }
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('never warms the mesh kernel when a B-rep source selects an unavailable runtime', async () => {
@@ -281,10 +315,7 @@ describe('GeometryBuildEngine', () => {
     }
     const engine = new GeometryBuildEngine([provider])
 
-    await expect(engine.buildSource(
-      '// @language openscad-viewer/brep-1\ncube(1);',
-      request,
-    )).rejects.toMatchObject({
+    await expect(engine.buildSource('// @language openscad-viewer/brep-1\ncube(1);', request)).rejects.toMatchObject({
       name: 'GeometryEngineUnavailableError',
       execution: {
         languageContract: 'openscad-viewer/brep-1',
@@ -297,32 +328,35 @@ describe('GeometryBuildEngine', () => {
 
   it('rejects unsupported requirements before invoking the selected provider', async () => {
     const build = vi.fn()
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build,
-    }])
+    const engine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm: vi.fn().mockResolvedValue(undefined),
+        build,
+      },
+    ])
 
-    await expect(engine.buildSource(
-      '// @requires nurbs.surfaces\ncube(1);',
-      request,
-    )).rejects.toBeInstanceOf(GeometryCapabilityUnavailableError)
+    await expect(engine.buildSource('// @requires nurbs.surfaces\ncube(1);', request)).rejects.toBeInstanceOf(
+      GeometryCapabilityUnavailableError,
+    )
     expect(build).not.toHaveBeenCalled()
   })
 
   it('attaches runtime execution provenance to provider failures without changing their type', async () => {
     const failure = new RangeError('provider failure')
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build: vi.fn().mockRejectedValue(failure),
-    }])
+    const engine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm: vi.fn().mockResolvedValue(undefined),
+        build: vi.fn().mockRejectedValue(failure),
+      },
+    ])
 
     await expect(engine.buildSource('cube(1);', request)).rejects.toBe(failure)
     expect(geometryExecutionForError(failure)).toMatchObject({
@@ -335,49 +369,53 @@ describe('GeometryBuildEngine', () => {
 
   it('quarantines providers that reuse errors or reject with primitives', async () => {
     const reused = new Error('reused')
-    const reusedEngine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build: vi.fn().mockRejectedValue(reused),
-    }])
+    const reusedEngine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm: vi.fn().mockResolvedValue(undefined),
+        build: vi.fn().mockRejectedValue(reused),
+      },
+    ])
     await expect(reusedEngine.buildSource('cube(1);', request)).rejects.toBe(reused)
-    await expect(reusedEngine.buildSource('cube(1);', request))
-      .rejects.toThrow(/reused an error object/)
+    await expect(reusedEngine.buildSource('cube(1);', request)).rejects.toThrow(/reused an error object/)
     expect((await reusedEngine.capabilities()).engines[0].availability).toBe('unavailable')
 
-    const primitiveEngine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build: vi.fn().mockRejectedValue('primitive failure'),
-    }])
-    await expect(primitiveEngine.buildSource('cube(1);', request))
-      .rejects.toThrow(/non-object error/)
+    const primitiveEngine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm: vi.fn().mockResolvedValue(undefined),
+        build: vi.fn().mockRejectedValue('primitive failure'),
+      },
+    ])
+    await expect(primitiveEngine.buildSource('cube(1);', request)).rejects.toThrow(/non-object error/)
     expect((await primitiveEngine.capabilities()).engines[0].availability).toBe('unavailable')
   })
 
   it('rejects a provider result whose quality contradicts the execution descriptor', async () => {
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build: vi.fn().mockResolvedValue({
-        meshes: [],
-        warnings: [],
-        volume: 0,
-        surfaceArea: 0,
-        quality: 'preview',
-        reduced: false,
-        timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
-      }),
-    }])
+    const engine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm: vi.fn().mockResolvedValue(undefined),
+        build: vi.fn().mockResolvedValue({
+          meshes: [],
+          warnings: [],
+          volume: 0,
+          surfaceArea: 0,
+          quality: 'preview',
+          reduced: false,
+          timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+        }),
+      },
+    ])
 
     let caught: unknown
     try {
@@ -391,9 +429,7 @@ describe('GeometryBuildEngine', () => {
       availability: 'unavailable',
       unavailableReason: expect.stringContaining('quarantined'),
     })
-    await expect(engine.buildSource('cube(1);', request)).rejects.toBeInstanceOf(
-      GeometryEngineUnavailableError,
-    )
+    await expect(engine.buildSource('cube(1);', request)).rejects.toBeInstanceOf(GeometryEngineUnavailableError)
   })
 
   it('blocks a late success when a monotonic revocation lands during execution', async () => {
@@ -406,28 +442,38 @@ describe('GeometryBuildEngine', () => {
       reduced: false
       timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }) => void
-    const build = vi.fn(() => new Promise<Parameters<typeof finish>[0]>(resolve => {
-      finish = resolve
-    }))
+    const build = vi.fn(
+      () =>
+        new Promise<Parameters<typeof finish>[0]>(resolve => {
+          finish = resolve
+        }),
+    )
     const revocations = new GeometryManifestRevocationRegistry()
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build,
-    }], { revocations })
+    const engine = new GeometryBuildEngine(
+      [
+        {
+          engineClass: 'mesh',
+          engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+          kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+          capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+          warm: vi.fn().mockResolvedValue(undefined),
+          build,
+        },
+      ],
+      { revocations },
+    )
 
     const pending = engine.buildSource('cube(1);', request)
     await vi.waitFor(() => expect(build).toHaveBeenCalledTimes(1))
-    revocations.apply(createGeometryManifestRevocationRecord({
-      epoch: 1,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest,
-      reason: 'qualification withdrawn',
-      effectiveAt: '2026-08-01T00:00:00.000Z',
-      authority: 'test-policy',
-    }))
+    revocations.apply(
+      createGeometryManifestRevocationRecord({
+        epoch: 1,
+        manifestDigest: GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest,
+        reason: 'qualification withdrawn',
+        effectiveAt: '2026-08-01T00:00:00.000Z',
+        authority: 'test-policy',
+      }),
+    )
     finish({
       meshes: [],
       warnings: [],
@@ -462,19 +508,25 @@ describe('GeometryBuildEngine', () => {
     }
     const finishers: Array<(result: Result) => void> = []
     const build = vi.fn(() => new Promise<Result>(resolve => finishers.push(resolve)))
-    const engine = new GeometryBuildEngine([{
-      engineClass: 'mesh',
-      engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
-      capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
-      warm: vi.fn().mockResolvedValue(undefined),
-      build,
-    }])
+    const engine = new GeometryBuildEngine([
+      {
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+        kernelFingerprint: CAD_MANIFESTS[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].kernelFingerprint,
+        capabilityManifestVersion: ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh,
+        warm: vi.fn().mockResolvedValue(undefined),
+        build,
+      },
+    ])
     const first = engine.buildSource('cube(1);', request)
     const second = engine.buildSource('sphere(1);', request)
     await vi.waitFor(() => expect(finishers).toHaveLength(2))
     const base = {
-      meshes: [] as [], warnings: [] as [], volume: 1, surfaceArea: 6, reduced: false as const,
+      meshes: [] as [],
+      warnings: [] as [],
+      volume: 1,
+      surfaceArea: 6,
+      reduced: false as const,
       timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     }
     finishers[0]({ ...base, quality: 'preview' })
@@ -526,10 +578,13 @@ describe('GeometryBuildEngine', () => {
   })
 
   it('ignores directive-shaped text inside block comments', () => {
-    const execution = new GeometryBuildEngine().planSource(`/*
+    const execution = new GeometryBuildEngine().planSource(
+      `/*
 // @language openscad-viewer/brep-1
 */
-cube(1);`, request)
+cube(1);`,
+      request,
+    )
 
     expect(execution).toMatchObject({
       languageContract: 'legacy/current',
@@ -538,10 +593,13 @@ cube(1);`, request)
   })
 
   it('does not interpret directive-shaped text inside multiline strings', () => {
-    const execution = new GeometryBuildEngine().planSource(`note = "first
+    const execution = new GeometryBuildEngine().planSource(
+      `note = "first
 // @language openscad-viewer/brep-1
 last";
-cube(1);`, request)
+cube(1);`,
+      request,
+    )
 
     expect(execution).toMatchObject({
       languageContract: 'legacy/current',

@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LanguageDiagnosticCode } from '../src/core/languageContract'
-import { scadEvalRust } from '../src/services/languages/kernel'
+import { scadEvalRust } from '../src/language/languages/kernel'
 
 interface Fixture {
   contract: string
@@ -23,17 +23,20 @@ interface Fixture {
   evaluateReject: Array<{ name: string; source: string; covers: string[] }>
 }
 
-const fixture = JSON.parse(readFileSync(fileURLToPath(
-  new URL('./fixtures/language-conformance-v1.json', import.meta.url),
-), 'utf8')) as Fixture
+const fixture = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./fixtures/language-conformance-v1.json', import.meta.url)), 'utf8'),
+) as Fixture
 
 describe('openscad-core Rust evaluator conformance gate (stage 2)', () => {
   for (const testCase of fixture.evaluate) {
     it(`evaluates ${testCase.name} with the pinned mesh count`, () => {
       const rust = scadEvalRust(testCase.source)
-      expect(rust.ok, `Rust evaluation failed for ${JSON.stringify(testCase.source)}: ${
-        rust.ok ? '' : JSON.stringify(rust.diagnostics)
-      }`).toBe(true)
+      expect(
+        rust.ok,
+        `Rust evaluation failed for ${JSON.stringify(testCase.source)}: ${
+          rust.ok ? '' : JSON.stringify(rust.diagnostics)
+        }`,
+      ).toBe(true)
       if (!rust.ok) return
       expect(rust.shapes.length).toBe(testCase.meshCount)
       expect(rust.shapes.every(shape => shape.dimension === 3)).toBe(true)

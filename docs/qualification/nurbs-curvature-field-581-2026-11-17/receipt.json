@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0581",
+  "testedBase": "74716a7fbc38344261c178c8674f2abc1fa9ea81",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 155,
+  "scope": [
+    "Enclose an original segment length across all seam pieces and verify full source interval coverage.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "15504069803bd5e47fee845dc4e0f4e5db7bb142d2a805e92a7db6164f610ae1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "9273ba4c1f43cf67d607eb7c3cb08eff90336e58b125fef791e3eee7d30cac9a",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "de65ef4dfcb9e91e1ecda56fde8d17ab3b7ea389562341659e4eaff61c766f0b"
+  }
+}

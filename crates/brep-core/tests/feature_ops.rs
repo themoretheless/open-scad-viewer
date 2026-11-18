@@ -1,9 +1,4 @@
-use brep_core::{
-    Model,
-    aag::Aag,
-    aag_fillets::find_fillet_chains,
-    feature_ops::{self, PatternMode},
-};
+use brep_core::{Model, aag::Aag, aag_fillets::find_fillet_chains, feature_ops::{self, PatternMode}};
 use nurbs_core::foundation::guards::Budget;
 fn budget() -> Budget {
     Budget::new(10_000_000, 16, 60_000).unwrap()

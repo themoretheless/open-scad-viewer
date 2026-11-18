@@ -1,24 +1,28 @@
-import { nextTick, onUnmounted, ref, type Ref, type ShallowRef } from 'vue'
+import { nextTick, onUnmounted, ref, type Ref, type ShallowRef } from 'svet'
 import {
   emptyDirectDocument,
   MAX_DRAFT_CHARACTERS,
   parseDirectDocument,
-  serializeDirectDocument,
+  serializeDirectDraft,
   type DirectDocument,
   type DirectHistory,
-} from '../../services/directModeling'
-import { isGeometryKernelReady, warmGeometryKernel } from '../../services/geometry/kernel'
-import { storageGet, storageSet } from '../../services/safeStorage'
-import { readSolidDraftHead, writeSolidDraftHead } from '../../services/solidDraftHeadStore'
+} from '../../app/directModeling'
+import { isGeometryKernelReady, warmGeometryKernel } from '../../kernel/geometry/kernel'
+import { storageGet, storageSet } from '../../core/safeStorage'
+import { readSolidDraftHead, writeSolidDraftHead } from '../../kernel/solidDraftHeadStore'
 import {
   collectSolidDraftSnapshots,
   readSolidDraftSnapshot,
-  removeSolidDraftSnapshot,
   solidDraftSnapshotId,
   withSolidDraftLock,
-  writeSolidDraftSnapshot,
-} from '../../services/solidDraftStore'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+} from '../../kernel/solidDraftStore'
+import { createSolidDraftStorageIo, saveSolidDraft, solidDraftRecoveryText } from '../../kernel/solidDraftSaveProtocol'
+
+const storageIo = createSolidDraftStorageIo({
+  get: key => storageGet(key),
+  set: (key, value) => storageSet(key, value),
+})
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import type { Pane } from './helpers'
 
 export interface UseDraftPersistenceOptions {
@@ -77,8 +81,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
   let stored = persistedReference ?? storageGet(legacyKey)
   const restoringDraft = ref(
     !props.initialDocument &&
-      (typeof indexedDB !== 'undefined' ||
-        (!!stored && (!isGeometryKernelReady() || !!solidDraftSnapshotId(stored)))),
+      (typeof indexedDB !== 'undefined' || (!!stored && (!isGeometryKernelReady() || !!solidDraftSnapshotId(stored)))),
   )
   let restoreDisposed = false
   onUnmounted(() => {
@@ -163,13 +166,12 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
             ),
           )
         const text =
-          head?.text ??
-          (solidDraftSnapshotId(reference) ? await readSolidDraftSnapshot(reference!) : reference!)
+          head?.text ?? (solidDraftSnapshotId(reference) ? await readSolidDraftSnapshot(reference!) : reference!)
         if (!current()) return
         // The shared draft lock keeps the canonical head stable until the validated
         // replacement is published. Local edits remain the preceding history entry.
         const applied = await target.commitAsync(async () => {
-          const next = await historyWorker.run({ kind: 'restoreDocument', text })
+          const next = await historyWorker.run({ kind: 'restoreDocument', text, verifyNative: true })
           if (!current() || storageGet(key) !== reference)
             throw Error(
               label(
@@ -200,6 +202,50 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     }
   }
 
+  /**
+   * Make a conflict copy the open document. It enters local history like any edit
+   * (Undo returns to the previous model) and is saved through the ordinary
+   * revision-checked path, so a newer version in another tab still conflicts.
+   */
+  async function restoreConflictCopy(text: string): Promise<boolean> {
+    if (loadingLatestDraft.value || historyPending.value) return false
+    getCancelCommand()()
+    const document = getDocument()
+    const generation = bumpHistoryGeneration(),
+      before = document.value,
+      target = getHistory()
+    const current = () =>
+      !restoreDisposed &&
+      props.open &&
+      generation === getHistoryGeneration() &&
+      document.value === before &&
+      target === getHistory()
+    historyMode.value = 'restore'
+    historyPending.value = true
+    try {
+      const applied = await target.commitAsync(async () => {
+        const next = await historyWorker.run({ kind: 'restoreDocument', text, verifyNative: true })
+        if (!current())
+          throw Error(label('Документ изменился во время восстановления.', 'Document changed while restoring.'))
+        return next
+      })
+      if (!applied || !current()) return false
+      error.value = ''
+      getSync()()
+      return true
+    } catch (e) {
+      if (current()) {
+        saveError.value = true
+        error.value =
+          label('Не удалось восстановить конфликтную копию: ', 'Could not restore the conflict copy: ') +
+          (e instanceof Error ? e.message : String(e))
+      }
+      return false
+    } finally {
+      if (generation === getHistoryGeneration()) historyPending.value = false
+    }
+  }
+
   function persist() {
     const document = getDocument()
     const generation = ++saveGeneration,
@@ -207,45 +253,25 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     savePending.value = true
     // Serialization finishes before the asynchronous write. Only top-level empty
     // collections are omitted; cloning materialized instance geometry is unnecessary.
-    const persisted = { ...document.value }
-    if (!persisted.curves?.length) delete persisted.curves
-    if (!persisted.surfaces?.length) delete persisted.surfaces
-    const text = serializeDirectDocument(persisted)
-    void withSolidDraftLock(key, async () => {
-      await durableReady
-      if (generation !== saveGeneration || restoreDisposed) return
-      if (storageGet(key) !== previous) {
-        draftConflict.value = true
-        throw Error('DRAFT_CONFLICT')
-      }
-      let marker: string | undefined
-      try {
-        if (text.length > MAX_DRAFT_CHARACTERS) marker = await writeSolidDraftSnapshot(text)
-        if (generation !== saveGeneration || restoreDisposed) {
-          if (marker) await removeSolidDraftSnapshot(marker)
-          return
-        }
-        const head = await writeSolidDraftHead(
-          key,
-          persistedRevision,
-          text,
-          () => generation === saveGeneration && !restoreDisposed,
-        )
-        persistedRevision = head.revision
-        if (generation !== saveGeneration || restoreDisposed) {
-          if (marker) await removeSolidDraftSnapshot(marker)
-          return
-        }
-        const reference = marker ?? text
-        if (!storageSet(key, reference)) throw Error('DRAFT_REFERENCE_FAILED')
-        stored = persistedReference = reference
+    // After a commit or restore the history already holds the full serialization.
+    const text = serializeDirectDraft(document.value, getHistory().canonicalText(document.value))
+    const live = () => generation === saveGeneration && !restoreDisposed
+    void saveSolidDraft(storageIo, {
+      ready: durableReady,
+      key,
+      text,
+      expectedRevision: () => persistedRevision,
+      expectedPointer: previous,
+      inlineLimit: MAX_DRAFT_CHARACTERS,
+      current: live,
+      // Runs inside the lock so the next queued save compares against this revision.
+      committed: result => {
+        if (result.revision) persistedRevision = result.revision
+        if (result.pointer === null || !live()) return
+        stored = persistedReference = result.pointer
         saveError.value = false
         draftConflict.value = false
-        await removeSolidDraftSnapshot(previous).catch(() => {})
-      } catch (e) {
-        if (marker && stored !== marker) void removeSolidDraftSnapshot(marker).catch(() => {})
-        throw e
-      }
+      },
     })
       .catch(e => {
         if (generation === saveGeneration && !restoreDisposed) {
@@ -337,17 +363,11 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
       kernelReady.value = true
       if (!restoringDraft.value || !current()) return
       const head = await durableReady
-      const text =
-        head?.text ??
-        (reference
-          ? solidDraftSnapshotId(reference)
-            ? await readSolidDraftSnapshot(reference)
-            : reference
-          : null)
+      const text = await solidDraftRecoveryText(head, reference, readSolidDraftSnapshot)
       if (!current()) return
       if (text) {
         const applied = await target.resetAsync(async () => {
-          const recovered = await draftRecoveryWorker.run({ kind: 'restoreDocument', text })
+          const recovered = await draftRecoveryWorker.run({ kind: 'restoreDocument', text, verifyNative: true })
           if (!current()) throw Error('Draft recovery cancelled.')
           if (!head)
             await withSolidDraftLock(key, async () => {
@@ -366,7 +386,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
         if (!applied || !current()) return
         const snapDocument = getSnapDocument()
         const document = getDocument()
-        snapDocument.value = history.document
+        snapDocument.value = history.syncedDocument
         document.value = snapDocument.value
         error.value = ''
         saveError.value = false
@@ -392,8 +412,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
                 'Сохранённый снимок отсутствует или повреждён. Импортируйте резервный JSON через меню «Файл».',
                 detail,
               )
-            : label('Не удалось восстановить сохранённый документ: ', 'Could not restore the saved document: ') +
-              detail
+            : label('Не удалось восстановить сохранённый документ: ', 'Could not restore the saved document: ') + detail
     } finally {
       if (generation === draftRecoveryGeneration) {
         restoringDraft.value = false
@@ -412,6 +431,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     isRestoreDisposed: () => restoreDisposed,
     getSaveGeneration: () => saveGeneration,
     loadLatestDraft,
+    restoreConflictCopy,
     persist,
     kernelReady,
     kernelLoadError,

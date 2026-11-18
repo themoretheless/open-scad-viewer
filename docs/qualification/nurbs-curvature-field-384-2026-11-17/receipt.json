@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0384",
+  "testedBase": "0dc70c910c9d61df9e32565645bb2a29ea69c056",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 93,
+  "scope": [
+    "Close a shell with mixed exact and rounded section caps under shared verification budgets.",
+    "Each plane has independent selection and support tolerances. The cumulative work and agreement budgets apply across all caps, and results are emitted only for a fully closed selected shell."
+  ],
+  "logSha256": "fc95fed55343f2a9e341e67b19435b2e417b3d121e00c8eaf1be84543e67f445",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "af8919aaf8a9b88b373a91a180ab5c6e95b55f413d4ecd6a1739cd3268d1b76e",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "96b2aa48a15726b8cedefab0aacee88505dd5e3158f7e675a3a848d2487df6a7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "e8cbb2b63c578780dd22fbf7d1c51125d771a31859c4353e0df0fe264505b4f3",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "11c4cf255221f7ff6433efe701cebe75289de3ae4ff2a4f7bd8b2b2a68be5a02"
+  }
+}

@@ -1,34 +1,14 @@
 // assetEvaluator: surfaceCallSource.
-import type { CadKernelHandle } from '../../services/cadKernelOps'
+import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import type { CallNode, ExpressionArgument, Value } from '../../services/openscadCompiler'
-
-import { formatOpenScadValue } from '../../services/openScadValueSemantics'
+import type { CallNode, ExpressionArgument, Value } from '../../language/openscadCompiler'
 
 import {
   resolveOpenScadFragments,
   type OpenScadFragmentResolutionInput,
-} from '../../services/openScadStableModuleSemantics'
+} from '../../language/semantic/openScadStableModuleSemantics'
 
-import {
-  OpenScadProjectError,
-  resolveOpenScadProjectPath,
-} from '../../services/openScadProject'
-
-import {
-  loadPreparedOpenScadImport,
-  OpenScadImportError,
-  OpenScadImportPositionedError,
-  type OpenScad2021LegacyImportFormat,
-  type OpenScadImportErrorCode,
-} from '../../services/openScadImport'
-
-import {
-  loadOpenScadSurfaceHeightMap,
-  OpenScadSurfaceDataError,
-  OpenScadSurfaceError,
-  triangulateOpenScadSurface,
-} from '../../services/openScadSurface'
+import { OpenScadImportPositionedError, type OpenScadImportErrorCode } from '../../exchange/openScadImport'
 
 import {
   OpenScadTextError,
@@ -36,34 +16,22 @@ import {
   renderOpenScadText,
   type OpenScadTextErrorCode,
   type OpenScadTextParameters,
-} from '../../services/openScadText'
+} from '../../language/openScadText'
 
-import { nextColor } from '../../services/openscadColors'
+import { nextColor } from '../../language/openscadColors'
 
-import {
-  type EvalContext,
-  type Shape,
-  type Vec2,
-} from '.././types'
+import { type EvalContext, type Shape, type Vec2 } from '.././types'
 
 import { callExpressionArguments } from '.././astDiscovery'
 
-import {
-  arg,
-  compatibilityString,
-  currentEntityId,
-  evalExpression,
-  evaluateStableBuiltinModuleArguments,
-  resolveStableVariable,
-  trackedSolid,
-  warn,
-} from '.././expressionEvaluator'
+import { currentEntityId, evalExpression, resolveStableVariable, warn } from '.././expressionEvaluator'
 
 import { stableModuleSemanticsContext } from '.././geometryEvaluator'
 
-
-
-export function surfaceCallSource(node: CallNode, ctx: EvalContext): {
+export function surfaceCallSource(
+  node: CallNode,
+  ctx: EvalContext,
+): {
   readonly source: string
   readonly sourcePath: string
 } {
@@ -75,13 +43,7 @@ export function surfaceCallSource(node: CallNode, ctx: EvalContext): {
   }
 }
 
-
-export const TEXT_POSITIONAL_PARAMETERS = Object.freeze([
-  'text',
-  'size',
-  'font',
-] as const)
-
+export const TEXT_POSITIONAL_PARAMETERS = Object.freeze(['text', 'size', 'font'] as const)
 
 export const TEXT_NAMED_PARAMETERS = new Set([
   ...TEXT_POSITIONAL_PARAMETERS,
@@ -95,7 +57,6 @@ export const TEXT_NAMED_PARAMETERS = new Set([
   '$fa',
   '$fs',
 ])
-
 
 export function textArgumentValues(node: CallNode, ctx: EvalContext): Map<string, Value> {
   const resolved = new Map<string, ExpressionArgument>()
@@ -122,7 +83,6 @@ export function textArgumentValues(node: CallNode, ctx: EvalContext): Map<string
   return values
 }
 
-
 export function textCallError(
   node: CallNode,
   ctx: EvalContext,
@@ -136,7 +96,6 @@ export function textCallError(
     ...details,
   })
 }
-
 
 export function textStringParameter(
   values: ReadonlyMap<string, Value>,
@@ -152,7 +111,6 @@ export function textStringParameter(
   return value
 }
 
-
 export function textNumberParameter(
   value: Value,
   name: string,
@@ -167,7 +125,6 @@ export function textNumberParameter(
   return selected
 }
 
-
 export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
   if (ctx.project === undefined || ctx.textAssets === undefined) {
     return textCallError(
@@ -179,9 +136,7 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   const authored = surfaceCallSource(node, ctx)
-  const argumentContext = authored.source === ctx.source
-    ? ctx
-    : { ...ctx, source: authored.source }
+  const argumentContext = authored.source === ctx.source ? ctx : { ...ctx, source: authored.source }
   const values = textArgumentValues(node, argumentContext)
   const size = textNumberParameter(values.get('size'), 'size', 10, node, argumentContext)
   const textSpecial = (name: '$fn' | '$fa' | '$fs'): { present: boolean; value: Value } => {
@@ -189,7 +144,9 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
     const inherited = resolveStableVariable(name, argumentContext)
     return { present: inherited.found, value: inherited.value }
   }
-  const textFn = textSpecial('$fn'), textFa = textSpecial('$fa'), textFs = textSpecial('$fs')
+  const textFn = textSpecial('$fn'),
+    textFa = textSpecial('$fa'),
+    textFs = textSpecial('$fs')
   const textFragmentInput: OpenScadFragmentResolutionInput = {
     radius: Math.max(0, size),
     quality: argumentContext.quality,
@@ -197,10 +154,7 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
     ...(textFa.present ? { fa: textFa.value } : {}),
     ...(textFs.present ? { fs: textFs.value } : {}),
   }
-  const textFragments = resolveOpenScadFragments(
-    textFragmentInput,
-    stableModuleSemanticsContext(argumentContext),
-  )
+  const textFragments = resolveOpenScadFragments(textFragmentInput, stableModuleSemanticsContext(argumentContext))
   if (textFragments.reduced) argumentContext.reduced.value = true
   const parameters: OpenScadTextParameters = {
     text: textStringParameter(values, 'text', '', node, argumentContext),
@@ -220,12 +174,7 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   try {
-    const layout = renderOpenScadText(
-      ctx.project,
-      ctx.textAssets,
-      parameters,
-      authored.sourcePath,
-    )
+    const layout = renderOpenScadText(ctx.project, ctx.textAssets, parameters, authored.sourcePath)
     const sections: CadKernelHandle[] = []
     for (const glyph of layout.glyphs) {
       if (glyph.contours.length === 0) continue
@@ -236,16 +185,17 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
       if (!ctx.kernel.isEmpty(section)) sections.push(section)
     }
     if (sections.length === 0) return []
-    const geometry = sections.length === 1
-      ? sections[0]
-      : ctx.kernel.boolean2('union', sections)
+    const [onlySection] = sections
+    const geometry = sections.length === 1 && onlySection ? onlySection : ctx.kernel.boolean2('union', sections)
     if (ctx.kernel.isEmpty(geometry)) return []
-    return [{
-      dimension: 2,
-      geometry,
-      color: nextColor(),
-      entityId: currentEntityId(ctx),
-    }]
+    return [
+      {
+        dimension: 2,
+        geometry,
+        color: nextColor(),
+        entityId: currentEntityId(ctx),
+      },
+    ]
   } catch (error) {
     if (error instanceof OpenScadTextPositionedError) throw error
     if (error instanceof OpenScadTextError) {
@@ -262,15 +212,7 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
   }
 }
 
-
-export const IMPORT_POSITIONAL_PARAMETERS = Object.freeze([
-  'file',
-  'layer',
-  'convexity',
-  'origin',
-  'scale',
-] as const)
-
+export const IMPORT_POSITIONAL_PARAMETERS = Object.freeze(['file', 'layer', 'convexity', 'origin', 'scale'] as const)
 
 export const IMPORT_NAMED_PARAMETERS = new Set([
   ...IMPORT_POSITIONAL_PARAMETERS,
@@ -282,7 +224,6 @@ export const IMPORT_NAMED_PARAMETERS = new Set([
   '$fa',
   '$fs',
 ])
-
 
 export function importArgumentValues(node: CallNode, ctx: EvalContext): Map<string, Value> {
   const resolved = new Map<string, ExpressionArgument>()
@@ -308,7 +249,6 @@ export function importArgumentValues(node: CallNode, ctx: EvalContext): Map<stri
   for (const [name, argument] of resolved) values.set(name, evalExpression(argument.value, ctx))
   return values
 }
-
 
 export function importCallError(
   node: CallNode,

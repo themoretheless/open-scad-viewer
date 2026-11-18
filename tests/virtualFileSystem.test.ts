@@ -4,7 +4,7 @@ import {
   VirtualFileSystem,
   normalizeVirtualPath,
   resolveVirtualPath,
-} from '../src/services/virtualFileSystem'
+} from '../src/app/virtualFileSystem'
 
 describe('virtual project filesystem', () => {
   it('resolves deterministic project-relative dependencies without host access', () => {
@@ -23,8 +23,25 @@ describe('virtual project filesystem', () => {
     expect(() => normalizeVirtualPath('C:\\secret.scad')).toThrow('project-relative')
     expect(() => normalizeVirtualPath('https://example.com/a.scad')).toThrow('project-relative')
     expect(() => normalizeVirtualPath('a//b.scad')).toThrow('project-relative')
-    expect(() => new VirtualFileSystem([{ path: 'a.scad', source: '' }, { path: './a.scad', source: '' }])).toThrow('Duplicate')
-    expect(() => new VirtualFileSystem([{ path: 'café.scad', source: '' }, { path: 'café.scad', source: '' }])).toThrow('Duplicate')
-    expect(() => new VirtualFileSystem(Array.from({ length: MAX_PROJECT_FILES + 1 }, (_, index) => ({ path: `${index}.scad`, source: '' })))).toThrow('exceeds')
+    expect(
+      () =>
+        new VirtualFileSystem([
+          { path: 'a.scad', source: '' },
+          { path: './a.scad', source: '' },
+        ]),
+    ).toThrow('Duplicate')
+    expect(
+      () =>
+        new VirtualFileSystem([
+          { path: 'café.scad', source: '' },
+          { path: 'café.scad', source: '' },
+        ]),
+    ).toThrow('Duplicate')
+    expect(
+      () =>
+        new VirtualFileSystem(
+          Array.from({ length: MAX_PROJECT_FILES + 1 }, (_, index) => ({ path: `${index}.scad`, source: '' })),
+        ),
+    ).toThrow('exceeds')
   })
 })

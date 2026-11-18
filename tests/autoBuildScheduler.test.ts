@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AutoBuildScheduler } from '../src/services/autoBuildScheduler'
+import { AutoBuildScheduler } from '../src/app/autoBuildScheduler'
 
 function harness() {
   vi.useFakeTimers()

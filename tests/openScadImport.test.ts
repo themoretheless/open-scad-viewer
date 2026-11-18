@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { deflateRawSync, gzipSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import differential from './fixtures/open-scad-import-2021.json'
-import { OpenScadProject, type OpenScadProjectFileInput } from '../src/services/openScadProject'
+import { OpenScadProject, type OpenScadProjectFileInput } from '../src/language/openScadProject'
 import {
   OPENSCAD_IMPORT_CAPABILITIES,
   OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES,
@@ -21,21 +21,15 @@ import {
   queryPreparedOpenScadDxfDimension,
   type OpenScadImportGeometry2D,
   type OpenScadImportGeometry3D,
-} from '../src/services/openScadImport'
+} from '../src/exchange/openScadImport'
 
 const UTF8 = new TextEncoder()
-const LEGACY_DIMENSIONED_DXF = readFileSync(
-  new URL('./fixtures/legacy-dimensioned.dxf', import.meta.url),
-  'utf8',
-)
+const LEGACY_DIMENSIONED_DXF = readFileSync(new URL('./fixtures/legacy-dimensioned.dxf', import.meta.url), 'utf8')
 
 function project(extraFiles: readonly OpenScadProjectFileInput[]): OpenScadProject {
   return new OpenScadProject({
     entrypoint: 'models/main.scad',
-    files: [
-      { kind: 'source', path: 'models/main.scad', source: '' },
-      ...extraFiles,
-    ],
+    files: [{ kind: 'source', path: 'models/main.scad', source: '' }, ...extraFiles],
   })
 }
 
@@ -92,7 +86,10 @@ function zip(
   })
   const localExtraSize = options.zip64 ? 20 : 0
   const centralExtraSize = options.zip64 ? 28 : 0
-  const localSize = encoded.reduce((sum, entry) => sum + 30 + entry.name.length + localExtraSize + entry.compressed.length, 0)
+  const localSize = encoded.reduce(
+    (sum, entry) => sum + 30 + entry.name.length + localExtraSize + entry.compressed.length,
+    0,
+  )
   const centralSize = encoded.reduce((sum, entry) => sum + 46 + entry.name.length + centralExtraSize, 0)
   const zip64Trailer = options.zip64 ? 76 : 0
   const comment = options.comment ?? new Uint8Array()
@@ -102,77 +99,136 @@ function zip(
   let offset = 0
   for (const entry of encoded) {
     entry.offset = offset
-    view.setUint32(offset, 0x04034b50, true); offset += 4
-    view.setUint16(offset, options.zip64 ? 45 : 20, true); offset += 2
-    view.setUint16(offset, 0x0800, true); offset += 2
-    view.setUint16(offset, entry.method, true); offset += 2
-    view.setUint32(offset, 0, true); offset += 4
-    view.setUint32(offset, entry.crc, true); offset += 4
-    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.compressed.length, true); offset += 4
-    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.data.length, true); offset += 4
-    view.setUint16(offset, entry.name.length, true); offset += 2
-    view.setUint16(offset, localExtraSize, true); offset += 2
-    output.set(entry.name, offset); offset += entry.name.length
+    view.setUint32(offset, 0x04034b50, true)
+    offset += 4
+    view.setUint16(offset, options.zip64 ? 45 : 20, true)
+    offset += 2
+    view.setUint16(offset, 0x0800, true)
+    offset += 2
+    view.setUint16(offset, entry.method, true)
+    offset += 2
+    view.setUint32(offset, 0, true)
+    offset += 4
+    view.setUint32(offset, entry.crc, true)
+    offset += 4
+    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.compressed.length, true)
+    offset += 4
+    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.data.length, true)
+    offset += 4
+    view.setUint16(offset, entry.name.length, true)
+    offset += 2
+    view.setUint16(offset, localExtraSize, true)
+    offset += 2
+    output.set(entry.name, offset)
+    offset += entry.name.length
     if (options.zip64) {
-      view.setUint16(offset, 0x0001, true); offset += 2
-      view.setUint16(offset, 16, true); offset += 2
-      u64(offset, entry.data.length); offset += 8
-      u64(offset, entry.compressed.length); offset += 8
+      view.setUint16(offset, 0x0001, true)
+      offset += 2
+      view.setUint16(offset, 16, true)
+      offset += 2
+      u64(offset, entry.data.length)
+      offset += 8
+      u64(offset, entry.compressed.length)
+      offset += 8
     }
-    output.set(entry.compressed, offset); offset += entry.compressed.length
+    output.set(entry.compressed, offset)
+    offset += entry.compressed.length
   }
   const centralOffset = offset
   for (const entry of encoded) {
-    view.setUint32(offset, 0x02014b50, true); offset += 4
-    view.setUint16(offset, options.zip64 ? 45 : 20, true); offset += 2
-    view.setUint16(offset, options.zip64 ? 45 : 20, true); offset += 2
-    view.setUint16(offset, 0x0800, true); offset += 2
-    view.setUint16(offset, entry.method, true); offset += 2
-    view.setUint32(offset, 0, true); offset += 4
-    view.setUint32(offset, entry.crc, true); offset += 4
-    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.compressed.length, true); offset += 4
-    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.data.length, true); offset += 4
-    view.setUint16(offset, entry.name.length, true); offset += 2
-    view.setUint16(offset, centralExtraSize, true); offset += 2
-    view.setUint16(offset, 0, true); offset += 2
-    view.setUint16(offset, 0, true); offset += 2
-    view.setUint16(offset, 0, true); offset += 2
-    view.setUint32(offset, 0, true); offset += 4
-    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.offset, true); offset += 4
-    output.set(entry.name, offset); offset += entry.name.length
+    view.setUint32(offset, 0x02014b50, true)
+    offset += 4
+    view.setUint16(offset, options.zip64 ? 45 : 20, true)
+    offset += 2
+    view.setUint16(offset, options.zip64 ? 45 : 20, true)
+    offset += 2
+    view.setUint16(offset, 0x0800, true)
+    offset += 2
+    view.setUint16(offset, entry.method, true)
+    offset += 2
+    view.setUint32(offset, 0, true)
+    offset += 4
+    view.setUint32(offset, entry.crc, true)
+    offset += 4
+    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.compressed.length, true)
+    offset += 4
+    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.data.length, true)
+    offset += 4
+    view.setUint16(offset, entry.name.length, true)
+    offset += 2
+    view.setUint16(offset, centralExtraSize, true)
+    offset += 2
+    view.setUint16(offset, 0, true)
+    offset += 2
+    view.setUint16(offset, 0, true)
+    offset += 2
+    view.setUint16(offset, 0, true)
+    offset += 2
+    view.setUint32(offset, 0, true)
+    offset += 4
+    view.setUint32(offset, options.zip64 ? 0xffffffff : entry.offset, true)
+    offset += 4
+    output.set(entry.name, offset)
+    offset += entry.name.length
     if (options.zip64) {
-      view.setUint16(offset, 0x0001, true); offset += 2
-      view.setUint16(offset, 24, true); offset += 2
-      u64(offset, entry.data.length); offset += 8
-      u64(offset, entry.compressed.length); offset += 8
-      u64(offset, entry.offset); offset += 8
+      view.setUint16(offset, 0x0001, true)
+      offset += 2
+      view.setUint16(offset, 24, true)
+      offset += 2
+      u64(offset, entry.data.length)
+      offset += 8
+      u64(offset, entry.compressed.length)
+      offset += 8
+      u64(offset, entry.offset)
+      offset += 8
     }
   }
   const centralLength = offset - centralOffset
   if (options.zip64) {
     const zip64Offset = offset
-    view.setUint32(offset, 0x06064b50, true); offset += 4
-    u64(offset, 44); offset += 8
-    view.setUint16(offset, 45, true); offset += 2
-    view.setUint16(offset, 45, true); offset += 2
-    view.setUint32(offset, 0, true); offset += 4
-    view.setUint32(offset, 0, true); offset += 4
-    u64(offset, encoded.length); offset += 8
-    u64(offset, encoded.length); offset += 8
-    u64(offset, centralLength); offset += 8
-    u64(offset, centralOffset); offset += 8
-    view.setUint32(offset, 0x07064b50, true); offset += 4
-    view.setUint32(offset, 0, true); offset += 4
-    u64(offset, zip64Offset); offset += 8
-    view.setUint32(offset, 1, true); offset += 4
+    view.setUint32(offset, 0x06064b50, true)
+    offset += 4
+    u64(offset, 44)
+    offset += 8
+    view.setUint16(offset, 45, true)
+    offset += 2
+    view.setUint16(offset, 45, true)
+    offset += 2
+    view.setUint32(offset, 0, true)
+    offset += 4
+    view.setUint32(offset, 0, true)
+    offset += 4
+    u64(offset, encoded.length)
+    offset += 8
+    u64(offset, encoded.length)
+    offset += 8
+    u64(offset, centralLength)
+    offset += 8
+    u64(offset, centralOffset)
+    offset += 8
+    view.setUint32(offset, 0x07064b50, true)
+    offset += 4
+    view.setUint32(offset, 0, true)
+    offset += 4
+    u64(offset, zip64Offset)
+    offset += 8
+    view.setUint32(offset, 1, true)
+    offset += 4
   }
-  view.setUint32(offset, 0x06054b50, true); offset += 4
-  view.setUint32(offset, 0, true); offset += 4
-  view.setUint16(offset, options.zip64 ? 0xffff : encoded.length, true); offset += 2
-  view.setUint16(offset, options.zip64 ? 0xffff : encoded.length, true); offset += 2
-  view.setUint32(offset, options.zip64 ? 0xffffffff : centralLength, true); offset += 4
-  view.setUint32(offset, options.zip64 ? 0xffffffff : centralOffset, true); offset += 4
-  view.setUint16(offset, comment.length, true); offset += 2
+  view.setUint32(offset, 0x06054b50, true)
+  offset += 4
+  view.setUint32(offset, 0, true)
+  offset += 4
+  view.setUint16(offset, options.zip64 ? 0xffff : encoded.length, true)
+  offset += 2
+  view.setUint16(offset, options.zip64 ? 0xffff : encoded.length, true)
+  offset += 2
+  view.setUint32(offset, options.zip64 ? 0xffffffff : centralLength, true)
+  offset += 4
+  view.setUint32(offset, options.zip64 ? 0xffffffff : centralOffset, true)
+  offset += 4
+  view.setUint16(offset, comment.length, true)
+  offset += 2
   output.set(comment, offset)
   return output
 }
@@ -215,11 +271,13 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     expect(OPENSCAD_IMPORT_CAPABILITIES).toEqual({
       profile: 'OpenSCAD-2021.01',
       formats: ['svg', 'dxf', 'stl', 'off', 'amf', '3mf'],
-      conditionalExclusions: [{
-        format: 'nef3',
-        requires: 'CGAL',
-        diagnostic: 'E_IMPORT_NEF3_UNAVAILABLE',
-      }],
+      conditionalExclusions: [
+        {
+          format: 'nef3',
+          requires: 'CGAL',
+          diagnostic: 'E_IMPORT_NEF3_UNAVAILABLE',
+        },
+      ],
     })
   })
 
@@ -274,18 +332,136 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
 
   it('imports ASCII DXF layers, closed/open chains, curves, and transformed BLOCK inserts', async () => {
     const dxf = [
-      '0','SECTION','2','BLOCKS',
-      '0','BLOCK','2','PART','10','1','20','1',
-      '0','LWPOLYLINE','8','0','70','1','10','1','20','1','10','3','20','1','10','1','20','3',
-      '0','ENDBLK','0','ENDSEC',
-      '0','SECTION','2','ENTITIES',
-      '0','INSERT','8','inserted','2','PART','10','10','20','20','41','2','42','3','50','90',
-      '0','LWPOLYLINE','8','cut','70','1','10','1','20','2','42','1','10','5','20','2','10','5','20','6','10','1','20','6',
-      '0','LINE','8','open','10','0','20','0','11','4','21','0',
-      '0','LINE','8','open','10','4','20','0','11','2','21','3',
-      '0','ARC','8','arc','10','20','20','20','40','3','50','0','51','180',
-      '0','CIRCLE','8','circle','10','30','20','30','40','2',
-      '0','ENDSEC','0','EOF',
+      '0',
+      'SECTION',
+      '2',
+      'BLOCKS',
+      '0',
+      'BLOCK',
+      '2',
+      'PART',
+      '10',
+      '1',
+      '20',
+      '1',
+      '0',
+      'LWPOLYLINE',
+      '8',
+      '0',
+      '70',
+      '1',
+      '10',
+      '1',
+      '20',
+      '1',
+      '10',
+      '3',
+      '20',
+      '1',
+      '10',
+      '1',
+      '20',
+      '3',
+      '0',
+      'ENDBLK',
+      '0',
+      'ENDSEC',
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'INSERT',
+      '8',
+      'inserted',
+      '2',
+      'PART',
+      '10',
+      '10',
+      '20',
+      '20',
+      '41',
+      '2',
+      '42',
+      '3',
+      '50',
+      '90',
+      '0',
+      'LWPOLYLINE',
+      '8',
+      'cut',
+      '70',
+      '1',
+      '10',
+      '1',
+      '20',
+      '2',
+      '42',
+      '1',
+      '10',
+      '5',
+      '20',
+      '2',
+      '10',
+      '5',
+      '20',
+      '6',
+      '10',
+      '1',
+      '20',
+      '6',
+      '0',
+      'LINE',
+      '8',
+      'open',
+      '10',
+      '0',
+      '20',
+      '0',
+      '11',
+      '4',
+      '21',
+      '0',
+      '0',
+      'LINE',
+      '8',
+      'open',
+      '10',
+      '4',
+      '20',
+      '0',
+      '11',
+      '2',
+      '21',
+      '3',
+      '0',
+      'ARC',
+      '8',
+      'arc',
+      '10',
+      '20',
+      '20',
+      '20',
+      '40',
+      '3',
+      '50',
+      '0',
+      '51',
+      '180',
+      '0',
+      'CIRCLE',
+      '8',
+      'circle',
+      '10',
+      '30',
+      '20',
+      '30',
+      '40',
+      '2',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
     ].join('\n')
     const parsed = parseOpenScadDxf(sourceFile('asset.dxf', dxf))
     expect(new Set(parsed.regions.map(region => region.layer))).toEqual(
@@ -295,24 +471,25 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
 
     const bundle = project([{ kind: 'source', path: 'assets/asset.dxf', source: dxf }])
     const prepared = await prepareOpenScadImportAssets(bundle)
-    const transformed = loadPreparedOpenScadImport(
-      bundle,
-      prepared,
-      'models/main.scad',
-      '../assets/asset.dxf',
-      { layer: 'cut', origin: [1, 2], scale: 2, center: false },
-    )
+    const transformed = loadPreparedOpenScadImport(bundle, prepared, 'models/main.scad', '../assets/asset.dxf', {
+      layer: 'cut',
+      origin: [1, 2],
+      scale: 2,
+      center: false,
+    })
     expect(transformed.dimension).toBe(2)
     if (transformed.dimension !== 2) throw new Error('Expected 2D import')
     expect(bounds2(transformed)).toEqual({ minimum: [0, 0], maximum: [8, 8] })
   })
 
   it('preserves bounded DXF query metadata independently from filled import geometry', async () => {
-    const bundle = project([{
-      kind: 'source',
-      path: 'fixtures/legacy-dimensioned.dxf',
-      source: LEGACY_DIMENSIONED_DXF,
-    }])
+    const bundle = project([
+      {
+        kind: 'source',
+        path: 'fixtures/legacy-dimensioned.dxf',
+        source: LEGACY_DIMENSIONED_DXF,
+      },
+    ])
     const direct = parseOpenScadDxfQueryMetadata(bundle.read('fixtures/legacy-dimensioned.dxf')!)
     expect(direct.dimensions.map(dimension => dimension.name)).toEqual([
       'block_raw',
@@ -338,21 +515,20 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
   })
 
   it('evaluates 2021.01 dxf_dim coordinate groups, transforms, selection, and warnings', async () => {
-    const bundle = project([{
-      kind: 'source',
-      path: 'fixtures/legacy-dimensioned.dxf',
-      source: LEGACY_DIMENSIONED_DXF,
-    }])
+    const bundle = project([
+      {
+        kind: 'source',
+        path: 'fixtures/legacy-dimensioned.dxf',
+        source: LEGACY_DIMENSIONED_DXF,
+      },
+    ])
     const prepared = await prepareOpenScadImportAssets(bundle)
-    const query = (name: string, options: { origin?: readonly [number, number]; scale?: number } = {}) => (
-      queryPreparedOpenScadDxfDimension(
-        bundle,
-        prepared,
-        'models/main.scad',
-        '../fixtures/legacy-dimensioned.dxf',
-        { layer: name === 'block_raw' ? 'block_dims' : 'dims', name, ...options },
-      )
-    )
+    const query = (name: string, options: { origin?: readonly [number, number]; scale?: number } = {}) =>
+      queryPreparedOpenScadDxfDimension(bundle, prepared, 'models/main.scad', '../fixtures/legacy-dimensioned.dxf', {
+        layer: name === 'block_raw' ? 'block_dims' : 'dims',
+        name,
+        ...options,
+      })
 
     expect(query('contract_dimension')).toEqual({ value: 6, diagnostics: [] })
     expect(query('aligned', { origin: [1, 2], scale: 2 })).toEqual({ value: 10, diagnostics: [] })
@@ -373,11 +549,13 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
   })
 
   it('builds dxf_cross paths after layer filtering and intersects the first two eligible paths', async () => {
-    const bundle = project([{
-      kind: 'source',
-      path: 'fixtures/legacy-dimensioned.dxf',
-      source: LEGACY_DIMENSIONED_DXF,
-    }])
+    const bundle = project([
+      {
+        kind: 'source',
+        path: 'fixtures/legacy-dimensioned.dxf',
+        source: LEGACY_DIMENSIONED_DXF,
+      },
+    ])
     const prepared = await prepareOpenScadImportAssets(bundle)
     const cross = queryPreparedOpenScadDxfCross(
       bundle,
@@ -388,41 +566,86 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     )
     // Infinite lines intersect outside the extent of the first source segment.
     expect(cross).toEqual({ value: [3, 1], diagnostics: [] })
-    expect(queryPreparedOpenScadDxfCross(
-      bundle,
-      prepared,
-      'models/main.scad',
-      '../fixtures/legacy-dimensioned.dxf',
-      { layer: 'contract_cross', origin: [1, -1], scale: 2 },
-    )).toEqual({ value: [4, 4], diagnostics: [] })
+    expect(
+      queryPreparedOpenScadDxfCross(bundle, prepared, 'models/main.scad', '../fixtures/legacy-dimensioned.dxf', {
+        layer: 'contract_cross',
+        origin: [1, -1],
+        scale: 2,
+      }),
+    ).toEqual({ value: [4, 4], diagnostics: [] })
     // A parallel first pair terminates the 2021.01 search; later paths are ignored.
-    expect(queryPreparedOpenScadDxfCross(
-      bundle,
-      prepared,
-      'models/main.scad',
-      '../fixtures/legacy-dimensioned.dxf',
-      { layer: 'parallel' },
-    )).toMatchObject({
+    expect(
+      queryPreparedOpenScadDxfCross(bundle, prepared, 'models/main.scad', '../fixtures/legacy-dimensioned.dxf', {
+        layer: 'parallel',
+      }),
+    ).toMatchObject({
       value: undefined,
       diagnostics: [{ severity: 'warning', code: 'OPENSCAD_DXF_CROSS_NOT_FOUND' }],
     })
 
     const layerJoinDxf = [
-      '0','SECTION','2','ENTITIES',
-      '0','LINE','8','a','10','0','20','0','11','1','21','0',
-      '0','LINE','8','b','10','1','20','0','11','2','21','0',
-      '0','LINE','8','c','10','0','20','1','11','2','21','1',
-      '0','LINE','8','d','10','3','20','0','11','3','21','2',
-      '0','ENDSEC','0','EOF',
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'LINE',
+      '8',
+      'a',
+      '10',
+      '0',
+      '20',
+      '0',
+      '11',
+      '1',
+      '21',
+      '0',
+      '0',
+      'LINE',
+      '8',
+      'b',
+      '10',
+      '1',
+      '20',
+      '0',
+      '11',
+      '2',
+      '21',
+      '0',
+      '0',
+      'LINE',
+      '8',
+      'c',
+      '10',
+      '0',
+      '20',
+      '1',
+      '11',
+      '2',
+      '21',
+      '1',
+      '0',
+      'LINE',
+      '8',
+      'd',
+      '10',
+      '3',
+      '20',
+      '0',
+      '11',
+      '3',
+      '21',
+      '2',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
     ].join('\n')
     const joinedBundle = project([{ kind: 'source', path: 'assets/joined.dxf', source: layerJoinDxf }])
     const joinedPrepared = await prepareOpenScadImportAssets(joinedBundle)
-    expect(queryPreparedOpenScadDxfCross(
-      joinedBundle,
-      joinedPrepared,
-      'models/main.scad',
-      '../assets/joined.dxf',
-    )).toEqual({ value: [3, 1], diagnostics: [] })
+    expect(
+      queryPreparedOpenScadDxfCross(joinedBundle, joinedPrepared, 'models/main.scad', '../assets/joined.dxf'),
+    ).toEqual({ value: [3, 1], diagnostics: [] })
   })
 
   it('prepares legacy import_stl/import_off/import_dxf decoders for neutral extensions', async () => {
@@ -439,10 +662,32 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     ].join('\n')
     const off = ['OFF', '3 1 0', '0 0 0', '1 0 0', '0 1 0', '3 0 1 2'].join('\n')
     const dxf = [
-      '0','SECTION','2','ENTITIES',
-      '0','LWPOLYLINE','8','0','70','1',
-      '10','0','20','0','10','2','20','0','10','0','20','2',
-      '0','ENDSEC','0','EOF',
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'LWPOLYLINE',
+      '8',
+      '0',
+      '70',
+      '1',
+      '10',
+      '0',
+      '20',
+      '0',
+      '10',
+      '2',
+      '20',
+      '0',
+      '10',
+      '0',
+      '20',
+      '2',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
     ].join('\n')
     const bundle = project([
       { kind: 'source', path: 'assets/mesh.stldata', source: asciiStl },
@@ -459,67 +704,81 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     expect(prepared.assets.size).toBe(0)
     expect(prepared.forcedAssets.size).toBe(3)
 
-    const loadedStl = loadPreparedOpenScadImport(
-      bundle, prepared, 'models/main.scad', '../assets/mesh.stldata', { forcedFormat: 'stl' },
-    )
-    const loadedOff = loadPreparedOpenScadImport(
-      bundle, prepared, 'models/main.scad', '../assets/mesh.offdata', { forcedFormat: 'off' },
-    )
-    const loadedDxf = loadPreparedOpenScadImport(
-      bundle, prepared, 'models/main.scad', '../assets/shape.dxfdata', { forcedFormat: 'dxf' },
-    )
+    const loadedStl = loadPreparedOpenScadImport(bundle, prepared, 'models/main.scad', '../assets/mesh.stldata', {
+      forcedFormat: 'stl',
+    })
+    const loadedOff = loadPreparedOpenScadImport(bundle, prepared, 'models/main.scad', '../assets/mesh.offdata', {
+      forcedFormat: 'off',
+    })
+    const loadedDxf = loadPreparedOpenScadImport(bundle, prepared, 'models/main.scad', '../assets/shape.dxfdata', {
+      forcedFormat: 'dxf',
+    })
     expect(loadedStl).toMatchObject({ dimension: 3, format: 'stl', triangleCount: 1 })
     expect(loadedOff).toMatchObject({ dimension: 3, format: 'off', triangleCount: 1 })
     expect(loadedDxf).toMatchObject({ dimension: 2, format: 'dxf' })
-    await expect(loadOpenScadImport(
-      bundle,
-      'models/main.scad',
-      '../assets/mesh.offdata',
-      { forcedFormat: 'off' },
-    )).resolves.toMatchObject({ dimension: 3, format: 'off', triangleCount: 1 })
+    await expect(
+      loadOpenScadImport(bundle, 'models/main.scad', '../assets/mesh.offdata', { forcedFormat: 'off' }),
+    ).resolves.toMatchObject({ dimension: 3, format: 'off', triangleCount: 1 })
   })
 
   it('decodes binary and grammar-checked ASCII STL and rejects Float32-collapsed faces', () => {
     const binary = parseOpenScadStl(blobFile('mesh.stl', binaryStl()))
-    const ascii = parseOpenScadStl(sourceFile('mesh.stl', [
-      'solid t',
-      'facet normal 0 0 1',
-      'outer loop',
-      'vertex 0 0 0',
-      'vertex 1 0 0',
-      'vertex 0 1 0',
-      'endloop',
-      'endfacet',
-      'endsolid t',
-    ].join('\n')))
+    const ascii = parseOpenScadStl(
+      sourceFile(
+        'mesh.stl',
+        [
+          'solid t',
+          'facet normal 0 0 1',
+          'outer loop',
+          'vertex 0 0 0',
+          'vertex 1 0 0',
+          'vertex 0 1 0',
+          'endloop',
+          'endfacet',
+          'endsolid t',
+        ].join('\n'),
+      ),
+    )
     expect(binary.triangleCount).toBe(1)
     expect(Array.from(ascii.vertices)).toEqual(Array.from(binary.vertices))
-    expect(() => parseOpenScadStl(sourceFile('bad.stl', [
-      'solid t',
-      'facet normal 0 0 1',
-      'outer loop',
-      'vertex 16777216 0 0',
-      'vertex 16777217 0 0',
-      'vertex 16777216 1 0',
-      'endloop',
-      'endfacet',
-      'endsolid t',
-    ].join('\n')))).toThrow(expect.objectContaining({ code: 'E_IMPORT_EMPTY' }))
+    expect(() =>
+      parseOpenScadStl(
+        sourceFile(
+          'bad.stl',
+          [
+            'solid t',
+            'facet normal 0 0 1',
+            'outer loop',
+            'vertex 16777216 0 0',
+            'vertex 16777217 0 0',
+            'vertex 16777216 1 0',
+            'endloop',
+            'endfacet',
+            'endsolid t',
+          ].join('\n'),
+        ),
+      ),
+    ).toThrow(expect.objectContaining({ code: 'E_IMPORT_EMPTY' }))
     expect(() => parseOpenScadStl(sourceFile('bad.stl', 'solid t\nvertex 0 0 0\nendsolid t'))).toThrow(
       expect.objectContaining({ code: 'E_IMPORT_INVALID_DATA' }),
     )
   })
 
   it('imports OFF/COFF polygon faces with optional per-line colors and concave triangulation', () => {
-    const off = parseOpenScadOff(sourceFile('mesh.off', [
-      'COFF 5 1 0',
-      '0 0 0 255 0 0 255',
-      '2 0 0 255 0 0 255',
-      '2 2 0 255 0 0 255',
-      '1 1 0 255 0 0 255',
-      '0 2 0 255 0 0 255',
-      '5 0 1 2 3 4 0 255 0 255',
-    ].join('\n')))
+    const off = parseOpenScadOff(
+      sourceFile(
+        'mesh.off',
+        [
+          'COFF 5 1 0',
+          '0 0 0 255 0 0 255',
+          '2 0 0 255 0 0 255',
+          '2 2 0 255 0 0 255',
+          '1 1 0 255 0 0 255',
+          '0 2 0 255 0 0 255',
+          '5 0 1 2 3 4 0 255 0 255',
+        ].join('\n'),
+      ),
+    )
     expect(off.triangleCount).toBe(3)
     expect(bounds3(off)).toEqual({ minimum: [0, 0, 0], maximum: [2, 2, 0] })
   })
@@ -541,22 +800,28 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     ].join('')
     const amf = await parseOpenScadAmf(sourceFile('mesh.amf', amfSource))
     expect(amf.triangleCount).toBe(2)
-    expect(bounds3(amf)).toEqual({ minimum: [50.79999923706055, 0, 0], maximum: [76.19999694824219, 25.399999618530273, 25.399999618530273] })
+    expect(bounds3(amf)).toEqual({
+      minimum: [50.79999923706055, 0, 0],
+      maximum: [76.19999694824219, 25.399999618530273, 25.399999618530273],
+    })
 
-    const zipped = await parseOpenScadAmf(blobFile('mesh.amf', zip([{ name: 'scene.amf', source: amfSource, deflate: true }])))
+    const zipped = await parseOpenScadAmf(
+      blobFile('mesh.amf', zip([{ name: 'scene.amf', source: amfSource, deflate: true }])),
+    )
     const gzipped = await parseOpenScadAmf(blobFile('mesh.amf', new Uint8Array(gzipSync(UTF8.encode(amfSource)))))
     expect(Array.from(zipped.vertices)).toEqual(Array.from(amf.vertices))
     expect(Array.from(gzipped.triangles)).toEqual(Array.from(amf.triangles))
   })
 
   it('expands nested AMF constellations once, retains standalone roots, and rejects cycles', async () => {
-    const mesh = (id: string, x: number) => [
-      `<object id="${id}"><mesh><vertices>`,
-      `<vertex><coordinates><x>${x}</x><y>0</y><z>0</z></coordinates></vertex>`,
-      `<vertex><coordinates><x>${x + 1}</x><y>0</y><z>0</z></coordinates></vertex>`,
-      `<vertex><coordinates><x>${x}</x><y>1</y><z>0</z></coordinates></vertex>`,
-      '</vertices><volume><triangle><v1>0</v1><v2>1</v2><v3>2</v3></triangle></volume></mesh></object>',
-    ].join('')
+    const mesh = (id: string, x: number) =>
+      [
+        `<object id="${id}"><mesh><vertices>`,
+        `<vertex><coordinates><x>${x}</x><y>0</y><z>0</z></coordinates></vertex>`,
+        `<vertex><coordinates><x>${x + 1}</x><y>0</y><z>0</z></coordinates></vertex>`,
+        `<vertex><coordinates><x>${x}</x><y>1</y><z>0</z></coordinates></vertex>`,
+        '</vertices><volume><triangle><v1>0</v1><v2>1</v2><v3>2</v3></triangle></volume></mesh></object>',
+      ].join('')
     const nested = [
       '<amf unit="millimeter">',
       mesh('1', 0),
@@ -569,12 +834,19 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     expect(geometry.triangleCount).toBe(2)
     expect(bounds3(geometry)).toEqual({ minimum: [5, 0, 0], maximum: [21, 8, 0] })
 
-    await expect(parseOpenScadAmf(sourceFile('cycle.amf', [
-      '<amf>',
-      '<constellation id="1"><instance objectid="2"/></constellation>',
-      '<constellation id="2"><instance objectid="1"/></constellation>',
-      '</amf>',
-    ].join('')))).rejects.toMatchObject({ code: 'E_IMPORT_INVALID_DATA' })
+    await expect(
+      parseOpenScadAmf(
+        sourceFile(
+          'cycle.amf',
+          [
+            '<amf>',
+            '<constellation id="1"><instance objectid="2"/></constellation>',
+            '<constellation id="2"><instance objectid="1"/></constellation>',
+            '</amf>',
+          ].join(''),
+        ),
+      ),
+    ).rejects.toMatchObject({ code: 'E_IMPORT_INVALID_DATA' })
   })
 
   it('imports stored and deflated 3MF core packages with units and component transforms', async () => {
@@ -593,19 +865,15 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
 
   it('accepts bounded ZIP64 3MF and skips EOCD-shaped bytes inside the real comment', async () => {
     for (const deflate of [false, true]) {
-      const geometry = await parseOpenScad3mf(blobFile(
-        'zip64.3mf',
-        zip(threeMfEntries(TRIANGLE_3MF, deflate), { zip64: true }),
-      ))
+      const geometry = await parseOpenScad3mf(
+        blobFile('zip64.3mf', zip(threeMfEntries(TRIANGLE_3MF, deflate), { zip64: true })),
+      )
       expect(geometry.triangleCount).toBe(1)
     }
 
     const fakeEnd = new Uint8Array(22)
     new DataView(fakeEnd.buffer).setUint32(0, 0x06054b50, true)
-    const geometry = await parseOpenScad3mf(blobFile(
-      'comment.3mf',
-      zip(threeMfEntries(), { comment: fakeEnd }),
-    ))
+    const geometry = await parseOpenScad3mf(blobFile('comment.3mf', zip(threeMfEntries(), { comment: fakeEnd })))
     expect(geometry.triangleCount).toBe(1)
 
     const oversized = zip(threeMfEntries(), { zip64: true })
@@ -626,21 +894,36 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
       '<Relationship Id="core" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/model.model"/>',
       '</Relationships>',
     ].join('')
-    const geometry = await parseOpenScad3mf(blobFile('routed.3mf', zip([
-      { name: '_rels/.rels', source: decoyRels },
-      { name: '3D/decoy.model', source: '<vendor/>' },
-      { name: '3D/model.model', source: TRIANGLE_3MF },
-    ])))
+    const geometry = await parseOpenScad3mf(
+      blobFile(
+        'routed.3mf',
+        zip([
+          { name: '_rels/.rels', source: decoyRels },
+          { name: '3D/decoy.model', source: '<vendor/>' },
+          { name: '3D/model.model', source: TRIANGLE_3MF },
+        ]),
+      ),
+    )
     expect(geometry.triangleCount).toBe(1)
 
-    const duplicateStart = START_PART_RELS.replace('</Relationships>', [
-      '<Relationship Id="rel1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/model.model"/>',
+    const duplicateStart = START_PART_RELS.replace(
       '</Relationships>',
-    ].join(''))
-    await expect(parseOpenScad3mf(blobFile('duplicate.3mf', zip([
-      { name: '_rels/.rels', source: duplicateStart },
-      { name: '3D/model.model', source: TRIANGLE_3MF },
-    ])))).rejects.toMatchObject({ code: 'E_IMPORT_INVALID_DATA' })
+      [
+        '<Relationship Id="rel1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/model.model"/>',
+        '</Relationships>',
+      ].join(''),
+    )
+    await expect(
+      parseOpenScad3mf(
+        blobFile(
+          'duplicate.3mf',
+          zip([
+            { name: '_rels/.rels', source: duplicateStart },
+            { name: '3D/model.model', source: TRIANGLE_3MF },
+          ]),
+        ),
+      ),
+    ).rejects.toMatchObject({ code: 'E_IMPORT_INVALID_DATA' })
   })
 
   it('resolves 3MF core namespaces and ST_ResourceID values, not lexical spellings', async () => {
@@ -671,13 +954,17 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
       'http://schemas.microsoft.com/3dmanufacturing/core/2015/02',
       'urn:vendor:fake-core',
     )
-    await expect(parseOpenScad3mf(blobFile('wrong-ns.3mf', zip(threeMfEntries(wrongNamespace))))).rejects.toMatchObject({
-      code: 'E_IMPORT_INVALID_DATA',
-    })
+    await expect(parseOpenScad3mf(blobFile('wrong-ns.3mf', zip(threeMfEntries(wrongNamespace))))).rejects.toMatchObject(
+      {
+        code: 'E_IMPORT_INVALID_DATA',
+      },
+    )
   })
 
   it('resolves imports relative to authored source and returns contextual path/format/NEF3 errors', async () => {
-    const bundle = project([{ kind: 'source', path: 'assets/shape.svg', source: '<svg><rect width="10" height="10"/></svg>' }])
+    const bundle = project([
+      { kind: 'source', path: 'assets/shape.svg', source: '<svg><rect width="10" height="10"/></svg>' },
+    ])
     const imported = await loadOpenScadImport(bundle, 'models/main.scad', '../assets/shape.svg')
     expect(imported).toMatchObject({ dimension: 2, format: 'svg' })
 

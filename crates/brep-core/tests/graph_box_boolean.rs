@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    minkowski3d::curved::{certify_graph_box_boolean, verify_graph_box_boolean},
-};
+use brep_core::{Model, minkowski3d::curved::{certify_graph_box_boolean, verify_graph_box_boolean}};
 fn source() -> Model {
     let mut a = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
     let old = a.faces[1].surface.clone();

@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0614",
+  "testedBase": "10b0d4615eab6f7e415932442576e9cf42aa8371",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 228,
+  "scope": [
+    "Expose area, centroid and central inertia within a selected unwrapped UV window through WASM.",
+    "Verify clipped seam area and centroid, invalid window rejection, and exact zero area for a disjoint window through WASM."
+  ],
+  "logSha256": "6dafc25a5c51d8895f5ff7aec42185884c717c52c6582f16923ee21df66d52a5",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "415ad8b6458ff7538bfd5e8aeff7347125cebaa06058acb40ccedbf333a66970",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "5937a767b988eda568b61e0fcc627a0b6b20672c69d705e6e68fba33d9d40c20",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "248d93321a487810bc224f44c034d9348bd8dff17416622d1489b2548329be15",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "39b6716422b8f880acd09343ea2a4f31f9971084f86358a4fe57cb128e98ddde"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

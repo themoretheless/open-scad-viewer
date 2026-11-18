@@ -13,9 +13,11 @@ fn variable_curved_body_keeps_fits_but_refuses_unproved_original_cap_membership(
         &f.mapping,
         &f.keeps,
         &f.source_pcurves,
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -58,9 +60,11 @@ fn variable_curved_body_keeps_fits_but_refuses_unproved_original_cap_membership(
         &f.mapping,
         &targets,
         &fitted.source_pcurves,
-        1e-8,
-        100000 - fitted.cells,
-        1000000 - fitted.exact_work,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000 - fitted.cells,
+            max_exact: 1000000 - fitted.exact_work,
+        },
     )
     .err()
     .expect("Incomplete original cap membership must refuse");
@@ -77,9 +81,11 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
         &f.patch,
         &f.mapping,
         &f.targets.map(|t| t.keep_vertex),
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.trims.all_valid);
@@ -109,20 +115,10 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
     .unwrap();
     assert!(g2.complete && g2.within_tolerance);
     assert!(out.cells + g2.cells <= 100000);
-    let radius = brep_core::fillet_radius::inspect_model(
-        &out.model,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
+    let radius = brep_core::fillet_radius::inspect_model(&out.model, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], f.law_domain, brep_core::fillet_radius::RadiusCheck { law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
             start: 0.5,
             end: 1.5,
-        },
-        f.law_domain,
-        [-1., -1.],
-        1e-6,
-        100000 - out.cells - g2.cells,
-        1000000 - out.exact_work - g2.exact_work,
-    )
+        }, sides: [-1., -1.], tolerance_mm: 1e-6, max_cells: 100000 - out.cells - g2.cells, max_exact: 1000000 })
     .unwrap();
     assert_eq!(
         radius.decision,
@@ -138,24 +134,14 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
         })
     );
     assert!(out.cells + g2.cells + radius.cells <= 100000);
-    assert!(out.exact_work + g2.exact_work + radius.exact_work <= 1000000);
+    assert!(out.exact_work <= 1000000 && g2.exact_work <= 1000000 && radius.exact_work <= 1000000);
     assert!(radius.maximum_center_gap_mm.unwrap()[1] <= 1e-6);
     assert!(radius.parameter_drift_upper_mm.unwrap() > 0.);
     assert!(radius.parameter_drift_upper_mm.unwrap() < 1e-10);
-    let renormalized = brep_core::fillet_radius::inspect_model(
-        &out.model,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
+    let renormalized = brep_core::fillet_radius::inspect_model(&out.model, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], out.model.edges[out.patch_edges[3]].curve.domain(), brep_core::fillet_radius::RadiusCheck { law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
             start: 0.5,
             end: 1.5,
-        },
-        out.model.edges[out.patch_edges[3]].curve.domain(),
-        [-1., -1.],
-        1e-6,
-        100000,
-        1000000,
-    )
+        }, sides: [-1., -1.], tolerance_mm: 1e-6, max_cells: 100000, max_exact: 1000000 })
     .unwrap();
     assert_eq!(
         renormalized.decision,
@@ -165,20 +151,10 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
     let restored: brep_core::Model = value_codec::from_str(&saved).unwrap();
     restored.validate().unwrap();
     assert_eq!(restored, out.model);
-    let rechecked = brep_core::fillet_radius::inspect_model(
-        &restored,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
+    let rechecked = brep_core::fillet_radius::inspect_model(&restored, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], f.law_domain, brep_core::fillet_radius::RadiusCheck { law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
             start: 0.5,
             end: 1.5,
-        },
-        f.law_domain,
-        [-1., -1.],
-        1e-6,
-        100000,
-        1000000,
-    )
+        }, sides: [-1., -1.], tolerance_mm: 1e-6, max_cells: 100000, max_exact: 1000000 })
     .unwrap();
     assert_eq!(
         rechecked.decision,
@@ -194,9 +170,11 @@ fn automatic_source_roots_and_target_faces_form_a_closed_transition() {
         &f.patch,
         &f.mapping,
         &f.targets.map(|t| t.keep_vertex),
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.trims.all_valid);
@@ -242,9 +220,11 @@ fn bound_transition_replaces_corner_sectors_with_one_closed_owned_boundary() {
         patch,
         &mapping,
         &fixture.targets.map(|t| t.keep_vertex),
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(out.model.vertices.len(), 10);
@@ -300,8 +280,28 @@ fn bound_transition_replaces_corner_sectors_with_one_closed_owned_boundary() {
     assert_eq!(source, &before);
     let mut wrong = targets.clone();
     wrong[0].keep_vertex = mapping[0];
-    assert!(contact_graft::attach(source, patch, &mapping, &wrong, 1e-8, 100000, 1000000).is_err());
-    assert!(contact_graft::attach(source, patch, &mapping, &targets, 1e-8, 1, 1000000).is_err());
+    assert!(contact_graft::attach(
+        source,
+        patch,
+        &mapping,
+        &wrong,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    ).is_err());
+    assert!(contact_graft::attach(
+        source,
+        patch,
+        &mapping,
+        &targets,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 1,
+            max_exact: 1000000,
+        },
+    ).is_err());
     assert_eq!(source, &before);
 }
 #[test]

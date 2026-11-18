@@ -8,9 +8,9 @@ import {
   LANGUAGE_CONTRACT,
   type LanguageDiagnosticCode,
 } from '../src/core/languageContract'
-import { compileOpenSCAD } from '../src/services/openscadCompiler'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileOpenSCAD } from '../src/language/openscadCompiler'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { QUALITY_TARGETS } from '../src/core/qualityTargets'
 
 interface Fixture {
@@ -23,9 +23,9 @@ interface Fixture {
   evaluateReject: Array<{ name: string; source: string; covers: string[] }>
 }
 
-const fixture = JSON.parse(readFileSync(fileURLToPath(
-  new URL('./fixtures/language-conformance-v1.json', import.meta.url),
-), 'utf8')) as Fixture
+const fixture = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./fixtures/language-conformance-v1.json', import.meta.url)), 'utf8'),
+) as Fixture
 
 describe('versioned language conformance corpus', () => {
   it('is pinned to the public language contract', () => {
@@ -38,16 +38,20 @@ describe('versioned language conformance corpus', () => {
 
   it('has executable coverage for every declared supported and unsupported feature', () => {
     const positiveCoverage = new Set([...fixture.compile, ...fixture.evaluate].flatMap(testCase => testCase.covers))
-    const negativeCoverage = new Set([...fixture.reject, ...fixture.evaluateReject].flatMap(testCase => testCase.covers))
+    const negativeCoverage = new Set(
+      [...fixture.reject, ...fixture.evaluateReject].flatMap(testCase => testCase.covers),
+    )
     expect([...positiveCoverage].sort()).toEqual([...LANGUAGE_CONTRACT.supported].sort())
     expect([...negativeCoverage].sort()).toEqual([...LANGUAGE_CONTRACT.unsupported].sort())
   })
 
   for (const testCase of fixture.compile) {
     it(`compiles ${testCase.name}`, () => {
-      expect(compileOpenSCAD(testCase.source).map(statement => statement.type === 'call'
-        ? statement.name
-        : statement.type)).toEqual(testCase.topLevel)
+      expect(
+        compileOpenSCAD(testCase.source).map(statement =>
+          statement.type === 'call' ? statement.name : statement.type,
+        ),
+      ).toEqual(testCase.topLevel)
     })
   }
 
@@ -61,13 +65,14 @@ describe('versioned language conformance corpus', () => {
 
   for (const testCase of fixture.reject) {
     it(`rejects ${testCase.name} with a stable code`, () => {
-      expect(() => compileOpenSCAD(testCase.source)).toThrow(expect.objectContaining({
-        name: 'OpenSCADParseError',
-        code: testCase.code,
-      }))
+      expect(() => compileOpenSCAD(testCase.source)).toThrow(
+        expect.objectContaining({
+          name: 'OpenSCADParseError',
+          code: testCase.code,
+        }),
+      )
     })
   }
-
 
   for (const testCase of fixture.evaluateReject) {
     it(`rejects unsupported evaluator feature ${testCase.name}`, async () => {
@@ -86,7 +91,7 @@ describe('bounded generated compiler inputs', () => {
     const atoms = ['cube(1);', 'sphere(r=1,$fn=8);', 'translate([1,2,3])', 'for(i=[0:2])', '{', '}', '(', ')', ';', '#']
 
     for (let caseIndex = 0; caseIndex < QUALITY_TARGETS.generatedCompilerCases; caseIndex++) {
-      const length = 1 + random() % 24
+      const length = 1 + (random() % 24)
       let source = ''
       for (let index = 0; index < length; index++) source += atoms[random() % atoms.length]
       expect(source.length).toBeLessThan(512)

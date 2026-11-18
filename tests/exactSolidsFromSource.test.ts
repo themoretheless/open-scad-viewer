@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { buildExactSolidBodies, InexactSolidError } from '../src/services/solid/brepBuild'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
 
 /** Both workspaces are fed by one evaluation: meshes for Mesh, the plan for Solid. */
 async function evaluate(source: string) {
@@ -59,7 +59,9 @@ describe('exact solids from source', () => {
   })
 
   it('builds an involute gear from the brep_gear builtin as one exact body with six faces per tooth', async () => {
-    const result = await evaluate('brep_gear(module = 2, teeth = 12, height = 5, helix = 20, herringbone = true, bore = 6);')
+    const result = await evaluate(
+      'brep_gear(module = 2, teeth = 12, height = 5, helix = 20, herringbone = true, bore = 6);',
+    )
     expect(result.meshes).toHaveLength(1)
     const plan = result.exactSolids!
     const [body] = buildExactSolidBodies(plan.nodes, plan.roots)
@@ -86,22 +88,20 @@ describe('exact solids from source', () => {
   }, 120000)
 
   it('lowers a helical RushGraph gear through the same builtin', async () => {
-    const result = await evaluate([
-      '// @rush/1',
-      'wheel = gear(teeth: 24, module: 1.5mm, thickness: 8mm, helix_angle: 30deg, herringbone: true, bore: 5mm)',
-      'show wheel',
-    ].join('\n'))
+    const result = await evaluate(
+      [
+        '// @rush/1',
+        'wheel = gear(teeth: 24, module: 1.5mm, thickness: 8mm, helix_angle: 30deg, herringbone: true, bore: 5mm)',
+        'show wheel',
+      ].join('\n'),
+    )
     const plan = result.exactSolids!
     const [body] = buildExactSolidBodies(plan.nodes, plan.roots)
     expect(body.brep!.faces).toHaveLength((24 * 6 + 12) * 2 + 2)
   }, 60000)
 
   it('records the second language too, since it compiles through the same evaluator', async () => {
-    const result = await evaluate([
-      '// @rush/1',
-      'part = box(10mm, 10mm, 10mm)',
-      'show part',
-    ].join('\n'))
+    const result = await evaluate(['// @rush/1', 'part = box(10mm, 10mm, 10mm)', 'show part'].join('\n'))
     const plan = result.exactSolids!
     const [body] = buildExactSolidBodies(plan.nodes, plan.roots)
     expect(body.brep!.faces).toHaveLength(6)

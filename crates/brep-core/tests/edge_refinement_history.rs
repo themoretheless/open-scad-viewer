@@ -1,8 +1,5 @@
 #![cfg(feature = "codec")]
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::history::{Budget, History},
-};
+use brep_core::{Model, feature_ops::edge_partition::history::{Budget, History}};
 use value_codec::Value;
 fn source() -> Model {
     let mut s = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();

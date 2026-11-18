@@ -1,0 +1,16 @@
+{
+  "distinct_tests_passed": 47,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "f07a0b5369d41817b4b8d19d3b9c4668cf0872c9aca469429721013d66a57e97",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface.rs": "2db18867e5797af52ecb4d0c2f9b07e723ab766d31348a920a588b5d92420b97",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "dc2323b42907dcf96150d30eb10a2f44d4f2341cfd20acf9f57ac35e969b583b",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock.rs": "c13302b255d4a42e94c0c5ca241239a6254cf42e13a45ba46ab0a2af12f68b85",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock/census.rs": "599c54d031f319693744a1827b0eaeee8001e9eee06db231504f6a607a86e666",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock/polynomial.rs": "ed1d6585274bb05f6b680549950d6249810ab9a9b65b4071cc0ddbf855169236",
+    "crates/nurbs-core/tests/ss_algebraic_root_census.rs": "2bea2089eefee6515eba64a7f31c32252c8384ba1153f7ac80d117764d676ce5",
+    "crates/nurbs-core/tests/ss_third_surface_candidates.rs": "92ca0871a7ddea813bc6bd37389b13ae104f77c97158218c6125c1e13d6f0108"
+  },
+  "scope": "Complete distinct scalar roots on a closed exact interval, including multiple and endpoint roots; third-surface candidate integration",
+  "remaining": "Real bounded third-UV/face membership, cross-source junctions, complete physical arrangements/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

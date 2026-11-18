@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    trimmed_shell::{self, Limits, Patch},
-};
+use brep_core::{Model, trimmed_shell::{self, Limits, Patch}};
 fn patches(model: &Model) -> Vec<Patch> {
     let mut reversed = vec![false; model.faces.len()];
     for shell in &model.shells {

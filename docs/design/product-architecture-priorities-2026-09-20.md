@@ -1,5 +1,9 @@
 # Product and architecture priorities
 
+Updated 2026-11-13: removed 0 resolved items; none of the four implementation
+steps is complete. File names below follow the current `src/App.svt` and
+`src/components/*.svt` layout.
+
 Source review: main f68ce0a6, 2026-09-20. This is a scoped comparison, not a
 competitive benchmark, feature certification or completed implementation plan.
 
@@ -11,10 +15,10 @@ PWA behavior. Its README also lists remaining preview and mobile-editor work;
 do not infer production completeness from the feature list.
 [Primary source](https://github.com/openscad/openscad-playground)
 
-Our `App.vue` still owns textarea inputs. `editorDiagnostics.ts` already maps
+Our `App.svt` still owns textarea inputs. `editorDiagnostics.ts` already maps
 build failures to source ranges and reveals them through selection. The gap is
 an integrated editing experience, not an absence of diagnostics. Customizer
-controls and named parameter presets already exist in `CustomizerPanel.vue`,
+controls and named parameter presets already exist in `CustomizerPanel.svt`,
 `scadCustomizer.ts` and `parameterPresets.ts`.
 
 CadQuery documents selectors over geometric objects, including composable
@@ -49,7 +53,8 @@ performance numbers cannot substitute for a shared workload and machine.
    Acceptance: interaction tests, desktop/mobile screenshots, accessibility,
    large-source typing latency and before/after bundle/startup measurements.
 3. Integrate measured Rust grouping work with one producer-owned computation.
-   PR #20 currently groups in both `export_buffers` and `render_buffers`.
+   `crates/geometry-bridge/src/mesh.rs` still calls `face_ids` from both
+   `export_buffers` and `render_buffers`.
    Acceptance: complete publication benchmark, sparse/dense fixtures, cache
    reuse and exact selection IDs; kernel-only timing is insufficient.
 4. Unify semantic execution behind a backend interface before broadening CAD
@@ -61,6 +66,156 @@ performance numbers cannot substitute for a shared workload and machine.
 This ordering is engineering judgment based on the current code and measured
 boundaries, not a competitor ranking. New editor dependencies have not been
 selected or installed by this review.
+
+## Step 2 status: editor adapter and baseline (2026-11-14)
+
+Done without new dependencies:
+
+- `src/editor/EditorAdapter.ts` defines `EditorAdapter`: text get/set and
+  range replacement as single programmatic edits, selection with direction,
+  focus, scroll and line height, engine-native undo/redo, highlight ranges for
+  source↔scene navigation, and IME composition state/events.
+  `createTextareaEditorAdapter` wraps the current `<textarea>` overlay.
+  `App.svt`, `useCodeEditorViewport`, `useEditorFind`, `useEditorFormatting`,
+  `useParameterPresets`, `useSourceProvenanceCaret` and `revealDiagnostic` now
+  reach the editor only through the adapter; the raw element ref is kept only
+  for the template binding.
+- One deliberate behaviour fix: Svet's `v-model` checked a `composing` flag that
+  nothing set, so intermediate IME text reached `code` (and render scheduling)
+  on every compositionupdate. The adapter now sets the flag and commits the
+  composed text once on compositionend; `handleEditorInput` ignores input while
+  composing.
+- `src/editor/editHistory.ts` states the undo-granularity contract a
+  replacement engine must keep (typing coalesced within 500 ms on one run,
+  newline splits, every programmatic edit one step, one step per composition).
+  The textarea engine keeps the browser's native undo stack as before; the
+  programmatic `setRangeText` edits are not on that native stack today, which
+  is unchanged and is the main undo gap a real editor engine closes.
+- Tests: `tests/editorAdapter.test.ts` (adapter, synthetic
+  compositionstart/update/end through the real `vModelText`, find/replace,
+  Tab indent, caret→scene highlight and scene pick→editor selection, undo
+  contract) and `tests/editorInputLatency.test.ts` (baseline below).
+
+### Baseline the editor decision is compared against
+
+Node 22.23, Apple M4 Max, `npx vitest run --project node
+tests/editorInputLatency.test.ts`, median of 15 keystrokes in the middle of a
+generated OpenSCAD source. "Keystroke→model" is adapter edit, `code` update and
+caret↔scene highlight sync. "Highlight refresh" is the synchronous recompute
+of `highlightCode`, the block/guide structure and the visible gutter window
+that the next render reads. Browser layout and paint are not included.
+
+| Source | Characters | Keystroke→model | Highlight refresh |
+|---|---|---|---|
+| 5,000 lines | 278 k | 0.06 ms | 47 ms |
+| 20,000 lines | 1.13 M | 0.05 ms | 295 ms |
+
+The whole-document regex highlighter dominates: a 5k-line file already exceeds
+a 16 ms frame per keystroke, 20k lines is ~0.3 s. Both CodeMirror 6 and Monaco
+highlight incrementally and only render the viewport, so this is the number
+the integration must beat.
+
+Bundle (`npx vite build`): the editor is not a separate chunk; it lives in the
+entry chunk `index-*.js` at 240.3 kB minified / 73–74 kB gzip. The editor
+modules themselves (adapter, viewport, find, formatting, provenance caret,
+diagnostics, highlighter, block model; esbuild `--minify`, `svet` external)
+are 16.0 kB minified / 6.8 kB gzip.
+
+### CodeMirror 6 vs Monaco (decision for the user)
+
+| | CodeMirror 6 | Monaco |
+|---|---|---|
+| Bundle | Modular ESM; a minimal setup (state, view, commands, history, search, language support) is roughly 120–200 kB minified, ~50–70 kB gzip, tree-shakeable | Monolithic editor core ~2–3 MB minified (~0.7–1 MB gzip) before languages; tree-shaking is limited |
+| Workers | None required; parsing runs on the main thread incrementally (Lezer), can be moved to a worker manually | Needs `MonacoEnvironment.getWorker` and bundled worker entries (editor worker at minimum); Vite needs worker plumbing |
+| IME | Uses `contenteditable` with explicit composition handling; good CJK and Android support, mobile is a design target | Hidden-textarea input; desktop IME is solid, mobile/touch support is officially limited |
+| Accessibility | Native DOM text in a `contenteditable`, works with screen readers; ARIA hooks configurable | Strong screen-reader mode (VS Code heritage), but an "accessibility mode" toggle and hidden textarea model |
+| Theming | CSS + `EditorView.theme` / `HighlightStyle`; maps directly to the app's CSS variables and both themes | JSON themes via `defineTheme`; global per page, harder to tie to CSS variables |
+| Undo | `@codemirror/commands` history: transaction-based, `isolateHistory` and `userEvent` annotations map 1:1 to the contract in `editHistory.ts` | Model undo stack with `pushStackElement`; also maps, less granular control |
+| OpenSCAD language | Write a Lezer grammar or a `StreamLanguage` from the existing highlighter | Monarch tokenizer from the existing regexes |
+
+Recommendation (engineering judgment, not a measurement): CodeMirror 6. It
+fits the bundle budget of the entry chunk, needs no worker setup, supports
+mobile IME, themes through CSS variables and exposes the transaction
+annotations the undo contract needs. Monaco is worth it only if VS Code-level
+features (multi-cursor UX parity, rich IntelliSense UI, diff editor) are
+wanted and a ~1 MB gzip lazily loaded chunk is acceptable. The bundle figures
+in the table are approximate public sizes, not measured in this repository;
+measure them with `vite build` after installing the chosen package.
+
+## Step 2 status: CodeMirror 6 integrated (2026-11-15)
+
+The user chose CodeMirror 6. Packages pinned exactly: `@codemirror/state`
+6.7.6, `@codemirror/view` 6.43.15, `@codemirror/commands` 6.11.1,
+`@codemirror/language` 6.13.1, `@codemirror/search` 6.7.2 and
+`@lezer/highlight` 1.2.5 (used directly for highlight tags).
+
+- `src/editor/codemirrorCore.ts` is the headless logic layer
+  (`@codemirror/state` + `@codemirror/commands` only): CodeMirror history with
+  `newGroupDelay` 500 ms, programmatic edits tagged `input.programmatic` and
+  isolated with `isolateHistory('full')` so format, find/replace, customizer,
+  preset and Tab indent are each exactly one undo step on the engine's history
+  (this closes the textarea gap where `setRangeText` edits were not undoable),
+  `setRangeText`-compatible selection modes, whole-document `setText` reduced
+  to a minimal prefix/suffix change, and a highlight `StateField` mapped
+  through edits.
+- `src/editor/codemirrorAdapter.ts` holds `createCodeMirrorEditorAdapter`,
+  which has no runtime CodeMirror import; `src/editor/codemirrorView.ts`
+  (line numbers, fold gutter over the existing `editorBlocks`, a
+  `StreamLanguage` tokenizer with the same classes as `highlightCode` for
+  OpenSCAD and Rush, `highlightSelectionMatches`, highlight decorations,
+  history/default keymaps without Tab, aria label, focus ring, a CSS-variable
+  theme) is loaded with `import()` by `useCodeMirrorEditor`.
+- The app uses CodeMirror by default. `?editor=textarea` or the
+  `scad-editor-engine=textarea` storage flag selects the textarea fallback.
+  Find/replace keeps the existing `useEditorFind` bar through the adapter;
+  the CodeMirror search panel is not bound. Tab stays the app's
+  `indentSelection` handler. IME composition is one undo step through
+  CodeMirror's `input.type.compose` joining, and the `code` model is updated
+  once after compositionend.
+- Tests: `tests/editorAdapter.test.ts` runs the adapter contract (text,
+  selection mapping, unmounted no-op, highlights, find/replace, Tab indent,
+  scene pick reveal) against both engines; CodeMirror runs over a DOM-free
+  host with real `@codemirror/state` transactions, plus history tests
+  (coalescing window, programmatic isolation, composition joining, highlight
+  mapping). No jsdom/happy-dom is installed, so the view wiring is covered by
+  `scripts/check-browser-smoke.mjs` (type, undo/redo groups across a 700 ms
+  pause, Ctrl/⌘+F find selecting in CodeMirror, Tab indent as one undo step,
+  syntax colours in light and dark, editor screenshots in both themes).
+
+### Before / after
+
+Same machine and command as the baseline. The textarea numbers were re-run on
+2026-11-15 next to the CodeMirror ones; the 2026-11-14 values are kept for
+reference. CodeMirror "highlight refresh" is `ensureSyntaxTree` up to the
+visible window (~60 lines past the caret) after the edit, i.e. the incremental
+StreamLanguage re-parse the view needs before painting; layout and paint are
+not included for either engine.
+
+| Source | Engine | Keystroke→model | Highlight refresh |
+|---|---|---|---|
+| 5,000 lines | textarea (11-14) | 0.06 ms | 47 ms |
+| 5,000 lines | textarea (11-15, 3 runs) | 0.06 ms | 32–72 ms |
+| 5,000 lines | CodeMirror 6 (3 runs) | 0.27–0.32 ms | 0.34–0.39 ms |
+| 20,000 lines | textarea (11-14) | 0.05 ms | 295 ms |
+| 20,000 lines | textarea (11-15, 3 runs) | 0.05 ms | 135–141 ms |
+| 20,000 lines | CodeMirror 6 (3 runs) | 0.43–0.53 ms | 0.27–0.29 ms |
+
+CodeMirror's keystroke→model includes `doc.toString()` for the `code` model,
+which is why it is above the textarea's.
+
+Bundle (`npx vite build`): entry chunk `index-*.js` 240.31 kB / 74.19 kB gzip
+before, 242.59 kB / 74.96 kB gzip after (+2.3 kB / +0.8 kB gzip for the
+adapter, the mount composable and the engine flag). CodeMirror itself is a
+separate lazily loaded chunk of 308.89 kB / 100.52 kB gzip, fetched when the
+source editor mounts. That is larger than the 120–200 kB estimate above; the
+fold gutter, search (selection-match highlighting) and the default keymap
+are included.
+
+Remaining: desktop/mobile screenshots of the full shell and a screen-reader
+pass are not done (the smoke captures only the editor pane in both themes);
+the textarea-only folded view and indent guides have no CodeMirror
+counterpart beyond the fold gutter; the chunk could be trimmed by dropping
+`@codemirror/search`.
 
 ## Greenfield choices that still apply
 

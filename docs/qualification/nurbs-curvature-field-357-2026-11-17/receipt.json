@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0357",
+  "testedBase": "b454f3cf3b4be3fabfdee35214df2ae9bed3bf29",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 46,
+  "scope": [
+    "Bound the total material length along a finite transverse section, including algebraic endpoints and unresolved winding.",
+    "Sum lower endpoint differences over proven components and upper differences over possible components, then apply the exact Euclidean metric of the support clock."
+  ],
+  "logSha256": "ee827dd4cb04c98c192534358c925b51bdc19affd49338ea57627275e927d50a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "326cf4f55ee24c5334f782af87e161dc8d9f542065e09b8fe8426fcc1addbb85",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "346be1fa0d55e8d70284ff3475500048935c1988124bc3c138a77e702681e95b",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "4789ce63ca5b26bd468046175e59d1c12abca27e30284736657df9275a5a9553",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "a3f94c13cbfb135eb232a8ffa9e58c8d19ad640673a93b3e2152d987318fd456",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section_length.rs": "b9e8c4df53e69c1232396b40780891eed00ef7eebb6570f323fcb9a4bc838488",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs": "b7d16c125d058c8336b1e73a4b65c0c97f7fa456dd10b15c97190fa0533d928f",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs": "1d6aa62e3903abed0a937a4b669f061e4861a5812297bd86d631c1e8fddd910e"
+  }
+}

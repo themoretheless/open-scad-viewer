@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { CACHE_VERSION_PLACEHOLDER, findInlineScripts } from './pwa-build.mjs'
 import { verifyPackedWasmChunk, verifyUniquePackedWasm, verifyRawWasm } from './verify-packed-wasm.mjs'
 
 const rootUrl = new URL('../dist/', import.meta.url)
@@ -17,6 +18,12 @@ function walk(directory) {
   }
 }
 walk(root)
+// The Content-Security-Policy forbids inline scripts, and the service worker must carry a build-derived version.
+const builtIndex = readFileSync(join(root, 'index.html'), 'utf8')
+const inlineScripts = findInlineScripts(builtIndex)
+if (inlineScripts.length) throw new Error(`dist/index.html has inline scripts, which the CSP blocks: ${inlineScripts.join(' ')}`)
+if (!/http-equiv="Content-Security-Policy"/.test(builtIndex)) throw new Error('dist/index.html has no Content-Security-Policy meta tag')
+if (readFileSync(join(root, 'sw.js'), 'utf8').includes(CACHE_VERSION_PLACEHOLDER)) throw new Error('dist/sw.js CACHE_VERSION was not stamped')
 const geometryDelivery=selectGeometryDeliveryBudget(createHash('sha256')
   .update(readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm',import.meta.url))).digest('hex'))
 
@@ -141,7 +148,8 @@ const jsChunkBudgets = [
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
   [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
   // Sweep preview and boundary proof status app shell, measured: 241,848 bytes.
-  [/^assets\/index-[^/]+\.js$/, 245_000],
+  // Merge of origin/main UI changes: measured 250,058 bytes (was 245,473 for the integration batch).
+  [/^assets\/index-[^/]+\.js$/, 250_600],
   // Packed HarfBuzz runtime, measured: 179,520 bytes.
   [/^assets\/harfbuzz-bytes-[^/]+\.js$/, 200_000],
   // Direct modeling panel with command guidance, inline dimensions, and isolation.
@@ -150,9 +158,15 @@ const jsChunkBudgets = [
   // Instance editing, draft recovery, exchange, diagnostics materials, SVG exchange and localized patch diagnostics and framed sweep controls: about 279 kB.
   // Profile region commands and target selection: measured 310,394 bytes.
   // Material path overlay: measured 405,355 bytes; retain 654-byte headroom.
-  [/^assets\/DirectModeler-[^/]+\.js$/, 454_000], // Composable extraction (src/features/directModeler/use*.ts): measured 453,441 bytes; option and return objects keep their property names unminified; 559-byte headroom. Previously: Unified workspace header, collapsible create strips and selection action bar: measured 438,621 bytes; 879-byte headroom. Previously: Adaptive self-wall counts: measured 437076 bytes; retain 511-byte margin. Whole-wall controls measured 436539 bytes; retain 511-byte margin. Automatic wall scan controls: measured 434313 bytes; retain 511-byte margin. Original wall witness overlay: measured 431890 bytes; retain 511-byte margin. Source wall UI: measured 429949 bytes; retain 511-byte margin. Selected seam UI: measured 423231 bytes; retain 511-byte margin. Native source face preview and outliner: measured 417289 bytes. Native source edge preview: measured 412806 bytes. Solid manufacturing entry: measured 407,522 bytes; 478-byte margin. Arc sweep range validation and corrective field message: measured 401,363 bytes, +803 bytes; previous 654-byte margin retained. Named profile inputs and two localized refusal cases: measured 400,560 bytes, +814 bytes; previous 654-byte margin retained. Numeric rectangle and retained-slot authoring: measured 399,746 bytes. Numeric arc authoring: measured 392,515 bytes. Numeric circle authoring: measured 390,417 bytes, total 7,208,418 bytes. Exact polyline point authoring: measured 388,518 bytes. Surface boundary validation and diagnostic retries: measured 386,547 bytes. Mesh clearance retry: measured 384,502 bytes. Measurement field validation, localized retries and edge keyboard selection: measured 383,412 bytes; 888-byte margin. Manual GPU reconnection and stale initialization cancellation: measured 381,431 bytes; 869-byte margin. Localized source-deletion dependency guard: measured 380,622 bytes; 778-byte margin. Profile intersection presentation loads asynchronously: measured 379,305 bytes; 795-byte margin. Retained profile revolution and exact-mode controls: 378,043 measured bytes. // Cancellable display collection: 377,171 bytes; approximately the prior 847-byte headroom. // Current UI with calculation retry/localized worker failures and VR controls: 376,153 bytes; 847-byte headroom. // Face-contact panel: measured 369,457 bytes. Distance kernels panel growth: measured 364,044 bytes. Radial bound diagnostics: measured 358,648 bytes. Trimmed face distance: measured 353,799 bytes. Full NURBS surface distance panel: measured 348,231 bytes. NURBS edge distance controls and witnesses: measured 344,995 bytes. All mesh contacts, completion and navigation: measured 340,273 bytes. Diagnostic input errors, retry and focus: measured 337,331 bytes. Screen point picking and focus: measured 334,107 bytes. Point trim preview and numeric inputs: measured 332,651 bytes. Retained NURBS targets in world coordinates: measured 328,305 bytes. Async body snap readiness: measured 327,041 bytes. Async authored edges: measured 326,006 bytes. Async topology selection: measured 325,581 bytes. Localized CV errors and accessible field association: measured 324,730 bytes. Cancellable retained profile display: measured 323,401 bytes. Cancellable surface display queue: measured 320,648 bytes. Worker startup recovery: measured 317,274 bytes. Cancellable JSON import: measured 316,313 bytes. Durable draft head and async restoration; previously async extrusion preview: measured 312,541 bytes.
+  [/^assets\/DirectModeler-[^/]+\.js$/, 497_300], // Merge of origin/main (UI changes) with the invalid-outline fix: measured 496,713 bytes; ~0.6 KB headroom. Previously 495,400: Integration batch (kernel jobs, coded refusal fields/targets, drag residency): measured 494,825 bytes; ~0.6 KB headroom. Previously 492,600: Shared Apply/Cancel panel and selection states (C5), localized errors and preview retention (C4), input contract (C6) and large-scene paths (C14): measured 492,062 bytes; ~0.5 KB headroom. Previously 454,000: Composable extraction (src/features/directModeler/use*.ts): measured 453,441 bytes; option and return objects keep their property names unminified; 559-byte headroom. Previously: Unified workspace header, collapsible create strips and selection action bar: measured 438,621 bytes; 879-byte headroom. Previously: Adaptive self-wall counts: measured 437076 bytes; retain 511-byte margin. Whole-wall controls measured 436539 bytes; retain 511-byte margin. Automatic wall scan controls: measured 434313 bytes; retain 511-byte margin. Original wall witness overlay: measured 431890 bytes; retain 511-byte margin. Source wall UI: measured 429949 bytes; retain 511-byte margin. Selected seam UI: measured 423231 bytes; retain 511-byte margin. Native source face preview and outliner: measured 417289 bytes. Native source edge preview: measured 412806 bytes. Solid manufacturing entry: measured 407,522 bytes; 478-byte margin. Arc sweep range validation and corrective field message: measured 401,363 bytes, +803 bytes; previous 654-byte margin retained. Named profile inputs and two localized refusal cases: measured 400,560 bytes, +814 bytes; previous 654-byte margin retained. Numeric rectangle and retained-slot authoring: measured 399,746 bytes. Numeric arc authoring: measured 392,515 bytes. Numeric circle authoring: measured 390,417 bytes, total 7,208,418 bytes. Exact polyline point authoring: measured 388,518 bytes. Surface boundary validation and diagnostic retries: measured 386,547 bytes. Mesh clearance retry: measured 384,502 bytes. Measurement field validation, localized retries and edge keyboard selection: measured 383,412 bytes; 888-byte margin. Manual GPU reconnection and stale initialization cancellation: measured 381,431 bytes; 869-byte margin. Localized source-deletion dependency guard: measured 380,622 bytes; 778-byte margin. Profile intersection presentation loads asynchronously: measured 379,305 bytes; 795-byte margin. Retained profile revolution and exact-mode controls: 378,043 measured bytes. // Cancellable display collection: 377,171 bytes; approximately the prior 847-byte headroom. // Current UI with calculation retry/localized worker failures and VR controls: 376,153 bytes; 847-byte headroom. // Face-contact panel: measured 369,457 bytes. Distance kernels panel growth: measured 364,044 bytes. Radial bound diagnostics: measured 358,648 bytes. Trimmed face distance: measured 353,799 bytes. Full NURBS surface distance panel: measured 348,231 bytes. NURBS edge distance controls and witnesses: measured 344,995 bytes. All mesh contacts, completion and navigation: measured 340,273 bytes. Diagnostic input errors, retry and focus: measured 337,331 bytes. Screen point picking and focus: measured 334,107 bytes. Point trim preview and numeric inputs: measured 332,651 bytes. Retained NURBS targets in world coordinates: measured 328,305 bytes. Async body snap readiness: measured 327,041 bytes. Async authored edges: measured 326,006 bytes. Async topology selection: measured 325,581 bytes. Localized CV errors and accessible field association: measured 324,730 bytes. Cancellable retained profile display: measured 323,401 bytes. Cancellable surface display queue: measured 320,648 bytes. Worker startup recovery: measured 317,274 bytes. Cancellable JSON import: measured 316,313 bytes. Durable draft head and async restoration; previously async extrusion preview: measured 312,541 bytes.
   // Modeling tools with validated transferable G-code moves, measured: 100,285 bytes.
   [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
+  // Named lazy chunks (vite.config.ts runtimeChunkFileName); each measured with ~0.5 KB headroom.
+  [/^assets\/codemirrorView-[^/]+\.js$/, 303_900], // CodeMirror 6 editor view without @codemirror/search: measured 303,339 bytes.
+  [/^assets\/geometryBuildEngine-[^/]+\.js$/, 332_900], // Geometry build engine and semantic lowering: measured 332,379 bytes (was 330,732).
+  [/^assets\/wasmStreaming-[^/]+\.js$/, 196_300], // Merge of origin/main (worker commit deltas against the published state): measured 195,710 bytes (was 195,195 with kernel jobs, worker protocol v13; 187,929 before).
+  [/^assets\/workerHandlerRuntime-[^/]+\.js$/, 113_400], // Shared worker handler runtime and coded error validation, grown by origin/main worker code (main budgeted it as a hashed chunk at 111,500): measured 112,878 bytes (was 108,416).
+  [/^assets\/profileIntersections-[^/]+\.js$/, 107_100], // Profile intersection presentation: measured 106,582 bytes.
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
   [/^assets\/wasm-brotli-bytes-[^/]+\.js$/, 140_000],
   [/^assets\/vr-core-bytes-[^/]+\.js$/, 76_000], // Independent VR core, losslessly packed with the bounded DEFLATE bootstrap.
@@ -164,11 +178,17 @@ for (const required of ['.html', '.css', '.js']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
+  // Raw streaming WASM: the geometry kernel takes the rawGeometryBytes of its delivery profile
+  // (7467ec, runtime v13 record: 18,558,145 bytes); other kernels keep 17,700,000.
   const streamingWasmLimit = /^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path)
-    ? 16_000_000
+    ? (file.path === 'wasm/geometry-kernel.wasm' ? geometryDelivery.rawGeometryBytes ?? 17_700_000 : 17_700_000)
     : undefined
   const explicitJsLimit = jsChunkBudgets.find(([pattern]) => pattern.test(file.path))?.[1]
+  const measuredName = /^assets\/(index|DirectModeler|geometryBuildEngine|wasmStreaming)-[^/]+\.js$/.exec(file.path)?.[1]
+  const measuredLimit = measuredName ? geometryDelivery.namedJsChunkBytes?.[measuredName] : undefined
   const limit = streamingWasmLimit
+    ?? geometryDelivery.exactJsChunkBytes?.[file.path]
+    ?? measuredLimit
     ?? (/^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : undefined)
     ?? explicitJsLimit
     ?? limits.get(file.extension)

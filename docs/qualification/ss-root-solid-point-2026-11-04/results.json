@@ -1,0 +1,39 @@
+{
+  "tested_base": "928ad41ce750111bd3022d33612cb8ae1bd4042c",
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "983cfe2ab7bb87588fb523e40c6d944b54e5086aaa82c0ca1f53643d3edca97d",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "18958fc49f282fceb4374fdec37e26f1cf82d441193fb0b9c7c265ea0cf8febc",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "2e210f5f3a029d50743c6f8490e27df5f0cfd784bc02f4449b96d8fe321b9b0f",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "728b6ee7c1faf28b37cd82f7c39cc5637c048daf69a1195706abf44e29477c21",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "4437aac17d27e84c77e317557b611ea3c1e47666f009b06ef0119a9b99c40060",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/material.rs": "b04b456baa8daf5faf3db1cacbc525231e860264202360c66640d34944330428",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume.rs": "a022c85a26719a8a22242476160741ed1cf807e4ea67a166113d725900f6d409",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/domain.rs": "6db2a9005a70cc65641c503561c70789c4108dffcfc9716bb91c2c77eb12ea51",
+    "crates/brep-core/src/ray_parity.rs": "0a92e50bd8c1d20ce8914180be4af8f8f11e36dfbaa4fdd382ea62b6d29367d9",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "11d88361012e6c4c706161e5f4be81d77adb7a078a0cffc81980104a2843ee7f",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire/winding.rs": "db938b2434255165764220ae3e2bc6b6470a57f3b836c11312962c2ba6348053",
+    "crates/brep-core/src/ray_parity/shared.rs": "1eb8abada39b6096c30838e3fcad3607de7e96cbbfe09ea68f0061f5a57b67c6",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/point.rs": "e05efb82be047e1716216e0c422bd135531dab0e45547e46abbe52b75e8d7a3c"
+  },
+  "tests_passed": 18,
+  "suites": {
+    "nested_census_arrangement": 5,
+    "ss_root_ports": 5,
+    "ss_quotient_path": 1,
+    "ray_parity": 7
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0
+  },
+  "scope": "Original-surface point membership for independently admitted paired root solids; adaptive whole-box native winding",
+  "remaining": [
+    "general all-face-pair SS coverage and singular/coincident branches",
+    "full mixed finite-face trim and cross-source rim stitching",
+    "periodic/pole arrangement material",
+    "nested cavity shells and healing",
+    "general Boolean and lineage",
+    "actual bridge/WASM delivery"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

@@ -29,9 +29,10 @@
       "owner": "polygon-core",
       "action": "migrate",
       "files": [
-        "src/services/mainSolidExtensions.ts"
+        "src/services/mainSolidExtensions.ts",
+        "src/services/boxGenerator.ts"
       ],
-      "reason": "Prism recognition, profile matching, shell/bevel construction and sphere recognition affect model geometry; preserve current admitted domains and errors."
+      "reason": "Prism recognition, profile matching, shell/bevel construction, sphere recognition and parametric box source generation affect model geometry; preserve current admitted domains and errors. OpenSCAD owns the emitted trigonometric and planar source semantics."
     },
     {
       "id": "mesh-display",
@@ -145,8 +146,8 @@
         "src/services/uniformFill.ts",
         "src/services/transparentOrdering.ts",
         "src/services/transparentBsp.ts",
-        "src/components/ViewCube.vue",
-        "src/components/ModelingFloorGrid.vue",
+        "src/components/ViewCube.svt",
+        "src/components/ModelingFloorGrid.svt",
         "src/dev/vrEmulator.ts"
       ],
       "reason": "Camera matrices, animation, frustum, lighting and per-frame transparent traversal consume display data and do not author geometry. Retain in host; centralize duplicated projection formulas within viewport modules. BSP construction/clipping remain geometry-ops."
@@ -167,12 +168,12 @@
       "owner": "application-ui + planar-geometry + geometry-ops",
       "action": "split",
       "files": [
-        "src/features/DirectModeler.vue",
-        "src/features/MainModelingOverlay.vue",
-        "src/features/MainSketchTools.vue",
-        "src/features/MeshModeler.vue",
+        "src/features/DirectModeler.svt",
+        "src/features/MainModelingOverlay.svt",
+        "src/features/MainSketchTools.svt",
+        "src/features/MeshModeler.svt",
         "src/features/MeshModeler/useMeshModeler/meshInteraction.ts",
-        "src/features/MainModelingTools.vue",
+        "src/features/MainModelingTools.svt",
         "src/features/directModeler/helpers.ts"
       ],
       "reason": "Keep interaction/projection/draft display in Vue. Extract committed curve construction, arc snap tessellation, trim candidate geometry and face normals to domain adapters. Avoid persistent model calculations inside components."
@@ -198,9 +199,9 @@
         "src/services/openScadText.ts",
         "src/mcp/officialOpenScadRuntimeProtocol.ts",
         "src/data/functionReference.ts",
-        "src/components/SceneOutliner.vue",
-        "src/components/InspectPanel.vue",
-        "src/App.vue"
+        "src/components/SceneOutliner.svt",
+        "src/components/InspectPanel.svt",
+        "src/App.svt"
       ],
       "reason": "Gesture thresholds, search/Unicode normalization, text runtime loading, timeout budgets and presentation calculations are host responsibilities. No per-scalar ABI migration."
     },

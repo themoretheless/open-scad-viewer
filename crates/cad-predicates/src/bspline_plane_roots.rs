@@ -85,11 +85,13 @@ pub fn rational_bspline_plane_roots(
         let x: Vec<_> = values.iter().map(|v| Expansion::scalar(*v)).collect();
         solve::solve(
             ctx,
-            &x[..tail],
-            uv,
-            n,
-            degree,
-            span,
+            ExactSpan {
+                x: &x[..tail],
+                uv,
+                n,
+                degree,
+                span,
+            },
             &std::array::from_fn(|i| x[tail + i].clone()),
             tolerance,
         )
@@ -245,9 +247,19 @@ mod solve;
 pub use patch::rational_bspline_affine_patch_roots;
 #[path = "bspline_plane_roots/polynomial.rs"]
 mod polynomial;
+use polynomial::ExactSpan;
 #[path = "bspline_plane_roots/common.rs"]
 mod common;
 pub use common::{OriginalPlaneCommonRootDecision, OriginalPlaneCommonRootOutcome, rational_bspline_plane_common_root};
 #[path = "bspline_plane_roots/edge.rs"]
 mod edge;
-pub use edge::rational_bspline_affine_patch_edge_root;
+pub use edge::{rational_bspline_affine_patch_edge_root, rational_bspline_affine_patch_edge_sign};
+#[path = "bspline_plane_roots/sign.rs"]
+mod sign;
+pub use sign::{OriginalPlaneRootSignDecision, rational_bspline_plane_root_sign};
+#[path = "bspline_plane_roots/quadric.rs"]
+mod quadric;
+pub use quadric::{OriginalQuadricRoot, OriginalQuadricRootsOutcome, OriginalQuadricRootsDecision, rational_bspline_quadric_roots};
+#[path = "bspline_plane_roots/quadric_edge.rs"]
+mod quadric_edge;
+pub use quadric_edge::{OriginalQuadricRootSignDecision,QuadricRefs,RationalSpanRefs,rational_bspline_quadric_projected_edge_sign};

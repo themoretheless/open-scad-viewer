@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0502",
+  "testedBase": "8b25027f162e95dc337b490cb3aab665d7e728cb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 58,
+  "scope": [
+    "Match the stationary second derivatives by a positive exact affine parameter change.",
+    "Compare exact endpoint jets, prove a positive rational square root of the second derivative ratio, and store all transported knots exactly. Equal flat jets admit a unit-scale translation."
+  ],
+  "logSha256": "fe50a3d6047ea21de5db42ea3e1755601407e39192389f1a100320ef58555b29",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fedc01da0c7a268fec7ab7007dc3b91beee96464b0394cbe92fe33ef5f4df176",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9f339e08f350a82dbf39aa1ed984e06a39367512098b91db2cd50080f0fb4599"
+  }
+}

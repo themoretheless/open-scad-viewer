@@ -61,6 +61,15 @@ fn restrict(
     }
     Ok(vec![row])
 }
+/// One source patch net of the curve/graph pair, the patch parameter that is
+/// transverse to the shared ordering coordinate, and which boundary side
+/// (upper or lower in that parameter) is used.
+#[derive(Clone, Copy)]
+pub struct ProjectionSource<'a> {
+    pub net: &'a [Vec<[LeafRef; 4]>],
+    pub transverse: usize,
+    pub upper: bool,
+}
 /// One source boundary, with strictly monotone ordering coordinate, is restricted
 /// by literal ORIGINAL raw-parameter endpoint leaves. Homogeneous blossom
 /// coefficients retain the positive (span width)^degree gauge, never rounded
@@ -72,14 +81,15 @@ fn restrict(
 /// Caller must prove the other surface's contact image is this boundary curve.
 pub fn binary_curve_graph_projection(
     ctx: &mut PredicateContext<'_>,
-    sources: [&[Vec<[LeafRef; 4]>]; 2],
-    transverse: [usize; 2],
-    upper: [bool; 2],
+    sides: [ProjectionSource<'_>; 2],
     reverse_graph: bool,
     axes: [usize; 2],
     curve_span: [LeafRef; 2],
     restriction: [LeafRef; 2],
 ) -> Result<CurveGraphProjectionDecision, InputError> {
+    let sources = sides.map(|side| side.net);
+    let transverse = sides.map(|side| side.transverse);
+    let upper = sides.map(|side| side.upper);
     if axes.iter().any(|a| *a > 2)
         || axes[0] == axes[1]
         || transverse.iter().any(|a| *a > 1)

@@ -1,4 +1,4 @@
-use crate::{Result, Value, field, input, json, require_exact_fields};
+use crate::{Result, Value, array_field, field, input, json, require_exact_fields};
 use mechanics_core::bonded_solid::{Bond, Model, Tet};
 
 pub fn solve(v: Value) -> Result<Value> {
@@ -40,7 +40,7 @@ pub fn solve(v: Value) -> Result<Value> {
         ));
     }
     let mut tets = Vec::new();
-    for t in v["tets"].as_array().unwrap() {
+    for t in array_field(&v, "tets")? {
         require_exact_fields(
             t,
             &["nodes", "region", "youngMpa", "poisson"],
@@ -59,7 +59,7 @@ pub fn solve(v: Value) -> Result<Value> {
         });
     }
     let mut bonds = Vec::new();
-    for b in v["bonds"].as_array().unwrap() {
+    for b in array_field(&v, "bonds")? {
         require_exact_fields(
             b,
             &[

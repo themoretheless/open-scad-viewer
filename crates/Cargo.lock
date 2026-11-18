@@ -217,7 +217,6 @@ dependencies = [
  "mesh-section",
  "planar-geometry",
  "polygon-core",
- "value-codec",
 ]
 
 [[package]]
@@ -312,6 +311,9 @@ version = "0.1.0"
 dependencies = [
  "brep-core",
  "brep-topology",
+ "cad-predicates",
+ "num-rational",
+ "num-traits",
  "nurbs-core",
  "sha2",
  "value-codec",
@@ -703,7 +705,6 @@ dependencies = [
  "gcode-core",
  "geometry-ops",
  "gpu-compute",
- "laser-core",
  "manifold-core",
  "manifold-ops",
  "mechanical-core",
@@ -714,17 +715,15 @@ dependencies = [
  "mesh-topology",
  "nurbs-core",
  "nurbs-intersect",
+ "nurbs-numerics",
  "osv-math",
  "planar-geometry",
  "polygon-core",
- "resvg",
  "sdf-core",
  "sha2",
  "sketch-core",
  "slicer-core",
  "subdivision-core",
- "svgtypes",
- "usvg",
  "value-codec",
 ]
 
@@ -1128,6 +1127,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 name = "manifold-core"
 version = "0.1.0"
 dependencies = [
+ "mesh-query",
  "mesh-topology",
  "rbench",
 ]
@@ -1137,10 +1137,15 @@ name = "manifold-ops"
 version = "0.1.0"
 dependencies = [
  "manifold-core",
+ "mesh-query",
+ "mesh-section",
+ "mesh-topology",
  "osv-math",
  "polygon-core",
+ "rbench",
  "serde",
  "serde_json",
+ "subdivision-core",
 ]
 
 [[package]]
@@ -1320,6 +1325,36 @@ dependencies = [
  "num-bigint",
  "num-rational",
  "num-traits",
+ "nurbs-foundation",
+ "nurbs-geometry",
+ "nurbs-numerics",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-foundation"
+version = "0.1.0"
+dependencies = [
+ "cad-predicates",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
+ "nurbs-geometry",
+ "nurbs-numerics",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-geometry"
+version = "0.1.0"
+dependencies = [
+ "cad-predicates",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
+ "nurbs-numerics",
  "osv-math",
  "value-codec",
 ]
@@ -1330,6 +1365,15 @@ version = "0.1.0"
 dependencies = [
  "cad-predicates",
  "nurbs-core",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-numerics"
+version = "0.1.0"
+dependencies = [
+ "num-rational",
  "osv-math",
  "value-codec",
 ]

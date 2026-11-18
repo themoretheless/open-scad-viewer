@@ -46,8 +46,13 @@ pub struct FiberOperator {
     pub(super) preconditioner: [[f64; 3]; 3],
     pub(super) scales: [f64; 3],
     pub(super) first_jacobian: [[[f64; 2]; 2]; 3],
+    exact_graph_shear: bool,
 }
 impl FiberOperator {
+    /// The root operator uses an independently checked global polynomial shear.
+    pub fn uses_exact_graph_shear(&self) -> bool {
+        self.exact_graph_shear
+    }
     /// Verified proposal R, not a claim of exact Jacobian inversion.
     pub fn preconditioner(&self) -> [[f64; 3]; 3] {
         self.preconditioner
@@ -82,17 +87,63 @@ struct Pair {
 #[derive(Clone, Debug)]
 pub struct FiberSources {
     pair: Arc<Pair>,
+    equations: Option<Arc<Pair>>,
+    affine_views: [Option<Arc<Surface>>; 2],
 }
 impl FiberSources {
     pub fn new(first: &Surface, second: &Surface) -> Result<Self> {
         first.validate()?;
         second.validate()?;
         Ok(Self {
+            equations: None,
+            affine_views: [first, second].map(|surface| {
+                crate::surface_injectivity::exact_affine_xy::equivalent_affine_surface(surface)
+                    .or_else(|| super::fiber_coverage::equivalent_multispan_affine_surface(surface))
+                    .map(Arc::new)
+            }),
             pair: Arc::new(Pair {
                 first: first.clone(),
                 second: second.clone(),
             }),
         })
+    }
+    /// Exact nonlinear coordinate conditioning; original sources remain owned
+    /// and externally visible. The global vertical shear has an exact inverse.
+    pub fn with_exact_graph_shear(first: &Surface, second: &Surface) -> Result<Self> {
+        let mut source = Self::new(first, second)?;
+        if first.control_points[0][0].len() == 3
+            && first
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == first.control_points[0][0][2])
+        {
+            return Ok(source);
+        }
+        let [a, b] = super::polynomial_order::exact_graph_shear(first, second)?;
+        source.equations = Some(Arc::new(Pair {
+            first: a,
+            second: b,
+        }));
+        Ok(source)
+    }
+    fn equation_surfaces(&self) -> Result<[&Surface; 2]> {
+        if let Some(p) = &self.equations {
+            let [a, b] = super::polynomial_order::exact_graph_shear(self.first(), self.second())?;
+            check(
+                a == p.first && b == p.second,
+                "Exact source graph shear changed",
+            )?;
+            Ok([&p.first, &p.second])
+        } else {
+            Ok(self.evaluation_surfaces())
+        }
+    }
+    pub(super) fn evaluation_surfaces(&self) -> [&Surface; 2] {
+        [
+            self.affine_views[0].as_deref().unwrap_or_else(|| self.first()),
+            self.affine_views[1].as_deref().unwrap_or_else(|| self.second()),
+        ]
     }
     pub fn first(&self) -> &Surface {
         &self.pair.first
@@ -450,7 +501,7 @@ fn evaluate_projected(
     }
     Ok(Some((values, derivatives)))
 }
-fn inverse(m: [[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
+pub(crate) fn inverse(m: [[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
     let mut a = [[0.; 6]; 3];
     for i in 0..3 {
         for j in 0..3 {
@@ -491,7 +542,6 @@ fn regular(j: [[I; 2]; 3]) -> bool {
         n.is_ok_and(|n| n.lo > 0. || n.hi < 0.)
     })
 }
-
 
 /// Positive weights are proposals only. Every accepted row sum is recomputed
 /// outward from the original operator bounds; no spectral-radius estimate or
@@ -570,3 +620,59 @@ mod operator_receipt_tests;
 #[path = "fiber/fiber_certificate.rs"]
 mod fiber_certificate;
 use fiber_certificate::certify;
+
+pub(crate) mod krawczyk;
+mod quotient;
+pub use quotient::{QuotientDiscoveryLimits,QuotientDiscoveryReport,QuotientDiscoveryResult,discover_quotient_fiber_surfaces,QualifiedQuotientFiber,QuotientFiberResult,QualifiedQuotientCoverage,QuotientCoverageResult,QuotientCoverageKind,QuotientCoverageNode,cover_quotient_fiber_box,cover_quotient_fiber_surfaces};
+
+
+pub(crate) use quotient::original_axis_sections;
+
+impl QualifiedFiber {
+    /// Bound displacement from the entire anchor enclosure along the same
+    /// uniformly unique graph, using its certified contraction operator.
+    pub(super) fn transported_root_bounds(
+        &self,
+        anchor: [[f64; 2]; 4],
+        max_rectangles: usize,
+    ) -> Result<(Option<[[f64; 2]; 4]>, usize)> {
+        let free = self.free_axis().index();
+        let domain = self.domain();
+        let op = self.report().operator.as_ref().unwrap();
+        let q = self.report().contraction_upper.unwrap();
+        let surfaces = self.source().equation_surfaces()?;
+        let support = free / 2;
+        let mut budget = Budget { used: 0, max: max_rectangles };
+        let Some((_, jacobian)) = evaluate(
+            surfaces[support],
+            [domain[2 * support], domain[2 * support + 1]],
+            true,
+            &mut budget,
+        )? else {
+            return Ok((None, budget.used));
+        };
+        let mut gain = 0_f64;
+        for (row, scale) in op.preconditioner().into_iter().zip(op.scales()) {
+            let mut projected = I::point(0.);
+            for (derivatives, coefficient) in jacobian.iter().zip(row) {
+                projected = projected.add(derivatives[free % 2].mul(I::point(coefficient))?)?;
+            }
+            gain = gain.max(I::point(projected.lo.abs().max(projected.hi.abs()))
+                .div(I::point(scale))?.hi);
+        }
+        let delta = I::point(domain[free][1]).sub(I::point(domain[free][0]))?;
+        let scaled = delta.mul(I::point(gain))?.div(I::point(1.).sub(I::point(q))?)?;
+        let mut bounds = domain;
+        let mut unknown = 0;
+        for axis in 0..4 {
+            if axis != free {
+                let radius = scaled.mul(I::point(op.scales()[unknown]))?.hi;
+                let reach = I::new(anchor[axis][0], anchor[axis][1])?
+                    .add(I::new(-radius, radius)?)?;
+                bounds[axis] = [domain[axis][0].max(reach.lo), domain[axis][1].min(reach.hi)];
+                unknown += 1;
+            }
+        }
+        Ok((Some(bounds), budget.used))
+    }
+}

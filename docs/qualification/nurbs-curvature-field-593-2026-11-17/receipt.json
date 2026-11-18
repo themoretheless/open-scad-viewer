@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0593",
+  "testedBase": "15d5cd3ecef7284976d64f73edf8c42179d756de",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 173,
+  "scope": [
+    "Return certified world boxes for equal-length contour stations and closing endpoints.",
+    "Verify world enclosures at seam-crossing equal-length stations, closed endpoints, and preserved coarse brackets."
+  ],
+  "logSha256": "c5383238aa524bb360f2e1fbe1c8cb9e493e59b0e0e418c90badcbbbfdd90d0d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "bc60321376b4eadbea36ec1e0432a8d54d0387e5e5ac650744b3a30560b0500b",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c8d7b6bcab7e4656333209b0ee8de9f77155f59181fdaef22812727ae18177e4"
+  }
+}

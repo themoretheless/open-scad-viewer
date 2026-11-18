@@ -3,6 +3,9 @@ use super::*;
 use crate::surface_measure::jets;
 #[path = "jet_join/paired.rs"]
 mod paired;
+#[path = "jet_join/patch_pair.rs"]
+mod patch_pair;
+pub use patch_pair::inspect_original_patch_pair;
 #[path = "jet_join/polynomial.rs"]
 mod polynomial;
 pub struct SpanJoinReport {
@@ -12,6 +15,8 @@ pub struct SpanJoinReport {
     pub regularity_proven: bool,
     pub cells: usize,
     pub pending: usize,
+    /// Positive derivative conditioning; stored source parameters are unchanged.
+    pub cross_scales: [f64; 2],
 }
 fn query(
     s: &Surface,
@@ -34,8 +39,16 @@ fn query(
         2,
     )?;
     let dv = I::point(p.v[1]).sub(I::point(p.v[0]))?;
-    for (j, span) in [(&mut a, p.left), (&mut b, p.right)] {
+    for ((j, span), factor) in [(&mut a, p.left), (&mut b, p.right)]
+        .into_iter()
+        .zip(p.cross_scales)
+    {
         let du = I::point(s.knots_u[span + 1]).sub(I::point(s.knots_u[span]))?;
+        let du = if factor == 1. {
+            du
+        } else {
+            du.div(I::point(factor))?
+        };
         for order in 1..=2 {
             for u in 0..=order {
                 let v = order - u;
@@ -52,7 +65,27 @@ fn query(
             }
         }
     }
-    paired::bounds(&a, &b, p.jumps(v)?)
+    let mut delta = p.jumps(v)?;
+    if let Some(axis) = p.unit_product_axis {
+        // These components follow from the ORIGINAL coefficient identity in
+        // Prepared, not from nearly-zero numerical jets. Retain both original
+        // projected jets and their correlated derivative differences.
+        for j in [&mut a, &mut b] {
+            j[1][0][axis] = I::point(0.);
+            j[2][0][axis] = I::point(0.);
+            for k in 0..3 {
+                j[0][1][k] = I::point(if k == axis { 1. } else { 0. });
+                j[1][1][k] = I::point(0.);
+                j[0][2][k] = I::point(0.);
+            }
+        }
+        delta[0][axis] = I::point(0.);
+        delta[1][axis] = I::point(0.);
+        delta[2] = [I::point(0.); 3];
+        paired::extrusion_bounds(&a, &b, delta, axis)
+    } else {
+        paired::bounds(&a, &b, delta)
+    }
 }
 struct Cell {
     v: [f64; 2],
@@ -68,6 +101,19 @@ pub fn inspect_original_span_join(
     curvature: f64,
     max_cells: usize,
 ) -> Result<SpanJoinReport> {
+    inspect_scaled(s, knot_u, normal, curvature, max_cells, [1.; 2])
+}
+/// Propose a positive cross-clock scale, then recheck the complete ORIGINAL
+/// normal/tensor fields with consistently scaled first, mixed and second jets.
+/// The point proposal authorizes nothing: every cell must still pass interval
+/// bounds. Stored controls, knots, trims and the physical surface are unchanged.
+pub fn inspect_original_geometric_span_join(
+    s: &Surface,
+    knot_u: f64,
+    normal: f64,
+    curvature: f64,
+    max_cells: usize,
+) -> Result<SpanJoinReport> {
     s.validate()?;
     check(
         knot_u.is_finite()
@@ -75,10 +121,67 @@ pub fn inspect_original_span_join(
             && (0. ..=2.).contains(&normal)
             && curvature.is_finite()
             && curvature >= 0.
-            && max_cells <= 100000,
+            && max_cells <= 100000
+            && s.control_points[0][0].len() == 3,
+        "Invalid original geometric join limits",
+    )?;
+    if max_cells < 2 {
+        return inspect_scaled(s, knot_u, normal, curvature, max_cells, [1.; 2]);
+    }
+    let prepared = polynomial::Prepared::new(s, knot_u, [1.; 2])?;
+    let v = prepared.v[0] * 0.5 + prepared.v[1] * 0.5;
+    let norm = |span: usize| -> Result<f64> {
+        let j = jets::calculate_partial_stable_up_to(
+            s,
+            [span, s.degree_v],
+            [[knot_u, knot_u], [v, v]],
+            [None; 2],
+            1,
+        )?;
+        let width = s.knots_u[span + 1] - s.knots_u[span];
+        let mut norm = 0f64;
+        for x in j[1][0] {
+            norm = norm.hypot((x.lo * 0.5 + x.hi * 0.5) / width);
+        }
+        Ok(norm)
+    };
+    let ratio = norm(prepared.left).and_then(|a| norm(prepared.right).map(|b| a / b));
+    let scales = match ratio.ok().filter(|r| r.is_finite() && *r > 0.) {
+        Some(r) if (1e-6..=1e6).contains(&r) => [1., r],
+        Some(r) if (1e-12..=1e12).contains(&r) => {
+            // Align both cross speeds when one-sided scaling would have
+            // exceeded its conditioning range. This proposes only positive
+            // clocks; all original normal/tensor intervals remain mandatory.
+            let root = r.sqrt();
+            [1. / root, root]
+        }
+        _ => [1.; 2],
+    };
+    let mut report = inspect_scaled(s, knot_u, normal, curvature, max_cells - 2, scales)?;
+    report.cells += 2;
+    Ok(report)
+}
+fn inspect_scaled(
+    s: &Surface,
+    knot_u: f64,
+    normal: f64,
+    curvature: f64,
+    max_cells: usize,
+    cross_scales: [f64; 2],
+) -> Result<SpanJoinReport> {
+    s.validate()?;
+    check(
+        knot_u.is_finite()
+            && normal.is_finite()
+            && (0. ..=2.).contains(&normal)
+            && curvature.is_finite()
+            && curvature >= 0.
+            && max_cells <= 100000
+            && s.control_points[0][0].len() == 3
+            && cross_scales.iter().all(|s| s.is_finite() && *s > 0.),
         "Invalid original join limits",
     )?;
-    let prepared = polynomial::Prepared::new(s, knot_u)?;
+    let prepared = polynomial::Prepared::new(s, knot_u, cross_scales)?;
     let mut work = 0;
     let mut lower = [0_f64; 2];
     let mut cell = |v: [f64; 2]| -> Result<Cell> {
@@ -119,6 +222,7 @@ pub fn inspect_original_span_join(
             tensor: [lower[1], upper.map_or(f64::INFINITY, |u| u[1])],
             regularity_proven: upper.is_some(),
             cells: work,
+            cross_scales,
             pending: cells
                 .iter()
                 .filter(|c| {
@@ -183,5 +287,6 @@ pub fn inspect_original_span_join(
 #[path = "jet_join/tests.rs"]
 mod tests;
 
-#[path="jet_join/extrusion.rs"] mod extrusion;
-pub use extrusion::{ExtrusionBoundaryReport,inspect_extrusion_boundary,inspect_planar_boundary};
+#[path = "jet_join/extrusion.rs"]
+mod extrusion;
+pub use extrusion::{ExtrusionBoundaryReport, inspect_extrusion_boundary, inspect_planar_boundary};

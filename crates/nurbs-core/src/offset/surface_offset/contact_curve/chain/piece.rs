@@ -10,8 +10,10 @@ pub(super) fn fit(
 ) -> Result<Piece> {
     let (s, d) = ordered(sources, distances, span);
     let uv_fit = uv::fit_branch(
-        s,
-        d,
+        uv::OffsetFaces {
+            surfaces: s,
+            distances: d,
+        },
         span.axis,
         span.drive,
         span.free,
@@ -42,8 +44,10 @@ pub(super) fn fit(
         curves.swap(0, 1);
     }
     let world_fit = super::super::fit(
-        s,
-        d,
+        uv::OffsetFaces {
+            surfaces: s,
+            distances: d,
+        },
         span.axis,
         span.drive,
         span.free,
@@ -83,21 +87,7 @@ pub(super) fn qualify(
         } else {
             1 - original
         };
-        let mut proof = uv::certify_refined(
-            &piece.curves[original],
-            side,
-            s,
-            d,
-            span.axis,
-            span.drive,
-            span.free,
-            span.other,
-            l.spans,
-            tol_uv,
-            l.final_cells_per_curve,
-            l.refinements,
-            l.refinements,
-        )?;
+        let mut proof = uv::certify_refined(&piece.curves[original], side, uv::OffsetFaces { surfaces: s, distances: d }, uv::ContactParameters { axis: span.axis, drive: span.drive, free: span.free, second: span.other, spans: l.spans }, tol_uv, uv::PcurveWork { max_cells: l.final_cells_per_curve, refinements: l.refinements, band_refinements: l.refinements })?;
         check(
             proof.correspondence_proven,
             "Bound actual chain UV curve lacks full original-root authority",
@@ -105,22 +95,12 @@ pub(super) fn qualify(
         proof.side = original;
         piece.uv_proofs.push(proof);
     }
-    let proof = super::super::certify(
-        &piece.world,
-        s,
-        d,
-        span.axis,
-        span.drive,
-        span.free,
-        span.other,
-        tol_mm,
-        super::super::Limits {
+    let proof = super::super::certify(&piece.world, crate::offset::contact_pcurve::OffsetFaces { surfaces: s, distances: d }, super::super::ContactDomain { axis: span.axis, drive: span.drive, free: span.free, second: span.other }, tol_mm, super::super::Limits {
             cells: l.final_cells_per_curve,
             spans: l.spans,
             section_refinements: l.refinements,
             band_refinements: l.refinements,
-        },
-    )?;
+        })?;
     check(
         proof.world_correspondence_proven,
         "Bound actual chain world curve lacks full original-root authority",

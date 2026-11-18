@@ -1,0 +1,694 @@
+import { GEOMETRY_WORKER_PAYLOAD_LIMITS, GEOMETRY_WORKER_PROTOCOL_VERSION } from '../geometryWorkerProtocol'
+import type {
+  GeometryBuildRequest,
+  GeometryCancelRequest,
+  GeometryWorkerRequest,
+  GeometryWorkerWireEvent,
+} from '../geometryWorkerProtocol'
+import { materializeWireScene } from './geometrySceneWire'
+import type { GeometryEvaluationResult } from '../../core/build'
+import { MAX_GEOMETRY_SOURCE_CHARACTERS } from '../../core/geometryExecution'
+import { MAX_NATIVE_GEOMETRY_CHARACTERS } from '../../core/nativeGeometry'
+import {
+  hasBoundedDataProperties,
+  hasExactKeys,
+  isBuildError,
+  isCancelReason,
+  isDenseExactArray,
+  isExecutionDescriptor,
+  isFloat32Payload,
+  isMeshData,
+  isPhase,
+  isPhaseTimings,
+  isQuality,
+  isRecord,
+  isUint32Payload,
+  optionalKey,
+} from './isRecord'
+import {
+  isNonNegativeFiniteNumber,
+  isNonNegativeSafeInteger,
+  isWellFormedUnicode,
+} from '../../core/workerPayloadPrimitives'
+import { sha256Hex } from '../../core/sha256'
+
+/**
+ * Reject oversized publications before the deep element/BVH graph scan. This
+ * loop is O(mesh count), never O(vertex/triangle count), and allocates no
+ * scratch buffers.
+ */
+export function hasSafeSuccessPayload(
+  value: Record<string, unknown>,
+  sharedAssetBuffers: ReadonlySet<ArrayBuffer> = new Set(),
+): boolean {
+  if (
+    !isDenseExactArray(value.meshes, GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes) ||
+    !isDenseExactArray(value.warnings, GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings)
+  )
+    return false
+  if (
+    !value.warnings.every(
+      warning => typeof warning === 'string' && warning.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters,
+    )
+  )
+    return false
+
+  let nativeCharacters = 0
+  let triangles = 0
+  let bytes = 0
+  let provenanceRuns = 0
+  let textCharacters = (value.warnings as string[]).reduce((total, warning) => total + warning.length, 0)
+  const entityIds = new Set<string>()
+  const payloadBuffers = new Set<ArrayBuffer>()
+  const countedAssetBuffers = new Set<ArrayBuffer>()
+  for (const candidate of value.meshes) {
+    if (
+      !isRecord(candidate) ||
+      !hasExactKeys(
+        candidate,
+        ['vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform', 'faceIds', 'provenance', 'topology'],
+        ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry', 'lods'],
+      ) ||
+      !isFloat32Payload(candidate.vertices) ||
+      !isUint32Payload(candidate.indices) ||
+      !isUint32Payload(candidate.edgeIndices) ||
+      (candidate.faceIdsInferred !== undefined && typeof candidate.faceIdsInferred !== 'boolean') ||
+      (candidate.faceIdsAuthoritative !== undefined && typeof candidate.faceIdsAuthoritative !== 'boolean') ||
+      !isUint32Payload(candidate.faceIds) ||
+      !isFloat32Payload(candidate.transform) ||
+      !isRecord(candidate.bvh) ||
+      !hasExactKeys(candidate.bvh, [
+        'version',
+        'vertexStride',
+        'leafSize',
+        'nodeCount',
+        'bounds',
+        'nodes',
+        'triangles',
+      ]) ||
+      !isFloat32Payload(candidate.bvh.bounds) ||
+      !isUint32Payload(candidate.bvh.nodes) ||
+      !isUint32Payload(candidate.bvh.triangles) ||
+      candidate.indices.length % 3 !== 0 ||
+      !isDenseExactArray(candidate.provenance, candidate.indices.length / 3)
+    )
+      return false
+    if (candidate.nativeGeometry !== undefined) {
+      if (
+        !isRecord(candidate.nativeGeometry) ||
+        !hasExactKeys(candidate.nativeGeometry, [
+          'version',
+          'nodeId',
+          'kind',
+          'revision',
+          'geometryJson',
+          'documentJson',
+          'documentRevision',
+        ])
+      )
+        return false
+      const native = candidate.nativeGeometry
+      if (typeof native.geometryJson !== 'string' || typeof native.documentJson !== 'string') return false
+      nativeCharacters += native.geometryJson.length + native.documentJson.length
+      if (nativeCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) return false
+      bytes += 2 * (native.geometryJson.length + native.documentJson.length)
+    }
+    const views = [
+      candidate.vertices,
+      candidate.indices,
+      candidate.edgeIndices,
+      candidate.faceIds,
+      candidate.transform,
+      candidate.bvh.bounds,
+      candidate.bvh.nodes,
+      candidate.bvh.triangles,
+    ] as const
+    for (const [index, view] of views.entries()) {
+      const buffer = view.buffer as ArrayBuffer
+      // Scene assets back the vertices/indices of every instance; count their bytes once.
+      if (index < 2 && sharedAssetBuffers.has(buffer)) {
+        if (countedAssetBuffers.has(buffer)) bytes -= view.byteLength
+        countedAssetBuffers.add(buffer)
+        continue
+      }
+      if (payloadBuffers.has(buffer) || sharedAssetBuffers.has(buffer)) return false
+      payloadBuffers.add(buffer)
+    }
+    if (candidate.lods !== undefined) {
+      const lods = lodPayloadSize(candidate.lods, payloadBuffers)
+      if (!lods) return false
+      triangles += lods.triangles
+      bytes += lods.bytes
+    }
+    if (candidate.entityId !== undefined) {
+      if (typeof candidate.entityId !== 'string' || entityIds.has(candidate.entityId)) return false
+      entityIds.add(candidate.entityId)
+      textCharacters += candidate.entityId.length
+    }
+    if (candidate.geometryAssetId !== undefined) {
+      if (typeof candidate.geometryAssetId !== 'string') return false
+      textCharacters += candidate.geometryAssetId.length
+    }
+    for (const run of candidate.provenance) {
+      if (
+        !isRecord(run) ||
+        !hasExactKeys(run, ['triangleStart', 'triangleEnd', 'source', 'backside']) ||
+        (run.source !== null &&
+          (!isRecord(run.source) ||
+            !hasExactKeys(run.source, ['id', 'originalId', 'start', 'end', 'label'], ['operationId', 'instanceId'])))
+      )
+        return false
+      if (isRecord(run.source)) {
+        if (typeof run.source.label !== 'string') return false
+        textCharacters += run.source.label.length
+        if (run.source.operationId !== undefined) {
+          if (typeof run.source.operationId !== 'string') return false
+          textCharacters += run.source.operationId.length
+        }
+        if (run.source.instanceId !== undefined) {
+          if (typeof run.source.instanceId !== 'string') return false
+          textCharacters += run.source.instanceId.length
+        }
+      }
+    }
+    triangles += candidate.indices.length / 3
+    provenanceRuns += candidate.provenance.length
+    bytes +=
+      candidate.vertices.byteLength +
+      candidate.indices.byteLength +
+      candidate.edgeIndices.byteLength +
+      candidate.faceIds.byteLength +
+      candidate.transform.byteLength +
+      candidate.bvh.bounds.byteLength +
+      candidate.bvh.nodes.byteLength +
+      candidate.bvh.triangles.byteLength
+    if (
+      triangles > GEOMETRY_WORKER_PAYLOAD_LIMITS.triangles ||
+      bytes > GEOMETRY_WORKER_PAYLOAD_LIMITS.bytes ||
+      provenanceRuns > triangles + value.meshes.length ||
+      textCharacters > GEOMETRY_WORKER_PAYLOAD_LIMITS.totalTextCharacters
+    )
+      return false
+  }
+  return true
+}
+
+/**
+ * Two or three coarse-to-fine display levels: typed views owned by this
+ * publication, a BVH, one provenance run and finite ordered error bounds.
+ * Returns the levels' triangle and byte totals for the publication budget.
+ */
+function lodPayloadSize(value: unknown, payloadBuffers: Set<ArrayBuffer>): { triangles: number; bytes: number } | null {
+  if (!isDenseExactArray(value, 3) || value.length < 2) return null
+  let triangles = 0,
+    bytes = 0,
+    previous: { triangleCount: number; errorUpper: number } | null = null
+  for (const level of value) {
+    if (
+      !isRecord(level) ||
+      !hasExactKeys(level, [
+        'vertices',
+        'indices',
+        'edgeIndices',
+        'faceIds',
+        'bvh',
+        'provenance',
+        'triangleCount',
+        'errorUpper',
+      ]) ||
+      !isFloat32Payload(level.vertices) ||
+      !isUint32Payload(level.indices) ||
+      !isUint32Payload(level.edgeIndices) ||
+      !isUint32Payload(level.faceIds) ||
+      !isRecord(level.bvh) ||
+      !hasExactKeys(level.bvh, ['version', 'vertexStride', 'leafSize', 'nodeCount', 'bounds', 'nodes', 'triangles']) ||
+      !isFloat32Payload(level.bvh.bounds) ||
+      !isUint32Payload(level.bvh.nodes) ||
+      !isUint32Payload(level.bvh.triangles) ||
+      !isNonNegativeSafeInteger(level.triangleCount) ||
+      level.indices.length !== level.triangleCount * 3 ||
+      level.faceIds.length !== level.triangleCount ||
+      !isNonNegativeFiniteNumber(level.errorUpper) ||
+      !isDenseExactArray(level.provenance, 1)
+    )
+      return null
+    const run = level.provenance[0]
+    if (
+      !isRecord(run) ||
+      !hasExactKeys(run, ['triangleStart', 'triangleEnd', 'source', 'backside']) ||
+      run.triangleStart !== 0 ||
+      run.triangleEnd !== level.triangleCount ||
+      (run.source !== null &&
+        (!isRecord(run.source) ||
+          !hasExactKeys(run.source, ['id', 'originalId', 'start', 'end', 'label'], ['operationId', 'instanceId']) ||
+          typeof run.source.label !== 'string' ||
+          run.source.label.length > GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters))
+    )
+      return null
+    if (previous && !(previous.triangleCount < level.triangleCount && previous.errorUpper > level.errorUpper))
+      return null
+    previous = { triangleCount: level.triangleCount, errorUpper: level.errorUpper }
+    for (const view of [
+      level.vertices,
+      level.indices,
+      level.edgeIndices,
+      level.faceIds,
+      level.bvh.bounds,
+      level.bvh.nodes,
+      level.bvh.triangles,
+    ]) {
+      const buffer = view.buffer as ArrayBuffer
+      if (payloadBuffers.has(buffer)) return null
+      payloadBuffers.add(buffer)
+      bytes += view.byteLength
+    }
+    triangles += level.triangleCount
+  }
+  return { triangles, bytes }
+}
+
+/**
+ * Validate a standalone kernel result before an MCP qualification supervisor
+ * accepts data from a disposable child realm. This deliberately applies the
+ * same bounded mesh checks as protocol-v5 success publication without adding a
+ * Worker-v5 envelope or claiming that the qualification adapter is a v5
+ * provider.
+ */
+export function isGeometryEvaluationResultPayload(value: unknown): value is GeometryEvaluationResult {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ['meshes', 'warnings', 'volume', 'surfaceArea', 'quality', 'reduced', 'timings']) ||
+    !hasSafeSuccessPayload(value) ||
+    !isDenseExactArray(value.meshes, GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes) ||
+    !value.meshes.every(isMeshData) ||
+    !isDenseExactArray(value.warnings, GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings) ||
+    !value.warnings.every(
+      warning => typeof warning === 'string' && warning.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters,
+    ) ||
+    !isQuality(value.quality) ||
+    !isNonNegativeFiniteNumber(value.volume) ||
+    !isNonNegativeFiniteNumber(value.surfaceArea) ||
+    typeof value.reduced !== 'boolean' ||
+    !isPhaseTimings(value.timings)
+  )
+    return false
+  return true
+}
+
+export function hasValidEventEnvelope(candidate: Record<string, unknown>): boolean {
+  return (
+    candidate.protocolVersion === GEOMETRY_WORKER_PROTOCOL_VERSION &&
+    isNonNegativeSafeInteger(candidate.documentRevision) &&
+    isNonNegativeSafeInteger(candidate.jobId) &&
+    isQuality(candidate.quality) &&
+    typeof candidate.sourceSha256 === 'string' &&
+    /^[a-f0-9]{64}$/.test(candidate.sourceSha256) &&
+    isPhase(candidate.phase)
+  )
+}
+
+const MAX_PROJECT_FILES = 127
+const MAX_PROJECT_LIBRARY_PATHS = 16
+const MAX_PROJECT_PATH_CHARACTERS = 1_024
+
+function isBoundedProjectPath(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_PROJECT_PATH_CHARACTERS &&
+    isWellFormedUnicode(value)
+  )
+}
+
+/** Shape check only; path canonicalization and containment stay with the project VFS. */
+function isGeometryProjectSources(value: unknown): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, ['entrypoint', 'files'], ['libraryPaths'])) return false
+  const project = value as Record<string, unknown>
+  if (!isBoundedProjectPath(project.entrypoint)) return false
+  if (!Array.isArray(project.files) || project.files.length > MAX_PROJECT_FILES) return false
+  let characters = 0
+  for (const file of project.files as unknown[]) {
+    if (!isRecord(file) || !hasExactKeys(file, ['path', 'source'])) return false
+    const entry = file as Record<string, unknown>
+    if (!isBoundedProjectPath(entry.path) || typeof entry.source !== 'string' || !isWellFormedUnicode(entry.source))
+      return false
+    characters += entry.source.length
+    if (characters > MAX_GEOMETRY_SOURCE_CHARACTERS * 16) return false
+  }
+  const libraryPaths = project.libraryPaths
+  return (
+    libraryPaths === undefined ||
+    (Array.isArray(libraryPaths) &&
+      libraryPaths.length <= MAX_PROJECT_LIBRARY_PATHS &&
+      libraryPaths.every(isBoundedProjectPath))
+  )
+}
+
+export function isGeometryWorkerRequest(value: unknown): value is GeometryWorkerRequest {
+  try {
+    if (!isRecord(value) || !hasBoundedDataProperties(value, 12)) return false
+    const candidate = value as Partial<GeometryWorkerRequest>
+    const envelopeIsValid =
+      candidate.protocolVersion === GEOMETRY_WORKER_PROTOCOL_VERSION &&
+      (candidate.type === 'build' || candidate.type === 'cancel' || candidate.type === 'sweep-preview-ack') &&
+      isNonNegativeSafeInteger(candidate.documentRevision) &&
+      isNonNegativeSafeInteger(candidate.jobId)
+    if (!envelopeIsValid) return false
+    if (candidate.type === 'build') {
+      const build = candidate as Partial<GeometryBuildRequest>
+      return (
+        hasExactKeys(
+          value,
+          ['protocolVersion', 'type', 'documentRevision', 'jobId', 'source', 'sourceSha256', 'quality'],
+          ['selectionSurfaces', 'acknowledgeSweepPreviews', 'project'],
+        ) &&
+        (build.project === undefined || isGeometryProjectSources(build.project)) &&
+        (build.acknowledgeSweepPreviews === undefined || typeof build.acknowledgeSweepPreviews === 'boolean') &&
+        (build.selectionSurfaces === undefined || typeof build.selectionSurfaces === 'boolean') &&
+        typeof build.source === 'string' &&
+        build.source.length <= MAX_GEOMETRY_SOURCE_CHARACTERS &&
+        isWellFormedUnicode(build.source) &&
+        typeof build.sourceSha256 === 'string' &&
+        /^[a-f0-9]{64}$/.test(build.sourceSha256) &&
+        sha256Hex(build.source) === build.sourceSha256 &&
+        isQuality(build.quality)
+      )
+    }
+    if (candidate.type === 'sweep-preview-ack')
+      return (
+        hasExactKeys(value, [
+          'protocolVersion',
+          'type',
+          'documentRevision',
+          'jobId',
+          'quality',
+          'sourceSha256',
+          'nodeId',
+          'sections',
+        ]) &&
+        isQuality(candidate.quality) &&
+        typeof candidate.sourceSha256 === 'string' &&
+        /^[a-f0-9]{64}$/.test(candidate.sourceSha256) &&
+        typeof candidate.nodeId === 'string' &&
+        candidate.nodeId.length > 0 &&
+        candidate.nodeId.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters &&
+        Number.isInteger(candidate.sections) &&
+        (candidate.sections as number) >= 2 &&
+        (candidate.sections as number) <= 1025
+      )
+    const cancel = candidate as Partial<GeometryCancelRequest>
+    return (
+      hasExactKeys(value, ['protocolVersion', 'type', 'documentRevision', 'jobId', 'reason']) &&
+      isCancelReason(cancel.reason)
+    )
+  } catch {
+    return false
+  }
+}
+
+function isKernelJobProgress(value: unknown): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, ['kind', 'done', 'total', 'steps'])) return false
+  const { kind, done, total, steps } = value
+  return (
+    (kind === 'mesh-boolean' || kind === 'render-prepare') &&
+    Number.isSafeInteger(done) &&
+    Number.isSafeInteger(total) &&
+    Number.isSafeInteger(steps) &&
+    (done as number) >= 0 &&
+    (done as number) <= (total as number) &&
+    (steps as number) >= 1
+  )
+}
+
+export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerWireEvent {
+  try {
+    if (!isRecord(value) || !hasBoundedDataProperties(value, 24) || !hasValidEventEnvelope(value)) return false
+
+    switch (value.status) {
+      case 'accepted':
+        return (
+          hasExactKeys(value, [
+            'protocolVersion',
+            'documentRevision',
+            'jobId',
+            'quality',
+            'sourceSha256',
+            'status',
+            'phase',
+          ]) && value.phase === 'queued'
+        )
+      case 'started':
+        return (
+          hasExactKeys(value, [
+            'protocolVersion',
+            'documentRevision',
+            'jobId',
+            'quality',
+            'sourceSha256',
+            'status',
+            'phase',
+          ]) &&
+          (value.phase === 'initializing' || value.phase === 'compiling')
+        )
+      case 'progress':
+        return (
+          hasExactKeys(
+            value,
+            ['protocolVersion', 'documentRevision', 'jobId', 'quality', 'sourceSha256', 'status', 'phase', 'progress'],
+            ['kernelJob'],
+          ) &&
+          (value.kernelJob === undefined || isKernelJobProgress(value.kernelJob)) &&
+          (value.progress === null ||
+            (typeof value.progress === 'number' &&
+              Number.isFinite(value.progress) &&
+              value.progress >= 0 &&
+              value.progress <= 1))
+        )
+      case 'sweep-preview':
+        return (
+          hasExactKeys(
+            value,
+            [
+              'protocolVersion',
+              'documentRevision',
+              'jobId',
+              'quality',
+              'sourceSha256',
+              'status',
+              'phase',
+              'nodeId',
+              'sections',
+              'accepted',
+              'sampledControlDeviation',
+              'budget',
+              'meshes',
+            ],
+            [
+              'phaseResolved',
+              'continuousBound',
+              'continuousErrorUpper',
+              'knownProfileErrorUpper',
+              'frameTransportCertified',
+              'certifiedErrorUpper',
+              'endpointContourErrorUpper',
+              'profileRegularityCertified',
+              'wallRegularityCertified',
+            ],
+          ) &&
+          value.phase === 'compiling' &&
+          typeof value.nodeId === 'string' &&
+          value.nodeId.length > 0 &&
+          value.nodeId.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters &&
+          Number.isInteger(value.sections) &&
+          (value.sections as number) >= 2 &&
+          (value.sections as number) <= 1025 &&
+          typeof value.accepted === 'boolean' &&
+          isNonNegativeFiniteNumber(value.sampledControlDeviation) &&
+          isNonNegativeFiniteNumber(value.budget) &&
+          hasSafeSuccessPayload({ ...value, warnings: [] }) &&
+          (value.continuousBound === undefined || typeof value.continuousBound === 'boolean') &&
+          (value.continuousBound !== true || isNonNegativeFiniteNumber(value.continuousErrorUpper)) &&
+          (value.phaseResolved === undefined || typeof value.phaseResolved === 'boolean') &&
+          (value.frameTransportCertified === undefined || typeof value.frameTransportCertified === 'boolean') &&
+          (value.profileRegularityCertified === undefined || typeof value.profileRegularityCertified === 'boolean') &&
+          (value.wallRegularityCertified === undefined ||
+            value.wallRegularityCertified === null ||
+            typeof value.wallRegularityCertified === 'boolean') &&
+          (value.certifiedErrorUpper === undefined ||
+            value.certifiedErrorUpper === null ||
+            isNonNegativeFiniteNumber(value.certifiedErrorUpper)) &&
+          (value.endpointContourErrorUpper === undefined ||
+            value.endpointContourErrorUpper === null ||
+            (Array.isArray(value.endpointContourErrorUpper) &&
+              value.endpointContourErrorUpper.length === 2 &&
+              value.endpointContourErrorUpper.every(isNonNegativeFiniteNumber))) &&
+          (value.continuousErrorUpper === undefined || isNonNegativeFiniteNumber(value.continuousErrorUpper)) &&
+          (value.knownProfileErrorUpper === undefined || isNonNegativeFiniteNumber(value.knownProfileErrorUpper)) &&
+          (value.knownProfileErrorUpper === undefined ||
+            value.continuousErrorUpper === undefined ||
+            value.knownProfileErrorUpper === value.continuousErrorUpper) &&
+          (value.continuousBound === undefined
+            ? value.accepted ===
+              ((value.knownProfileErrorUpper === undefined ||
+                (value.knownProfileErrorUpper as number) <= (value.budget as number)) &&
+                (value.sampledControlDeviation as number) <= (value.budget as number) &&
+                (value.phaseResolved ?? true) &&
+                (value.frameTransportCertified ?? true) &&
+                (value.profileRegularityCertified ?? true) &&
+                (value.wallRegularityCertified === undefined || value.wallRegularityCertified === true) &&
+                (value.certifiedErrorUpper === undefined
+                  ? value.continuousErrorUpper === undefined ||
+                    (value.continuousErrorUpper as number) <= (value.budget as number)
+                  : value.certifiedErrorUpper !== null &&
+                    (value.certifiedErrorUpper as number) <= (value.budget as number)))
+            : !value.accepted ||
+              (value.continuousBound &&
+                (value.knownProfileErrorUpper === undefined ||
+                  (value.knownProfileErrorUpper as number) <= (value.budget as number)) &&
+                (value.sampledControlDeviation as number) <= (value.budget as number) &&
+                (value.phaseResolved ?? true) &&
+                (value.frameTransportCertified ?? true) &&
+                (value.profileRegularityCertified ?? true) &&
+                (value.wallRegularityCertified === undefined || value.wallRegularityCertified === true) &&
+                (value.certifiedErrorUpper === undefined
+                  ? value.continuousErrorUpper === undefined ||
+                    (value.continuousErrorUpper as number) <= (value.budget as number)
+                  : value.certifiedErrorUpper !== null &&
+                    (value.certifiedErrorUpper as number) <= (value.budget as number)))) &&
+          (value.meshes as unknown[]).every(
+            mesh =>
+              isMeshData(mesh) &&
+              !('nativeGeometry' in mesh) &&
+              mesh.faceIdsAuthoritative === false &&
+              mesh.provenance.every(run => run.source === null),
+          )
+        )
+      case 'succeeded': {
+        if (
+          !hasExactKeys(value, [
+            'protocolVersion',
+            'documentRevision',
+            'jobId',
+            'quality',
+            'sourceSha256',
+            'status',
+            'phase',
+            'execution',
+            'scene',
+            'warnings',
+            'volume',
+            'surfaceArea',
+            'reduced',
+            'timings',
+            'durationMs',
+          ])
+        )
+          return false
+        // The eager view shares asset views between instances; deep checks run on it.
+        const scene = materializeWireScene(value.scene)
+        return (
+          scene !== null &&
+          value.phase === 'complete' &&
+          isQuality(value.quality) &&
+          isExecutionDescriptor(value.execution, value.quality) &&
+          hasSafeSuccessPayload({ ...value, meshes: scene.meshes }, scene.assetBuffers) &&
+          scene.meshes.every(isMeshData) &&
+          isNonNegativeFiniteNumber(value.volume) &&
+          isNonNegativeFiniteNumber(value.surfaceArea) &&
+          typeof value.reduced === 'boolean' &&
+          isPhaseTimings(value.timings) &&
+          isNonNegativeFiniteNumber(value.durationMs)
+        )
+      }
+      case 'failed':
+        return (
+          hasExactKeys(
+            value,
+            [
+              'protocolVersion',
+              'documentRevision',
+              'jobId',
+              'quality',
+              'sourceSha256',
+              'status',
+              'phase',
+              'error',
+              'durationMs',
+            ],
+            ['execution'],
+          ) &&
+          optionalKey(
+            value,
+            'execution',
+            candidate =>
+              isQuality(value.quality) && isExecutionDescriptor(candidate, value.quality, 'runtime-or-planned'),
+          ) &&
+          isBuildError(value.error) &&
+          isNonNegativeFiniteNumber(value.durationMs)
+        )
+      case 'cancelled':
+        return (
+          hasExactKeys(
+            value,
+            [
+              'protocolVersion',
+              'documentRevision',
+              'jobId',
+              'quality',
+              'sourceSha256',
+              'status',
+              'phase',
+              'reason',
+              'durationMs',
+            ],
+            ['execution'],
+          ) &&
+          optionalKey(
+            value,
+            'execution',
+            candidate =>
+              isQuality(value.quality) && isExecutionDescriptor(candidate, value.quality, 'runtime-or-planned'),
+          ) &&
+          isCancelReason(value.reason) &&
+          isNonNegativeFiniteNumber(value.durationMs)
+        )
+      case 'stale':
+        return (
+          hasExactKeys(
+            value,
+            [
+              'protocolVersion',
+              'documentRevision',
+              'jobId',
+              'quality',
+              'sourceSha256',
+              'status',
+              'phase',
+              'durationMs',
+            ],
+            ['execution', 'supersededBy'],
+          ) &&
+          optionalKey(
+            value,
+            'execution',
+            candidate =>
+              isQuality(value.quality) && isExecutionDescriptor(candidate, value.quality, 'runtime-or-planned'),
+          ) &&
+          optionalKey(
+            value,
+            'supersededBy',
+            candidate =>
+              isRecord(candidate) &&
+              hasExactKeys(candidate, ['documentRevision', 'jobId']) &&
+              isNonNegativeSafeInteger(candidate.documentRevision) &&
+              isNonNegativeSafeInteger(candidate.jobId),
+          ) &&
+          isNonNegativeFiniteNumber(value.durationMs)
+        )
+      default:
+        return false
+    }
+  } catch {
+    return false
+  }
+}

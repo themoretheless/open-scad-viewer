@@ -61,7 +61,14 @@ pub fn certify_frenet_control_trajectories(
         return certify_frenet_planar_control_trajectories(path,scale,twist,affine,qs,traversal,max_cells);
     }
     let frame=certify_frenet_path(path,twist,traversal,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_frenet_path_values(
@@ -146,35 +153,71 @@ fn frenet_values_cell(
 /// Relative Frenet pose: original path derivatives and station laws retain
 /// distinct parameter intervals. Translation is covered separately by callers.
 pub(crate) fn certify_frenet_relative_values(
-    path:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
+    laws: super::ProfileLaws<'_>,
+    qs:&[[[f64;2];3]],
+    path_traversal:[f64;2],
+    law_traversal:[f64;2],
+    max_cells:usize,
 )->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=frenet_values_at(path,twist,path_traversal,law_traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     // Relative translation is the constructor-owned literal zero curve.
     // Its exact value is known; no original-source query is needed here.
-    super::trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,law_traversal,max_cells,frame,None,Some([[0.;2];3]))
+    super::trajectory::control_values_with_prepared_path(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+        Some([[0.;2];3]),
+    )
 }
 
 /// Tighter original Frenet image using its proved orthonormal binormal
 /// identity. Separate entry point preserves existing adaptive enclosures.
 pub(crate) fn certify_frenet_relative_values_with_binormal_identity(
-    path:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
+    laws: super::ProfileLaws<'_>,
+    qs:&[[[f64;2];3]],
+    path_traversal:[f64;2],
+    law_traversal:[f64;2],
+    max_cells:usize,
 )->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=frenet_values_at_with_binormal_identity(path,twist,path_traversal,law_traversal,max_cells,true)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,law_traversal,max_cells,frame,None,Some([[0.;2];3]))
+    super::trajectory::control_values_with_prepared_path(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+        Some([[0.;2];3]),
+    )
 }
 
 /// Relative second jets in normalized arc station. Caller must own a complete
 /// original C4 source certificate and quantitative positive speed cover.
 /// No sampled inverse derivatives or retained-frame identity is assumed.
+/// Arc-length transport: the source and station intervals, the enclosed arc length and a lower
+/// bound on the path speed.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ArcTraversal {
+    pub source: [f64; 2],
+    pub station: [f64; 2],
+    pub length: [f64; 2],
+    pub speed_lower: f64,
+}
 pub(crate) fn certify_c4_frenet_arc_relative_trajectories(
-    path:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],source:[f64;2],station:[f64;2],length:[f64;2],
-    speed_lower:f64,max_cells:usize,
+    laws: super::ProfileLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    arc: ArcTraversal,
+    max_cells: usize,
 )->Result<TrajectoriesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let ArcTraversal { source, station, length, speed_lower } = arc;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     let mut frame=certify_frenet_path(path,&zero,source,max_cells)?;
     let refusal=|frame:Report|TrajectoriesReport{traversal:station,status:Status::Unresolved,cells:frame.cells,jets:None,single_span:false,reason:frame.reason};
@@ -199,7 +242,14 @@ pub(crate) fn certify_c4_frenet_arc_relative_trajectories(
     // still retain their independent single-span/C2 requirements below.
     frame.single_span=true;
     frame=apply_twist(frame,twist,station,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(&zero,scale,affine,qs,station,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        station,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_frenet_control_values(
@@ -207,7 +257,14 @@ pub fn certify_frenet_control_values(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
     let frame=certify_frenet_path_values(path,twist,traversal,max_cells)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// On an original coordinate-plane path, Frenet binormal is constant wherever
@@ -242,7 +299,14 @@ pub fn certify_frenet_planar_control_trajectories(
         }
     }
     let frame=if frame.status==Status::Certified {apply_twist(frame,twist,traversal,max_cells)?} else {frame};
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]
@@ -400,14 +464,36 @@ fn frenet_relative_values_separate_original_path_and_station_laws(){
     let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
     let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
     let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-    let r=certify_frenet_relative_values(&path,&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
+    let r=certify_frenet_relative_values(
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: None,
+        },
+        &qs,
+        [0.2,0.3],
+        [0.6,0.7],
+        1000,
+    ).unwrap();
     assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
     for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
         let d=(1.+4.*u*u).sqrt();let a=0.25*s;
         let expected=[-(1.+s)*2.*u*a.cos()/d,(1.+s)*a.cos()/d,(1.+s)*a.sin()];
         for k in 0..3{assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1],"{bounds:?} vs {expected:?}");}
     }}
-    let short=certify_frenet_relative_values(&path,&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],r.cells-1).unwrap();
+    let short=certify_frenet_relative_values(
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: None,
+        },
+        &qs,
+        [0.2,0.3],
+        [0.6,0.7],
+        r.cells-1,
+    ).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
 }
 
@@ -447,10 +533,20 @@ fn original_arc_frenet_second_jets_match_independent_parabola_chain_rule(){
  // Changing the authored knot domain must leave normalized arc derivatives invariant.
  for (origin,width) in [(0.,1.),(-3.,8.),(2.,0.125)]{
  let mut path=path.clone();for knot in &mut path.knots{*knot=origin+width * *knot;}
- let proof=certify_c4_frenet_arc_relative_trajectories(&path,&scale,&twist,None,&qs,[0.2,0.3],[0.1,0.4],[length.next_down(),length.next_up()],1./width,10000).unwrap();
+ let proof=certify_c4_frenet_arc_relative_trajectories(
+     ProfileLaws { path: &path, scale: &scale, twist: &twist, affine: None },
+     &qs,
+     ArcTraversal { source: [0.2,0.3], station: [0.1,0.4], length: [length.next_down(),length.next_up()], speed_lower: 1./width },
+     10000,
+ ).unwrap();
  assert_eq!(proof.status,Status::Certified,"{proof:?}");assert!(proof.single_span);
  let jet=&proof.jets.as_ref().unwrap()[0];
  for u in [0.2_f64,0.25,0.3]{let g=(1.+4.*u*u).sqrt();let value=[-2.*u/g,1./g,0.];let first=[-2.*length/g.powi(4),-4.*u*length/g.powi(4),0.];let second=[32.*u*length*length/g.powi(7),(-4.+48.*u*u)*length*length/g.powi(7),0.];for (bounds,values) in [(jet.value,value),(jet.first,first),(jet.second,second)]{for k in 0..3{assert!(bounds[k][0]<=values[k]&&values[k]<=bounds[k][1],"{bounds:?}, {values:?}");}}}
- for budget in [0,proof.cells-1]{let short=certify_c4_frenet_arc_relative_trajectories(&path,&scale,&twist,None,&qs,[0.2,0.3],[0.1,0.4],[length.next_down(),length.next_up()],1./width,budget).unwrap();assert_eq!(short.status,Status::Unresolved);assert!(short.jets.is_none());}
+ for budget in [0,proof.cells-1]{let short=certify_c4_frenet_arc_relative_trajectories(
+     ProfileLaws { path: &path, scale: &scale, twist: &twist, affine: None },
+     &qs,
+     ArcTraversal { source: [0.2,0.3], station: [0.1,0.4], length: [length.next_down(),length.next_up()], speed_lower: 1./width },
+     budget,
+ ).unwrap();assert_eq!(short.status,Status::Unresolved);assert!(short.jets.is_none());}
  }
 }

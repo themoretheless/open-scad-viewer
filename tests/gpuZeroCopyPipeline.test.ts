@@ -7,7 +7,7 @@ import {
   dispatchComputeToZeroCopyMesh,
   supportsOffscreenWebGpu,
   GpuBufferArena,
-} from '../src/services/gpuZeroCopyPipeline'
+} from '../src/render/gpuZeroCopyPipeline'
 
 function createMockGpuDevice() {
   const createdBuffers: Array<{ size: number; usage: number; destroyed: boolean }> = []
@@ -100,21 +100,13 @@ describe('Zero-Copy WebGPU Pipeline & VRAM Buffer Arena', () => {
     const pipelineMock = {} as GPUComputePipeline
     const bindGroupMock = {} as GPUBindGroup
 
-    dispatchComputeToZeroCopyMesh(
-      device,
-      encoderMock,
-      pipelineMock,
-      bindGroupMock,
-      [4, 4, 1],
-      buffers,
-      {
-        indexCount: 192,
-        instanceCount: 1,
-        firstIndex: 0,
-        baseVertex: 0,
-        firstInstance: 0,
-      }
-    )
+    dispatchComputeToZeroCopyMesh(device, encoderMock, pipelineMock, bindGroupMock, [4, 4, 1], buffers, {
+      indexCount: 192,
+      instanceCount: 1,
+      firstIndex: 0,
+      baseVertex: 0,
+      firstInstance: 0,
+    })
 
     expect(device.queue.writeBuffer).toHaveBeenCalledTimes(1)
     expect(passMock.setPipeline).toHaveBeenCalledWith(pipelineMock)

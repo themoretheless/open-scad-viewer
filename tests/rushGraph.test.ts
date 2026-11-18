@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_EXAMPLE } from '../src/services/rushGraph'
+import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_EXAMPLE } from '../src/language/rushGraph'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 
 describe('Rush IR/1 frontend', () => {
@@ -12,7 +12,9 @@ describe('Rush IR/1 frontend', () => {
       const analysis = await service.analyze(compileRushGraph(RUSH_GRAPH_EXAMPLE).source, 'full')
       expect(analysis.volume).toBeGreaterThan(9100)
       expect(analysis.volume).toBeLessThan(9600)
-    } finally { await runtime.close() }
+    } finally {
+      await runtime.close()
+    }
   })
 
   it('builds real geometry and preserves the own Rust mesh execution identity', async () => {
@@ -36,16 +38,30 @@ describe('Rush IR/1 frontend', () => {
     const after = setRushGraphParameters(before.document, before.document_sha256, [{ id: 'width', value: 50 }])
     expect(after.document.parameters[0].value).toBe(50)
     expect(before.document.parameters[0].value).toBe(40)
-    expect(() => setRushGraphParameters(after.document, before.document_sha256, [{ id: 'width', value: 60 }])).toThrow('Document changed')
-    expect(() => setRushGraphParameters(before.document, before.document_sha256, [{ id: 'width', value: -1 }])).toThrow('positive')
+    expect(() => setRushGraphParameters(after.document, before.document_sha256, [{ id: 'width', value: 60 }])).toThrow(
+      'Document changed',
+    )
+    expect(() => setRushGraphParameters(before.document, before.document_sha256, [{ id: 'width', value: -1 }])).toThrow(
+      'positive',
+    )
   })
 
   it('rejects code injection, dangling references, duplicate IDs and cycles before geometry execution', () => {
     expect(() => compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, source: 'cube(1);' })).toThrow()
     expect(() => compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, root: 'missing' })).toThrow('Unknown node')
-    expect(() => compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, nodes: [{ id: 'x', op: 'translate', vector: [0, 0, 0], input: 'x' }], root: 'x' })).toThrow('Cycle')
-    expect(() => compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, nodes: [...RUSH_GRAPH_EXAMPLE.nodes, RUSH_GRAPH_EXAMPLE.nodes[0]] })).toThrow('unique')
-    expect(() => compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, nodes: [{ id: 'x);cube(1)', op: 'sphere', radius: 1 }], root: 'x' })).toThrow()
+    expect(() =>
+      compileRushGraph({
+        ...RUSH_GRAPH_EXAMPLE,
+        nodes: [{ id: 'x', op: 'translate', vector: [0, 0, 0], input: 'x' }],
+        root: 'x',
+      }),
+    ).toThrow('Cycle')
+    expect(() =>
+      compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, nodes: [...RUSH_GRAPH_EXAMPLE.nodes, RUSH_GRAPH_EXAMPLE.nodes[0]] }),
+    ).toThrow('unique')
+    expect(() =>
+      compileRushGraph({ ...RUSH_GRAPH_EXAMPLE, nodes: [{ id: 'x);cube(1)', op: 'sphere', radius: 1 }], root: 'x' }),
+    ).toThrow()
   })
 
   it('bounds shared-reference expansion rather than just counting unique nodes', () => {

@@ -1,0 +1,49 @@
+{
+  "id": "NURBS-0643",
+  "testedBase": "02971f66ca1eb341e82983ce3d6c04e10227c013",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 283,
+  "scope": [
+    "Expose ordered enclosures for the eigenvalues of the density-weighted central tensor and report whether the requested tolerance was met.",
+    "Check analytic ordered moments of a weighted nested island, tolerance status and incomplete integration through the compiled ABI."
+  ],
+  "logSha256": "6ca06dea32bdfe6356bcb3fe5ad37419abe110837bf89b4704235ffec334970c",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "bd91ad2a0bca9bb7a0cf47f7a3ab9d44177c20152fe87a2d77393eed80bbbe44",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "16c4284f2cff4d78840e213cd3c069c90f93a8ef424f92caf690172386cc2689",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "83a085e242f95adf923f6be3a503c4c6e03488aaf105b13df437f42e2ff317b0",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "1707f93c7a9d9b40e4a0138cc90c966f3e575c38e0193a6191f9be1126873cd4"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

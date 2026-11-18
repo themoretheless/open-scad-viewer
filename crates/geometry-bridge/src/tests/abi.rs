@@ -40,7 +40,7 @@ fn manifold_check_reports_open_quad() {
     let indices: [u32; 6] = [0, 1, 2, 0, 2, 3];
     let (vp, vl) = upload(&positions);
     let (ip, il) = upload(&indices);
-    let packed = unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64) };
+    let packed = unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64, 0.0) };
     let _ = packed;
     let response = unsafe { take_response() };
     let handle = response_handle(&response);
@@ -52,10 +52,10 @@ fn manifold_check_reports_open_quad() {
         assert_eq!(abi_array_field(handle, 5), 0);
         assert_eq!(abi_array_field(handle, 7), 0);
         // Summary: 4 vertices, 2 triangles, 1 component, boundary flag.
-        assert_eq!(abi_array_field(handle, 12), 4);
-        assert_eq!(abi_array_field(handle, 13), 2);
-        assert_eq!(abi_array_field(handle, 14), 1);
-        let flags = abi_array_field(handle, 15);
+        assert_eq!(abi_array_field(handle, 16), 4);
+        assert_eq!(abi_array_field(handle, 17), 2);
+        assert_eq!(abi_array_field(handle, 18), 1);
+        let flags = abi_array_field(handle, 19);
         assert_eq!(flags & 1, 0, "open quad is not strictly manifold");
         assert_ne!(flags & 2, 0, "open quad is manifold with boundary");
         abi_array_free(handle);
@@ -70,13 +70,13 @@ fn manifold_check_flags_triple_edge() {
     let indices: [u32; 9] = [0, 1, 2, 0, 4, 1, 0, 1, 3];
     let (vp, vl) = upload(&positions);
     let (ip, il) = upload(&indices);
-    unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64) };
+    unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64, 0.0) };
     let response = unsafe { take_response() };
     let handle = response_handle(&response);
     unsafe {
         // One non-manifold edge (0, 1) with 3 faces.
         assert_eq!(abi_array_field(handle, 3), 2);
-        assert_ne!(abi_array_field(handle, 15) & 1, 1);
+        assert_ne!(abi_array_field(handle, 19) & 1, 1);
         abi_array_free(handle);
         reclaim::<f64>(vp, vl);
         reclaim::<u32>(ip, il);
@@ -117,16 +117,16 @@ fn manifold_repair_welds_unwelded_cube() {
     }
     let (vp, vl) = upload(&positions);
     let (ip, il) = upload(&indices);
-    unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 0) };
+    unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 0, 0) };
     let response = unsafe { take_response() };
     let handle = response_handle(&response);
     unsafe {
         // Welded 24 -> 8 vertices, nothing removed or flipped.
         assert_eq!(abi_array_field(handle, 1), 24); // 8 vertices * 3
         assert_eq!(abi_array_field(handle, 3), 36); // 12 triangles * 3
-        assert_eq!(abi_array_field(handle, 4), 16); // welded
-        assert_eq!(abi_array_field(handle, 5), 0); // degenerates
-        let flags = abi_array_field(handle, 7);
+        assert_eq!(abi_array_field(handle, 6), 16); // welded
+        assert_eq!(abi_array_field(handle, 7), 0); // degenerates
+        let flags = abi_array_field(handle, 9);
         assert_eq!(flags & 1, 1, "repaired cube must be strictly manifold");
         abi_array_free(handle);
         reclaim::<f64>(vp, vl);
@@ -138,7 +138,7 @@ fn manifold_repair_welds_unwelded_cube() {
 fn manifold_check_rejects_unknown_format() {
     let positions: [f64; 3] = [0., 0., 0.];
     let (vp, vl) = upload(&positions);
-    unsafe { abi_manifold_check(vp, vl, 0, 0, 7) };
+    unsafe { abi_manifold_check(vp, vl, 0, 0, 7, 0.0) };
     let response = unsafe { take_response() };
     assert_eq!(response["ok"].as_bool(), Some(false));
     unsafe { reclaim::<f64>(vp, vl) };
@@ -247,7 +247,7 @@ fn manifold_boolean_unions_overlapping_boxes() {
     let (bip, bil) = upload(&bi);
     unsafe {
         abi_manifold_boolean(
-            avp, avl, aip, ail, FMT_F64, bvp, bvl, bip, bil, FMT_F64, 0, 0.0, 1e-9,
+            avp, avl, aip, ail, FMT_F64, bvp, bvl, bip, bil, FMT_F64, 0, 0.0, 1e-9, 0,
         )
     };
     let response = unsafe { take_response() };
@@ -304,20 +304,20 @@ fn manifold_repair_full_fills_open_box_top() {
     }
     let (vp, vl) = upload(&positions);
     let (ip, il) = upload(&indices);
-    unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 1) };
+    unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 1, 0) };
     let response = unsafe { take_response() };
     let handle = response_handle(&response);
     unsafe {
-        assert_eq!(abi_array_field(handle, 8), 0, "no splits needed");
-        assert_eq!(abi_array_field(handle, 9), 1, "one boundary loop filled");
+        assert_eq!(abi_array_field(handle, 10), 0, "no splits needed");
+        assert_eq!(abi_array_field(handle, 11), 1, "one boundary loop filled");
         assert_eq!(
-            abi_array_field(handle, 10),
+            abi_array_field(handle, 12),
             2,
             "quad filled with 2 triangles"
         );
-        let flags = abi_array_field(handle, 7);
+        let flags = abi_array_field(handle, 9);
         assert_eq!(flags & 1, 1, "full repair closes the box");
-        assert_eq!(abi_array_field(handle, 11), 1, "mode tag is Full");
+        assert_eq!(abi_array_field(handle, 13), 1, "mode tag is Full");
         abi_array_free(handle);
         reclaim::<f64>(vp, vl);
         reclaim::<u32>(ip, il);
@@ -396,12 +396,12 @@ fn manifold_abi_fuzz_rejects_bad_buffers_without_handle_leaks() {
         for operation in 0..4 {
             let response = caught_response(|| unsafe {
                 match operation {
-                    0 => abi_manifold_check(call_vp, call_vl, call_ip, call_il, fmt),
-                    1 => abi_manifold_repair(call_vp, call_vl, call_ip, call_il, fmt, 0.0, 0),
+                    0 => abi_manifold_check(call_vp, call_vl, call_ip, call_il, fmt, 0.0),
+                    1 => abi_manifold_repair(call_vp, call_vl, call_ip, call_il, fmt, 0.0, 0, 0),
                     2 => abi_manifold_metrics(call_vp, call_vl, call_ip, call_il, fmt),
                     _ => abi_manifold_boolean(
                         call_vp, call_vl, call_ip, call_il, fmt, call_vp, call_vl, call_ip,
-                        call_il, fmt, 0, 0.0, 1e-9,
+                        call_il, fmt, 0, 0.0, 1e-9, 0,
                     ),
                 }
             });

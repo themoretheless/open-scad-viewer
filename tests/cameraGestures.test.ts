@@ -5,7 +5,7 @@ import {
   computeWheelDistance,
   computePinchUpdate,
   clampGestureDistance,
-} from '../src/services/cameraGestures'
+} from '../src/render/cameraGestures'
 import reference from './fixtures/camera-gestures-reference-v1.json'
 
 const initial = { yaw: 0, pitch: 0, dist: 10, tx: 0, ty: 0, tz: 0 }
@@ -13,13 +13,16 @@ const initial = { yaw: 0, pitch: 0, dist: 10, tx: 0, ty: 0, tz: 0 }
 it('matches 81 frozen pre-migration orbit, pan and pinch states', () => {
   expect(reference.cases).toHaveLength(81)
   for (const entry of reference.cases) {
-    const result = entry.action === 'orbit'
-      ? computeOrbitUpdate(...entry.args as unknown as Parameters<typeof computeOrbitUpdate>)
-      : entry.action === 'pan'
-        ? computePanUpdate(...entry.args as unknown as Parameters<typeof computePanUpdate>)
-        : computePinchUpdate(...entry.args as unknown as Parameters<typeof computePinchUpdate>)
+    const result =
+      entry.action === 'orbit'
+        ? computeOrbitUpdate(...(entry.args as unknown as Parameters<typeof computeOrbitUpdate>))
+        : entry.action === 'pan'
+          ? computePanUpdate(...(entry.args as unknown as Parameters<typeof computePanUpdate>))
+          : computePinchUpdate(...(entry.args as unknown as Parameters<typeof computePinchUpdate>))
     for (const key of ['yaw', 'pitch', 'dist', 'tx', 'ty', 'tz'] as const) {
-      expect(Math.abs(result[key] - entry.expected[key])).toBeLessThanOrEqual(1e-12 * Math.max(1, Math.abs(entry.expected[key])))
+      expect(Math.abs(result[key] - entry.expected[key])).toBeLessThanOrEqual(
+        1e-12 * Math.max(1, Math.abs(entry.expected[key])),
+      )
     }
   }
 })
@@ -36,7 +39,8 @@ it('preserves explicit scalar fallbacks across the finite-only WASM transport', 
 })
 
 it('pans a collapsed pinch without zoom and leaves rejected input unchanged', () => {
-  const p = { x: 0, y: 0 }, q = { x: 10, y: 10 }
+  const p = { x: 0, y: 0 },
+    q = { x: 10, y: 10 }
   const result = computePinchUpdate(p, p, q, q, initial, 100)
   expect(result.dist).toBe(initial.dist)
   expect(result.tx).toBeLessThan(initial.tx)

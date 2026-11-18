@@ -134,7 +134,6 @@ impl Report {
 /// proposal, path-link and endpoint-link allowances. This is not one global
 /// allowance silently reused by several proof calls. No material/embedding or
 /// complete original-root-set claim follows from these connected subsets.
-#[allow(clippy::too_many_arguments)]
 pub fn connect(
     surfaces: [&Surface; 2],
     distances: [f64; 2],
@@ -181,8 +180,10 @@ pub fn connect(
     let drive = c[owner][boundary.axis];
     let fixed = drive[0] * 0.5 + drive[1] * 0.5;
     let (anchor, queries) = uv::section(
-        [surfaces[owner], surfaces[other]],
-        [distances[owner], distances[other]],
+        crate::offset::contact_pcurve::OffsetFaces {
+            surfaces: [surfaces[owner], surfaces[other]],
+            distances: [distances[owner], distances[other]],
+        },
         boundary.axis,
         fixed,
         c[owner][1 - boundary.axis],

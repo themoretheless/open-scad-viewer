@@ -1,0 +1,66 @@
+{
+  "status": "passed",
+  "baseCommit": "324748acf0ae053adaee097adbe95aab1f153d2e",
+  "qualificationScope": "Native Rust suites in isolated frozen base plus exact owned paths; client tests/typecheck and architecture on main. Unrelated dirty geometry changes excluded from native and WASM build.",
+  "nativeTests": {
+    "nurbs": 107,
+    "brep": 33,
+    "bridge": 21,
+    "boxCoverUnit": 1,
+    "total": 162
+  },
+  "clientTests": 52,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations; baseline unchanged",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "75f4b889db98dd9bff86b3ad8916d8f6e741cbf8ed99b62135b965a5193f6bde",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/affine_plane.rs": "1cc0f8b079111deffe3f5822099e0661148c39e30b41236f212543022d60ac11",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window.rs": "81f18270e705ebe210078053f4609cf2486779edfc52ee17633d29f79dc9bccf",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window/repair.rs": "d138baaec42faa880c9d634c271775d4398ab13ee14dea9a3949ac88ce1b574a",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window/repair/boxes.rs": "6bfe03e6f9d8dc9152710ec22903cf3744cdb613977b18e31947182497fc4f9f",
+    "crates/nurbs-core/tests/curve_surface_root_excision.rs": "253662abe7d9857c8b36628f1623fea5bf67f32158a3e8233f08c2ae34bd7ede",
+    "crates/brep-core/tests/automatic_trim_root_excision.rs": "79c1f620a5bcff8f16fa35926f2ff93cb79e83ebda6d717f1fb12506dde6f057",
+    "crates/geometry-bridge/tests/curve_surface_root_excision.rs": "48dae773c0e67d35cc664e26ff34e52dc2f701ac6097fb54d1d824da217cecf6",
+    "tools/browser-qualification/root-excision-fixtures.ts": "7fd7123669ca0baece742e5d69f653653270991ca26ead41e8fd3d5e13822cb0",
+    "scripts/check-surface-self-intersection-wasm.mts": "3db0d475477a2ac1e9a8b4f863f1d6793daef530e6e35d8b8f4d8fb14123128f",
+    "tools/browser-qualification/surface-self-intersection.ts": "aa29d236bf5bec280c19df071f3d0c69d251890cf928ae8dbf8203ee5da66d6c",
+    "tools/browser-qualification/surface-self-intersection.mjs": "d4d7f6f008841a0f371ec9f8cb91e4c0c4c7b7203e1e9054f001fd62b978d6b7"
+  },
+  "mechanism": "Fresh overlapping original-coefficient Krawczyk existence/uniqueness windows repair artificial subdivision seams. Parameter containment proves root ownership. Closed unique domains are excised into at most six slabs; pending regions retained under one shared caller cell budget. Refinements preserve previous enclosures.",
+  "controlledRegression": {
+    "repairDisabled": true,
+    "exitCode": 101,
+    "expectedFailure": true,
+    "observed": "One root at t=13/16, missing t=7/16 on artificial cut; 4 unresolved cells, 407 cells searched. Same positive regression passes with repair enabled.",
+    "log": "control.log.gz"
+  },
+  "automaticTrim": {
+    "nativeLibraryQualified": true,
+    "originalBoundaryRoots": 4,
+    "branches": 2,
+    "faceSectors": 3,
+    "edgeSplitChildren": 3,
+    "modelValidity": true,
+    "persistentIds": true,
+    "immutableInputs": true,
+    "budgetFailureAtomic": true,
+    "wholeSurfaceBranchCensus": false,
+    "bodyAdmission": false
+  },
+  "runtimePrepared": {
+    "newCases": 14,
+    "expectedAbiCases": 457,
+    "expectedWorkers": 427,
+    "qualified": false
+  },
+  "scope": "Curve/surface and exact original iso/target roots; generic API feeds face_crossings, edge_partition and boundary-connected automatic fiber trim. Does not establish all surface/surface branch completeness.",
+  "remaining": [
+    "Original-knot and caller-boundary roots needing cross-boundary proof",
+    "Tangencies and singular/multiple roots",
+    "Periodic seams and poles",
+    "General hidden/closed surface intersection branch census",
+    "Globally complete automatic trims",
+    "Valid closed Body and general intersecting-NURBS Boolean",
+    "Installed runtime qualification"
+  ]
+}

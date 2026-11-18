@@ -1,0 +1,27 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/6a82c37cca659bf0502f183b4f1fb592f050331bb74b0e0ce40a8f6be3684b28.wasm",
+  "sha256": "6a82c37cca659bf0502f183b4f1fb592f050331bb74b0e0ce40a8f6be3684b28",
+  "bytes": 21727409,
+  "sourceCommit": "3eba92165ef5b779b369f4a9499539e7f658c720",
+  "status": "passed",
+  "abiCases": 165,
+  "graphCases": 54,
+  "workersStarted": 147,
+  "workersTerminated": 147,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "0e72e9ff720a545219b27a60aa4ab491f98c9fa69334a5ab3606d27d08068d26",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "d65f57fefd0217e8a0455abb357f4c0d8fd8e02073767d84814fec0a55de4ecb",
+    "tools/browser-qualification/surface-self-intersection.mjs": "c8721216de5aa1428b990bd9ea1d4485a3a73de0864ec47a591366c5ab22bf78"
+  },
+  "nativeReceipt": "docs/qualification/rational-multispan-quadric-graph-2026-11-03/results.json",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of positive exactly separable original multi-span rational graph clocks, including natural UV and algebraic outer boundaries.",
+  "remaining": [
+    "Coupled nonseparable weights",
+    "General freeform all-branch enumeration",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}

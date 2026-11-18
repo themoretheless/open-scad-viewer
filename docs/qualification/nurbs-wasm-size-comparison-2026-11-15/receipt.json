@@ -1,0 +1,370 @@
+{
+  "schema": "paired-wasm-performance-result/1",
+  "decision": "reject-size-optimized-candidate",
+  "qualification": "local raw ABI wall-clock measurements on a shared host; no estimates for browser or published kernel",
+  "sourceCommit": "a2659abe8141c25912538b76a972fec8d0c3baf1",
+  "runtime": "Node 22.23.4",
+  "host": "macOS-27.3-arm64-arm-64bit-Mach-O",
+  "hostActivity": "Other Git and Rust processes were active during the measurements. Wall-clock samples vary.",
+  "variants": {
+    "reference": {
+      "bytes": 16794155,
+      "sha256": "a2b286ddd476f66b067a6e6c7e3a09220582a8db812718267f29f7447c3fcdde",
+      "valid": true
+    },
+    "candidate": {
+      "bytes": 15838604,
+      "sha256": "fe02c94bf82017b8d87b6f27e6f706f2ce596f8d2d092d75f1256f4d0b23f570",
+      "valid": true
+    }
+  },
+  "correctnessMatched": [
+    "inspect",
+    "boundary",
+    "section",
+    "stl",
+    "boolean",
+    "extrude",
+    "refine",
+    "tessellate",
+    "sdf",
+    "sdfMesh",
+    "nurbs",
+    "surfaceAudit",
+    "progressive-hollow-boundary",
+    "progressive-unsegmented-hollow-boundary",
+    "pick"
+  ],
+  "timingPolicy": {
+    "warmupBatches": 2,
+    "measuredRounds": 5,
+    "order": "alternate reference/candidate per round",
+    "minimumBatchMs": 200,
+    "maximumMedianRatio": 1.1,
+    "include": "ABI allocation, input copy, request, result copy, free",
+    "exclude": "input encoding, result decoding, assertions, compilation"
+  },
+  "timings": [
+    {
+      "name": "inspect",
+      "inputSha256": "db6e49ed98bf5d12b9deafa7c15f6bb328bdbfa382d493053a745213bf4abc3c",
+      "samples": [
+        [
+          0.04539132071998286,
+          0.03363492285060726,
+          0.051157898073024795,
+          0.046018535179298777,
+          0.04915108212209407
+        ],
+        [
+          0.10915636363636375,
+          0.04441671285810031,
+          0.05545007402273484,
+          0.06082935902819851,
+          0.04986318340506937
+        ]
+      ],
+      "medians": [
+        0.046018535179298777,
+        0.05545007402273484
+      ],
+      "ratio": 1.2049508704848735,
+      "passed": false
+    },
+    {
+      "name": "boundary",
+      "inputSha256": "78af1b985de0bda008d01574eb413edb92eac1a6e013bdfd38cba68a06aa5f6e",
+      "samples": [
+        [
+          0.025725905825827948,
+          0.026446180637254194,
+          0.027164265475263256,
+          0.033318786800442694,
+          0.027586672413793135
+        ],
+        [
+          0.029831063720453237,
+          0.045157707985960256,
+          0.04153735721703239,
+          0.0423733506735699,
+          0.04636498565810685
+        ]
+      ],
+      "medians": [
+        0.027164265475263256,
+        0.0423733506735699
+      ],
+      "ratio": 1.5598931144358228,
+      "passed": false
+    },
+    {
+      "name": "section",
+      "inputSha256": "a1289ada7cdcfccee0588fd702df7c367b59318624ef21f3aacc1120326521c9",
+      "samples": [
+        [
+          0.06926179077323312,
+          0.06666920833333279,
+          0.055493617015640234,
+          0.05146051794349654,
+          0.07626460792950923
+        ],
+        [
+          0.08719416086434521,
+          0.07837088557993821,
+          0.07139870652557734,
+          0.09139080112721501,
+          0.08408016422900412
+        ]
+      ],
+      "medians": [
+        0.06666920833333279,
+        0.08408016422900412
+      ],
+      "ratio": 1.2611543819242612,
+      "passed": false
+    },
+    {
+      "name": "stl",
+      "inputSha256": "087d7bce1af02d3d0ce624c8e90fb8b7a49116afe2762d60dcca8fd37daed768",
+      "samples": [
+        [
+          0.1034250645994844,
+          0.10086103653191275,
+          0.15807678498827618,
+          0.10515531913775372,
+          0.07692863769230406
+        ],
+        [
+          0.12443950865266623,
+          0.18761005201791997,
+          0.15004788672168382,
+          0.15257575147929128,
+          0.10830042613636856
+        ]
+      ],
+      "medians": [
+        0.1034250645994844,
+        0.15004788672168382
+      ],
+      "ratio": 1.4507884264104374,
+      "passed": false
+    },
+    {
+      "name": "boolean",
+      "inputSha256": "430698ee11187b1dc09b3d94814f1eaa9666225655b51b593810540a90708612",
+      "samples": [
+        [
+          1.3486845217390646,
+          1.5758872573528873,
+          1.2208379024390215,
+          1.7249883474575916,
+          1.6978579833332332
+        ],
+        [
+          1.9847165841582153,
+          3.0606886527776727,
+          3.5256178281251778,
+          3.251283063492294,
+          3.1698190000001887
+        ]
+      ],
+      "medians": [
+        1.5758872573528873,
+        3.1698190000001887
+      ],
+      "ratio": 2.011450365633849,
+      "passed": false
+    },
+    {
+      "name": "extrude",
+      "inputSha256": "1b8f0928c2827fb15fe067ad4138abce54d2175edccb58b27ee554d65f61cd94",
+      "samples": [
+        [
+          0.42161984381337486,
+          0.17428028476823007,
+          0.1929184539781523,
+          0.16249796913079081,
+          0.13286293558473508
+        ],
+        [
+          0.33065700483094673,
+          0.28177995281124507,
+          0.3092794577259694,
+          0.2978142123287448,
+          0.3560769911504668
+        ]
+      ],
+      "medians": [
+        0.17428028476823007,
+        0.3092794577259694
+      ],
+      "ratio": 1.7746095499974108,
+      "passed": false
+    },
+    {
+      "name": "refine",
+      "inputSha256": "8ede9a2c306e57720f84b3d04ef2aa5221a1302c2b36129bdccd3078f4ee4446",
+      "samples": [
+        [
+          1.4688559782609472,
+          0.9534699810425789,
+          1.879775587719275,
+          0.97037305607486,
+          1.3721729346406053
+        ],
+        [
+          2.1830673723402954,
+          2.425542647059089,
+          2.128491575757366,
+          2.261800591836859,
+          1.974639676190591
+        ]
+      ],
+      "medians": [
+        1.3721729346406053,
+        2.1830673723402954
+      ],
+      "ratio": 1.5909564437751256,
+      "passed": false
+    },
+    {
+      "name": "tessellate",
+      "inputSha256": "c944c01cf1d12976667e637c70d74e44ea398b2e3e5f123f9c8ecb73a28b75fe",
+      "samples": [
+        [
+          2.011514676190425,
+          2.639790026315926,
+          2.1761885773193708,
+          2.6346485657896235,
+          1.986961144230848
+        ],
+        [
+          5.559302918918941,
+          4.533413888889158,
+          5.6480115833328455,
+          5.431173405405511,
+          5.840528944444183
+        ]
+      ],
+      "medians": [
+        2.1761885773193708,
+        5.559302918918941
+      ],
+      "ratio": 2.5546053209078465,
+      "passed": false
+    },
+    {
+      "name": "sdf",
+      "inputSha256": "850208121cc932ff29986a5b83392bfa08c98cf16fb54abe4fb6e8c3e27575d7",
+      "samples": [
+        [
+          0.023526335708626483,
+          0.020259758205023282,
+          0.024656048924403155,
+          0.018180631306247173,
+          0.019688784661621998
+        ],
+        [
+          0.02051995557257967,
+          0.031070333539988018,
+          0.028094113077551264,
+          0.026631208499335434,
+          0.024118446737310468
+        ]
+      ],
+      "medians": [
+        0.020259758205023282,
+        0.026631208499335434
+      ],
+      "ratio": 1.3144879731453256,
+      "passed": false
+    },
+    {
+      "name": "sdfMesh",
+      "inputSha256": "767ea9bd748da71ae9cfddf03f739dcf5abebd24c7b8f115585ed3c5bb843f24",
+      "samples": [
+        [
+          9.651021857141695,
+          9.50950186363612,
+          8.48703085185089,
+          6.114335848484188,
+          18.511319416667295
+        ],
+        [
+          56.47251049999613,
+          52.82827099999122,
+          41.75011816666423,
+          52.790425000002145,
+          43.25092500000028
+        ]
+      ],
+      "medians": [
+        9.50950186363612,
+        52.790425000002145
+      ],
+      "ratio": 5.551334418669206,
+      "passed": false
+    },
+    {
+      "name": "nurbs",
+      "inputSha256": "f8e6b1f602be01c682fe35cdb891a9313a52e66dac57c21146502ae4d7f3c30d",
+      "samples": [
+        [
+          0.11049919801979219,
+          0.13568662347352123,
+          0.11468169438072487,
+          0.09929088498556474,
+          0.1289353220012831
+        ],
+        [
+          0.1538462176923461,
+          0.14428881982582972,
+          0.13953836467426678,
+          0.13762767504962947,
+          0.1327361201061515
+        ]
+      ],
+      "medians": [
+        0.11468169438072487,
+        0.13953836467426678
+      ],
+      "ratio": 1.2167448818032087,
+      "passed": false
+    },
+    {
+      "name": "surfaceAudit",
+      "inputSha256": "01fa17f9ec72801770ab23850b500856b8f1563c45d3872843cd8eff19e805c0",
+      "samples": [
+        [
+          0.1298020495814619,
+          0.1253229232657969,
+          0.14171632712213947,
+          0.1419068181818478,
+          0.13116641845235358
+        ],
+        [
+          0.13355283382965946,
+          0.15266116042403413,
+          0.13414696512407623,
+          0.13396327260546997,
+          0.11050467348068396
+        ]
+      ],
+      "medians": [
+        0.13116641845235358,
+        0.13396327260546997
+      ],
+      "ratio": 1.0213229436780906,
+      "passed": true
+    }
+  ],
+  "timingNotCompleted": [
+    "progressive-hollow-boundary",
+    "progressive-unsegmented-hollow-boundary",
+    "pick"
+  ],
+  "earlyStopReason": "Candidate exceeded 10% median slowdown in 11 timed workloads. Both large native solid-audit outputs already matched.",
+  "invalidFixtureRetry": "Polygon extrusion input was changed from rings array to the documented outer/holes object before any timings were collected.",
+  "logSha256": "e6539410beb6db6bb5d2a335bfd7b02d4e8ab08b2d0f0750f017e3b0bc024c6e",
+  "harnessSha256": "6ad1fed3362bbe4f602177dfa52c9e74118671ed048016cdc636f5a6efe51bfb"
+}

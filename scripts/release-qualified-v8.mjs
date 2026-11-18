@@ -44,8 +44,8 @@ const implementation=[
  'crates/brep-core/src/analytic_features.rs','crates/brep-core/src/operations.rs',
  'crates/brep-core/src/imprint_pipeline.rs','crates/brep-core/src/solid_audit.rs',
  'crates/brep-core/src/lib.rs','crates/geometry-bridge/src/lib.rs',
- 'crates/geometry-bridge/src/tests.rs','src/services/geometry/brep.ts',
- 'src/services/geometry/brepCapability.ts',
+ 'crates/geometry-bridge/src/tests.rs','src/kernel/geometry/brep.ts',
+ 'src/kernel/geometry/brepCapability.ts',
 ]
 const excluded=[
  'Adjacent planar face openings: exact corner-transition ownership is not authored.',
@@ -81,7 +81,7 @@ write(next.plan,{
   'Collapse, boundedness, support collision, audit, cavity orientation, naming, permutation, bridge/WASM serialization, mutation and atomic-refusal coverage.',
  ],excluded},
  matrix:rows.map(([id,expected])=>({id,expected,blocksQualification:true})),
- bindings:{implementation,registry:'src/services/geometry/brepCapability.ts',evidenceJson:next.evidence},
+ bindings:{implementation,registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:next.evidence},
  evidence:{state:'qualified',notes:[
   'Only exact cells with native and bridge coverage are released.',
   'Every unsupported transition is typed-refused before source mutation; no mesh shell fallback exists.',

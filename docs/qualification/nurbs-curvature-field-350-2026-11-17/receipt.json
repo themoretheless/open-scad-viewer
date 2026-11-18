@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0350",
+  "testedBase": "560dd45bd34f98a5ab47fe83a2d11d524400de0f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 32,
+  "scope": [
+    "Identify exact shared contour contacts from irreducible quadratic equations using a canonical algebraic support clock.",
+    "A monic minimal quadratic and ordered-root selector identify the exact clock value across different parameterizations. The proof covers interior roots of irreducible quadratic contact equations on both contours."
+  ],
+  "logSha256": "6ca63f67ee587659827b383a20309a832869a28cfe4acbd201b808dd01654ba2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "65e02ebd02a5d612a3dd25d50a41fdeb012aff5abb003d71c2a1dd614d285b44",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "760a8ad225803cb9e6e1df82fb34a0e4773c218d153676dd97e834d5fcce5ac3",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "76747b0e52820ef1819781bc502266abc0720701373c7e5099da1dfc20067637",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "a5b7016a137fb4cf180e1fd065af74060143380bca69a812f56af903e0ee1375",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic.rs": "c4c7516a8d37a66211436830fc129f2cb55ee31e5be9be2ed20c94a491aa042d",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs": "e4bb9d1d839f6fe368d01b059dc6029d0dfe09746fd2f2b3eb94db7ef519082b",
+    "crates/nurbs-core/src/editing/rational_factor/polynomial.rs": "fb5ddabb8e7b294868b5447b7eed52180febaf5bac827cec908840bb532e3da5"
+  }
+}

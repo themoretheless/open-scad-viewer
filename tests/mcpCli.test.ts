@@ -5,11 +5,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/server'
 import { describe, expect, it, vi } from 'vitest'
 import { BoundedTransport } from '../src/mcp/boundedTransport'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
-import {
-  parseMcpCliOptions,
-  runMcpServer,
-  type RunMcpServerDependencies,
-} from '../src/mcp/server'
+import { parseMcpCliOptions, runMcpServer, type RunMcpServerDependencies } from '../src/mcp/server'
 
 const testDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = resolve(testDirectory, '..')
@@ -73,26 +69,30 @@ function runStdioLifecycle(): Promise<StdioRun> {
           if (message.id === 1 && ('result' in message || 'error' in message) && !toolsRequested) {
             initialized = true
             toolsRequested = true
-            child.stdin.write(`${JSON.stringify({
-              jsonrpc: '2.0',
-              method: 'notifications/initialized',
-            })}\n${JSON.stringify({
-              jsonrpc: '2.0',
-              id: 2,
-              method: 'tools/list',
-              params: {},
-            })}\n`)
+            child.stdin.write(
+              `${JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'notifications/initialized',
+              })}\n${JSON.stringify({
+                jsonrpc: '2.0',
+                id: 2,
+                method: 'tools/list',
+                params: {},
+              })}\n`,
+            )
           } else if (message.id === 2 && ('result' in message || 'error' in message) && !analyzeRequested) {
             analyzeRequested = true
-            child.stdin.write(`${JSON.stringify({
-              jsonrpc: '2.0',
-              id: 3,
-              method: 'tools/call',
-              params: {
-                name: 'openscad_analyze',
-                arguments: { source: 'cube(2);', quality: 'full' },
-              },
-            })}\n`)
+            child.stdin.write(
+              `${JSON.stringify({
+                jsonrpc: '2.0',
+                id: 3,
+                method: 'tools/call',
+                params: {
+                  name: 'openscad_analyze',
+                  arguments: { source: 'cube(2);', quality: 'full' },
+                },
+              })}\n`,
+            )
           } else if (message.id === 3 && ('result' in message || 'error' in message)) {
             analyzeSeen = true
           }
@@ -104,7 +104,15 @@ function runStdioLifecycle(): Promise<StdioRun> {
         stdinEnded = true
         // Bootstrap and analysis may be slow on hosted runners; EOF shutdown stays bounded.
         clearTimeout(timer)
-        timer = setTimeout(() => reject(new Error(`Timed out shutting down after stdin EOF (exit=${child.exitCode}, signal=${child.signalCode})\nstdout tail:\n${stdout.slice(-2000)}\nstderr:\n${stderr.slice(-4000)}`)), 10_000)
+        timer = setTimeout(
+          () =>
+            reject(
+              new Error(
+                `Timed out shutting down after stdin EOF (exit=${child.exitCode}, signal=${child.signalCode})\nstdout tail:\n${stdout.slice(-2000)}\nstderr:\n${stderr.slice(-4000)}`,
+              ),
+            ),
+          10_000,
+        )
         child.stdin.end()
       }
     })
@@ -117,24 +125,29 @@ function runStdioLifecycle(): Promise<StdioRun> {
       settled = true
       clearTimeout(timer)
       if (!initialized || !analyzeSeen) {
-        rejectRun(new Error(`MCP process exited before the stdio smoke completed\nstdout:\n${stdout}\nstderr:\n${stderr}`))
+        rejectRun(
+          new Error(`MCP process exited before the stdio smoke completed\nstdout:\n${stdout}\nstderr:\n${stderr}`),
+        )
         return
       }
       resolveRun({ code, signal, stdout, stderr })
     })
 
-    child.stdin.write(`${JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-11-25',
-        capabilities: {},
-        clientInfo: { name: 'open-scad-viewer-cli-test', version: '1.0.0' },
+    child.stdin.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-11-25',
+          capabilities: {},
+          clientInfo: { name: 'open-scad-viewer-cli-test', version: '1.0.0' },
+        },
+      })}\n`,
+      error => {
+        if (error) reject(error)
       },
-    })}\n`, error => {
-      if (error) reject(error)
-    })
+    )
   })
 }
 
@@ -201,8 +214,7 @@ function runStdioBurst(requestCount = 24): Promise<StdioBurstRun> {
             child.stdin.write(`${messages.map(message => JSON.stringify(message)).join('\n')}\n`, error => {
               if (error) reject(error)
             })
-          } else if (typeof message.id === 'number'
-            && message.id >= 100 && message.id < 100 + requestCount) {
+          } else if (typeof message.id === 'number' && message.id >= 100 && message.id < 100 + requestCount) {
             if (!responseIds.has(message.id) && message.error?.data?.code === 'server_busy') {
               busyResponses++
             }
@@ -239,18 +251,21 @@ function runStdioBurst(requestCount = 24): Promise<StdioBurstRun> {
       })
     })
 
-    child.stdin.write(`${JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-11-25',
-        capabilities: {},
-        clientInfo: { name: 'open-scad-viewer-burst-test', version: '1.0.0' },
+    child.stdin.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-11-25',
+          capabilities: {},
+          clientInfo: { name: 'open-scad-viewer-burst-test', version: '1.0.0' },
+        },
+      })}\n`,
+      error => {
+        if (error) reject(error)
       },
-    })}\n`, error => {
-      if (error) reject(error)
-    })
+    )
   })
 }
 
@@ -260,15 +275,28 @@ describe('MCP CLI', () => {
       databasePath: join(repositoryRoot, '.open-scad-viewer.duckdb'),
       showHelp: false,
     })
-    expect(parseMcpCliOptions([], {
-      OPENSCAD_VIEWER_DUCKDB: 'state/catalog.duckdb',
-    }, repositoryRoot).databasePath).toBe(join(repositoryRoot, 'state', 'catalog.duckdb'))
-    expect(parseMcpCliOptions(['--db', 'data/catalog.duckdb'], {}, repositoryRoot).databasePath)
-      .toBe(join(repositoryRoot, 'data', 'catalog.duckdb'))
+    expect(
+      parseMcpCliOptions(
+        [],
+        {
+          OPENSCAD_VIEWER_DUCKDB: 'state/catalog.duckdb',
+        },
+        repositoryRoot,
+      ).databasePath,
+    ).toBe(join(repositoryRoot, 'state', 'catalog.duckdb'))
+    expect(parseMcpCliOptions(['--db', 'data/catalog.duckdb'], {}, repositoryRoot).databasePath).toBe(
+      join(repositoryRoot, 'data', 'catalog.duckdb'),
+    )
     expect(parseMcpCliOptions(['--db', ':memory:'], {}, repositoryRoot).databasePath).toBe(':memory:')
-    expect(parseMcpCliOptions(['--memory'], {
-      OPENSCAD_VIEWER_DUCKDB: 'persistent.duckdb',
-    }, repositoryRoot).databasePath).toBe(':memory:')
+    expect(
+      parseMcpCliOptions(
+        ['--memory'],
+        {
+          OPENSCAD_VIEWER_DUCKDB: 'persistent.duckdb',
+        },
+        repositoryRoot,
+      ).databasePath,
+    ).toBe(':memory:')
     expect(parseMcpCliOptions(['--help'], {}, repositoryRoot).showHelp).toBe(true)
     expect(() => parseMcpCliOptions(['--db'], {}, repositoryRoot)).toThrow('--db requires a file path')
     expect(() => parseMcpCliOptions(['--unknown'], {}, repositoryRoot)).toThrow('Unknown argument')
@@ -277,11 +305,14 @@ describe('MCP CLI', () => {
   it('keeps stdout JSON-RPC-clean and shuts down after stdin EOF', async () => {
     const run = await runStdioLifecycle()
     const lines = run.stdout.split(/\r?\n/).filter(Boolean)
-    const messages = lines.map(line => JSON.parse(line) as {
-      id?: unknown
-      method?: string
-      result?: { serverInfo?: { name?: string } }
-    })
+    const messages = lines.map(
+      line =>
+        JSON.parse(line) as {
+          id?: unknown
+          method?: string
+          result?: { serverInfo?: { name?: string } }
+        },
+    )
     const responses = messages.filter(message => typeof message.id === 'number')
 
     expect(run.code).toBe(0)
@@ -301,9 +332,11 @@ describe('MCP CLI', () => {
         },
       },
     })
-    expect(messages).toContainEqual(expect.objectContaining({
-      method: 'notifications/resources/list_changed',
-    }))
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        method: 'notifications/resources/list_changed',
+      }),
+    )
     expect(run.stderr).toContain('OpenSCAD Viewer MCP server ready (DuckDB: :memory:)')
   }, 45_000)
 
@@ -326,29 +359,47 @@ describe('MCP CLI', () => {
       await originalStoreClose()
     })
     const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
-      capabilities: vi.fn(async () => { throw new Error('not used') }),
-      build: vi.fn(async () => { throw new Error('not used') }),
-      close: vi.fn(async () => { events.push('runtime') }),
+      capabilities: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      build: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      close: vi.fn(async () => {
+        events.push('runtime')
+      }),
     }
     const officialRuntime = {
-      capabilities: vi.fn(async () => { throw new Error('not used') }),
-      check: vi.fn(async () => { throw new Error('not used') }),
-      export: vi.fn(async () => { throw new Error('not used') }),
-      close: vi.fn(async () => { events.push('official-runtime') }),
+      capabilities: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      check: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      export: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      close: vi.fn(async () => {
+        events.push('official-runtime')
+      }),
     } satisfies ReturnType<RunMcpServerDependencies['createOfficialRuntime']>
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
     const transport = new BoundedTransport(serverTransport)
-    const handleClose = vi.fn(async () => { events.push('handle') })
-    const startServer = vi.fn(() => ({ close: handleClose })) as unknown as
-      RunMcpServerDependencies['startServer']
-
-    const running = await runMcpServer({ databasePath: ':memory:', showHelp: false }, {
-      openStore: async () => store,
-      createGeometryRuntime: () => runtime,
-      createOfficialRuntime: () => officialRuntime,
-      createTransport: () => transport,
-      startServer,
+    const handleClose = vi.fn(async () => {
+      events.push('handle')
     })
+    const startServer = vi.fn(() => ({ close: handleClose })) as unknown as RunMcpServerDependencies['startServer']
+
+    const running = await runMcpServer(
+      { databasePath: ':memory:', showHelp: false },
+      {
+        openStore: async () => store,
+        createGeometryRuntime: () => runtime,
+        createOfficialRuntime: () => officialRuntime,
+        createTransport: () => transport,
+        startServer,
+      },
+    )
     await Promise.all([running.close(), running.close()])
     await clientTransport.close()
 
@@ -365,23 +416,33 @@ describe('MCP CLI', () => {
     const originalStoreClose = store.close.bind(store)
     const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
     const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
-      capabilities: vi.fn(async () => { throw new Error('not used') }),
-      build: vi.fn(async () => { throw new Error('not used') }),
+      capabilities: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      build: vi.fn(async () => {
+        throw new Error('not used')
+      }),
       close: vi.fn(async () => undefined),
     }
     const [, serverTransport] = InMemoryTransport.createLinkedPair()
     const transport = new BoundedTransport(serverTransport)
     const transportClose = vi.spyOn(transport, 'close')
     const startupError = new Error('synthetic bootstrap failure')
-    const startServer = vi.fn(() => { throw startupError }) as unknown as
-      RunMcpServerDependencies['startServer']
+    const startServer = vi.fn(() => {
+      throw startupError
+    }) as unknown as RunMcpServerDependencies['startServer']
 
-    await expect(runMcpServer({ databasePath: ':memory:', showHelp: false }, {
-      openStore: async () => store,
-      createGeometryRuntime: () => runtime,
-      createTransport: () => transport,
-      startServer,
-    })).rejects.toBe(startupError)
+    await expect(
+      runMcpServer(
+        { databasePath: ':memory:', showHelp: false },
+        {
+          openStore: async () => store,
+          createGeometryRuntime: () => runtime,
+          createTransport: () => transport,
+          startServer,
+        },
+      ),
+    ).rejects.toBe(startupError)
 
     expect(transportClose).toHaveBeenCalledTimes(1)
     expect(runtime.close).toHaveBeenCalledTimes(1)
@@ -394,10 +455,17 @@ describe('MCP CLI', () => {
     const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
     const startupError = new Error('synthetic geometry runtime construction failure')
 
-    await expect(runMcpServer({ databasePath: ':memory:', showHelp: false }, {
-      openStore: async () => store,
-      createGeometryRuntime: () => { throw startupError },
-    })).rejects.toBe(startupError)
+    await expect(
+      runMcpServer(
+        { databasePath: ':memory:', showHelp: false },
+        {
+          openStore: async () => store,
+          createGeometryRuntime: () => {
+            throw startupError
+          },
+        },
+      ),
+    ).rejects.toBe(startupError)
 
     expect(storeClose).toHaveBeenCalledTimes(1)
   })
@@ -407,17 +475,28 @@ describe('MCP CLI', () => {
     const originalStoreClose = store.close.bind(store)
     const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
     const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
-      capabilities: vi.fn(async () => { throw new Error('not used') }),
-      build: vi.fn(async () => { throw new Error('not used') }),
+      capabilities: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      build: vi.fn(async () => {
+        throw new Error('not used')
+      }),
       close: vi.fn(async () => undefined),
     }
     const startupError = new Error('synthetic official runtime construction failure')
 
-    await expect(runMcpServer({ databasePath: ':memory:', showHelp: false }, {
-      openStore: async () => store,
-      createGeometryRuntime: () => runtime,
-      createOfficialRuntime: () => { throw startupError },
-    })).rejects.toBe(startupError)
+    await expect(
+      runMcpServer(
+        { databasePath: ':memory:', showHelp: false },
+        {
+          openStore: async () => store,
+          createGeometryRuntime: () => runtime,
+          createOfficialRuntime: () => {
+            throw startupError
+          },
+        },
+      ),
+    ).rejects.toBe(startupError)
 
     expect(runtime.close).toHaveBeenCalledTimes(1)
     expect(storeClose).toHaveBeenCalledTimes(1)
@@ -430,23 +509,33 @@ describe('MCP CLI', () => {
     const runtimeError = new Error('synthetic runtime close failure')
     const handleError = new Error('synthetic handle close failure')
     const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
-      capabilities: vi.fn(async () => { throw new Error('not used') }),
-      build: vi.fn(async () => { throw new Error('not used') }),
-      close: vi.fn(async () => { throw runtimeError }),
+      capabilities: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      build: vi.fn(async () => {
+        throw new Error('not used')
+      }),
+      close: vi.fn(async () => {
+        throw runtimeError
+      }),
     }
     const [, serverTransport] = InMemoryTransport.createLinkedPair()
     const transport = new BoundedTransport(serverTransport)
-    const handleClose = vi.fn(async () => { throw handleError })
-    const startServer = vi.fn(() => ({ close: handleClose })) as unknown as
-      RunMcpServerDependencies['startServer']
-    const running = await runMcpServer({ databasePath: ':memory:', showHelp: false }, {
-      openStore: async () => store,
-      createGeometryRuntime: () => runtime,
-      createTransport: () => transport,
-      startServer,
+    const handleClose = vi.fn(async () => {
+      throw handleError
     })
+    const startServer = vi.fn(() => ({ close: handleClose })) as unknown as RunMcpServerDependencies['startServer']
+    const running = await runMcpServer(
+      { databasePath: ':memory:', showHelp: false },
+      {
+        openStore: async () => store,
+        createGeometryRuntime: () => runtime,
+        createTransport: () => transport,
+        startServer,
+      },
+    )
 
-    const error = await running.close().catch(reason => reason) as AggregateError
+    const error = (await running.close().catch(reason => reason)) as AggregateError
 
     expect(error).toBeInstanceOf(AggregateError)
     expect([...error.errors]).toEqual([handleError, runtimeError])

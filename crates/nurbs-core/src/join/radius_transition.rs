@@ -344,9 +344,11 @@ fn run(candidate: Option<&Surface>, o: Options) -> Result<Report> {
             &pcurve,
             direction,
             &actual,
-            o.tolerances,
-            o.max_cells - cells,
-            o.max_coefficients - coefficient_work,
+            surface_collar::CollarBudget {
+                tolerances: o.tolerances,
+                max_cells: o.max_cells - cells,
+                max_work: o.max_coefficients - coefficient_work,
+            },
         )?;
         cells += proof.cells;
         coefficient_work += proof.coefficient_work;

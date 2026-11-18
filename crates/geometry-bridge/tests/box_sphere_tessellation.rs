@@ -14,6 +14,22 @@ fn placed_sphere(radius: f64, at: [f64; 3]) -> brep_core::Model {
     .unwrap()
 }
 
+/// The core Boolean, then on a proof refusal the certified curved families,
+/// in the order `geometry-bridge` tries them.
+fn certified(a: &brep_core::Model, b: &brep_core::Model, op: &str) -> nurbs_core::Result<brep_core::Model> {
+    match operations::boolean(a, b, op) {
+        Err(error) if matches!(error.code, "BREP_UNSUPPORTED_OPERATION" | "BREP_NURBS_BOOLEAN_UNPROVED") => {
+            brep_intersect::sphere_torus_boolean(a, b, op)
+                .or_else(|_| brep_intersect::sphere_cylinder_boolean(a, b, op))
+                .or_else(|_| brep_intersect::sphere_cone_boolean(a, b, op))
+                .or_else(|_| brep_intersect::cylinder_torus_boolean(a, b, op))
+                .or_else(|_| brep_intersect::cone_torus_boolean(a, b, op))
+                .map_err(|_| error)
+        }
+        other => other,
+    }
+}
+
 fn aabb(points: impl Iterator<Item = [f64; 3]>) -> [f64; 6] {
     let mut out = [
         f64::INFINITY,
@@ -86,7 +102,8 @@ fn box_sphere_results_tessellate_within_their_vertex_bounds() {
             sphere(5.).unwrap(),
             placed_sphere(1.5, [4.6, 0.7, 0.9]),
         ),
-        // Tolerant fallback results (numerical SSI).
+        // Off-axis pairs the core refuses and the certified curved families
+        // of brep-intersect resolve (the box sphere stays in the core).
         (
             "tolerant off-axis",
             cylinder(3., 10.).unwrap(),
@@ -116,38 +133,10 @@ fn box_sphere_results_tessellate_within_their_vertex_bounds() {
             )
             .unwrap(),
         ),
-        (
-            "tolerant crossing cylinders",
-            cylinder(2., 12.).unwrap(),
-            transform::affine(
-                &cylinder(1.2, 12.).unwrap(),
-                [
-                    [1., 0., 0., 0.3],
-                    [0., 0., -1., 6.],
-                    [0., 1., 0., 6.],
-                    [0., 0., 0., 1.],
-                ],
-            )
-            .unwrap(),
-        ),
-        (
-            "tolerant torus box",
-            cuboid([0., 0., 0.], [10., 10., 10.]).unwrap(),
-            transform::affine(
-                &brep_core::torus(4., 1.).unwrap(),
-                [
-                    [1., 0., 0., 0.3],
-                    [0., 1., 0., 0.7],
-                    [0., 0., 1., 0.4],
-                    [0., 0., 0., 1.],
-                ],
-            )
-            .unwrap(),
-        ),
     ];
     for (name, b, s) in &cases {
         for operation in ["union", "difference", "intersection"] {
-            let model = operations::boolean(b, s, operation)
+            let model = certified(b, s, operation)
                 .unwrap_or_else(|e| panic!("{name} {operation}: {e:?}"));
             for segments in [2usize, 4, 8] {
                 let t = nurbs(&model, segments)
@@ -193,6 +182,53 @@ fn box_sphere_results_tessellate_within_their_vertex_bounds() {
                     );
                 }
             }
+        }
+    }
+}
+
+#[test]
+fn uncertified_curved_pairs_are_refused_by_the_core() {
+    // No exact proof and no certified family covers these pairs; the core
+    // is fail-closed and must refuse rather than return a numerical result.
+    let cases: Vec<(&str, brep_core::Model, brep_core::Model)> = vec![
+        (
+            "tolerant crossing cylinders",
+            cylinder(2., 12.).unwrap(),
+            transform::affine(
+                &cylinder(1.2, 12.).unwrap(),
+                [
+                    [1., 0., 0., 0.3],
+                    [0., 0., -1., 6.],
+                    [0., 1., 0., 6.],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap(),
+        ),
+        (
+            "tolerant torus box",
+            cuboid([0., 0., 0.], [10., 10., 10.]).unwrap(),
+            transform::affine(
+                &brep_core::torus(4., 1.).unwrap(),
+                [
+                    [1., 0., 0., 0.3],
+                    [0., 1., 0., 0.7],
+                    [0., 0., 1., 0.4],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap(),
+        ),
+    ];
+    for (name, a, b) in &cases {
+        for operation in ["union", "difference", "intersection"] {
+            let error = operations::boolean(a, b, operation)
+                .err()
+                .unwrap_or_else(|| panic!("{name} {operation}: unexpectedly certified"));
+            assert!(
+                matches!(error.code, "BREP_NURBS_BOOLEAN_UNPROVED" | "BREP_UNSUPPORTED_OPERATION"),
+                "{name} {operation}: {error:?}"
+            );
         }
     }
 }

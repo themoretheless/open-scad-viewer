@@ -12,6 +12,7 @@ use crate::{
     infill::{generate_cubic_infill, generate_infill, hatch_angled},
     inset_rings, invalid, path_from_ring, point_count, require_section, require_settings,
     valid_coordinate,
+    thin_walls::{ThinWallConfig, split_thin_walls},
 };
 
 /// Configuration for curvature / surface-normal adaptive layer thickness.
@@ -93,6 +94,16 @@ pub struct SupportConfig {
     pub overhang_offset_mm: f64,
     /// Line spacing for support hatching.
     pub support_spacing_mm: f64,
+    /// Parallel lines or a crossed grid beneath overhangs.
+    pub pattern: SupportPattern,
+}
+
+/// Support infill layout.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SupportPattern {
+    #[default]
+    Lines,
+    Grid,
 }
 
 impl Default for SupportConfig {
@@ -100,6 +111,48 @@ impl Default for SupportConfig {
         Self {
             overhang_offset_mm: 0.4,
             support_spacing_mm: 2.5,
+            pattern: SupportPattern::Lines,
+        }
+    }
+}
+
+impl SupportConfig {
+    /// Support for faces steeper than `threshold_deg` from vertical: a layer may
+    /// step out by `layer_height * tan(threshold)` before it needs support.
+    pub fn from_overhang_angle(
+        threshold_deg: f64,
+        layer_height_mm: f64,
+        support_spacing_mm: f64,
+        pattern: SupportPattern,
+    ) -> Result<Self> {
+        if !(threshold_deg.is_finite() && (0.0..90.0).contains(&threshold_deg))
+            || !(layer_height_mm.is_finite() && layer_height_mm > 0.0)
+        {
+            return Err(invalid(
+                "TOOLPATH_INVALID_SETTINGS",
+                "Overhang angle must be 0..90 degrees and layer height positive",
+            ));
+        }
+        Ok(Self {
+            overhang_offset_mm: layer_height_mm * threshold_deg.to_radians().tan(),
+            support_spacing_mm,
+            pattern,
+        })
+    }
+}
+
+/// Number of solid shell layers at the top and bottom of every surface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ShellConfig {
+    pub top_layers: usize,
+    pub bottom_layers: usize,
+}
+
+impl Default for ShellConfig {
+    fn default() -> Self {
+        Self {
+            top_layers: 1,
+            bottom_layers: 1,
         }
     }
 }
@@ -113,7 +166,74 @@ pub fn plan_layers_with_skins_and_supports(
     pattern: InfillPattern,
     support: Option<&SupportConfig>,
 ) -> Result<Vec<ToolpathLayer>> {
+    plan_layers_with_shells(
+        sections,
+        settings,
+        pattern,
+        &ShellConfig::default(),
+        support,
+    )
+}
+
+/// Like [`plan_layers_with_skins_and_supports`] with configurable solid shells:
+/// region of layer `i` becomes solid skin unless it is covered by material on
+/// each of the `top_layers` layers above and `bottom_layers` layers below.
+/// Perimeter count comes from `settings.wall_count`.
+pub fn plan_layers_with_shells(
+    sections: &[LayerSection],
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    shells: &ShellConfig,
+    support: Option<&SupportConfig>,
+) -> Result<Vec<ToolpathLayer>> {
+    plan_layers_core(sections, settings, pattern, shells, support, None).map(|(layers, _)| layers)
+}
+
+/// Layers plus the per-segment extrusion width table that
+/// `gcode_core::emit_job_variable_width` consumes (`widths[layer][path][segment]`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct WidthPlan {
+    pub layers: Vec<ToolpathLayer>,
+    pub widths: Vec<Vec<Vec<f64>>>,
+}
+
+/// Like [`plan_layers_with_shells`], but strips narrower than two nominal line
+/// widths are printed as one [`PathRole::ThinWall`] centre-line bead whose
+/// segment widths follow the local wall thickness, clamped to `thin`. Every
+/// other path gets the nominal line width. A layer without thin strips plans
+/// exactly as [`plan_layers_with_shells`] does.
+pub fn plan_layers_with_thin_walls(
+    sections: &[LayerSection],
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    shells: &ShellConfig,
+    support: Option<&SupportConfig>,
+    thin: &ThinWallConfig,
+) -> Result<WidthPlan> {
     require_settings(settings)?;
+    thin.validate(settings.line_width_mm)?;
+    let (layers, widths) =
+        plan_layers_core(sections, settings, pattern, shells, support, Some(thin))?;
+    Ok(WidthPlan { layers, widths })
+}
+
+type WidthTable = Vec<Vec<Vec<f64>>>;
+
+fn plan_layers_core(
+    sections: &[LayerSection],
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    shells: &ShellConfig,
+    support: Option<&SupportConfig>,
+    thin: Option<&ThinWallConfig>,
+) -> Result<(Vec<ToolpathLayer>, WidthTable)> {
+    require_settings(settings)?;
+    if shells.top_layers > 64 || shells.bottom_layers > 64 {
+        return Err(invalid(
+            "TOOLPATH_INVALID_SETTINGS",
+            "Shell layer counts must be at most 64",
+        ));
+    }
     if sections.len() > MAX_LAYERS {
         return Err(invalid(
             "TOOLPATH_LAYER_LIMIT",
@@ -170,8 +290,21 @@ pub fn plan_layers_with_skins_and_supports(
     }
 
     let mut out_layers = Vec::with_capacity(sections.len());
+    let mut out_widths = Vec::with_capacity(if thin.is_some() { sections.len() } else { 0 });
     for i in 0..sections.len() {
-        let source = &normalized[i];
+        let (split_source, beads) = match thin {
+            Some(config) => {
+                let (walls, beads) =
+                    split_thin_walls(&normalized[i], settings.line_width_mm, config, &mut budget)?;
+                if beads.is_empty() {
+                    (None, beads)
+                } else {
+                    (Some(walls), beads)
+                }
+            }
+            None => (None, Vec::new()),
+        };
+        let source = split_source.as_ref().unwrap_or(&normalized[i]);
         let mut paths = Vec::with_capacity(settings.wall_count * source.len() + 8);
         for wall in 0..settings.wall_count {
             let inset = (wall as f64 + 0.5) * settings.line_width_mm;
@@ -215,24 +348,40 @@ pub fn plan_layers_with_skins_and_supports(
                 rings::planar(&interior, &bridge_region, "difference")?
             };
             if !supported_interior.is_empty() {
-                let is_bottom = i == 0 || normalized[i - 1].is_empty();
-                let is_top = i + 1 == sections.len() || normalized[i + 1].is_empty();
-                if is_bottom || is_top {
-                    paths.extend(hatch_angled(
-                        &supported_interior,
-                        settings.line_width_mm,
-                        std::f64::consts::FRAC_PI_4,
-                        PathRole::SolidSkin,
-                        &mut budget,
-                    )?);
+                // Material present on every required neighbour layer; a missing
+                // neighbour (outside the stack) leaves nothing covered.
+                let mut covered: Option<Rings> = None;
+                let neighbours = (1..=shells.top_layers)
+                    .map(|k| i.checked_add(k).filter(|&j| j < sections.len()))
+                    .chain((1..=shells.bottom_layers).map(|k| i.checked_sub(k)));
+                for j in neighbours {
+                    let Some(j) = j else {
+                        covered = Some(Vec::new());
+                        break;
+                    };
+                    let next = match covered {
+                        None => normalized[j].clone(),
+                        Some(ref acc) => rings::planar(acc, &normalized[j], "intersection")?,
+                    };
+                    let empty = next.is_empty();
+                    covered = Some(next);
+                    if empty {
+                        break;
+                    }
+                }
+                let covered = covered.unwrap_or_else(|| supported_interior.clone());
+                let (skin_region, sparse_region) = if covered.is_empty() {
+                    (supported_interior.clone(), Vec::new())
                 } else {
-                    let top_skin_region =
-                        rings::planar(&supported_interior, &normalized[i + 1], "difference")?;
-                    let sparse_region =
-                        rings::planar(&supported_interior, &top_skin_region, "difference")?;
-                    if !top_skin_region.is_empty() {
+                    (
+                        rings::planar(&supported_interior, &covered, "difference")?,
+                        rings::planar(&supported_interior, &covered, "intersection")?,
+                    )
+                };
+                {
+                    if !skin_region.is_empty() {
                         paths.extend(hatch_angled(
-                            &top_skin_region,
+                            &skin_region,
                             settings.line_width_mm,
                             std::f64::consts::FRAC_PI_4,
                             PathRole::SolidSkin,
@@ -271,13 +420,38 @@ pub fn plan_layers_with_skins_and_supports(
                 PathRole::Support,
                 &mut budget,
             )?);
+            if sup.pattern == SupportPattern::Grid {
+                paths.extend(hatch_angled(
+                    &support_regions[i],
+                    sup.support_spacing_mm,
+                    std::f64::consts::FRAC_PI_2,
+                    PathRole::Support,
+                    &mut budget,
+                )?);
+            }
+        }
+        if thin.is_some() {
+            let mut layer_widths: Vec<Vec<f64>> = paths
+                .iter()
+                .map(|path| {
+                    let segments = path.points.len().saturating_sub(1)
+                        + usize::from(path.closed && path.points.len() >= 3);
+                    vec![settings.line_width_mm; segments]
+                })
+                .collect();
+            for bead in beads {
+                budget.points(bead.path.points.len())?;
+                paths.push(bead.path);
+                layer_widths.push(bead.widths);
+            }
+            out_widths.push(layer_widths);
         }
         out_layers.push(ToolpathLayer {
             z_mm: sections[i].z_mm,
             paths,
         });
     }
-    Ok(out_layers)
+    Ok((out_layers, out_widths))
 }
 
 /// Closed 2D contour loop (`Vec<[f64; 2]>`) in millimeter coordinates.

@@ -1,22 +1,27 @@
-import { computed, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import type { CommitInWorker } from './prepareDocumentCommit'
+import { computed, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import {
   MAX_DOCUMENT_CHARACTERS,
-  parseDirectDocument,
   serializeDirectDocument,
   type DirectBody,
   type DirectDocument,
   type DirectHistory,
   type Point2,
-} from '../../services/directModeling'
-import type { SketchPlane } from '../../services/directSketchGeometry'
-import { downloadBytes } from '../../services/downloadArtifact'
-import { type MeshExportFormat } from '../../services/meshConvert'
-import { stripMeshExtension } from '../../services/meshFormats'
-import { manifoldPreferenceSnapshot } from '../../services/manifoldPreferences'
-import { formatMeshImportNotice } from '../../services/meshImportReport'
-import { stringifyMeshJson } from '../../services/meshJson'
-import type { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+} from '../../app/directModeling'
+import type { SketchPlane } from '../../app/directSketchGeometry'
+import { downloadBytes } from '../../exchange/downloadArtifact'
+import { type MeshExportFormat } from '../../exchange/meshConvert'
+import { stripMeshExtension } from '../../exchange/meshFormats'
+import { manifoldPreferenceSnapshot } from '../../kernel/manifoldPreferences'
+import { formatMeshImportNotice } from '../../exchange/meshImportReport'
+import { stringifyMeshJson } from '../../exchange/meshJson'
+import type { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { download, type Pane } from './helpers'
+import {
+  documentUnit,
+  stlExportPositionsFromMillimetres,
+  stlImportPositionsToMillimetres,
+} from '../../app/documentUnits'
 import { useSvgExchange } from './useSvgExchange'
 
 export interface UseFileExchangeOptions {
@@ -42,7 +47,7 @@ export interface UseFileExchangeOptions {
   mode: Ref<'2d' | '3d'>
   sketchPaneOpen: Ref<boolean>
   operation: Ref<'extrude' | 'revolve' | 'fillet' | 'dogear' | 'array' | null>
-  advancedOp: Ref<any>
+  advancedOp: Ref<string | null>
   subtract: Ref<{ a: string[]; b: string[]; active: 'a' | 'b' } | null>
   boxSelect: Ref<boolean>
   activePlane: Ref<SketchPlane>
@@ -60,12 +65,14 @@ export interface UseFileExchangeOptions {
     origin?: 'edit' | 'file',
   ) => { validateLocked: ((doc: DirectDocument) => void) | undefined; added: string[] }
   finishCommit: (added: string[], next?: DirectDocument) => void
-  commit: (next: DirectDocument) => void
+  commitInWorker: CommitInWorker
   sync: (next?: DirectDocument) => void
   run: (action: () => void) => void
   fit: (pane: Pane, selectedOnly?: boolean) => void
   pickObject: (id: string, pane: Pane, additive?: boolean) => void
 }
+
+const isStlFormat = (format: MeshExportFormat) => format === 'stl' || format === 'stl_binary'
 
 export function useFileExchange(options: UseFileExchangeOptions) {
   const {
@@ -102,9 +109,8 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     cancelCommand,
     prepareCommit,
     finishCommit,
-    commit,
+    commitInWorker,
     sync,
-    run,
     fit,
     pickObject,
   } = options
@@ -130,9 +136,13 @@ export function useFileExchange(options: UseFileExchangeOptions) {
                   : label('Повторная проверка', 'Verifying the result')
     return `${phase} · ${progress.completed}/${progress.total}`
   })
-  watch(historyPending, pending => {
-    if (!pending) meshImportProgress.value = undefined
-  }, { flush: 'sync' })
+  watch(
+    historyPending,
+    pending => {
+      if (!pending) meshImportProgress.value = undefined
+    },
+    { flush: 'sync' },
+  )
   const { svgInput, svgBusy, importSvg, exportBodySvg } = useSvgExchange(options)
 
   const stepInput = ref<HTMLInputElement>()
@@ -183,7 +193,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
           kind: 'rushGraphImport',
           document: history.document,
           text,
-          group: activeGroup.value || undefined,
+          ...(activeGroup.value ? { group: activeGroup.value } : {}),
         })
         if (!current()) return
         const { validateLocked, added } = prepareCommit(next)
@@ -215,7 +225,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
         const { validateLocked, added } = prepareCommit(imported, 'file')
         const payload = stringifyMeshJson(imported)
         const applied = await target.commitAsync(
-          () => historyWorker.run({ kind: 'restoreDocument', text: payload }),
+          () => historyWorker.run({ kind: 'restoreDocument', text: payload, verifyNative: true }),
           validateLocked,
         )
         if (!current() || !applied) return
@@ -229,7 +239,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       const menu = input.closest?.('details') as HTMLDetailsElement | null
       if (menu) menu.open = false
     } catch (e) {
-      const { solidImportErrorMessage } = await import('../../services/solidImportErrorMessage')
+      const { solidImportErrorMessage } = await import('../../exchange/solidImportErrorMessage')
       if (generation === getHistoryGeneration()) error.value = solidImportErrorMessage(e, ru.value ? 'ru' : 'en')
     } finally {
       if (generation === getHistoryGeneration()) historyPending.value = false
@@ -242,18 +252,43 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     cancelCommand()
     error.value = ''
     const body = selectedBody.value
-    if (!body) { error.value = label('Выберите тело.', 'Select a body.'); return }
-    const generation = bumpHistoryGeneration(), before = document.value, id = body.id
-    const name = body.name || 'body', format = bodyExportFormat.value
-    const current = () => generation === getHistoryGeneration() && !isRestoreDisposed()
-      && props.open && document.value === before && selectedBody.value?.id === id
+    if (!body) {
+      error.value = label('Выберите тело.', 'Select a body.')
+      return
+    }
+    const generation = bumpHistoryGeneration(),
+      before = document.value,
+      id = body.id
+    const name = body.name || 'body',
+      format = bodyExportFormat.value
+    const current = () =>
+      generation === getHistoryGeneration() &&
+      !isRestoreDisposed() &&
+      props.open &&
+      document.value === before &&
+      selectedBody.value?.id === id
     historyMode.value = 'export'
     historyPending.value = true
     workspace.value?.focus()
     try {
       const artifact = await historyWorker.run(
-        { kind: 'meshExport', mesh: body.mesh, target: format, options: {} },
-        { onProgress: progress => { if (current()) meshImportProgress.value = progress } },
+        {
+          kind: 'meshExport',
+          // STL has no unit field: write its coordinates in the document unit.
+          mesh: isStlFormat(format)
+            ? {
+                positions: stlExportPositionsFromMillimetres(body.mesh.positions, documentUnit(before)),
+                indices: body.mesh.indices,
+              }
+            : body.mesh,
+          target: format,
+          options: {},
+        },
+        {
+          onProgress: progress => {
+            if (current()) meshImportProgress.value = progress
+          },
+        },
       )
       if (!current()) return
       historyPending.value = false
@@ -295,22 +330,40 @@ export function useFileExchange(options: UseFileExchangeOptions) {
           input: bytes,
           options: { weld: preferences.importWeldEpsilonMm, repair: preferences.importRepair },
         },
-        { onProgress: progress => { if (current()) meshImportProgress.value = progress } },
+        {
+          onProgress: progress => {
+            if (current()) meshImportProgress.value = progress
+          },
+        },
       )
       if (!current()) return
       // Publishing the document must not make its watcher cancel this completed import.
       historyPending.value = false
-      const d = history.document
       const id = crypto.randomUUID()
-      d.bodies.push({
-        id,
-        name: stripMeshExtension(file.name) || imported.format.toUpperCase(),
-        mesh: { positions: imported.positions, indices: imported.indices },
-      })
-      commit(d)
-      selection.value = id
-      mode.value = '3d'
-      setNotice(formatMeshImportNotice(imported, ru.value ? 'ru' : 'en'))
+      // STL coordinates are unitless and read in the document unit; the kernel stores millimetres.
+      const positions =
+        imported.format === 'stl'
+          ? stlImportPositionsToMillimetres(imported.positions, documentUnit(before))
+          : imported.positions
+      await commitInWorker(
+        () => {
+          const d = history.document
+          d.bodies.push({
+            id,
+            name: stripMeshExtension(file.name) || imported.format.toUpperCase(),
+            mesh: { positions, indices: imported.indices },
+          })
+          return d
+        },
+        () => {
+          selection.value = id
+          mode.value = '3d'
+          setNotice(formatMeshImportNotice(imported, ru.value ? 'ru' : 'en'))
+        },
+        message => {
+          if (generation === getHistoryGeneration()) error.value = message
+        },
+      )
     } catch (e) {
       if (generation === getHistoryGeneration()) error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -334,7 +387,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       if (!file) return
       if (file.size > 16 * 1024 * 1024) throw Error('STEP file exceeds 16 MiB.')
       const text = await file.text()
-      const { prepareSolidStepImport } = await import('../../services/solidStepExchange')
+      const { prepareSolidStepImport } = await import('../../kernel/solidStepExchange')
       if (isRestoreDisposed() || !props.open || document.value !== before)
         throw Error('The scene changed during STEP import. Import again to add its bodies.')
       cancelCommand()
@@ -346,20 +399,33 @@ export function useFileExchange(options: UseFileExchangeOptions) {
             : 'The scene changed during STEP import. Import again to add its bodies.',
         )
       }
-      commit(imported.document)
-      operation.value = null
-      advancedOp.value = null
-      subtract.value = null
-      boxSelect.value = false
-      pickObject(imported.selected, '3d')
-      fit('3d')
-      setNotice(
+      const changed = Error(
         imported.report.retained
-          ? label(
-              `AP242: ${imported.report.occurrenceIdentities.length} экземпляров; оригинал сохранён.`,
-              `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`,
-            )
-          : label('STEP: сетка импортирована.', 'STEP: mesh imported.'),
+          ? 'AP242 original saved, but the scene changed during import. Import again to add its bodies.'
+          : 'The scene changed during STEP import. Import again to add its bodies.',
+      )
+      await commitInWorker(
+        () => {
+          // A commit queued ahead of this one would be overwritten by the prepared document.
+          if (document.value !== before) throw changed
+          return imported.document
+        },
+        () => {
+          operation.value = null
+          advancedOp.value = null
+          subtract.value = null
+          boxSelect.value = false
+          pickObject(imported.selected, '3d')
+          fit('3d')
+          setNotice(
+            imported.report.retained
+              ? label(
+                  `AP242: ${imported.report.occurrenceIdentities.length} ${({ one: 'экземпляр', few: 'экземпляра', many: 'экземпляров' } as Record<string, string>)[new Intl.PluralRules('ru').select(imported.report.occurrenceIdentities.length)] ?? 'экземпляра'}; оригинал сохранён.`,
+                  `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`,
+                )
+              : label('STEP: сетка импортирована.', 'STEP: mesh imported.'),
+          )
+        },
       )
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -374,7 +440,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     error.value = ''
     const before = document.value
     try {
-      const { exportSolidBlenderSnapshot } = await import('../../services/solidBlenderExchange')
+      const { exportSolidBlenderSnapshot } = await import('../../kernel/solidBlenderExchange')
       if (document.value !== before || isRestoreDisposed())
         throw Error(label('Сцена изменилась. Повторите экспорт.', 'The scene changed. Export again.'))
       // Validate support before assigning identity or persisting metadata.

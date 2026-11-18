@@ -2,15 +2,11 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { OPENSCAD_2021_01_SYNTAX_CONSTRUCTS } from '../src/core/openScad2021Contract'
-import {
-  compileOpenSCAD,
-  TT,
-  type Expr,
-} from '../src/services/openscadCompiler'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+import { compileOpenSCAD, TT, type Expr } from '../src/language/openscadCompiler'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 
 const FULL_PROFILE = { languageProfile: 'openscad/stable-2021.01' } as const
-type CanonicalSyntaxId = typeof OPENSCAD_2021_01_SYNTAX_CONSTRUCTS[number]['id']
+type CanonicalSyntaxId = (typeof OPENSCAD_2021_01_SYNTAX_CONSTRUCTS)[number]['id']
 const STAGE_ONE_EXPRESSION_SYNTAX_IDS = [
   'let-expression',
   'assert-expression',
@@ -61,24 +57,34 @@ describe('OpenSCAD compiler front-end', () => {
     } catch (error) {
       expect(error).toMatchObject({ line: 2, column: 7 })
     }
-    const compilerSource = readFileSync(fileURLToPath(new URL('../src/services/openscadCompiler.ts', import.meta.url)), 'utf8')
+    const compilerSource = readFileSync(
+      fileURLToPath(new URL('../src/language/openscadCompiler.ts', import.meta.url)),
+      'utf8',
+    )
     expect(compilerSource).not.toContain('manifold-3d')
   })
 
   it('rejects unsupported language features with stable diagnostic codes', () => {
     expect(() => compileOpenSCAD('include <part.scad>')).toThrow(expect.objectContaining({ code: 'E_FEATURE_INCLUDE' }))
-    expect(() => compileOpenSCAD('function f(x) = x;')).toThrow(expect.objectContaining({ code: 'E_FEATURE_USER_FUNCTION' }))
-    expect(() => compileOpenSCAD('f = function(x) x;')).toThrow(expect.objectContaining({ code: 'E_FEATURE_USER_FUNCTION' }))
+    expect(() => compileOpenSCAD('function f(x) = x;')).toThrow(
+      expect.objectContaining({ code: 'E_FEATURE_USER_FUNCTION' }),
+    )
+    expect(() => compileOpenSCAD('f = function(x) x;')).toThrow(
+      expect.objectContaining({ code: 'E_FEATURE_USER_FUNCTION' }),
+    )
     expect(() => compileOpenSCAD('#cube(1);')).toThrow(expect.objectContaining({ code: 'E_FEATURE_VIEWPORT_MODIFIER' }))
     expect(compileOpenSCAD('*cube(1);')).toEqual([])
   })
 
   it('represents named and anonymous functions in the full 2021.01 profile', () => {
-    const program = compileOpenSCAD(`
+    const program = compileOpenSCAD(
+      `
       function scale_by(value, factor = 2) = value * factor;
       callback = function(value) value + 1;
       cube([scale_by(3, factor = 4), callback(2), [7, 8, 9].z]);
-    `, { languageProfile: 'openscad/stable-2021.01' })
+    `,
+      { languageProfile: 'openscad/stable-2021.01' },
+    )
 
     expect(program.map(statement => statement.type)).toEqual(['function', 'assign', 'call'])
     expect(program[0]).toMatchObject({
@@ -121,10 +127,7 @@ describe('OpenSCAD compiler front-end', () => {
         source: 'value = assert(true, "ok") 7;',
         expected: {
           kind: 'assert',
-          args: [
-            { value: { kind: 'literal', value: true } },
-            { value: { kind: 'literal', value: 'ok' } },
-          ],
+          args: [{ value: { kind: 'literal', value: true } }, { value: { kind: 'literal', value: 'ok' } }],
           body: { kind: 'literal', value: 7 },
         },
       },
@@ -142,11 +145,13 @@ describe('OpenSCAD compiler front-end', () => {
         source: 'value = [for(i = [0:2]) i * i];',
         expected: {
           kind: 'vector',
-          items: [{
-            kind: 'lc-for',
-            args: [{ name: 'i', value: { kind: 'range' } }],
-            body: { kind: 'binary', op: TT.Star },
-          }],
+          items: [
+            {
+              kind: 'lc-for',
+              args: [{ name: 'i', value: { kind: 'range' } }],
+              body: { kind: 'binary', op: TT.Star },
+            },
+          ],
         },
       },
       {
@@ -154,13 +159,15 @@ describe('OpenSCAD compiler front-end', () => {
         source: 'value = [for(i = 0; i < 3; i = i + 1) i];',
         expected: {
           kind: 'vector',
-          items: [{
-            kind: 'lc-for-c',
-            init: [{ name: 'i', value: { kind: 'literal', value: 0 } }],
-            condition: { kind: 'binary', op: TT.Lt },
-            update: [{ name: 'i', value: { kind: 'binary', op: TT.Plus } }],
-            body: { kind: 'identifier', name: 'i' },
-          }],
+          items: [
+            {
+              kind: 'lc-for-c',
+              init: [{ name: 'i', value: { kind: 'literal', value: 0 } }],
+              condition: { kind: 'binary', op: TT.Lt },
+              update: [{ name: 'i', value: { kind: 'binary', op: TT.Plus } }],
+              body: { kind: 'identifier', name: 'i' },
+            },
+          ],
         },
       },
       {
@@ -168,12 +175,14 @@ describe('OpenSCAD compiler front-end', () => {
         source: 'value = [if(true) 1 else 2];',
         expected: {
           kind: 'vector',
-          items: [{
-            kind: 'lc-if',
-            condition: { kind: 'literal', value: true },
-            yes: { kind: 'literal', value: 1 },
-            no: { kind: 'literal', value: 2 },
-          }],
+          items: [
+            {
+              kind: 'lc-if',
+              condition: { kind: 'literal', value: true },
+              yes: { kind: 'literal', value: 1 },
+              no: { kind: 'literal', value: 2 },
+            },
+          ],
         },
       },
       {
@@ -181,11 +190,13 @@ describe('OpenSCAD compiler front-end', () => {
         source: 'value = [let(a = 1) each [a]];',
         expected: {
           kind: 'vector',
-          items: [{
-            kind: 'lc-let',
-            args: [{ name: 'a', value: { kind: 'literal', value: 1 } }],
-            body: { kind: 'lc-each', value: { kind: 'vector' } },
-          }],
+          items: [
+            {
+              kind: 'lc-let',
+              args: [{ name: 'a', value: { kind: 'literal', value: 1 } }],
+              body: { kind: 'lc-each', value: { kind: 'vector' } },
+            },
+          ],
         },
       },
       {
@@ -209,32 +220,39 @@ describe('OpenSCAD compiler front-end', () => {
   it('keeps terminal let expressions distinct from list-comprehension let', () => {
     expect(assignedValue('value = [let(a = 1) a];')).toMatchObject({
       kind: 'vector',
-      items: [{
-        kind: 'let',
-        args: [{ name: 'a' }],
-        body: { kind: 'identifier', name: 'a' },
-      }],
+      items: [
+        {
+          kind: 'let',
+          args: [{ name: 'a' }],
+          body: { kind: 'identifier', name: 'a' },
+        },
+      ],
     })
     expect(assignedValue('value = [for(i = [0:2]) if(i > 0) each [i, -i]];')).toMatchObject({
       kind: 'vector',
-      items: [{
-        kind: 'lc-for',
-        body: {
-          kind: 'lc-if',
-          yes: { kind: 'lc-each' },
+      items: [
+        {
+          kind: 'lc-for',
+          body: {
+            kind: 'lc-if',
+            yes: { kind: 'lc-each' },
+          },
         },
-      }],
+      ],
     })
   })
 
   it('represents omitted assert/echo bodies separately from explicit undef', () => {
-    const program = compileOpenSCAD(`
+    const program = compileOpenSCAD(
+      `
       a = assert(true);
       b = assert(true) undef;
       c = echo("x");
       d = echo("x") undef;
-    `, FULL_PROFILE)
-    const values = program.map(statement => statement.type === 'assign' ? statement.value : undefined)
+    `,
+      FULL_PROFILE,
+    )
+    const values = program.map(statement => (statement.type === 'assign' ? statement.value : undefined))
     expect(values[0]).toMatchObject({ kind: 'assert' })
     expect(values[0]).not.toHaveProperty('body')
     expect(values[1]).toMatchObject({ kind: 'assert', body: { kind: 'literal', value: undefined } })
@@ -271,15 +289,14 @@ describe('OpenSCAD compiler front-end', () => {
     if (value.kind !== 'call') throw new Error('Expected expression call')
     expect(value.args.map(argument => argument.name)).toEqual(['a', undefined, 'c', undefined])
     expect(() => compileOpenSCAD('value = f(a = 1, 2);')).toThrow(
-      expect.objectContaining({ message: expect.stringContaining('Positional arguments must precede named arguments') }),
+      expect.objectContaining({
+        message: expect.stringContaining('Positional arguments must precede named arguments'),
+      }),
     )
   })
 
   it('retains duplicate named module arguments in stable authored order', () => {
-    const call = compileOpenSCAD(
-      'probe(a = echo("first") 1, a = echo("second") 2, 3);',
-      FULL_PROFILE,
-    )[0]
+    const call = compileOpenSCAD('probe(a = echo("first") 1, a = echo("second") 2, 3);', FULL_PROFILE)[0]
     if (call?.type !== 'call') throw new Error('Expected module call')
     expect(call.callArguments?.map(argument => argument.name)).toEqual(['a', 'a', undefined])
     expect(call.callArguments?.map(argument => argument.value)).toHaveLength(3)

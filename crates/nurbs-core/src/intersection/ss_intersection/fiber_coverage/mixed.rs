@@ -1,6 +1,11 @@
 //! Closed original-product coverage by overlapping fibers with different free
 //! axes. Parameter-root coverage does not identify physical branches or trims.
 use super::*;
+mod graph_reduction;
+pub(in crate::intersection::ss_intersection) use graph_reduction::{
+    AffineGraphExclusion, equivalent_multispan_affine_surface,
+};
+pub use graph_reduction::{exclude_shared_frame_graph_contact, shared_frame_graph_contact_corners};
 #[derive(Clone, Debug, PartialEq)]
 pub enum MixedCoverageKind {
     Fiber {
@@ -13,6 +18,7 @@ pub enum MixedCoverageKind {
         attempt: FiberReport,
     },
     Excluded(FiberReport),
+    AffineGraphExcluded,
     Split {
         axis: usize,
         parameter: f64,
@@ -54,6 +60,7 @@ impl MixedFiberCoverageResult {
 }
 #[derive(Clone, Debug)]
 pub struct QualifiedMixedFiberCoverage {
+    reduction: Option<graph_reduction::Proof>,
     fibers: Vec<QualifiedFiber>,
     domain: Box4,
     nodes: Vec<MixedCoverageNode>,
@@ -61,6 +68,9 @@ pub struct QualifiedMixedFiberCoverage {
     report: FiberCoverageReport,
 }
 impl QualifiedMixedFiberCoverage {
+    pub(in crate::intersection::ss_intersection) fn depth_limit(&self) -> usize {
+        self.limits.max_depth
+    }
     pub fn fibers(&self) -> &[QualifiedFiber] {
         &self.fibers
     }
@@ -103,6 +113,9 @@ impl QualifiedMixedFiberCoverage {
     fn verify_with(&self, work: &mut Work) -> Result<()> {
         self.limits.validate()?;
         validate(&self.fibers, self.domain)?;
+        if let Some(p) = &self.reduction {
+            return p.verify(self, work);
+        }
         check(
             !self.nodes.is_empty()
                 && self.nodes.len() <= self.limits.max_cells
@@ -112,6 +125,7 @@ impl QualifiedMixedFiberCoverage {
         for f in &self.fibers {
             replay_fiber(f, work)?;
         }
+        let affine = AffineGraphExclusion::new(self.fibers[0].source()).ok();
         let mut seen = vec![false; self.nodes.len()];
         let mut pending = vec![(0, 0)];
         let mut excluded = 0;
@@ -123,6 +137,12 @@ impl QualifiedMixedFiberCoverage {
             )?;
             seen[id] = true;
             let node = &self.nodes[id];
+            let affine_excluded = !matches!(node.kind, Some(MixedCoverageKind::Fiber { .. }))
+                && affine_excludes(affine.as_ref(), node.domain, work)?;
+            check(
+                affine_excluded == matches!(node.kind, Some(MixedCoverageKind::AffineGraphExcluded)),
+                "Mixed affine graph exclusion changed",
+            )?;
             check(
                 node.probes.len() <= 4,
                 "Too many original mixed-axis queries",
@@ -175,6 +195,10 @@ impl QualifiedMixedFiberCoverage {
                         }),
                         "Mixed original exclusion receipt changed",
                     )?;
+                    excluded += 1;
+                }
+                MixedCoverageKind::AffineGraphExcluded => {
+                    check(node.probes.is_empty(), "Unexpected probes on affine graph exclusion")?;
                     excluded += 1;
                 }
                 MixedCoverageKind::Split {
@@ -270,8 +294,8 @@ fn contains_root_image(cell: Box4, report: &FiberReport, free: usize, chart: Box
 }
 fn validate(fibers: &[QualifiedFiber], domain: Box4) -> Result<()> {
     check(
-        (1..=64).contains(&fibers.len()),
-        "Mixed coverage needs one to64 actual fibers",
+        (1..=MAX_MIXED_FIBERS).contains(&fibers.len()),
+        "Mixed coverage needs a bounded number of actual fibers",
     )?;
     let first = &fibers[0];
     let all = natural(first.source());
@@ -313,8 +337,16 @@ fn split_at(cell: Box4, domain: Box4, fibers: &[QualifiedFiber]) -> Option<(usiz
             }
         }
     }
-    if let Some((_, a, t)) = best {
-        return Some((a, t));
+    let widest = (0..4)
+        .map(|a| (cell[a][1] - cell[a][0]) / (domain[a][1] - domain[a][0]))
+        .fold(0., f64::max);
+    // A chart boundary only a few ulps from a cell wall must not win over a
+    // balanced split on another coordinate. Closed children are still checked
+    // identically; this is only a proposal heuristic, not a coverage shortcut.
+    if let Some((score, a, t)) = best {
+        if score >= 0.125 * widest {
+            return Some((a, t));
+        }
     }
     let a = (0..4).max_by(|&a, &b| {
         let width = |k: usize| (cell[k][1] - cell[k][0]) / (domain[k][1] - domain[k][0]);
@@ -323,6 +355,20 @@ fn split_at(cell: Box4, domain: Box4, fibers: &[QualifiedFiber]) -> Option<(usiz
     let t = 0.5 * cell[a][0] + 0.5 * cell[a][1];
     (cell[a][0] < t && t < cell[a][1]).then_some((a, t))
 }
+fn affine_excludes(
+    affine: Option<&AffineGraphExclusion>,
+    cell: Box4,
+    work: &mut Work,
+) -> Result<bool> {
+    if let Some(affine) = affine
+        && work.used < work.max
+    {
+        work.used += 1;
+        return affine.excludes(cell);
+    }
+    Ok(false)
+}
+
 /// Cover a complete closed original parameter product by freshly verified
 /// uniform root fibers and complete original exclusions. Fibers may overlap
 /// and use different free axes/intervals. Missing roots, uncovered chart ends,
@@ -355,6 +401,7 @@ pub fn cover_mixed_fiber_box(
         result.report.rectangles = work.used;
         return Ok(result);
     }
+    let affine = AffineGraphExclusion::new(fibers[0].source()).ok();
     let mut nodes = vec![MixedCoverageNode {
         domain,
         kind: None,
@@ -368,6 +415,11 @@ pub fn cover_mixed_fiber_box(
         if let Some(index) = fibers.iter().position(|f| contains(f.domain(), cell)) {
             nodes[id].kind = Some(MixedCoverageKind::Fiber { index });
             covered += 1;
+            continue;
+        }
+        if affine_excludes(affine.as_ref(), cell, &mut work)? {
+            nodes[id].kind = Some(MixedCoverageKind::AffineGraphExcluded);
+            excluded += 1;
             continue;
         }
         let mut axes = [false; 4];
@@ -448,6 +500,7 @@ pub fn cover_mixed_fiber_box(
         result.report.reason = "complete-original-mixed-fiber-cover";
         result.report.unresolved_box = None;
         result.coverage = Some(QualifiedMixedFiberCoverage {
+            reduction: None,
             fibers: fibers.to_vec(),
             domain,
             nodes,
@@ -500,6 +553,13 @@ mod tests {
             .unwrap()
             .into_fiber()
             .unwrap();
+        let padded = fiber
+            .domain()
+            .map(|[lo, hi]| [lo - 2f64.powi(-40), hi + 2f64.powi(-40)]);
+        assert_eq!(
+            split_at(padded, [[-1., 2.]; 4], std::slice::from_ref(&fiber)),
+            Some((0, 0.5))
+        );
         let owner = cover_mixed_fiber_surfaces(&[fiber], CoverageLimits::default())
             .unwrap()
             .into_coverage()
@@ -560,4 +620,21 @@ mod tests {
         });
         assert!(bad.reverify().is_err());
     }
+}
+
+/// Exact same-XY polynomial reduction; None means the family does not apply.
+/// The returned root census still needs independent component/embedding proofs.
+pub fn cover_graph_fiber_surfaces(
+    fibers: &[QualifiedFiber],
+    limits: CoverageLimits,
+) -> Result<Option<MixedFiberCoverageResult>> {
+    graph_reduction::construct(fibers, None, limits)
+}
+
+pub(in crate::intersection::ss_intersection) fn cover_graph_fiber_box(
+    fibers: &[QualifiedFiber],
+    domain: Box4,
+    limits: CoverageLimits,
+) -> Result<Option<MixedFiberCoverageResult>> {
+    graph_reduction::construct(fibers, Some(domain), limits)
 }

@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0476",
+  "testedBase": "b9b7d25ebb06d863260f0be8bffe7070bb8fca0b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 276,
+  "scope": [
+    "Triangulate exact planar Boolean results without hanging nodes on cell seams.",
+    "Node each slab seam at all exact incident vertices. Triangulate convex cells about exact interior centers with shared vertex indices and consistent winding."
+  ],
+  "logSha256": "62e4c9a12d70aead448785c1957048f48431cfa7f0c6a733e548e6ccbf7d966d",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "acd83a67138aa764d171792444691e7275916046de3070b3623aefbd6d2a90b4",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "f47df5bd7ae5fef666bc01cd50bce14b838bb7e9aaebf57919937e7303a7bbec",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "3db20ca89fdade5f4ee6f706c3c0bc19a8f1c0cea8e1c5245f52ca3f5529309b",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

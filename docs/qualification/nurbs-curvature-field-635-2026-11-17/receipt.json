@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0635",
+  "testedBase": "150135e0b0ccfa35487f5bf9057c2c16e9145f54",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 271,
+  "scope": [
+    "Attach interval mass fractions to each outer-contour component in WASM.",
+    "Check dependent mass fractions through WASM, density-interval corner ratios, component identity, and incomplete-budget behavior."
+  ],
+  "logSha256": "92f94aa500a94924a35e6cb8d2b64b14c2fce3c893c0b92ce95f4aa5ce139d32",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "de794918997d3ec49c417eb27894cb058a9efca25a034b6a476c29a2d15ac72f",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "ffd961ed82c031378f800617e4bae8e5c8ec4aa477a141371c7eb1ab4e830ef0",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "c7ffebcf9127784cba3c9592237d230b55d713563f385ff41e9871ee1bf069d1"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

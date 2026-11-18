@@ -49,12 +49,18 @@ fn run(
     };
     rational_bspline_restriction_identity(
         &mut ctx,
-        p,
-        &rows(0, a.len()),
-        &knots(ak),
-        p,
-        &rows(4 * a.len(), b.len()),
-        &knots(bk),
+        [
+            cad_predicates::SplineLeafRefs {
+                controls: &rows(0, a.len()),
+                knots: &knots(ak),
+                degree: p,
+            },
+            cad_predicates::SplineLeafRefs {
+                controls: &rows(4 * a.len(), b.len()),
+                knots: &knots(bk),
+                degree: p,
+            },
+        ],
         std::array::from_fn(|i| arena.leaf(shift + i).unwrap()),
     )
     .unwrap()

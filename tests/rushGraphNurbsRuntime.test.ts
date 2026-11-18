@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }))
 vi.mock('node:child_process', () => ({ spawn }))
-vi.mock('../src/services/rushGraphNurbs', () => ({ compileRushGraphNurbs: vi.fn() }))
+vi.mock('../src/language/rushGraphNurbs', () => ({ compileRushGraphNurbs: vi.fn() }))
 import { runOwnNurbs } from '../src/mcp/rushGraphNurbsRuntime'
 
 class Child extends EventEmitter {
@@ -26,14 +26,22 @@ class Child extends EventEmitter {
 let children: Child[]
 beforeEach(() => {
   children = []
-  spawn.mockImplementation(() => { const child = new Child(); children.push(child); return child })
+  spawn.mockImplementation(() => {
+    const child = new Child()
+    children.push(child)
+    return child
+  })
 })
-afterEach(() => { vi.useRealTimers(); spawn.mockReset() })
+afterEach(() => {
+  vi.useRealTimers()
+  spawn.mockReset()
+})
 const run = (signal?: AbortSignal) => runOwnNurbs({}, { action: 'build' }, signal)
 const ok = { ok: true }
 
 it('waits for EOF before termination and for close before releasing an admission slot', async () => {
-  const first = run(), second = run()
+  const first = run(),
+    second = run()
   const [a, b] = children
   await expect(run()).rejects.toThrow('Two NURBS jobs')
   a!.stdout.write(JSON.stringify(ok))
@@ -44,7 +52,9 @@ it('waits for EOF before termination and for close before releasing an admission
   expect(a!.kill).toHaveBeenCalledWith('SIGKILL')
   await expect(run()).rejects.toThrow('Two NURBS jobs')
   let settled = false
-  void first.then(() => { settled = true })
+  void first.then(() => {
+    settled = true
+  })
   await setImmediate()
   expect(settled).toBe(false)
   a!.close()
@@ -69,16 +79,19 @@ it('collects split UTF-8 chunks and accepts a completed natural exit', async () 
   await expect(pending).resolves.toEqual(response)
 })
 
-it.each(['', '{"ok":', '{"ok":"yes"}', '{"ok":true} trailing'])('refuses malformed or incomplete EOF: %j', async response => {
-  const pending = run()
-  const rejected = expect(pending).rejects.toThrow('Invalid NURBS process response')
-  const child = children[0]!
-  child.stdout.end(response)
-  await setImmediate()
-  expect(child.kill).toHaveBeenCalledWith('SIGKILL')
-  child.close()
-  await rejected
-})
+it.each(['', '{"ok":', '{"ok":"yes"}', '{"ok":true} trailing'])(
+  'refuses malformed or incomplete EOF: %j',
+  async response => {
+    const pending = run()
+    const rejected = expect(pending).rejects.toThrow('Invalid NURBS process response')
+    const child = children[0]!
+    child.stdout.end(response)
+    await setImmediate()
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+    child.close()
+    await rejected
+  },
+)
 
 it('does not treat an unrelated nonzero exit as successful response termination', async () => {
   const pending = run()

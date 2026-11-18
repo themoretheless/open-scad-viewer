@@ -31,11 +31,13 @@ describe('OfficialArtifactCache', () => {
     const second = cache.put(artifact('same', 'second.stl'))
 
     expect(second.id).toBe(first.id)
-    expect(cache.list()).toEqual([expect.objectContaining({
-      id: first.id,
-      fileName: 'second.stl',
-      byteLength: 4,
-    })])
+    expect(cache.list()).toEqual([
+      expect.objectContaining({
+        id: first.id,
+        fileName: 'second.stl',
+        byteLength: 4,
+      }),
+    ])
   })
 
   it('evicts by aggregate byte budget and rejects an impossible single item', () => {

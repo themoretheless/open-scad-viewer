@@ -2,43 +2,37 @@
 pub use crate::helix::Approximation;
 use crate::{Result, check};
 
+/// A ring torus: center, major radius R and minor radius r with R > r > 0.
+#[derive(Clone, Copy, Debug)]
+pub struct Torus {
+    pub center: [f64; 3],
+    pub major_radius: f64,
+    pub minor_radius: f64,
+}
+/// Signed turns around the major and minor circles and the starting phase of each, in degrees.
+#[derive(Clone, Copy, Debug)]
+pub struct TorusWinding {
+    pub major_turns: f64,
+    pub minor_turns: f64,
+    pub major_phase_degrees: f64,
+    pub minor_phase_degrees: f64,
+}
+
 /// P(t)=center+[(R+r*cos(B))*cos(A),(R+r*cos(B))*sin(A),r*sin(B)],
 /// A=major_phase+TAU*major_turns*t, B=minor_phase+TAU*minor_turns*t.
 /// Signed fractional turns define open trajectories on a ring torus R>r>0.
-pub fn approximate(
-    center: [f64; 3],
-    major_radius: f64,
-    minor_radius: f64,
-    major_turns: f64,
-    minor_turns: f64,
-    major_phase_degrees: f64,
-    minor_phase_degrees: f64,
-    budget: f64,
-) -> Result<Approximation> {
-    fit(
-        center,
-        major_radius,
-        minor_radius,
-        major_turns,
-        minor_turns,
-        major_phase_degrees,
-        minor_phase_degrees,
-        budget,
-        false,
-    )
+pub fn approximate(torus: Torus, winding: TorusWinding, budget: f64) -> Result<Approximation> {
+    fit(torus, winding, budget, false)
 }
 
 /// Closed (p,q) torus knot, with positive coprime integers p,q >= 2.
 /// Clamped encoding retains periodic=false; endpoint controls/jets are shared.
 /// This does not certify knot topology or absence of approximation intersections.
 pub fn approximate_knot(
-    center: [f64; 3],
-    major_radius: f64,
-    minor_radius: f64,
+    torus: Torus,
     p: usize,
     q: usize,
-    major_phase_degrees: f64,
-    minor_phase_degrees: f64,
+    [major_phase_degrees, minor_phase_degrees]: [f64; 2],
     budget: f64,
 ) -> Result<Approximation> {
     let (mut a, mut b) = (p, q);
@@ -49,30 +43,18 @@ pub fn approximate_knot(
         p >= 2 && q >= 2 && p <= 32 && q <= 32 && a == 1,
         "Torus knot requires coprime p,q in 2..32; links and unknots use other contracts",
     )?;
-    fit(
-        center,
-        major_radius,
-        minor_radius,
-        p as f64,
-        q as f64,
+    let winding = TorusWinding {
+        major_turns: p as f64,
+        minor_turns: q as f64,
         major_phase_degrees,
         minor_phase_degrees,
-        budget,
-        true,
-    )
+    };
+    fit(torus, winding, budget, true)
 }
 
-fn fit(
-    center: [f64; 3],
-    major_radius: f64,
-    minor_radius: f64,
-    major_turns: f64,
-    minor_turns: f64,
-    major_phase_degrees: f64,
-    minor_phase_degrees: f64,
-    budget: f64,
-    closed: bool,
-) -> Result<Approximation> {
+fn fit(torus: Torus, winding: TorusWinding, budget: f64, closed: bool) -> Result<Approximation> {
+    let Torus { center, major_radius, minor_radius } = torus;
+    let TorusWinding { major_turns, minor_turns, major_phase_degrees, minor_phase_degrees } = winding;
     check(
         center.iter().all(|x| x.is_finite())
             && major_radius.is_finite()
@@ -158,7 +140,11 @@ mod tests {
     #[test]
     fn independent_formula_signed_turns_and_endpoint_jets() {
         for (p, q) in [(0.5, 1.25), (-0.75, 0.5), (2., 3.)] {
-            let fit = approximate([3., 4., 5.], 3., 1., p, q, 23., 47., 1e-4).unwrap();
+            let fit = approximate(
+                Torus { center: [3., 4., 5.], major_radius: 3., minor_radius: 1. },
+                TorusWinding { major_turns: p, minor_turns: q, major_phase_degrees: 23., minor_phase_degrees: 47. },
+                1e-4,
+            ).unwrap();
             for i in 0..=1000 {
                 let t = i as f64 / 1000.;
                 let a = 23_f64.to_radians() + std::f64::consts::TAU * p * t;
@@ -193,14 +179,34 @@ mod tests {
     }
     #[test]
     fn closed_knot_and_refusals() {
-        let a = approximate_knot([0.; 3], 3., 1., 2, 3, 0., 0., 1e-4).unwrap();
+        let a = approximate_knot(
+            Torus { center: [0.; 3], major_radius: 3., minor_radius: 1. },
+            2,
+            3,
+            [0., 0.],
+            1e-4,
+        ).unwrap();
         assert_eq!(
             a.curve.control_points.first(),
             a.curve.control_points.last()
         );
         assert!(!a.curve.periodic);
-        assert!(approximate_knot([0.; 3], 3., 1., 2, 4, 0., 0., 1e-4).is_err());
-        assert!(approximate([0.; 3], 1., 1., 1., 2., 0., 0., 1e-4).is_err());
-        assert!(approximate([0.; 3], 3., 1., 2., 3., 0., 0., 1e-12).is_err());
+        assert!(approximate_knot(
+            Torus { center: [0.; 3], major_radius: 3., minor_radius: 1. },
+            2,
+            4,
+            [0., 0.],
+            1e-4,
+        ).is_err());
+        assert!(approximate(
+            Torus { center: [0.; 3], major_radius: 1., minor_radius: 1. },
+            TorusWinding { major_turns: 1., minor_turns: 2., major_phase_degrees: 0., minor_phase_degrees: 0. },
+            1e-4,
+        ).is_err());
+        assert!(approximate(
+            Torus { center: [0.; 3], major_radius: 3., minor_radius: 1. },
+            TorusWinding { major_turns: 2., minor_turns: 3., major_phase_degrees: 0., minor_phase_degrees: 0. },
+            1e-12,
+        ).is_err());
     }
 }

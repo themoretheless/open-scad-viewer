@@ -272,8 +272,16 @@ fn contact_qualification_delivery_binds_snapshot_and_retains_angular_work_stops(
         [[0.30, 0.44], [0.15, 0.25]], 2,
     ).unwrap().unwrap();
     let pc = crate::offset_contact_pcurve::propose(
-        [&a, &b], [0.2, 0.2], 0, [0.35, 0.39], [0.25, 0.35],
-        [[0.30, 0.44], [0.15, 0.25]], 2, 3,
+        crate::offset::contact_pcurve::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2, 0.2],
+        },
+        0,
+        [0.35, 0.39],
+        [0.25, 0.35],
+        [[0.30, 0.44], [0.15, 0.25]],
+        2,
+        3,
     ).unwrap().unwrap();
     let points = [vec![0., 0.], vec![1., 0.], vec![1., 1.], vec![0., 1.]];
     let loops = vec![(0..4).map(|i| crate::curve::Curve::from_polyline(

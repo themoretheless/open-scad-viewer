@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::quadrilateral_network::{Limits, SourceRegion, thicken_with_caps};
+use brep_core::shell_thickness::quadrilateral_network::{Limits, OffsetSettings, SourceRegion, thicken_with_caps};
 use nurbs_core::surface::Surface;
 
 fn plane(x: f64) -> Surface {
@@ -35,10 +35,12 @@ fn nonparallel_original_uv_region_closes_with_literal_source_and_replay() {
         &[c.clone()],
         &[REGION],
         &[false],
-        0.25,
-        0.002,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.25,
+            normal_tolerance: 0.002,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -67,10 +69,12 @@ fn adjacent_quadrilateral_caps_share_a_seam_without_an_internal_wall() {
         &caps,
         &regions,
         &[false; 2],
-        0.25,
-        0.002,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.25,
+            normal_tolerance: 0.002,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -93,11 +97,13 @@ fn wrong_maps_changed_caps_and_incomplete_normal_budget_publish_no_skin() {
             &[c.clone()],
             &[folded],
             &[false],
-            0.25,
-            0.002,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.25,
+                normal_tolerance: 0.002,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -107,11 +113,13 @@ fn wrong_maps_changed_caps_and_incomplete_normal_budget_publish_no_skin() {
             &[c.clone()],
             &[REGION],
             &[false],
-            0.25,
-            1e-12,
-            1,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.25,
+                normal_tolerance: 1e-12,
+                normal_cells: 1,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -123,11 +131,13 @@ fn wrong_maps_changed_caps_and_incomplete_normal_budget_publish_no_skin() {
             &[broken],
             &[REGION],
             &[false],
-            0.25,
-            0.002,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.25,
+                normal_tolerance: 0.002,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );

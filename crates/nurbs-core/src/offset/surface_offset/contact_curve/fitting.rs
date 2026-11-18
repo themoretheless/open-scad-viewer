@@ -1,11 +1,10 @@
 //! Polynomial world-contact proposals; only complete original-root proofs admit.
 use super::{FitLimits, Limits, Report};
+use crate::offset::polynomial_fit;
 use crate::{
     Result, bernstein_interpolation as interpolation, check,
     curve::Curve,
-    distance_bounds::Interval as I,
     offset_contact_pcurve as uv,
-    surface::Surface,
     surface_offset::{self, ContactBand},
 };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,10 +34,8 @@ pub struct FitReport {
 /// Certified section-root boxes define only an interpolating world proposal.
 /// Actual rounded poles need fresh COMPLETE world correspondence. No UV curve,
 /// shared-edge receipt or positive certificate is accepted from the caller.
-#[allow(clippy::too_many_arguments)]
 pub fn fit(
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     axis: usize,
     drive: [f64; 2],
     free: [f64; 2],
@@ -46,6 +43,10 @@ pub fn fit(
     tolerance_mm: f64,
     limits: FitLimits,
 ) -> Result<FitReport> {
+    let crate::offset::contact_pcurve::OffsetFaces {
+        surfaces,
+        distances,
+    } = faces;
     check(
         tolerance_mm.is_finite()
             && tolerance_mm > 0.
@@ -91,10 +92,7 @@ pub fn fit(
         }
         ContactBand::ContinuousBranch(_) => {}
     }
-    let mut degrees = vec![1usize];
-    while *degrees.last().unwrap() < limits.max_degree {
-        degrees.push((2 * degrees.last().unwrap()).min(limits.max_degree));
-    }
+    let degrees = polynomial_fit::degree_ladder(limits.max_degree);
     for (attempt, &degree) in degrees.iter().enumerate() {
         let n = degree + 1;
         let per_root = limits.root_refinements + 1;
@@ -111,20 +109,9 @@ pub fn fit(
             out.stop = FitStop::CoefficientLimit;
             break;
         }
-        let sites: Vec<_> = (0..n)
-            .map(|i| {
-                if i == 0 {
-                    drive[0]
-                } else if i == degree {
-                    drive[1]
-                } else {
-                    let t = (1. - (std::f64::consts::PI * i as f64 / degree as f64).cos()) * 0.5;
-                    drive[0] * (1. - t) + drive[1] * t
-                }
-            })
-            .collect();
-        check(
-            sites.windows(2).all(|r| r[0] < r[1]),
+        let sites = polynomial_fit::chebyshev_sites(
+            drive,
+            degree,
             "World fit nodes reached original clock resolution",
         )?;
         let (Some(basis), work) = interpolation::basis_on(
@@ -139,8 +126,10 @@ pub fn fit(
         let mut samples = Vec::with_capacity(n);
         for &t in &sites {
             let (root, queries) = uv::section(
-                surfaces,
-                distances,
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces,
+                    distances,
+                },
                 axis,
                 t,
                 free,
@@ -155,24 +144,9 @@ pub fn fit(
             };
             samples.push(root.point.map(|p| p[0] * 0.5 + p[1] * 0.5));
         }
-        let mut points = vec![vec![0.; 3]; n];
-        for k in 0..3 {
-            let nodal: Vec<_> = samples.iter().map(|p| I::point(p[k])).collect();
-            let c = interpolation::reconstruct(&nodal, &basis)?;
-            out.coefficient_work += n * n;
-            for (i, c) in c.into_iter().enumerate() {
-                points[i][k] = c.lo * 0.5 + c.hi * 0.5;
-            }
-        }
-        let curve = Curve {
-            degree,
-            knots: std::iter::repeat_n(drive[0], n)
-                .chain(std::iter::repeat_n(drive[1], n))
-                .collect(),
-            control_points: points,
-            weights: vec![1.; n],
-            periodic: false,
-        };
+        let points =
+            polynomial_fit::interpolate_poles(&samples, &basis, &mut out.coefficient_work)?;
+        let curve = polynomial_fit::bezier(drive, points);
         let cells = ((limits.proof_cells - out.proof_cells) / (degrees.len() - attempt))
             .max(1)
             .min((limits.root_queries - out.root_queries) / per_root);
@@ -180,22 +154,12 @@ pub fn fit(
             out.stop = FitStop::QueryLimit;
             break;
         }
-        let report = super::certify(
-            &curve,
-            surfaces,
-            distances,
-            axis,
-            drive,
-            free,
-            second,
-            tolerance_mm,
-            Limits {
+        let report = super::certify(&curve, crate::offset::contact_pcurve::OffsetFaces { surfaces, distances }, super::ContactDomain { axis, drive, free, second }, tolerance_mm, Limits {
                 cells,
                 spans: limits.spans,
                 section_refinements: limits.root_refinements,
                 band_refinements: limits.root_refinements,
-            },
-        )?;
+            })?;
         out.proof_cells += report.visited;
         out.root_queries += report.section_queries;
         let accepted = report.world_correspondence_proven;

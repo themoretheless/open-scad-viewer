@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'vue'
+import { computed, ref, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
 import { hexToRgb, lineAndColumn, type DockTab } from '../appHelpers'
 import type {
   DistanceMeasurement as PanelMeasurement,
@@ -7,10 +7,10 @@ import type {
   SourceProvenanceRow,
 } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
-import type { Language } from '../i18n/appStrings'
-import type { CameraState } from '../services/cameraHistory'
-import { inspectMesh } from '../services/meshInspection'
-import { useModelingGrid } from '../services/modelingGrid'
+import type { CameraState } from '../render/cameraHistory'
+import { inspectMesh } from '../kernel/meshInspection'
+import { measureBodyProperties, type BodyProperties } from '../app/bodyProperties'
+import { useModelingGrid } from '../app/modelingGrid'
 import type {
   DisplayMode,
   DistanceMeasurement,
@@ -19,11 +19,12 @@ import type {
   SelectionMode,
   ShadingModel,
   StandardView,
-} from '../services/rendererContracts'
-import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../services/rendererContracts'
-import type { SceneController, SceneState } from '../services/sceneController'
-import type { ViewportController, ViewportState } from '../services/viewportController'
-import type { WebGPURenderer } from '../services/webgpuRenderer'
+} from '../render/rendererContracts'
+import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../render/rendererContracts'
+import type { SceneController, SceneState } from '../app/sceneController'
+import type { ViewportController, ViewportState } from '../render/viewportController'
+import type { WebGPURenderer } from '../render/webgpuRenderer'
+import { resolveKeyboardCameraStep } from '../render/keyboardCamera'
 
 export interface UseViewportDisplayControlsOptions {
   viewportController: ViewportController
@@ -64,8 +65,6 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     measurement,
     renderedSource,
     code,
-    surfaceArea,
-    volume,
     mainCameraRevision,
     dockOpen,
     dockTab,
@@ -143,10 +142,28 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     }),
   )
 
-  const sceneMeshId = (index: number | null) =>
-    index === null ? null : sceneMeshes.value[index]?.entityId ?? index
+  const sceneMeshId = (index: number | null) => (index === null ? null : (sceneMeshes.value[index]?.entityId ?? index))
   const selectedSceneMeshId = computed(() => sceneMeshId(selectedMesh.value))
   const hoveredMesh = computed(() => sceneMeshId(hoveredHit.value?.meshIndex ?? null))
+
+  const bodyPropertiesCache = new WeakMap<MeshData, BodyProperties>()
+  /** Per-body measured properties of the selected body; volume only when the body is closed. */
+  function bodyInspection(mesh: MeshData): Partial<InspectSelection> {
+    let properties = bodyPropertiesCache.get(mesh)
+    if (!properties) {
+      properties = measureBodyProperties(mesh)
+      bodyPropertiesCache.set(mesh, properties)
+    }
+    return {
+      surfaceArea: properties.surfaceArea,
+      ...(properties.closed ? { volume: Math.abs(properties.volume) } : {}),
+      vertexCount: properties.vertexCount,
+      edgeCount: properties.edgeCount,
+      faceCount: properties.faceCount,
+      closed: properties.closed,
+      ...(properties.centroid ? { centroid: properties.centroid } : {}),
+    }
+  }
 
   const currentInspection = computed<InspectSelection | null>(() => {
     const index = selectedMesh.value
@@ -173,12 +190,11 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
       meshId: mesh.entityId ?? index,
       meshName: `${t('object')} ${index + 1}`,
       triangleCount: facts.triangles,
-      surfaceArea: sceneMeshes.value.length === 1 ? surfaceArea.value : undefined,
-      volume: sceneMeshes.value.length === 1 ? volume.value : undefined,
-      position: hit?.point,
-      normal: hit?.normal,
-      bounds: facts.bounds ?? undefined,
-      source,
+      ...bodyInspection(mesh),
+      ...(hit?.point !== undefined ? { position: hit.point } : {}),
+      ...(hit?.normal !== undefined ? { normal: hit.normal } : {}),
+      ...(facts.bounds != null ? { bounds: facts.bounds } : {}),
+      ...(source !== undefined ? { source } : {}),
     }
   })
 
@@ -186,7 +202,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     measurement.value
       ? {
           points: measurement.value.points,
-          distance: measurement.value.distance ?? undefined,
+          ...(measurement.value.distance != null ? { distance: measurement.value.distance } : {}),
         }
       : null,
   )
@@ -213,6 +229,17 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     if (viewportController.state.camera.projection !== state.projection) {
       getRenderer()?.setProjection(viewportController.state.camera.projection)
     }
+  }
+
+  /** Arrow/Shift+arrow/+/- camera navigation of the focused viewport; true when the key was consumed. */
+  function handleCameraKey(event: KeyboardEvent): boolean {
+    const step = resolveKeyboardCameraStep(event)
+    if (!step) return false
+    const renderer = getRenderer()
+    if (!renderer) return false
+    event.preventDefault()
+    renderer.applyKeyboardCameraStep(step)
+    return true
   }
 
   function focusSelection() {
@@ -300,12 +327,16 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
 
   function setMatcap(id: string) {
     matcapId.value = id
-    void getRenderer()?.setMatcapTexture(id)?.catch(() => {})
+    void getRenderer()
+      ?.setMatcapTexture(id)
+      ?.catch(() => {})
   }
 
   function setEnv(id: string) {
     envId.value = id
-    void getRenderer()?.setEnvMap(id)?.catch(() => {})
+    void getRenderer()
+      ?.setEnvMap(id)
+      ?.catch(() => {})
   }
 
   function setShadows(enabled: boolean) {
@@ -340,8 +371,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
   }
 
   function meshIndex(id: number | string) {
-    const entityIndex =
-      typeof id === 'string' ? sceneMeshes.value.findIndex(mesh => mesh.entityId === id) : -1
+    const entityIndex = typeof id === 'string' ? sceneMeshes.value.findIndex(mesh => mesh.entityId === id) : -1
     const index = entityIndex >= 0 ? entityIndex : typeof id === 'number' ? id : Number(id)
     return Number.isInteger(index) && index >= 0 && index < sceneMeshes.value.length ? index : null
   }
@@ -396,16 +426,14 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
   }
 
   async function copyMeasurement(value: PanelMeasurement) {
-    if (value.points.length < 2) return
     const [a, b] = value.points
+    if (a === undefined || b === undefined) return
     const dx = b[0] - a[0]
     const dy = b[1] - a[1]
     const dz = b[2] - a[2]
     const distance = value.distance ?? (dx * dx + dy * dy + dz * dz) ** 0.5
     try {
-      await navigator.clipboard.writeText(
-        `A ${a.join(', ')}\nB ${b.join(', ')}\nDistance ${distance}`,
-      )
+      await navigator.clipboard.writeText(`A ${a.join(', ')}\nB ${b.join(', ')}\nDistance ${distance}`)
       showNotice(t('copied'))
     } catch {
       /* Clipboard may be unavailable outside a secure context. */
@@ -438,6 +466,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     currentInspection,
     panelMeasurement,
     fitView,
+    handleCameraKey,
     resetView,
     previousView,
     syncCameraState,

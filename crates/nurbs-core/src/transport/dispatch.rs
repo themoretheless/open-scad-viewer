@@ -28,6 +28,9 @@ pub(super) fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> 
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if super::exact_primitive_requests::handles(&op) {
+        return super::exact_primitive_requests::dispatch(&v, &op);
+    }
     if op == "surface_offset_continuous_deviation" { return super::offset_requests::inspect(&v); }
     if op=="profile_section_bridge_chords" {return super::profile_bridge_chord_transport::inspect(&v);}
     if op == "sweep_filled_cap_error_upper" {
@@ -274,11 +277,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
     if op == "sweep_wall_audit" {
         let walls = field::<Vec<surface::Surface>>(&v, "walls")?;
         let shared = field::<Vec<[usize; 2]>>(&v, "sharedBoundaries")?;
-        let report = sweep_wall_audit::inspect(
-            &walls, &shared, field(&v, "clearance")?, field(&v, "distanceTolerance")?,
-            field(&v, "maxInjectivityCells")?, field(&v, "maxPairs")?,
-            field(&v, "maxPairCells")?,
-        )?;
+        let report = sweep_wall_audit::inspect(&walls, &shared, wall_audit_limits(&v)?)?;
         return encode_wall_audit(report);
     }
     if op == "sweep_seam_audit" {
@@ -351,15 +350,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
         if op == "curve_progressive_miter_wall_audit" {
             let sections = field::<Vec<Vec<curve::Curve>>>(&v, "sections")?;
             let loops = optional_field::<Vec<usize>>(&v, "loopSizes")?;
-            let args = (field(&v, "clearance")?, field(&v, "distanceTolerance")?,
-                field(&v, "maxInjectivityCells")?, field(&v, "maxPairs")?,
-                field(&v, "maxPairCells")?);
+            let limits = wall_audit_limits(&v)?;
             return encode_wall_audit(if let Some(loops) = loops {
-                sweep.inspect_wall_geometry_with_loops(&sections, &loops,
-                    args.0, args.1, args.2, args.3, args.4)?
+                sweep.inspect_wall_geometry_with_loops(&sections, &loops, limits)?
             } else {
-                sweep.inspect_wall_geometry(&sections,
-                    args.0, args.1, args.2, args.3, args.4)?
+                sweep.inspect_wall_geometry(&sections, limits)?
             });
         }
         if op=="curve_progressive_miter_level" {
@@ -376,4 +371,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
     } else {
         dispatch_other(v,op)
     }
+}
+fn wall_audit_limits(v: &Value) -> Result<sweep_wall_audit::WallAuditLimits> {
+    Ok(sweep_wall_audit::WallAuditLimits {
+        clearance: field(v, "clearance")?,
+        distance_tolerance: field(v, "distanceTolerance")?,
+        max_injectivity_cells: field(v, "maxInjectivityCells")?,
+        max_pairs: field(v, "maxPairs")?,
+        max_pair_cells: field(v, "maxPairCells")?,
+    })
 }

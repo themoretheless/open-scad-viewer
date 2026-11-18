@@ -1,62 +1,10 @@
-import type {MeshObject} from '../../../services/meshEditing'
-import type {MainSolidJob,MainSolidResults} from '../../../services/mainSolidProtocol'
-import VrControls from '../../../components/VrControls.vue'
-import { prepareVrPolygons } from '../../../services/vrScene'
-import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { stringifyMeshJson } from '../../../services/meshJson'
-import ModelingFloorGrid from '../../../components/ModelingFloorGrid.vue'
-import ModelingGridControls from '../../../components/ModelingGridControls.vue'
-import WorkspaceActionBar from '../../../components/WorkspaceActionBar.vue'
-import CommandPalette from '../../../components/CommandPalette.vue'
-import type { PaletteCommand } from '../../../services/commandSearch'
-import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../../../services/geometryEditing'
-import { meshCentroid, sculptMesh } from '../../../services/meshEditing'
-import {
-  MeshHistory,
-  buildEdgeList,
-  createBoxMesh,
-  createUvSphereMesh,
-  deleteFaces,
-  duplicateObject,
-  emptyMeshDocument,
-  exportMeshObjectStl,
-  extrudeSelectedFaces,
-  flipFaces,
-  insetSelectedFaces,
-  joinMeshes,
-  knifeSplitEdges,
-  mergeByDistance,
-  meshObjectStats,
-  moveVertices,
-  moveVerticesProportional,
-  parseMeshDocument,
-  separateFaces,
-  subdivideFaces,
-  symmetrizeMesh,
-  transformMesh,
-  twistMesh,
-  type MeshSelectMode,
-  type MeshWorkspaceDocument,
-} from '../../../services/meshEditing'
-import { createSolidPreviewWorker } from '../../../services/solidPreviewWorker'
-import { useMainSolidTask } from '../.././useMainSolidTask'
-import { defaultDirectCamera, projectDirectPoint } from '../../../services/directModelingTools'
-import { projectMeshModelerObject,cachedMeshModelerStats } from '../../../services/meshModelerProjection'
-import { isGeometryKernelReady, warmGeometryKernel } from '../../../services/geometry/kernel'
-import { storageGet, storageSet } from '../../../services/safeStorage'
-import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../../../services/meshImport'
-import { manifoldPreferenceSnapshot } from '../../../services/manifoldPreferences'
-import ManifoldSettings from '../../../components/ManifoldSettings.vue'
-import { formatMeshImportNotice } from '../../../services/meshImportReport'
-import { formatMeshBooleanNotice } from '../../../services/meshBooleanReport'
-import { formatMeshRepairNotice } from '../../../services/meshRepairReport'
-import { meshManifoldDefectLabels } from '../../../services/meshManifoldDefects'
-import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../../../services/meshConvert'
-import { downloadBytes } from '../../../services/downloadArtifact'
-import type { PolygonMesh } from '../../../services/geometry/polygon'
-import type { KernelManifoldReport } from '../../../services/geometry/manifoldAnalysis'
-import type {MeshModelerProps,MeshModelerEmit} from '../useMeshModeler'
-import type {Ref,ComputedRef,ShallowRef} from 'vue'
+import type { MeshObject } from '../../../kernel/meshEditing'
+import type { MainSolidJob, MainSolidResults } from '../../../kernel/mainSolidProtocol'
+import { type SculptFalloff, type SculptKind } from '../../../kernel/geometryEditing'
+import { MeshHistory, type MeshSelectMode, type MeshWorkspaceDocument } from '../../../kernel/meshEditing'
+import type { PolygonMesh } from '../../../kernel/geometry/polygon'
+import type { MeshModelerProps } from '../useMeshModeler'
+import type { Ref, ComputedRef, ShallowRef } from 'svet'
 export interface MeshCommandsContext {
   run: (fn: () => void) => void
   history: MeshHistory
@@ -85,7 +33,11 @@ export interface MeshCommandsContext {
   importNotice: Ref<string, string>
   booleanNotice: Ref<string, string>
   document: ShallowRef<MeshWorkspaceDocument, MeshWorkspaceDocument>
-  runMeshTask: <K extends MainSolidJob["kind"]>(job: Extract<MainSolidJob, { kind: K; }>, accept: (result: MainSolidResults[K]) => void, reject: (error: unknown) => void) => Promise<boolean>
+  runMeshTask: <K extends MainSolidJob['kind']>(
+    job: Extract<MainSolidJob, { kind: K }>,
+    accept: (result: MainSolidResults[K]) => void,
+    reject: (error: unknown) => void,
+  ) => Promise<boolean>
   ru: ComputedRef<boolean>
   booleanTarget: Ref<string, string>
   brushKind: Ref<SculptKind, SculptKind>
@@ -94,7 +46,10 @@ export interface MeshCommandsContext {
   brushFalloff: Ref<SculptFalloff, SculptFalloff>
   brushMirror: Ref<[boolean, boolean, boolean], [boolean, boolean, boolean]>
   twistAmount: Ref<number, number>
-  booleanOp: Ref<"union" | "difference" | "intersection", "union" | "difference" | "intersection">
-  exportFormat: Ref<"stl" | "stl_binary" | "3mf" | "obj" | "ply" | "off" | "amf", "stl" | "stl_binary" | "3mf" | "obj" | "ply" | "off" | "amf">
+  booleanOp: Ref<'union' | 'difference' | 'intersection', 'union' | 'difference' | 'intersection'>
+  exportFormat: Ref<
+    'stl' | 'stl_binary' | '3mf' | 'obj' | 'ply' | 'off' | 'amf',
+    'stl' | 'stl_binary' | '3mf' | 'obj' | 'ply' | 'off' | 'amf'
+  >
   props: MeshModelerProps
 }

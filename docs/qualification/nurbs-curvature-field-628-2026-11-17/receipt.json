@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0628",
+  "testedBase": "67e342b3784cd7a312a9e35988b050f0c184dde5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 257,
+  "scope": [
+    "Expose opt-in bounds on the radius of gyration from the existing patch-set moment and positive area.",
+    "Check analytic radius bounds, reuse of the axis moment, validation of the opt-in flag, and absence of a radius on incomplete integration."
+  ],
+  "logSha256": "db1542abc187296a0566c1246ae5166c1e9ca72fd0863cc2d882a857937abf51",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "7781c2bcb517e9c52ae3f76ef673d6963a268efc5ea0a4ec2e061cf461f22c75",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "72468f161540b728b202dd71795ea8966449596fe5bb6813e5e718efdd80cca6",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "e0c01025d4e6a82a8abe9987e8d6c6a0a41b2f89f5b8d3e808071857774df873",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "e86533084a139ab4a4cce6296982bbdcdaffa800d20a4feea8c842827b014aa3"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

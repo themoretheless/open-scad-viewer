@@ -1,0 +1,69 @@
+{
+  "schema": "closed-ss-wasm-qualification/1",
+  "identity": {
+    "sha256": "2e4d31342866086dc9f1539bcdc64d5f7b4adeaf9ad4df510acb67d63aa37dd8",
+    "bytes": 22232309,
+    "sourceCommit": "1c83050c24a5d6a1b999ed8f20f89bbeca90b0b0"
+  },
+  "browser": "151.0.7922.34",
+  "result": {
+    "main": {
+      "passed": true,
+      "branches": 2,
+      "segments": 89,
+      "worldErrorUpper": 0.00002500000084499074,
+      "uvErrorUpper": [
+        0.00002406928995823264,
+        0.000016650506680536433
+      ],
+      "failures": [
+        {
+          "key": "faceA",
+          "code": "BREP_FACE_CUT_INPUT"
+        },
+        {
+          "key": "toleranceMm",
+          "code": "NURBS_INVALID_INPUT"
+        },
+        {
+          "key": "materialClassified",
+          "code": "BREP_CLOSED_SS_INPUT"
+        }
+      ],
+      "elapsedMs": 5168.699999988079,
+      "inputIntact": true
+    },
+    "thread": {
+      "ok": true,
+      "result": {
+        "passed": true,
+        "branches": 2,
+        "segments": 89,
+        "worldErrorUpper": 0.00002500000084499074,
+        "uvErrorUpper": [
+          0.00002406928995823264,
+          0.000016650506680536433
+        ],
+        "failures": [
+          {
+            "key": "faceA",
+            "code": "BREP_FACE_CUT_INPUT"
+          },
+          {
+            "key": "toleranceMm",
+            "code": "NURBS_INVALID_INPUT"
+          },
+          {
+            "key": "materialClassified",
+            "code": "BREP_CLOSED_SS_INPUT"
+          }
+        ],
+        "elapsedMs": 5078.9000000059605,
+        "inputIntact": true
+      }
+    }
+  },
+  "pageErrors": [],
+  "passed": true,
+  "scope": "Finite original regular nonperiodic closed-component fixtures and paired finite-face subdivisions; no material/Boolean/general-singularity qualification."
+}

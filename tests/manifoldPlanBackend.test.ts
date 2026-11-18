@@ -2,25 +2,21 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import type { SemanticNode, SemanticValueType } from '../src/core/semanticProgram'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
-import { executeSemanticProgram } from '../src/services/semanticProgramExecutor'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import { executeSemanticProgram } from '../src/language/semantic/semanticProgramExecutor'
 import {
   MANIFOLD_PLAN_CARRIERS,
   ManifoldPlanBackend,
   type ManifoldPlanPayloadFamily,
-} from '../src/services/manifoldPlanBackend'
-import type {
-  CadKernelHandle,
-  CadKernelOps,
-  CadKernelSolidAnalysis,
-} from '../src/services/cadKernelOps'
+} from '../src/kernel/manifoldPlanBackend'
+import type { CadKernelHandle, CadKernelOps, CadKernelSolidAnalysis } from '../src/kernel/cadKernelOps'
 import {
   evaluateOpenSCADViaInjectedManifoldPlan,
   evaluateOpenSCADViaManifoldPlanForQualification,
   ManifoldPlanQualificationLane,
-} from '../src/services/manifoldPlanEvaluator'
+} from '../src/kernel/manifoldPlanEvaluator'
 import {
   referenceCaptureLegacyOutcome,
   referenceCompareLegacyOutcomes,
@@ -38,10 +34,7 @@ import {
 } from './support/referenceFrozenLegacyOutcome'
 
 const FROZEN_MANIFEST_SHA256 = 'a6b4d6025aa59081501d4c54bce921857512cd492714efda560a31b946184897'
-const frozenManifestText = readFileSync(
-  new URL('./fixtures/manifold-plan-oracle-v1.json', import.meta.url),
-  'utf8',
-)
+const frozenManifestText = readFileSync(new URL('./fixtures/manifold-plan-oracle-v1.json', import.meta.url), 'utf8')
 const frozenManifestInput: unknown = JSON.parse(frozenManifestText)
 const FROZEN_MANIFEST = referenceValidateFrozenLegacyManifest(frozenManifestInput)
 
@@ -69,16 +62,16 @@ function compareFrozenLegacyOutcome(
     compare('$.success.meshCount', expected.meshCount, actual.success.meshes.length)
     compare('$.success.sceneAssetCount', expected.sceneAssetCount, actual.success.scene.assets.length)
     compare('$.success.sceneEntityCount', expected.sceneEntityCount, actual.success.scene.entities.length)
-    if (!referenceFrozenMetricEqual(
-      expected.volume,
-      actual.success.volume,
-      manifest.comparison.metrics.volume,
-    )) differences.push('$.success.volume')
-    if (!referenceFrozenMetricEqual(
-      expected.surfaceArea,
-      actual.success.surfaceArea,
-      manifest.comparison.metrics.surfaceArea,
-    )) differences.push('$.success.surfaceArea')
+    if (!referenceFrozenMetricEqual(expected.volume, actual.success.volume, manifest.comparison.metrics.volume))
+      differences.push('$.success.volume')
+    if (
+      !referenceFrozenMetricEqual(
+        expected.surfaceArea,
+        actual.success.surfaceArea,
+        manifest.comparison.metrics.surfaceArea,
+      )
+    )
+      differences.push('$.success.surfaceArea')
     return differences
   }
   if (actual.tag === 'success') return differences
@@ -95,30 +88,27 @@ function compareFrozenLegacyOutcome(
 describe('SemanticProgram to Manifold qualification adapter', () => {
   it('authenticates the hand-frozen qualification manifest and corpus', () => {
     expect(referenceFrozenLegacySha256(frozenManifestText)).toBe(FROZEN_MANIFEST_SHA256)
-    expect(FROZEN_MANIFEST.corpusSha256)
-      .toBe('c58ff48a7f174cb547b4f8aad8ada72a30816d5009a87d046d4f78d634db7482')
+    expect(FROZEN_MANIFEST.corpusSha256).toBe('c58ff48a7f174cb547b4f8aad8ada72a30816d5009a87d046d4f78d634db7482')
     expect(FROZEN_MANIFEST.cases).toHaveLength(65)
     expect(FROZEN_MANIFEST.cases.filter(item => item.expected.tag === 'success')).toHaveLength(43)
     expect(FROZEN_MANIFEST.cases.filter(item => item.expected.tag === 'error')).toHaveLength(22)
 
-    const supportSource = readFileSync(
-      new URL('./support/referenceFrozenLegacyOutcome.ts', import.meta.url),
-      'utf8',
-    )
-    expect(supportSource.match(/^\s*import\s+.*$/gm) ?? [])
-      .toEqual(["import { createHash } from 'node:crypto'"])
+    const supportSource = readFileSync(new URL('./support/referenceFrozenLegacyOutcome.ts', import.meta.url), 'utf8')
+    expect(supportSource.match(/^\s*import\s+.*$/gm) ?? []).toEqual(["import { createHash } from 'node:crypto'"])
     expect(supportSource).not.toMatch(/(?:from\s*|import\s*\()['"][^'"]*src\//)
   })
 
   it.each(FROZEN_MANIFEST.cases)(
     'preserves evaluator semantics on the archived corpus with the own Rust kernel: $name',
     async fixture => {
-      const candidate = await referenceCaptureLegacyOutcome(() => (
+      const candidate = await referenceCaptureLegacyOutcome(() =>
         evaluateOpenSCADViaManifoldPlanForQualification(fixture.source, {
           quality: fixture.quality,
-        })
-      ))
-      const direct = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(fixture.source, { quality: fixture.quality }))
+        }),
+      )
+      const direct = await referenceCaptureLegacyOutcome(() =>
+        parseOpenSCAD(fixture.source, { quality: fixture.quality }),
+      )
       expect(referenceCompareLegacyOutcomes(direct, candidate)).toEqual([])
       // The archive remains immutable. Mesh bytes belong to its old kernel;
       // acceptance/error categories still belong to the language contract.
@@ -135,68 +125,92 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       throw new Error('Frozen manifest has no mutable success case')
     }
     mutableSuccess.expected.lme1Sha256 = '0'.repeat(64)
-    expect(() => referenceValidateFrozenLegacyManifest(mutatedManifest))
-      .toThrow('$.corpusSha256: corpus digest mismatch')
+    expect(() => referenceValidateFrozenLegacyManifest(mutatedManifest)).toThrow(
+      '$.corpusSha256: corpus digest mismatch',
+    )
 
     const successFixture = FROZEN_MANIFEST.cases[0]
     if (successFixture?.expected.tag !== 'success') {
       throw new Error('First frozen fixture must be a success case')
     }
-    const success = await referenceCaptureLegacyOutcome(() => (
+    const success = await referenceCaptureLegacyOutcome(() =>
       evaluateOpenSCADViaManifoldPlanForQualification(successFixture.source, {
         quality: successFixture.quality,
-      })
-    ))
-    if(success.tag !== 'success') throw new Error('Expected successful own-kernel evaluation')
-    const currentExpected: ReferenceFrozenLegacyExpected = {...successFixture.expected,
+      }),
+    )
+    if (success.tag !== 'success') throw new Error('Expected successful own-kernel evaluation')
+    const currentExpected: ReferenceFrozenLegacyExpected = {
+      ...successFixture.expected,
       lme1Sha256: referenceLegacySha256(referenceLegacyMeshBytes(success)),
       lme1ByteLength: referenceLegacyMeshBytes(success).length,
       lse1Sha256: referenceLegacySha256(referenceLegacySceneBytes(success)),
       lse1ByteLength: referenceLegacySceneBytes(success).length,
-      volume: success.success.volume, surfaceArea: success.success.surfaceArea,
+      volume: success.success.volume,
+      surfaceArea: success.success.surfaceArea,
     }
     expect(compareFrozenLegacyOutcome(currentExpected, success)).toEqual([])
-    expect(compareFrozenLegacyOutcome({
-      ...currentExpected,
-      lme1Sha256: '0'.repeat(64),
-    }, success)).toContain('$.success.lme1Sha256')
-    expect(compareFrozenLegacyOutcome({
-      ...currentExpected,
-      lse1Sha256: '0'.repeat(64),
-    }, success)).toContain('$.success.lse1Sha256')
-    expect(compareFrozenLegacyOutcome({
-      ...currentExpected,
-      warnings: [...successFixture.expected.warnings, 'mutated warning'],
-    }, success)).toContain('$.success.warnings')
-    expect(compareFrozenLegacyOutcome({
-      ...currentExpected,
-      volume: successFixture.expected.volume + 1,
-    }, success)).toContain('$.success.volume')
+    expect(
+      compareFrozenLegacyOutcome(
+        {
+          ...currentExpected,
+          lme1Sha256: '0'.repeat(64),
+        },
+        success,
+      ),
+    ).toContain('$.success.lme1Sha256')
+    expect(
+      compareFrozenLegacyOutcome(
+        {
+          ...currentExpected,
+          lse1Sha256: '0'.repeat(64),
+        },
+        success,
+      ),
+    ).toContain('$.success.lse1Sha256')
+    expect(
+      compareFrozenLegacyOutcome(
+        {
+          ...currentExpected,
+          warnings: [...successFixture.expected.warnings, 'mutated warning'],
+        },
+        success,
+      ),
+    ).toContain('$.success.warnings')
+    expect(
+      compareFrozenLegacyOutcome(
+        {
+          ...currentExpected,
+          volume: successFixture.expected.volume + 1,
+        },
+        success,
+      ),
+    ).toContain('$.success.volume')
 
     const errorFixture = FROZEN_MANIFEST.cases.find(item => item.expected.tag === 'error')
     if (errorFixture?.expected.tag !== 'error' || errorFixture.expected.end === null) {
       throw new Error('Frozen manifest has no spanned error case')
     }
-    const error = await referenceCaptureLegacyOutcome(() => (
+    const error = await referenceCaptureLegacyOutcome(() =>
       evaluateOpenSCADViaManifoldPlanForQualification(errorFixture.source, {
         quality: errorFixture.quality,
-      })
-    ))
+      }),
+    )
     expect(compareFrozenLegacyOutcome(errorFixture.expected, error)).toEqual([])
-    expect(compareFrozenLegacyOutcome({
-      ...errorFixture.expected,
-      end: errorFixture.expected.end + 1,
-    }, error)).toContain('$.error.end')
+    expect(
+      compareFrozenLegacyOutcome(
+        {
+          ...errorFixture.expected,
+          end: errorFixture.expected.end + 1,
+        },
+        error,
+      ),
+    ).toContain('$.error.end')
   })
 
   it('does not impose a smaller discarded-effect cap than the retained node budget', async () => {
-    const source = `${Array.from(
-      { length: 1_001 },
-      () => 'difference(){if(false)cube(1);cube(1);}',
-    ).join('')}cube(2);`
+    const source = `${Array.from({ length: 1_001 }, () => 'difference(){if(false)cube(1);cube(1);}').join('')}cube(2);`
     expect(source).toHaveLength(39_047)
-    expect(referenceFrozenLegacySha256(source))
-      .toBe('11e7285cec7d48fd3ea9227b2ace16ac802b25400fa0d290aba8371ae2d6e602')
+    expect(referenceFrozenLegacySha256(source)).toBe('11e7285cec7d48fd3ea9227b2ace16ac802b25400fa0d290aba8371ae2d6e602')
     const expected: ReferenceFrozenLegacyExpected = {
       tag: 'success',
       lme1Sha256: 'f1344e36d1a2bb026cd534b4076d5c8ae36dcc10a651d08d8dad810b664308bf',
@@ -212,9 +226,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       sceneAssetCount: 1,
       sceneEntityCount: 1,
     }
-    const candidate = await referenceCaptureLegacyOutcome(() => (
-      evaluateOpenSCADViaManifoldPlanForQualification(source)
-    ))
+    const candidate = await referenceCaptureLegacyOutcome(() => evaluateOpenSCADViaManifoldPlanForQualification(source))
     const direct = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(source))
     expect(referenceCompareLegacyOutcomes(direct, candidate)).toEqual([])
     if (candidate.tag === 'success' && expected.tag === 'success') {
@@ -229,8 +241,9 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     const source = ' '.repeat(250_001)
     const message = `Line 1, column 1: Source exceeds 250,000 characters\n${source}\n^`
     expect(message).toHaveLength(250_055)
-    expect(referenceFrozenLegacySha256(message))
-      .toBe('480083bf026186d0d8fbef7c5ec470c859e3c055792fab3917218c845710238c')
+    expect(referenceFrozenLegacySha256(message)).toBe(
+      '480083bf026186d0d8fbef7c5ec470c859e3c055792fab3917218c845710238c',
+    )
     const expected: ReferenceFrozenLegacyExpected = {
       tag: 'error',
       name: 'OpenSCADParseError',
@@ -242,9 +255,9 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       end: 1,
     }
     const kernel = fakeKernel()
-    const candidate = await referenceCaptureLegacyOutcome(() => (
-      evaluateOpenSCADViaInjectedManifoldPlan(source, new ManifoldPlanBackend(kernel.ops))
-    ))
+    const candidate = await referenceCaptureLegacyOutcome(() =>
+      evaluateOpenSCADViaInjectedManifoldPlan(source, new ManifoldPlanBackend(kernel.ops)),
+    )
     const direct = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(source))
     expect(referenceCompareLegacyOutcomes(direct, candidate)).toEqual([])
     if (candidate.tag === 'success' && expected.tag === 'success') {
@@ -257,12 +270,12 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
   it('matches frozen cooperative cancellation as a distinct terminal outcome', async () => {
     const source = Array.from({ length: 120 }, (_, index) => `cube([1,1,${index + 1}]);`).join('\n')
     let calls = 0
-    const candidate = await referenceCaptureLegacyOutcome(() => (
+    const candidate = await referenceCaptureLegacyOutcome(() =>
       evaluateOpenSCADViaManifoldPlanForQualification(source, {
         shouldAbort: () => calls++ > 0,
         yieldControl: async () => {},
-      })
-    ))
+      }),
+    )
     const expected: ReferenceFrozenLegacyExpected = {
       tag: 'cancelled',
       name: 'AbortedError',
@@ -293,22 +306,28 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       }
     }
     for (const directory of ['core/', 'components/']) visit(new URL(directory, root))
-    files.push(fileURLToPath(new URL('../src/services/openscadCompiler.ts', import.meta.url)))
+    files.push(fileURLToPath(new URL('../src/language/openscadCompiler.ts', import.meta.url)))
     const scanned = files.map(file => relative(rootPath, file).split(sep).join('/'))
     expect(scanned).toContain('core/geometryExecution.ts')
-    expect(scanned).toContain('services/openscadCompiler.ts')
+    expect(scanned).toContain('language/openscadCompiler.ts')
     const importsManifold = /(?:from\s*|import\s*\()['"]manifold-3d\//
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
-    expect(readFileSync(new URL('../src/services/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
-      .not.toContain('manifold-3d')
-    const forbiddenPlanImports = /from\s*['"]\.\/(?:openscadCompiler|openscadParser|geometryWorkerProtocol)['"]/
-    expect(readFileSync(new URL('../src/services/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
-      .not.toMatch(forbiddenPlanImports)
-    expect(readFileSync(new URL('../src/services/legacyV5Assembler.ts', import.meta.url), 'utf8'))
-      .not.toMatch(forbiddenPlanImports)
-    expect(readFileSync(new URL('../src/services/cadKernelOps.ts', import.meta.url), 'utf8'))
-      .not.toMatch(importsManifold)
-    visit(new URL('services/', root))
+    expect(readFileSync(new URL('../src/kernel/manifoldPlanBackend.ts', import.meta.url), 'utf8')).not.toContain(
+      'manifold-3d',
+    )
+    // Any relative path: since plan M10 these modules live in different domain directories.
+    const forbiddenPlanImports =
+      /from\s*['"](?:\.\.?\/)+(?:[\w-]+\/)*(?:openscadCompiler|openscadParser|geometryWorkerProtocol)['"]/
+    expect(readFileSync(new URL('../src/kernel/manifoldPlanBackend.ts', import.meta.url), 'utf8')).not.toMatch(
+      forbiddenPlanImports,
+    )
+    expect(readFileSync(new URL('../src/app/legacyV5Assembler.ts', import.meta.url), 'utf8')).not.toMatch(
+      forbiddenPlanImports,
+    )
+    expect(readFileSync(new URL('../src/kernel/cadKernelOps.ts', import.meta.url), 'utf8')).not.toMatch(importsManifold)
+    // src/services was split into these domain directories (refactor plan M10).
+    for (const domain of ['app/', 'kernel/', 'language/', 'exchange/', 'render/', 'fabrication/'])
+      visit(new URL(domain, root))
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
     const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
     expect(packageJson.dependencies?.['manifold-3d']).toBeUndefined()
@@ -355,10 +374,18 @@ function fakeKernel(options: FakeKernelOptions = {}): {
     volume: 0,
     surfaceArea: 0,
     bvh: {
-      version: 1, vertexStride: 6, leafSize: 8, nodeCount: 0,
-      bounds: new Float32Array(), nodes: new Uint32Array(), triangles: new Uint32Array(),
+      version: 1,
+      vertexStride: 6,
+      leafSize: 8,
+      nodeCount: 0,
+      bounds: new Float32Array(),
+      nodes: new Uint32Array(),
+      triangles: new Uint32Array(),
     },
-    semanticEdges: { indices: new Uint32Array(), diagnostics: { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 } },
+    semanticEdges: {
+      indices: new Uint32Array(),
+      diagnostics: { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 },
+    },
     mesh: {
       numProp: 6,
       numTri: 0,
@@ -438,12 +465,14 @@ describe('Manifold plan ownership lifecycle', () => {
     const kernel = fakeKernel()
     const backend = new ManifoldPlanBackend(kernel.ops)
     const signal = new AbortController().signal
-    expect(() => backend.begin({
-      programHash: 'program',
-      languageContract: 'openscad-viewer/brep-1',
-      limits: { maxNodes: 1 },
-      signal,
-    })).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_UNSUPPORTED' }))
+    expect(() =>
+      backend.begin({
+        programHash: 'program',
+        languageContract: 'openscad-viewer/brep-1',
+        limits: { maxNodes: 1 },
+        signal,
+      }),
+    ).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_UNSUPPORTED' }))
 
     const session = backend.begin({
       programHash: 'program',
@@ -471,12 +500,15 @@ describe('Manifold plan ownership lifecycle', () => {
       languageContract: 'legacy/current' as const,
       signal,
     }
-    expect(() => session.evaluate(analytic, [], context))
-      .toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_UNSUPPORTED' }))
-    expect(() => session.evaluate(analytic, [], {
-      ...context,
-      carrierKey: 'solid-set/d3/mesh',
-    })).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_CONTRACT' }))
+    expect(() => session.evaluate(analytic, [], context)).toThrowError(
+      expect.objectContaining({ code: 'E_MANIFOLD_PLAN_UNSUPPORTED' }),
+    )
+    expect(() =>
+      session.evaluate(analytic, [], {
+        ...context,
+        carrierKey: 'solid-set/d3/mesh',
+      }),
+    ).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_CONTRACT' }))
 
     const certifiedType: SemanticValueType = {
       geometryKind: 'solid-set',
@@ -488,16 +520,22 @@ describe('Manifold plan ownership lifecycle', () => {
         certificatePolicyHash: 'test-policy',
       },
     }
-    expect(() => session.evaluate({
-      id: 0,
-      kind: 'box',
-      valueType: certifiedType,
-      size: [1, 1, 1],
-      center: false,
-    }, [], {
-      ...context,
-      carrierKey: 'solid-set/d3/mesh',
-    })).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_UNSUPPORTED' }))
+    expect(() =>
+      session.evaluate(
+        {
+          id: 0,
+          kind: 'box',
+          valueType: certifiedType,
+          size: [1, 1, 1],
+          center: false,
+        },
+        [],
+        {
+          ...context,
+          carrierKey: 'solid-set/d3/mesh',
+        },
+      ),
+    ).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_UNSUPPORTED' }))
 
     const transform: SemanticNode = {
       id: 0,
@@ -509,23 +547,21 @@ describe('Manifold plan ownership lifecycle', () => {
         evidence: { tag: 'representation-preserving' },
       },
       input: 0,
-      matrix: [
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1,
-      ],
+      matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     }
     const transformContext = {
       ...context,
       carrierKey: 'solid-set/d3/mesh' as const,
     }
-    expect(() => session.evaluate(transform, [], transformContext))
-      .toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_CONTRACT' }))
-    expect(() => session.evaluate(transform, [], {
-      ...transformContext,
-      producer: { occurrenceIndex: 0, operationIndex: 0, operationName: 'color' },
-    })).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_CONTRACT' }))
+    expect(() => session.evaluate(transform, [], transformContext)).toThrowError(
+      expect.objectContaining({ code: 'E_MANIFOLD_PLAN_CONTRACT' }),
+    )
+    expect(() =>
+      session.evaluate(transform, [], {
+        ...transformContext,
+        producer: { occurrenceIndex: 0, operationIndex: 0, operationName: 'color' },
+      }),
+    ).toThrowError(expect.objectContaining({ code: 'E_MANIFOLD_PLAN_CONTRACT' }))
     await session.close({ tag: 'failure', code: 'E_SEMANTIC_BACKEND_FAILURE', node: 0 })
     expect(kernel.live.size).toBe(0)
   })
@@ -534,18 +570,22 @@ describe('Manifold plan ownership lifecycle', () => {
     const kernel = fakeKernel()
     const backend = new ManifoldPlanBackend(kernel.ops)
     let samples = 0
-    await expect(evaluateOpenSCADViaInjectedManifoldPlan('cube(1);', backend, {
-      now: () => {
-        samples++
-        if (samples === 4) throw new Error('clock failed after commit')
-        return samples
-      },
-    })).rejects.toThrow('clock failed after commit')
+    await expect(
+      evaluateOpenSCADViaInjectedManifoldPlan('cube(1);', backend, {
+        now: () => {
+          samples++
+          if (samples === 4) throw new Error('clock failed after commit')
+          return samples
+        },
+      }),
+    ).rejects.toThrow('clock failed after commit')
     expect(kernel.live.size).toBe(0)
 
-    await expect(evaluateOpenSCADViaInjectedManifoldPlan('cube(1);', backend, {
-      yieldControl: async () => {},
-    })).resolves.toMatchObject({ meshes: expect.any(Array) })
+    await expect(
+      evaluateOpenSCADViaInjectedManifoldPlan('cube(1);', backend, {
+        yieldControl: async () => {},
+      }),
+    ).resolves.toMatchObject({ meshes: expect.any(Array) })
     expect(kernel.live.size).toBe(0)
     expect(new Set(kernel.deleted).size).toBe(kernel.deleted.length)
   })
@@ -553,10 +593,9 @@ describe('Manifold plan ownership lifecycle', () => {
   it('releases every kernel-prefix lease before surfacing a captured language terminal', async () => {
     const kernel = fakeKernel()
     const backend = new ManifoldPlanBackend(kernel.ops)
-    await expect(evaluateOpenSCADViaInjectedManifoldPlan(
-      'cube(1); assert(false, "after kernel");',
-      backend,
-    )).rejects.toThrow(/Assertion 'false' failed: after kernel/)
+    await expect(
+      evaluateOpenSCADViaInjectedManifoldPlan('cube(1); assert(false, "after kernel");', backend),
+    ).rejects.toThrow(/Assertion 'false' failed: after kernel/)
     expect(kernel.live.size).toBe(0)
     expect(new Set(kernel.deleted).size).toBe(kernel.deleted.length)
   })
@@ -565,12 +604,13 @@ describe('Manifold plan ownership lifecycle', () => {
     const kernel = fakeKernel()
     const backend = new ManifoldPlanBackend(kernel.ops)
     const signal = new AbortController().signal
-    const begin = () => backend.begin({
-      programHash: 'program',
-      languageContract: 'legacy/current',
-      limits: { maxNodes: 1 },
-      signal,
-    })
+    const begin = () =>
+      backend.begin({
+        programHash: 'program',
+        languageContract: 'legacy/current',
+        limits: { maxNodes: 1 },
+        signal,
+      })
     const session = begin()
     const node: SemanticNode = {
       id: 0,
@@ -594,16 +634,17 @@ describe('Manifold plan ownership lifecycle', () => {
       signal,
     })
     if (evaluated.tag === 'empty') throw new Error('fake box unexpectedly returned empty')
-    await expect(session.close({
-      tag: 'commit',
-      retained: [evaluated.lease, evaluated.lease],
-    })).rejects.toMatchObject({ code: 'E_MANIFOLD_PLAN_CONTRACT' })
+    await expect(
+      session.close({
+        tag: 'commit',
+        retained: [evaluated.lease, evaluated.lease],
+      }),
+    ).rejects.toMatchObject({ code: 'E_MANIFOLD_PLAN_CONTRACT' })
     expect(kernel.live.size).toBe(0)
 
     const recovery = begin()
     await recovery.close({ tag: 'failure', code: 'E_SEMANTIC_BACKEND_FAILURE', node: null })
   })
-
 
   it('holds the serialized lane through root disposal and deletes every handle once', async () => {
     const kernel = fakeKernel()
@@ -701,10 +742,9 @@ describe('Manifold plan ownership lifecycle', () => {
   it('rolls back all allocated inputs when a downstream kernel operation fails', async () => {
     const kernel = fakeKernel({ failTransform: true })
     const backend = new ManifoldPlanBackend(kernel.ops)
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('translate([1,0,0]) cube(1);'),
-      backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE' })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('translate([1,0,0]) cube(1);'), backend),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE' })
     expect(kernel.live.size).toBe(0)
     expect(kernel.deleted).toHaveLength(1)
   })
@@ -712,7 +752,8 @@ describe('Manifold plan ownership lifecycle', () => {
   it('preserves both a mapped legacy kernel error and session cleanup failure', async () => {
     const kernel = fakeKernel({ failPolyhedron: true, failDelete: true })
     const backend = new ManifoldPlanBackend(kernel.ops)
-    const source = 'cube(1); polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,2,1],[0,1,3],[0,3,2],[1,2,3]]);'
+    const source =
+      'cube(1); polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,2,1],[0,1,3],[0,3,2],[1,2,3]]);'
     let failure: unknown
     try {
       await evaluateOpenSCADViaInjectedManifoldPlan(source, backend)
@@ -738,19 +779,15 @@ describe('Manifold plan ownership lifecycle', () => {
     const fault: FakeKernelOptions = { ...options }
     const kernel = fakeKernel(fault)
     const backend = new ManifoldPlanBackend(kernel.ops)
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram(source),
-      backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE' })
+    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram(source), backend)).rejects.toMatchObject({
+      code: 'E_SEMANTIC_BACKEND_FAILURE',
+    })
     expect(kernel.live.size).toBe(0)
     expect(new Set(kernel.deleted).size).toBe(kernel.deleted.length)
 
     fault.failAsOriginal = false
     fault.failOriginalIdAt = undefined
-    const recovered = await executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('cube(1);'),
-      backend,
-    )
+    const recovered = await executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), backend)
     await recovered.dispose()
     expect(kernel.live.size).toBe(0)
   })

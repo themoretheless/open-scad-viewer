@@ -1,0 +1,19 @@
+{
+  "passed": 8,
+  "failed": 0,
+  "qualified_scope": "complete original quotient coverage anchored to one paired Jordan contour; mixed trim/root regressions",
+  "multiple_distinct_components_positive_qualified": false,
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "mixed_solid_admitted": false,
+  "general_boolean_complete": false,
+  "sources": {
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "6c05f49df6b836ecc1af753c019a1eb5f62da764d734ae6ecada95938577fc77",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "08d1ec6cef17b17ebb210db0812d8baf31c59a949cd3cf14287330688f22b28f",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "1948b9c8ee62e01e1b2df39bf07afc14002581f87c1a8275bbe199f1e8ff8d87",
+    "crates/brep-core/src/mixed_root_model.rs": "7a780a19a2c5432f1eea1ee5ec493dd6a47d41f12ea8e5e3fb48a29954d8058c",
+    "crates/brep-core/tests/mixed_cut_regions.rs": "0771a9e92b0ad49a59445e5610f1b90cad390ce0a28d5138ca973941aa49b564",
+    "docs/design/ss-interior-census-progress-2026-11-04.md": "bf07db61a976d394cca3052b6993449850dd90b159f1fe622574a737c75234ca",
+    "docs/design/ss-interior-jordan-progress-2026-11-04.md": "0718e7ef1e39492a43dae5a5cd41ef5234ac639885b5fb85ee3673a186b9f0fa"
+  }
+}

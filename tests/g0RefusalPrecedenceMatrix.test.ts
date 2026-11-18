@@ -24,7 +24,7 @@ describe('G0.3 refusal precedence matrix', () => {
 
   it('indexes routing surface cases and supervisor fixtures', () => {
     expect(matrix.rows.length).toBeGreaterThanOrEqual(18)
-    expect(matrix.rows.every((row) => matrix.stages.includes(row.stage))).toBe(true)
-    expect(matrix.rows.some((row) => row.id.startsWith('supervisor-'))).toBe(true)
+    expect(matrix.rows.every(row => matrix.stages.includes(row.stage))).toBe(true)
+    expect(matrix.rows.some(row => row.id.startsWith('supervisor-'))).toBe(true)
   })
 })

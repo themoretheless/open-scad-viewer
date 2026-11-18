@@ -1,30 +1,11 @@
 // geometryEvaluator: segments.
-import type { CadKernelHandle } from '../../services/cadKernelOps'
+import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import { clamp01 } from '../../services/math3d'
+import { resolveLegacyOpenScadSegments } from '../../language/openScadLegacySegments'
 
-import { resolveLegacyOpenScadSegments } from '../../services/openScadLegacySegments'
+import type { CallNode, Value } from '../../language/openscadCompiler'
 
-import type { CallNode, ExpressionArgument, Statement, Value } from '../../services/openscadCompiler'
-
-import { formatOpenScadValue } from '../../services/openScadValueSemantics'
-
-import {
-  resolveOpenScadFragments,
-  type OpenScadFragmentResolutionInput,
-  type OpenScadStableModuleSemanticsContext,
-} from '../../services/openScadStableModuleSemantics'
-
-import {
-  resolveOpenScadCircle,
-  resolveOpenScadCube,
-  resolveOpenScadCylinder,
-  resolveOpenScadPolygon,
-  resolveOpenScadPolyhedron,
-  resolveOpenScadSphere,
-  resolveOpenScadSquare,
-  type OpenScadStablePrimitiveContext,
-} from '../../services/openScadStablePrimitiveSemantics'
+import { resolveOpenScadFragments } from '../../language/semantic/openScadStableModuleSemantics'
 
 import {
   resolveOpenScadMirror,
@@ -33,83 +14,56 @@ import {
   resolveOpenScadScale,
   resolveOpenScadTranslate,
   resolveOpenScadViewerAxisAngle,
-  type OpenScadStableTransformContext,
   type OpenScadStableTransformPlan,
-} from '../../services/openScadStableTransformSemantics'
+} from '../../language/semantic/openScadStableTransformSemantics'
 
-import {
-  resolveOpenScad2dMultmatrix,
-  resolveOpenScadLinearExtrude,
-  resolveOpenScadResize,
-  resolveOpenScadRotateExtrude,
-  type OpenScadStableGeometryContext,
-} from '../../services/openScadStableGeometrySemantics'
+import { resolveOpenScad2dMultmatrix } from '../../language/semantic/openScadStableGeometrySemantics'
 
-import {
-  evaluationError,
-  isStableProfile,
-} from '../../services/openScadStableExpressionEval'
+import { evaluationError, isStableProfile } from '../../language/openScadStableExpressionEval'
 
-import { CSS_COLORS, nextColor, type RGBA } from '../../services/openscadColors'
+import { nextColor } from '../../language/openscadColors'
 
-import {
-  compatibilityDxfProfile,
-  makeImport,
-  makeSurface,
-  makeText,
-} from '.././assetEvaluator'
+import { type EvalContext, type Shape, type Shape2D, type Shape3D, type Vec2 } from '.././types'
 
-import {
-  MAX_EXTRUDE_SLICES,
-  type EvalContext,
-  type Shape,
-  type Shape2D,
-  type Shape3D,
-  type Vec2,
-  type Vec3,
-} from '.././types'
-
-import {
-  callExpressionArguments,
-  finiteNumber,
-  vectorValue,
-} from '.././astDiscovery'
+import { finiteNumber, vectorValue } from '.././astDiscovery'
 
 import {
   arg,
-  compatibilityString,
   currentEntityId,
-  enterStableStatementScope,
-  evalExpression,
   evaluateStableBuiltinModuleArguments,
-  evaluateStableCompatibilityArguments,
   kernelCall,
-  resolveStableVariable,
+  kernelCallAsync,
   trackedSolid,
   warn,
 } from '.././expressionEvaluator'
-import { stableFragmentInput, stableModuleSemanticsContext, stableTransformSemanticsContext, EvalNodesFn, stableEmptyShape } from './EvalNodesFn'
-
+import {
+  stableFragmentInput,
+  stableModuleSemanticsContext,
+  stableTransformSemanticsContext,
+  EvalNodesFn,
+  stableEmptyShape,
+} from './EvalNodesFn'
 
 export function segments(node: CallNode, ctx: EvalContext, fallback: number, minimum: number, radius: number): number {
+  const boost = ctx.exportQuality === 'ultra' ? 2 : ctx.exportQuality === 'high' ? 1.5 : 1
   if (isStableProfile(ctx)) {
     const resolution = resolveOpenScadFragments(
       stableFragmentInput(node, ctx, radius),
       stableModuleSemanticsContext(ctx),
     )
     if (resolution.reduced) ctx.reduced.value = true
-    return resolution.fragments
+    return boost > 1 ? Math.min(256, Math.round(resolution.fragments * boost)) : resolution.fragments
   }
   const local = arg(node, '$fn', -1, undefined, ctx)
   const global = ctx.env.get('$fn')
   const raw = local === undefined || local === 0 ? global : local
   const requested = raw === undefined || raw === 0 ? null : finiteNumber(raw, ctx, node.p, '$fn')
   const selection = resolveLegacyOpenScadSegments(requested, fallback, minimum, ctx.quality)
-  if (selection.clamped) warn(ctx, `$fn=${selection.beforeCap} was clamped to ${selection.maximum} for ${ctx.quality} rendering`)
+  if (selection.clamped)
+    warn(ctx, `$fn=${selection.beforeCap} was clamped to ${selection.maximum} for ${ctx.quality} rendering`)
   if (selection.reduced) ctx.reduced.value = true
-  return selection.segments
+  return boost > 1 ? Math.min(256, Math.round(selection.segments * boost)) : selection.segments
 }
-
 
 export function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   const height = finiteNumber(arg(node, 'h', 0, 1, ctx), ctx, node.p, 'cylinder height')
@@ -123,15 +77,20 @@ export function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   if (d1 !== undefined) low = finiteNumber(d1, ctx, node.p, 'd1') / 2
   if (d2 !== undefined) high = finiteNumber(d2, ctx, node.p, 'd2') / 2
   if (low === undefined && high === undefined) {
-    const base = diameter !== undefined ? finiteNumber(diameter, ctx, node.p, 'diameter') / 2
-      : radius !== undefined ? finiteNumber(radius, ctx, node.p, 'radius') : 1
+    const base =
+      diameter !== undefined
+        ? finiteNumber(diameter, ctx, node.p, 'diameter') / 2
+        : radius !== undefined
+          ? finiteNumber(radius, ctx, node.p, 'radius')
+          : 1
     low = high = base
   }
   if (low === undefined) low = high
   if (high === undefined) high = low
   const r1 = finiteNumber(low, ctx, node.p, 'r1')
   const r2 = finiteNumber(high, ctx, node.p, 'r2')
-  if (r1 < 0 || r2 < 0 || (r1 === 0 && r2 === 0)) evaluationError(ctx, node.p, 'Cylinder radii must be non-negative and not both zero')
+  if (r1 < 0 || r2 < 0 || (r1 === 0 && r2 === 0))
+    evaluationError(ctx, node.p, 'Cylinder radii must be non-negative and not both zero')
   const center = arg(node, 'center', 3, false, ctx) === true
   const fn = segments(node, ctx, 32, 3, Math.max(r1, r2))
   let geometry: CadKernelHandle
@@ -143,36 +102,42 @@ export function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   return [trackedSolid(geometry, nextColor(), node, ctx)]
 }
 
-
 export function makePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
   const points = arg(node, 'points', 0, [], ctx)
   const faces = arg(node, 'faces', 1, arg(node, 'triangles', 1, [], ctx), ctx)
-  if (!Array.isArray(points) || !Array.isArray(faces)) evaluationError(ctx, node.p, 'polyhedron points and faces must be vectors')
+  if (!Array.isArray(points) || !Array.isArray(faces))
+    evaluationError(ctx, node.p, 'polyhedron points and faces must be vectors')
   const vertices: number[] = []
   for (const point of points) {
     const vector = vectorValue(point, ctx, node.p, 'polyhedron point')
     if (vector.length < 3) evaluationError(ctx, node.p, 'Each polyhedron point needs three coordinates')
-    vertices.push(vector[0], vector[1], vector[2])
+    vertices.push(vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0)
   }
   const indices: number[] = []
   for (const face of faces) {
     const polygon = vectorValue(face, ctx, node.p, 'polyhedron face').map(Math.trunc)
     if (polygon.length < 3) evaluationError(ctx, node.p, 'Each polyhedron face needs at least three vertices')
-    for (const index of polygon) if (index < 0 || index >= points.length) evaluationError(ctx, node.p, 'Polyhedron face index is out of bounds')
+    for (const index of polygon)
+      if (index < 0 || index >= points.length) evaluationError(ctx, node.p, 'Polyhedron face index is out of bounds')
     // OpenSCAD faces are wound clockwise viewed from outside; the kernel
     // requires counter-clockwise — reverse the fan so spec-correct
     // polyhedra build outward-facing instead of inside-out.
-    for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0], polygon[i + 1], polygon[i])
+    for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0] ?? 0, polygon[i + 1] ?? 0, polygon[i] ?? 0)
   }
   try {
     // Weld duplicated coordinates first: OpenSCAD accepts point lists with
     // repeated positions, but kernel halfedge pairing rejects them.
-    return [trackedSolid(ctx.kernel.ofMesh(new Float64Array(vertices), new Uint32Array(indices)), nextColor(), node, ctx)]
+    return [
+      trackedSolid(ctx.kernel.ofMesh(new Float64Array(vertices), new Uint32Array(indices)), nextColor(), node, ctx),
+    ]
   } catch (error) {
-    evaluationError(ctx, node.p, `Invalid manifold polyhedron: ${error instanceof Error ? error.message : String(error)}`)
+    evaluationError(
+      ctx,
+      node.p,
+      `Invalid manifold polyhedron: ${error instanceof Error ? error.message : String(error)}`,
+    )
   }
 }
-
 
 export function makePolygon(node: CallNode, ctx: EvalContext): Shape[] {
   const pointsValue = arg(node, 'points', 0, [], ctx)
@@ -186,22 +151,25 @@ export function makePolygon(node: CallNode, ctx: EvalContext): Shape[] {
   let polygons: Vec2[][] = [points]
   if (pathsValue !== undefined) {
     if (!Array.isArray(pathsValue)) evaluationError(ctx, node.p, 'polygon paths must be a vector')
-    polygons = pathsValue.map(path => vectorValue(path, ctx, node.p, 'polygon path').map(index => {
-      const point = points[Math.trunc(index)]
-      if (!point) evaluationError(ctx, node.p, 'Polygon path index is out of bounds')
-      return point
-    }))
+    polygons = pathsValue.map(path =>
+      vectorValue(path, ctx, node.p, 'polygon path').map(index => {
+        const point = points[Math.trunc(index)]
+        if (!point) evaluationError(ctx, node.p, 'Polygon path index is out of bounds')
+        return point
+      }),
+    )
   }
   // EvenOdd: the default Positive fill rule silently yields an EMPTY shape
   // for clockwise-wound point lists, which are perfectly valid in OpenSCAD.
-  return [{
-    dimension: 2,
-    geometry: ctx.kernel.polygon(polygons, 'EvenOdd'),
-    color: nextColor(),
-    entityId: currentEntityId(ctx),
-  }]
+  return [
+    {
+      dimension: 2,
+      geometry: ctx.kernel.polygon(polygons, 'EvenOdd'),
+      color: nextColor(),
+      entityId: currentEntityId(ctx),
+    },
+  ]
 }
-
 
 export function stableTransformPlan(node: CallNode, ctx: EvalContext): OpenScadStableTransformPlan {
   const context = stableTransformSemanticsContext(ctx)
@@ -231,7 +199,6 @@ export function stableTransformPlan(node: CallNode, ctx: EvalContext): OpenScadS
   }
 }
 
-
 export async function transformStableChildren(
   node: CallNode,
   ctx: EvalContext,
@@ -239,16 +206,10 @@ export async function transformStableChildren(
 ): Promise<Shape[]> {
   // Argument binding and expression effects happen before child instantiation.
   const plan = stableTransformPlan(node, ctx)
-  const shapes = booleanShapes(
-    await evalNodes(node.children, ctx),
-    'union',
-    ctx,
-    node.p,
-    node.name,
-  )
-  if (shapes.length === 0) return []
+  const shapes = booleanShapes(await evalNodes(node.children, ctx), 'union', ctx, node.p, node.name)
+  const [shape] = shapes
+  if (!shape) return []
 
-  const shape = shapes[0]
   const singular = shape.dimension === 3 ? plan.matrix3dSingular : plan.matrix2dSingular
   if (plan.dropsChildren || singular) {
     if (singular) warn(ctx, `${node.name}() produced empty geometry from a singular transform`)
@@ -266,32 +227,37 @@ export async function transformStableChildren(
       // Stable multmatrix honors an authored projective fourth row through
       // the dedicated kernel operation; every other transform is affine.
       const projective = matrix[3] !== 0 || matrix[7] !== 0 || matrix[11] !== 0 || matrix[15] !== 1
-      return [{
-        ...shape,
-        geometry: projective
-          ? ctx.kernel.transform3Projective(shape.geometry, matrix)
-          : ctx.kernel.transform3(shape.geometry, matrix),
-        entityId: currentEntityId(ctx),
-      }]
+      return [
+        {
+          ...shape,
+          geometry: projective
+            ? ctx.kernel.transform3Projective(shape.geometry, matrix)
+            : ctx.kernel.transform3(shape.geometry, matrix),
+          entityId: currentEntityId(ctx),
+        },
+      ]
     }
-    return [{
-      ...shape,
-      geometry: ctx.kernel.transform2(shape.geometry, [...plan.matrix2d]),
-      entityId: currentEntityId(ctx),
-    }]
+    return [
+      {
+        ...shape,
+        geometry: ctx.kernel.transform2(shape.geometry, [...plan.matrix2d]),
+        entityId: currentEntityId(ctx),
+      },
+    ]
   } catch {
     warn(ctx, `${node.name}() transform could not be represented by the geometry kernel`)
     return [stableEmptyShape(shape.dimension, shape.color, ctx)]
   }
 }
 
-
 export function rotateShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
   const angle = arg(node, 'a', 0, 0, ctx)
   const axis = arg(node, 'v', 1, undefined, ctx)
   return shapes.map(shape => {
     if (shape.dimension === 2) {
-      const degrees = Array.isArray(angle) ? vectorValue(angle, ctx, node.p, 'rotation')[2] ?? 0 : finiteNumber(angle, ctx, node.p, 'rotation')
+      const degrees = Array.isArray(angle)
+        ? (vectorValue(angle, ctx, node.p, 'rotation')[2] ?? 0)
+        : finiteNumber(angle, ctx, node.p, 'rotation')
       return { ...shape, geometry: ctx.kernel.rotate(shape.geometry, degrees) }
     }
     if (Array.isArray(angle)) {
@@ -305,13 +271,11 @@ export function rotateShapes(shapes: Shape[], node: CallNode, ctx: EvalContext):
   })
 }
 
-
 export function axisAngleMatrix(axis: number[], degrees: number, ctx: EvalContext, p: number): number[] {
   const matrix = resolveOpenScadViewerAxisAngle(axis, degrees)
   if (matrix === null) evaluationError(ctx, p, 'Rotation axis cannot be zero')
   return [...matrix]
 }
-
 
 export function transformByMatrix(shapes: Shape[], value: Value, node: CallNode, ctx: EvalContext): Shape[] {
   const has2d = shapes.some(shape => shape.dimension === 2)
@@ -332,7 +296,8 @@ export function transformByMatrix(shapes: Shape[], value: Value, node: CallNode,
     const rows = value.map(row => vectorValue(row, ctx, node.p, 'matrix row'))
     if (rows.some(row => row.length < 4)) evaluationError(ctx, node.p, 'multmatrix requires a 4x4 matrix')
     const matrix: number[] = []
-    for (let column = 0; column < 4; column++) for (let row = 0; row < 4; row++) matrix.push(rows[row]?.[column] ?? (row === column ? 1 : 0))
+    for (let column = 0; column < 4; column++)
+      for (let row = 0; row < 4; row++) matrix.push(rows[row]?.[column] ?? (row === column ? 1 : 0))
     matrix3d = matrix
   }
   return shapes.map(shape => {
@@ -343,7 +308,6 @@ export function transformByMatrix(shapes: Shape[], value: Value, node: CallNode,
     return { ...shape, geometry: ctx.kernel.transform3(shape.geometry, matrix3d!) }
   })
 }
-
 
 /**
  * Mixed-dimension policy shared by every Boolean module: the legacy profile
@@ -357,8 +321,9 @@ export function homogeneousShapes(
   p: number,
   diagnosticName: string = operation,
 ): Shape[] {
-  if (shapes.length === 0) return []
-  const dimension = shapes[0].dimension
+  const [firstShape] = shapes
+  if (!firstShape) return []
+  const dimension = firstShape.dimension
   if (!shapes.some(shape => shape.dimension !== dimension)) return shapes
   if (!isStableProfile(ctx)) {
     evaluationError(ctx, p, `${diagnosticName}() cannot mix 2D and 3D children`)
@@ -368,7 +333,6 @@ export function homogeneousShapes(
   return shapes.filter(shape => shape.dimension === dimension)
 }
 
-
 export function booleanShapes(
   sourceShapes: Shape[],
   operation: 'union' | 'intersection',
@@ -377,14 +341,67 @@ export function booleanShapes(
   diagnosticName: string = operation,
 ): Shape[] {
   const shapes = homogeneousShapes(sourceShapes, operation, ctx, p, diagnosticName)
-  if (shapes.length <= 1) return shapes
+  const [firstShape] = shapes
+  if (shapes.length <= 1 || !firstShape) return shapes
   ctx.control?.poll()
-  if (shapes[0].dimension === 3) {
+  if (firstShape.dimension === 3) {
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
     const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean3(operation, solids))
-    return [{ dimension: 3, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
+    return [{ dimension: 3, geometry, color: firstShape.color, entityId: currentEntityId(ctx) }]
   }
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
   const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean2(operation, sections))
-  return [{ dimension: 2, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
+  return [{ dimension: 2, geometry, color: firstShape.color, entityId: currentEntityId(ctx) }]
+}
+
+/**
+ * `booleanShapes` with 3D Booleans evaluated as a kernel start/step/cancel
+ * job when a host observes the evaluation: the job yields to the host's
+ * message loop between pairwise operations, so a cancel arrives within one
+ * step instead of after the whole fold. Results are identical to the
+ * synchronous path, which remains in use for unobserved evaluations and for
+ * kernels (recorders) that do not offer the cooperative operation.
+ */
+export async function booleanShapesCooperative(
+  sourceShapes: Shape[],
+  operation: 'union' | 'intersection',
+  ctx: EvalContext,
+  p: number,
+  diagnosticName: string = operation,
+): Promise<Shape[]> {
+  const control = ctx.control
+  if (
+    !control?.cooperative ||
+    ctx.kernel.boolean3Cooperatively === undefined ||
+    sourceShapes.length <= 1 ||
+    sourceShapes[0]!.dimension !== 3
+  ) {
+    return booleanShapes(sourceShapes, operation, ctx, p, diagnosticName)
+  }
+  const shapes = homogeneousShapes(sourceShapes, operation, ctx, p, diagnosticName)
+  if (shapes.length <= 1 || shapes[0]!.dimension !== 3) return booleanShapes(shapes, operation, ctx, p, diagnosticName)
+  control.poll()
+  const geometry = await cooperativeBoolean3(
+    ctx,
+    p,
+    operation,
+    shapes.map(shape => (shape as Shape3D).geometry),
+  )
+  return [{ dimension: 3, geometry, color: shapes[0]!.color, entityId: currentEntityId(ctx) }]
+}
+
+/** One cooperative 3D Boolean; the checkpoint polls abort and yields when due. */
+export function cooperativeBoolean3(
+  ctx: EvalContext,
+  p: number,
+  operation: 'union' | 'intersection' | 'difference',
+  solids: readonly CadKernelHandle[],
+): Promise<CadKernelHandle> {
+  const control = ctx.control!
+  return kernelCallAsync(ctx, p, () =>
+    ctx.kernel.boolean3Cooperatively!(operation, solids, async () => {
+      control.poll()
+      await control.yieldIfDue()
+    }),
+  )
 }

@@ -28,15 +28,14 @@ struct Cell {
     upper: Option<[[f64; 2]; 2]>,
 }
 fn cell(
-    p: [&Curve; 2],
-    s: [&Surface; 2],
-    reverse: [bool; 2],
+    charts: super::SeamCharts<'_>,
     t: [f64; 2],
     tolerances: [f64; 2],
     witnesses: &mut [[f64; 2]; 2],
     work: &mut usize,
     max: usize,
 ) -> Result<Cell> {
+    let super::SeamCharts { p, s, reverse } = charts;
     if t[1] - t[0] <= 1. / 16. && *work < max {
         if let Some((upper, lower)) = mean_value::bounds(p, s, reverse, t, work, max)? {
             for k in 0..2 {
@@ -74,16 +73,13 @@ fn cell(
 /// `Enclosed` means field coverage within tolerances and fresh positions.
 /// It deliberately does NOT certify chart joins, pole regularity or a solid.
 pub fn inspect_span_fields(
-    c: &Curve,
-    p: [&Curve; 2],
-    s: [&Surface; 2],
-    reverse: [bool; 2],
-    position: f64,
-    normal: f64,
-    curvature: f64,
+    seam: super::PcurveSeam<'_>,
+    tolerance: super::G2PcurveTolerance,
     max_cells: usize,
     max_exact: u64,
 ) -> Result<FieldCoverage> {
+    let super::PcurveSeam { curve: c, pcurves: p, surfaces: s, reversed: reverse } = seam;
+    let super::G2PcurveTolerance { position, normal, curvature } = tolerance;
     check(
         normal.is_finite()
             && (0. ..=2.).contains(&normal)
@@ -104,9 +100,7 @@ pub fn inspect_span_fields(
         && !p.iter().any(|p| p.periodic)
     {
         cells[0] = cell(
-            p,
-            s,
-            reverse,
+            super::SeamCharts { p, s, reverse },
             [0., 1.],
             [normal, curvature],
             &mut witnesses,
@@ -175,55 +169,18 @@ pub fn inspect_span_fields(
         if let Some(decision) = decision {
             return Ok(result(decision));
         }
-        let index = cells
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| {
-                c.upper.is_none_or(|u| {
-                    !(0..2).any(|k| !failed[k] && u[k][0] <= normal && u[k][1] <= curvature)
-                })
-            })
-            .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
-            .map(|(i, _)| i);
-        // Cells may each admit a different orientation. Then refine the
-        // longest cell until one coherent whole-trace sign is bounded.
-        let index = index.unwrap_or_else(|| {
-            cells
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
-                .unwrap()
-                .0
-        });
+        let index = select_split_cell(&cells, failed, normal, curvature);
         let old = &cells[index];
         let mid = old.t[0] * 0.5 + old.t[1] * 0.5;
         if !(old.t[0] < mid && mid < old.t[1]) {
             return Ok(result(FieldDecision::Unresolved));
         }
         let range = old.t;
-        let left = cell(
-            p,
-            s,
-            reverse,
-            [range[0], mid],
-            [normal, curvature],
-            &mut witnesses,
-            &mut work,
-            max_cells,
-        )?;
+        let left = cell(super::SeamCharts { p, s, reverse }, [range[0], mid], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
         if work == max_cells && left.upper.is_none() {
             continue;
         }
-        let right = cell(
-            p,
-            s,
-            reverse,
-            [mid, range[1]],
-            [normal, curvature],
-            &mut witnesses,
-            &mut work,
-            max_cells,
-        )?;
+        let right = cell(super::SeamCharts { p, s, reverse }, [mid, range[1]], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
         if work == max_cells && right.upper.is_none() {
             continue;
         }
@@ -231,6 +188,29 @@ pub fn inspect_span_fields(
         cells.push(left);
         cells.push(right);
     }
+}
+
+fn select_split_cell(cells: &[Cell], failed: [bool; 2], normal: f64, curvature: f64) -> usize {
+    let unresolved = cells
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| {
+            c.upper.is_none_or(|u| {
+                !(0..2).any(|k| !failed[k] && u[k][0] <= normal && u[k][1] <= curvature)
+            })
+        })
+        .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
+        .map(|(i, _)| i);
+    // Cells may each admit a different orientation. Then refine the
+    // longest cell until one coherent whole-trace sign is bounded.
+    unresolved.unwrap_or_else(|| {
+        cells
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
+            .unwrap()
+            .0
+    })
 }
 #[cfg(test)]
 #[path = "span_fields/tests.rs"]

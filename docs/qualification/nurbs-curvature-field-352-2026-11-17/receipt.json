@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0352",
+  "testedBase": "36b6a72ce1cbcd40febfffbb75befc9883a35680",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 36,
+  "scope": [
+    "Order rational and quadratic support-clock values by exact polynomial signs, grouping truly equal coordinates.",
+    "Compare quadratic branches using their vertices and exact reduced polynomial signs. Retain every source index in stable groups of equal coordinates."
+  ],
+  "logSha256": "e4bb7035d9f00508fc197372c0d4636e228ac38e025a65b3871a0d86bfdb02ed",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "1368732cdd623362ed59b0affa39f6680e7710cff38bcfdf9ed2b3d464f1b7b0",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "e74835d7a2c15813d045087186c2db7436dd612f66c6df18f54d091e332056e6",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "76747b0e52820ef1819781bc502266abc0720701373c7e5099da1dfc20067637",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "b2118f42049a461866f610a7ae3bfc22e2956298293828f7e57dd9976a54bc38",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs": "317a484984d6719570a80bf6f396fe85593c75944c6f7b4bec0ca464d57097e6",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs": "e4bb9d1d839f6fe368d01b059dc6029d0dfe09746fd2f2b3eb94db7ef519082b"
+  }
+}

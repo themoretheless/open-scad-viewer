@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0486",
+  "testedBase": "c0f3c998d72c6d24f459f9e3d07a31b84a08bd5b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 296,
+  "scope": [
+    "Measure exact overlap of two planar profile extrusions with collinear sweeps.",
+    "Translate the second footprint along the common sweep, certify exact coplanarity and measure the overlap area. Multiply its projected sweep height by the common axial parameter length."
+  ],
+  "logSha256": "eac9988b4e788a2da6c934f72e34034a2a55a100f2ce581d02c3f6c28faac12f",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "efee23f9c41b02273a3659fab6e376087b4414d4e872f0b43dc38b80e44b8a59",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "70cf3d5b48cd569f88b7c40068ef406bfbfea2994aa2507fedae0c479acade56",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "aec64841496a5357aa23bed21289a9284299a5685b250392f03e8f465aac386b",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

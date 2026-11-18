@@ -314,19 +314,8 @@ pub fn lighten(source_mesh: Mesh, options: LighteningOptions) -> Result<Mesh> {
         .map_err(|e| input(format!("Cad lightening graph generation failed: {e}")))?;
         let nodes = g.nodes;
         let edges = g.edges;
-        let mut reduced_mesh = crate::mesh_shell::lattice(
-            &source_mesh,
-            nodes,
-            edges,
-            rib / 2.,
-            skin,
-            step,
-            pattern == "bone",
-            open_top,
-            wall_depth,
-            keep_core,
-        )?
-        .mesh;
+        let style = crate::mesh_shell::ShellStyle { skin, organic: pattern == "bone", open_top, wall_depth, keep_core };
+        let mut reduced_mesh = crate::mesh_shell::lattice(&source_mesh, nodes, edges, rib / 2., step, style)?.mesh;
         reduced_mesh = decimate(reduced_mesh, step * 1.5, 2600.)?;
         let compact_positions = reduced_mesh
             .positions

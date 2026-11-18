@@ -3,7 +3,7 @@ use super::{
     ContinuationSample, Result, Surface, TRANSVERSE_SINE, affine_plane, coedge_trim, cross3, dot3,
     enclosure_of, invert_uv, next_down, next_up, norm3, point3, surface_domain,
 };
-use crate::foundation::guards::Budget;
+use crate::numerics::guards::Budget;
 
 #[allow(dead_code)]
 pub(super) enum PlanarIntersection {

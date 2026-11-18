@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0535",
+  "testedBase": "a1ef63f23f053849d98c710e1ae2eda0f2dc39d9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 127,
+  "scope": [
+    "Partition full and partial surface turns at ordered absolute cuts under one work budget.",
+    "Prepare exact cyclic support once and extract ordered clamped strips while preserving the transverse axis."
+  ],
+  "logSha256": "ff5e5d369f63c959aed4f1fc1c02dfcb0501f6e4c200bb112540ac970dce13f9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "5873e0ec31b4abc47dcecb3bacf3a3bb8f0f120ed3c6222a0f431d06bd66c862",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "b9877b5644a9a249b0eeb5045ac84b77e3f111cc4dcd3d3ab09aa7ffb1a7e9b3"
+  }
+}

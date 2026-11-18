@@ -32,19 +32,21 @@ pub(crate) fn coefficients(curve: &Curve, plane: Plane) -> Vec<Coefficient> {
         .collect()
 }
 fn split(coefficients: &[Coefficient]) -> (Vec<Coefficient>, Vec<Coefficient>) {
+    let n = coefficients.len();
     let mut row = coefficients.to_vec();
-    let mut left = vec![row[0]];
-    let mut right = vec![*row.last().unwrap()];
-    while row.len() > 1 {
-        row = row
-            .windows(2)
-            .map(|p| Coefficient {
-                value: (p[0].value + p[1].value) * 0.5,
-                bound: p[0].bound.add(p[1].bound).mul(Interval::exact(0.5)),
-            })
-            .collect();
+    let mut left = Vec::with_capacity(n);
+    let mut right = Vec::with_capacity(n);
+    left.push(row[0]);
+    right.push(row[n - 1]);
+    for len in (1..n).rev() {
+        for i in 0..len {
+            row[i] = Coefficient {
+                value: (row[i].value + row[i + 1].value) * 0.5,
+                bound: row[i].bound.add(row[i + 1].bound).mul(Interval::exact(0.5)),
+            };
+        }
         left.push(row[0]);
-        right.push(*row.last().unwrap());
+        right.push(row[len - 1]);
     }
     right.reverse();
     (left, right)
@@ -54,21 +56,26 @@ pub(crate) fn excluded(coefficients: &[Coefficient]) -> bool {
         || coefficients.iter().all(|c| c.bound.sign() == -1)
 }
 fn sign_variations(coefficients: &[Coefficient]) -> usize {
-    let signs: Vec<_> = coefficients
-        .iter()
-        .filter_map(|c| {
-            if c.value == 0. {
-                None
-            } else {
-                Some(c.value > 0.)
+    let mut count = 0usize;
+    let mut prev: Option<bool> = None;
+    for c in coefficients {
+        if c.value != 0. {
+            let s = c.value > 0.;
+            if let Some(p) = prev
+                && p != s
+            {
+                count += 1;
             }
-        })
-        .collect();
-    signs.windows(2).filter(|s| s[0] != s[1]).count()
+            prev = Some(s);
+        }
+    }
+    count
 }
 
 /// Isolate intersections of any validated positive-weight 3D NURBS curve with
-/// a plane, over the curve's entire active knot domain. Multiple/tangent roots,
+/// a plane, over the curve's entire active knot domain. Tangent and multiple
+/// roots that exact Bernstein sign arithmetic can certify are returned as
+/// points with `Contact::Tangent { multiplicity }`; uncertifiable ones,
 /// precision bands and work exhaustion stay explicit instead of becoming empty.
 pub fn curve_plane(
     curve: &Curve,
@@ -113,7 +120,7 @@ pub fn curve_plane(
         // zeros are merged, never distinct roots merely closer than a tol.
         for (parameter, coefficient) in [
             (interval[0], values[0]),
-            (interval[1], *values.last().unwrap()),
+            (interval[1], values[values.len() - 1]),
         ] {
             if coefficient.value == 0. {
                 let jet = curve.evaluate(parameter)?;
@@ -160,7 +167,7 @@ pub fn curve_plane(
             let mut handled = false;
             for (face, coefficient) in [
                 (interval[0], values[0]),
-                (interval[1], *values.last().unwrap()),
+                (interval[1], values[values.len() - 1]),
             ] {
                 if coefficient.bound.sign() != 0 {
                     continue;
@@ -280,6 +287,22 @@ pub fn curve_plane(
         };
         parameter(a).total_cmp(&parameter(b))
     });
+    // Tangent or near-tangent contacts that subdivision could only refuse
+    // are re-decided with exact Bernstein signs; if any span stays
+    // ambiguous the typed refusal above is kept unchanged.
+    if report.unresolved.iter().any(|u| {
+        matches!(
+            u.reason,
+            UnresolvedReason::TangencyOrMultipleRoot | UnresolvedReason::NearCoincidence
+        )
+    }) && let Some(certified) = super::curve_plane_tangency::certify_tangencies(
+        curve,
+        plane,
+        options,
+        report.boxes_visited,
+    )? {
+        return Ok(certified);
+    }
     Ok(report)
 }
 /// Merge curve/plane point events whose isolating intervals touch in

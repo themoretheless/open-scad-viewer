@@ -44,9 +44,11 @@ fn inferred_network_charts_close_and_preserve_shared_original_roots() {
         &[1],
         &cutter,
         0,
-        1e-8,
-        100000,
-        1000000,
+        face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.cap.replacement.trims.all_valid && out.cap.interior.certified);
@@ -78,9 +80,11 @@ fn inferred_network_charts_close_and_preserve_shared_original_roots() {
             &[1],
             &cutter,
             0,
-            1e-8,
-            32,
-            1000000,
+            face_cut::CutLimits {
+                tolerance_uv: 1e-8,
+                max_cells: 32,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -178,9 +182,11 @@ fn shared_curved_sections_replace_one_region_with_an_owned_curved_cap() {
         &[1],
         &cutter,
         0,
-        1e-8,
-        100000,
-        1000000,
+        face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(atomic.cap.replacement.model, cap.replacement.model);

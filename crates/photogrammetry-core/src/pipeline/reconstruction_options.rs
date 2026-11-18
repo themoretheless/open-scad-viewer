@@ -98,7 +98,7 @@ pub fn reconstruct_detailed_with_matches(
             .collect(),
         ..Default::default()
     };
-    let reconstruction = try {
+    let reconstruction = (|| {
         validate_inputs(images, options, &mut report)?;
         let pair_matches =
             crate::host_matching::matches_from_gpu_response(plan, response, &options.feature_options)?;
@@ -113,8 +113,8 @@ pub fn reconstruct_detailed_with_matches(
             cache,
             &mut report,
             &mut progress,
-        )?
-    };
+        )
+    })();
     if let Err(error) = &reconstruction {
         for image in &mut report.images {
             if error.message == "Cancelled" && !image.registered {
@@ -129,21 +129,33 @@ pub fn reconstruct_detailed_with_matches(
         report,
     }
 }
-#[expect(
-    clippy::too_many_arguments,
-    reason = "pipeline state is passed explicitly across the solver boundary; a typed optimization context is the next modularization step"
-)]
+/// Flat bundle-adjustment inputs, rebuilt on every optimization pass and kept
+/// between passes only to reuse their allocations.
+#[derive(Default)]
+pub(super) struct BundleScratch {
+    positions: Vec<V3>,
+    observations: Vec<bundle::Observation>,
+}
+
+/// Registered cameras and triangulated tracks that bundle adjustment refines in place.
+pub(super) struct GeometryState<'a> {
+    pub(super) cameras: &'a mut [Option<Camera>],
+    pub(super) points: &'a mut [Point],
+}
 pub(super) fn optimize_geometry(
-    cameras: &mut [Option<Camera>],
-    points: &mut [Point],
+    geometry: GeometryState<'_>,
     features: &[Vec<Feature>],
     seed_pair: [usize; 2],
     options: &bundle::BundleOptions,
     report: &mut ReconstructionReport,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
-    positions: &mut Vec<V3>,
-    observations: &mut Vec<bundle::Observation>,
+    scratch: &mut BundleScratch,
 ) -> Result<()> {
+    let GeometryState { cameras, points } = geometry;
+    let BundleScratch {
+        positions,
+        observations,
+    } = scratch;
     positions.clear();
     positions.extend(points.iter().map(|p| p.position));
     observations.clear();
@@ -238,7 +250,7 @@ fn run(
     let mut features = Vec::new();
     for (i, image) in images.iter().enumerate() {
         if !progress("features", i, images.len()) {
-            do yeet crate::error("Cancelled");
+            return Err(crate::error("Cancelled"));
         }
         features.push(features::extract_with_options(
             image,
@@ -270,38 +282,38 @@ fn validate_inputs(
         for image in &mut report.images {
             image.reason = "invalid_options";
         }
-        do yeet crate::error("Invalid reconstruction options");
+        return Err(crate::error("Invalid reconstruction options"));
     }
     if let Err(error) = options.geometry_options.validate() {
         for image in &mut report.images {
             image.reason = "invalid_options";
         }
-        do yeet error;
+        return Err(error);
     }
     if images.len() < 2 || images.len() > 200 {
-        do yeet crate::error("Provide 2 to 200 overlapping photos");
+        return Err(crate::error("Provide 2 to 200 overlapping photos"));
     }
     if let Some(bundle) = &options.bundle {
         if let Err(error) = bundle.validate() {
             for image in &mut report.images {
                 image.reason = "invalid_options";
             }
-            do yeet error;
+            return Err(error);
         }
         if images.len() > bundle.max_cameras {
             for image in &mut report.images {
                 image.reason = "invalid_options";
             }
-            do yeet crate::error(format!(
+            return Err(crate::error(format!(
                 "Joint refinement is configured for at most {} photos; increase its camera limit up to 64 or explicitly disable it",
                 bundle.max_cameras
-            ));
+            )));
         }
     }
     for (i, image) in images.iter().enumerate() {
         if let Err(error) = image.validate() {
             report.images[i].reason = "invalid_image";
-            do yeet error;
+            return Err(error);
         }
     }
     Ok(())
@@ -321,9 +333,11 @@ fn solve(
         images,
         features,
         &mut cache,
-        options.max_seed_pairs,
-        &options.geometry_options,
-        &options.seed_options,
+        crate::seeding::SeedSearch {
+            limit: options.max_seed_pairs,
+            geometry_options: &options.geometry_options,
+            seed_options: &options.seed_options,
+        },
         report,
         progress,
     )?;

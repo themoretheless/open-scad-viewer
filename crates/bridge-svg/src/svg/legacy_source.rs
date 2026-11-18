@@ -52,7 +52,8 @@ pub(super) fn legacy_source(source: &str, doc: &usvg::roxmltree::Document<'_>, d
                     }
                 output.push_str(&value[start..i]);
             } else {
-                let c = value[i..].chars().next().unwrap();
+                // `i < value.len()` and sits on a char boundary, so a char follows.
+                let Some(c) = value[i..].chars().next() else { break };
                 output.push(c);
                 i += c.len_utf8();
             }
@@ -202,7 +203,7 @@ pub(super) fn normalize_raster_image(mime: &str, data: std::sync::Arc<Vec<u8>>) 
             let mut options = gif::DecodeOptions::new();
             options.set_color_output(gif::ColorOutput::RGBA);
             options.set_memory_limit(gif::MemoryLimit::Bytes(
-                (64 * 1024 * 1024).try_into().unwrap(),
+                std::num::NonZeroU64::MIN.saturating_add(64 * 1024 * 1024 - 1),
             ));
             let mut decoder = options
                 .read_info(data.as_slice())
@@ -305,6 +306,59 @@ pub(super) fn admit_outline_font(bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
+fn check_images(
+    group: &usvg::Group,
+    depth: usize,
+    nodes: &mut usize,
+    pixels: &mut f64,
+    stroke_points: &mut usize,
+) -> Result<()> {
+    if depth > MAX_DEPTH {
+        return Err(limit("SVG image tree nesting exceeds 128 levels"));
+    }
+    for node in group.children() {
+        *nodes += 1;
+        if *nodes > 100_000 {
+            return Err(limit("SVG image tree exceeds 100000 nodes"));
+        }
+        match node {
+            Node::Group(g) => check_images(g, depth + 1, nodes, pixels, stroke_points)?,
+            Node::Image(i) => {
+                let size = i.size();
+                *pixels += size.width() as f64 * size.height() as f64;
+                if *pixels > 64. * 1024. * 1024. {
+                    return Err(limit("SVG images exceed 64 million total decoded pixels"));
+                }
+            }
+            Node::Path(path) if path.stroke().is_some_and(|s| s.is_non_scaling()) => {
+                let centerline = path
+                    .stroke_centerline()
+                    .ok_or_else(|| invalid("SVG non-scaling stroke transform is invalid"))?;
+                if let Some(intervals) = path.stroke().and_then(|s| s.dasharray()) {
+                    check_dash_budget(&centerline, intervals)?;
+                }
+                if let Some(outline) = path.stroke_outline(4.) {
+                    *stroke_points += outline.len();
+                    if *stroke_points > MAX_POINTS {
+                        return Err(limit(
+                            "SVG non-scaling stroke outline exceeds 500000 segments",
+                        ));
+                    }
+                }
+            }
+            _ => {}
+        }
+        let mut status = Ok(());
+        node.subroots(|subroot| {
+            if status.is_ok() {
+                status = check_images(subroot, depth + 1, nodes, pixels, stroke_points);
+            }
+        });
+        status?;
+    }
+    Ok(())
+}
+
 pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Result<usvg::Tree> {
     let document = preflight(source)?;
     let source_with_namespace;
@@ -322,7 +376,8 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
     let mut options = usvg::Options {
         dpi: dpi as f32,
         font_family: "Noto Sans".to_owned(),
-        default_size: usvg::Size::from_wh(300., 150.).unwrap(),
+        default_size: usvg::Size::from_wh(300., 150.)
+            .ok_or_else(|| invalid("Invalid default SVG size"))?,
         ..Default::default()
     };
     options
@@ -384,7 +439,9 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
             } else {
                 let size = imagesize::blob_size(&data)
                     .map_err(|_| invalid("SVG embedded image is invalid"))?;
-                let mut pixels = decoded_pixel_budget.lock().unwrap();
+                let mut pixels = decoded_pixel_budget
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 *pixels = pixels.saturating_add(size.width.saturating_mul(size.height));
                 if *pixels > 64 * 1024 * 1024 {
                     return Err(limit("SVG image decoding exceeds 64 million total pixels"));
@@ -396,14 +453,20 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
         match result {
             Ok(image) => Some(image),
             Err(e) => {
-                *pending_error.lock().unwrap() = Some(e);
+                *pending_error
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(e);
                 None
             }
         }
     });
     let mut tree =
         usvg::Tree::from_str(source, &options).map_err(|e| invalid(format!("Invalid SVG: {e}")))?;
-    if let Some(error) = resolver_error.lock().unwrap().take() {
+    if let Some(error) = resolver_error
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .take()
+    {
         return Err(error);
     }
     tree.resolve_non_scaling_contexts(MAX_POINTS)
@@ -415,58 +478,6 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
                 invalid("SVG non-scaling resource has an invalid transform")
             }
         })?;
-    fn check_images(
-        group: &usvg::Group,
-        depth: usize,
-        nodes: &mut usize,
-        pixels: &mut f64,
-        stroke_points: &mut usize,
-    ) -> Result<()> {
-        if depth > MAX_DEPTH {
-            return Err(limit("SVG image tree nesting exceeds 128 levels"));
-        }
-        for node in group.children() {
-            *nodes += 1;
-            if *nodes > 100_000 {
-                return Err(limit("SVG image tree exceeds 100000 nodes"));
-            }
-            match node {
-                Node::Group(g) => check_images(g, depth + 1, nodes, pixels, stroke_points)?,
-                Node::Image(i) => {
-                    let size = i.size();
-                    *pixels += size.width() as f64 * size.height() as f64;
-                    if *pixels > 64. * 1024. * 1024. {
-                        return Err(limit("SVG images exceed 64 million total decoded pixels"));
-                    }
-                }
-                Node::Path(path) if path.stroke().is_some_and(|s| s.is_non_scaling()) => {
-                    let centerline = path
-                        .stroke_centerline()
-                        .ok_or_else(|| invalid("SVG non-scaling stroke transform is invalid"))?;
-                    if let Some(intervals) = path.stroke().and_then(|s| s.dasharray()) {
-                        check_dash_budget(&centerline, intervals)?;
-                    }
-                    if let Some(outline) = path.stroke_outline(4.) {
-                        *stroke_points += outline.len();
-                        if *stroke_points > MAX_POINTS {
-                            return Err(limit(
-                                "SVG non-scaling stroke outline exceeds 500000 segments",
-                            ));
-                        }
-                    }
-                }
-                _ => {}
-            }
-            let mut status = Ok(());
-            node.subroots(|subroot| {
-                if status.is_ok() {
-                    status = check_images(subroot, depth + 1, nodes, pixels, stroke_points);
-                }
-            });
-            status?;
-        }
-        Ok(())
-    }
     check_images(tree.root(), 0, &mut 0, &mut 0., &mut 0)?;
     Ok(tree)
 }

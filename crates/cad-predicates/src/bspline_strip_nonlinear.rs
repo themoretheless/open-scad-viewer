@@ -543,9 +543,8 @@ fn local_charts(
             {
                 continue;
             }
-            if crossed_relations(
-                &spans[0], &u[0], b, &n, &d, &start, &end, degrees[0], scale, order, ctx,
-            )? {
+            let axis = StripAxis { spans: &spans[0], u: &u[0], b, degree: degrees[0], scale, order };
+            if crossed_relations(axis, &n, &d, &start, &end, ctx)? {
                 accepted = Some(end);
                 break;
             }
@@ -598,10 +597,8 @@ fn local_charts(
                             && start.sub(bounds[0], ctx)?.n.sign() != Sign::Negative
                             && one().sub(&end, ctx)?.n.sign() != Sign::Negative
                         {
-                            if crossed_relations(
-                                &spans[0], &u[0], b, &n, &d, &start, &end, degrees[0], scale,
-                                order, ctx,
-                            )? {
+                            let axis = StripAxis { spans: &spans[0], u: &u[0], b, degree: degrees[0], scale, order };
+                            if crossed_relations(axis, &n, &d, &start, &end, ctx)? {
                                 accepted = Some(end);
                             }
                         }
@@ -625,19 +622,25 @@ fn local_charts(
 // Rational-polynomial identities on every positive source overlap avoid
 // rounded (possibly irrational) preimage knots. Each identity holds throughout
 // the B span, hence throughout its actual overlap with that original A span.
+/// One parameter axis of the strip: its span data, knots, basis, degree, scale and order.
+#[derive(Clone, Copy)]
+struct StripAxis<'a> {
+    spans: &'a [(usize, Vec<H>)],
+    u: &'a [Q],
+    b: &'a [H],
+    degree: usize,
+    scale: &'a Q,
+    order: usize,
+}
 fn crossed_relations(
-    spans: &[(usize, Vec<H>)],
-    u: &[Q],
-    b: &[H],
+    axis: StripAxis<'_>,
     n: &P,
     d: &P,
     start: &Q,
     end: &Q,
-    degree: usize,
-    scale: &Q,
-    order: usize,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<bool, Reason> {
+    let StripAxis { spans, u, b, degree, scale, order } = axis;
     let mut covered = false;
     for (ai, a) in spans {
         if end.sub(&u[*ai], ctx)?.n.sign() != Sign::Positive

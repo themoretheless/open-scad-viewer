@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0358",
+  "testedBase": "d4b6f736fc66c4dba3ab5c523132e64379f73f44",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 48,
+  "scope": [
+    "Build exact rational spatial and chart geometry contained in proven transverse section components with bounded endpoint setbacks.",
+    "Inward sides of separated algebraic endpoint brackets give rational subsegments wholly inside verified material. Exact chart lifting synchronizes both pcurves, and singleton contacts retain their original event."
+  ],
+  "logSha256": "2a0cc5044a0802185ad83813055aa65dd1fa3a50613101614bd72b871b9b0dcb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "becb2d68401d99d4f0457b9feef2e365e17aee8b86cfc5fab6221aca7231ccdb",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "648eafeb7c2723a73d51637b0d6ac09ec06ae432f4a72c242185bcfffead6f4f",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "4789ce63ca5b26bd468046175e59d1c12abca27e30284736657df9275a5a9553",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "91abfa54b66f57753eeb6da1cd648f8f94c690839dfad61f5144f74098ad856a",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section_geometry.rs": "a744815912a3afa60d9e0d26aee10cad2c8c88d83e9e587ca946301ddae74d7e",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs": "b7d16c125d058c8336b1e73a4b65c0c97f7fa456dd10b15c97190fa0533d928f",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs": "e0cae3c752751b0503d811a97a23ba2735abdf902c6a8f8776cbdac85cef31a0",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs": "d205066c7516a7a5b293b72d42760cb4755113826a4217be69344b898c74ddb3"
+  }
+}

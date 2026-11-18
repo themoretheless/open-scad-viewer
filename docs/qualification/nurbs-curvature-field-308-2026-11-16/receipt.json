@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0308",
+  "testedBase": "3fd95244ec2f78bb65d5348e444c22a54a13fdf3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_affine_curve_clock_contracts",
+    "--test",
+    "exact_mobius_spline_contracts",
+    "--test",
+    "exact_surface_pcurve_seam_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 8,
+  "scope": [
+    "Assign a new absolute curve parameter range and direction, preserving the complete rational trace with exact knot storage.",
+    "Both directions, including unclamped exterior knots and periodic data. Nonrepresentable knot maps refuse atomically."
+  ],
+  "logSha256": "43484c0c0a1e01b536b6ca1c6ab270494015f56bb4d075c65f102d7ab44543b6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "4b24a0ec1f1576fa0ad89b7909389ade54d6715b23a3e8054e764d72533338ca",
+    "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs": "c13d23ce2432b443dcc1f8d3c7d45f62ee345d5b5ad5d5f7acd7d24112d4e2f4",
+    "crates/nurbs-core/tests/exact_affine_curve_clock_contracts.rs": "d3743fdc4bf5f22ad83c8e7f02ad4cda08684d32dfc0011b990d764510f5f69d"
+  }
+}

@@ -1,5 +1,5 @@
-use math_core::Result;
 use crate::{Constraint, Sketch, error, length, subtract};
+use math_core::Result;
 
 impl Sketch {
     pub(crate) fn validate(&self) -> Result<()> {
@@ -64,9 +64,7 @@ impl Sketch {
                     axis_a,
                     axis_b,
                 } => [a, b, axis_a, axis_b].iter().all(|&p| point(p)) && axis_a != axis_b,
-                Constraint::Collinear { a, b, c } => {
-                    point(a) && point(b) && point(c) && a != b
-                }
+                Constraint::Collinear { a, b, c } => point(a) && point(b) && point(c) && a != b,
                 Constraint::Radius { circle: c, value } => circle(c) && positive(value),
                 Constraint::Concentric { a, b } | Constraint::EqualRadius { a, b } => {
                     circle(a) && circle(b) && a != b
@@ -138,7 +136,11 @@ impl Sketch {
         }
     }
 
-    pub(crate) fn eval_constraint_residual(&self, constraint: &Constraint, x: &[f64]) -> ([f64; 2], usize) {
+    pub(crate) fn eval_constraint_residual(
+        &self,
+        constraint: &Constraint,
+        x: &[f64],
+    ) -> ([f64; 2], usize) {
         let p = |i: usize| [x[2 * i], x[2 * i + 1]];
         let r = |i: usize| x[2 * self.points.len() + i];
         let center = |i: usize| p(self.circles[i].center);
@@ -147,7 +149,9 @@ impl Sketch {
             Constraint::Horizontal { a, b } => ([p(b)[1] - p(a)[1], 0.0], 1),
             Constraint::Vertical { a, b } => ([p(b)[0] - p(a)[0], 0.0], 1),
             Constraint::Coincident { a, b } => (subtract(p(a), p(b)), 2),
-            Constraint::Distance { a, b, value } => ([length(subtract(p(a), p(b))) - value, 0.0], 1),
+            Constraint::Distance { a, b, value } => {
+                ([length(subtract(p(a), p(b))) - value, 0.0], 1)
+            }
             Constraint::Parallel { a, b, c, d }
             | Constraint::Perpendicular { a, b, c, d }
             | Constraint::EqualLength { a, b, c, d } => {
@@ -183,16 +187,14 @@ impl Sketch {
                 let ry = ux * sin_t + uy * cos_t;
                 let scale = lu.max(lv);
                 (
-                    [(rx * vy - ry * vx) * scale, (rx * vx + ry * vy - 1.0) * scale],
+                    [
+                        (rx * vy - ry * vx) * scale,
+                        (rx * vx + ry * vy - 1.0) * scale,
+                    ],
                     2,
                 )
             }
-            Constraint::PointToLineDistance {
-                point,
-                a,
-                b,
-                value,
-            } => {
+            Constraint::PointToLineDistance { point, a, b, value } => {
                 let u = subtract(p(b), p(a));
                 let v = subtract(p(point), p(a));
                 let dist = (u[0] * v[1] - u[1] * v[0]).abs() / length(u).max(1e-12);
@@ -203,10 +205,7 @@ impl Sketch {
                 let pb = p(b);
                 let pm = p(point);
                 (
-                    [
-                        pm[0] - 0.5 * (pa[0] + pb[0]),
-                        pm[1] - 0.5 * (pa[1] + pb[1]),
-                    ],
+                    [pm[0] - 0.5 * (pa[0] + pb[0]), pm[1] - 0.5 * (pa[1] + pb[1])],
                     2,
                 )
             }
@@ -325,6 +324,20 @@ impl Sketch {
         }
     }
 
+    /// Characteristic length used to make every residual and Jacobian row dimensionless.
+    pub(crate) fn characteristic_scale(&self) -> f64 {
+        self.bounding_box()
+            .map(|(min, max)| length(subtract(max, min)).max(1e-12))
+            .unwrap_or(1.0)
+    }
+
+    pub(crate) fn residual_into_scaled(&self, x: &[f64], out: &mut [f64], scale: f64) {
+        self.residual_into(x, out);
+        for value in out {
+            *value /= scale;
+        }
+    }
+
     pub(crate) fn residual_into(&self, x: &[f64], out: &mut [f64]) {
         let mut offset = 0;
         for constraint in &self.constraints {
@@ -345,7 +358,10 @@ impl Sketch {
     }
 }
 
-pub(crate) fn constraint_active_vars(sketch: &Sketch, constraint: &Constraint) -> ([usize; 16], usize) {
+pub(crate) fn constraint_active_vars(
+    sketch: &Sketch,
+    constraint: &Constraint,
+) -> ([usize; 16], usize) {
     let mut vars = [0usize; 16];
     let mut len = 0usize;
     let add_pt = |vars: &mut [usize; 16], len: &mut usize, p: usize| {

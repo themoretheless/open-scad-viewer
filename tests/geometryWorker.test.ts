@@ -2,11 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   isGeometryWorkerEvent,
+  materializeGeometryWorkerEvent,
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from '../src/services/geometryWorkerProtocol'
-import { OpenSCADParseError } from '../src/services/openscadParser'
+} from '../src/kernel/geometryWorkerProtocol'
+import { OpenSCADParseError } from '../src/language/openscadParser'
 import { sha256Hex } from '../src/core/sha256'
 
 const parseOpenSCADMock = vi.hoisted(() => vi.fn())
@@ -14,18 +15,21 @@ const parseOpenSCADMock = vi.hoisted(() => vi.fn())
 // provider invokes parseOpenSCAD directly.
 const warmGeometryKernelMock = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
-vi.mock('../src/services/openscadParser', async importOriginal => {
-  const original = await importOriginal<typeof import('../src/services/openscadParser')>()
+vi.mock('../src/language/openscadParser', async importOriginal => {
+  const original = await importOriginal<typeof import('../src/language/openscadParser')>()
   return { ...original, parseOpenSCAD: parseOpenSCADMock, warmGeometryKernel: warmGeometryKernelMock }
 })
 
 class FakeWorkerScope {
+  /** Host view: successes are materialized from their wire GeometryScene. */
   readonly events: GeometryWorkerEvent[] = []
+  readonly wireEvents: unknown[] = []
   readonly transfers: Transferable[][] = []
   private readonly listeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
 
   postMessage(event: GeometryWorkerEvent, options: { transfer?: Transferable[] } = {}) {
-    this.events.push(event)
+    this.wireEvents.push(event)
+    this.events.push(isGeometryWorkerEvent(event) ? materializeGeometryWorkerEvent(event) : event)
     this.transfers.push([...(options.transfer ?? [])])
   }
 
@@ -57,28 +61,15 @@ function identity(prefix: string, length: number, suffix = 'x'): string {
   return `${prefix}${suffix.repeat(length - prefix.length)}`
 }
 
-function identityMesh(options: {
-  entityId: string
-  operationId: string
-  instanceId: string
-}) {
+function identityMesh(options: { entityId: string; operationId: string; instanceId: string }) {
   return {
     entityId: options.entityId,
-    vertices: new Float32Array([
-      0, 0, 0, 0, 0, 1,
-      1, 0, 0, 0, 0, 1,
-      0, 1, 0, 0, 0, 1,
-    ]),
+    vertices: new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1]),
     indices: new Uint32Array([0, 1, 2]),
     edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
     faceIds: new Uint32Array([0]),
     color: [1, 1, 1, 1] as [number, number, number, number],
-    transform: new Float32Array([
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1,
-    ]),
+    transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
     bvh: {
       version: 1 as const,
       vertexStride: 6,
@@ -88,29 +79,27 @@ function identityMesh(options: {
       nodes: new Uint32Array([0, 0x80000001]),
       triangles: new Uint32Array([0]),
     },
-    provenance: [{
-      triangleStart: 0,
-      triangleEnd: 1,
-      backside: false,
-      source: {
-        id: 1,
-        originalId: 1,
-        start: 0,
-        end: 0,
-        label: 'cube()',
-        operationId: options.operationId,
-        instanceId: options.instanceId,
+    provenance: [
+      {
+        triangleStart: 0,
+        triangleEnd: 1,
+        backside: false,
+        source: {
+          id: 1,
+          originalId: 1,
+          start: 0,
+          end: 0,
+          label: 'cube()',
+          operationId: options.operationId,
+          instanceId: options.instanceId,
+        },
       },
-    }],
+    ],
     topology: { boundary: 3, crease: 0, nonManifold: 0, degenerate: 0 },
   }
 }
 
-function identityResult(options: {
-  entityId: string
-  operationId: string
-  instanceId: string
-}) {
+function identityResult(options: { entityId: string; operationId: string; instanceId: string }) {
   return {
     meshes: [identityMesh(options)],
     warnings: [],
@@ -131,16 +120,27 @@ afterEach(() => {
 })
 
 it('delivers queued cancellation before publishing a long selection batch', async () => {
-  await (await import('../src/services/geometry/kernel')).warmGeometryKernel()
-  parseOpenSCADMock.mockResolvedValueOnce(identityResult({entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a'}))
+  await (await import('../src/kernel/geometry/kernel')).warmGeometryKernel()
+  parseOpenSCADMock.mockResolvedValueOnce(
+    identityResult({ entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a' }),
+  )
   class CancelDuringSelection extends FakeWorkerScope {
-    override postMessage(event: GeometryWorkerEvent, options: {transfer?: Transferable[]} = {}) {
+    override postMessage(event: GeometryWorkerEvent, options: { transfer?: Transferable[] } = {}) {
       super.postMessage(event, options)
       if (event.status === 'progress' && event.phase === 'serializing') {
         let now = performance.now()
-        vi.spyOn(performance, 'now').mockImplementation(() => now += 20)
-        setTimeout(() => this.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-          type: 'cancel', documentRevision: 1, jobId: 1, reason: 'user'}), 0)
+        vi.spyOn(performance, 'now').mockImplementation(() => (now += 20))
+        setTimeout(
+          () =>
+            this.dispatchMessage({
+              protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+              type: 'cancel',
+              documentRevision: 1,
+              jobId: 1,
+              reason: 'user',
+            }),
+          0,
+        )
       }
     }
   }
@@ -148,24 +148,44 @@ it('delivers queued cancellation before publishing a long selection batch', asyn
   vi.stubGlobal('self', scope)
   await import('../src/workers/geometry.worker')
   const source = 'cube(1);'
-  scope.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION, type: 'build',
-    documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full', selectionSurfaces: true})
+  scope.dispatchMessage({
+    protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+    type: 'build',
+    documentRevision: 1,
+    jobId: 1,
+    source,
+    sourceSha256: sha256Hex(source),
+    quality: 'full',
+    selectionSurfaces: true,
+  })
   await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('cancelled'))
-  expect(scope.events.filter(event => ['succeeded', 'failed', 'stale', 'cancelled'].includes(event.status))).toHaveLength(1)
+  expect(
+    scope.events.filter(event => ['succeeded', 'failed', 'stale', 'cancelled'].includes(event.status)),
+  ).toHaveLength(1)
   expect(scope.transfers.every(transfer => transfer.length === 0)).toBe(true)
 })
 
 it('publishes requested selection patches through the real WASM boundary', async () => {
-  parseOpenSCADMock.mockResolvedValueOnce(identityResult({entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a'}))
+  parseOpenSCADMock.mockResolvedValueOnce(
+    identityResult({ entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a' }),
+  )
   const scope = new FakeWorkerScope()
   vi.stubGlobal('self', scope)
   await import('../src/workers/geometry.worker')
   const source = 'cube(1);'
-  scope.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION, type: 'build',
-    documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full', selectionSurfaces: true})
+  scope.dispatchMessage({
+    protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+    type: 'build',
+    documentRevision: 1,
+    jobId: 1,
+    source,
+    sourceSha256: sha256Hex(source),
+    quality: 'full',
+    selectionSurfaces: true,
+  })
   await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
   const result = scope.events.at(-1)!
-  expect(isGeometryWorkerEvent(result)).toBe(true)
+  expect(isGeometryWorkerEvent(scope.wireEvents.at(-1))).toBe(true)
   if (result.status !== 'succeeded') throw new Error('Expected success')
   expect(result.meshes[0].faceIdsInferred).toBe(true)
   expect(result.meshes[0].faceIdsAuthoritative).not.toBe(true)
@@ -175,14 +195,23 @@ it('publishes requested selection patches through the real WASM boundary', async
 
 describe('geometry Worker lifecycle', () => {
   it('does not let a malformed exact-solid request consume a display worker', async () => {
-    parseOpenSCADMock.mockResolvedValue(identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }))
+    parseOpenSCADMock.mockResolvedValue(
+      identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }),
+    )
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
     await import('../src/workers/geometry.worker')
     scope.dispatchMessage({ kind: 'exact-solid', version: 2, source: 'cube(1);' } as unknown as GeometryWorkerRequest)
     const source = 'cube(1);'
-    scope.dispatchMessage({ protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build', documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full' })
+    scope.dispatchMessage({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'build',
+      documentRevision: 1,
+      jobId: 1,
+      source,
+      sourceSha256: sha256Hex(source),
+      quality: 'full',
+    })
     await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
     expect(parseOpenSCADMock).toHaveBeenCalledOnce()
   })
@@ -213,18 +242,23 @@ describe('geometry Worker lifecycle', () => {
     const success = scope.events.at(-1)
     expect(success).toMatchObject({
       status: 'succeeded',
-      meshes: [{
-        entityId: identities.entityId,
-        provenance: [{
-          source: {
-            operationId: identities.operationId,
-            instanceId: identities.instanceId,
-          },
-        }],
-      }],
+      meshes: [
+        {
+          entityId: identities.entityId,
+          provenance: [
+            {
+              source: {
+                operationId: identities.operationId,
+                instanceId: identities.instanceId,
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect(scope.events.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)))
-      .toHaveLength(1)
+    expect(
+      scope.events.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)),
+    ).toHaveLength(1)
     expect(scope.transfers.at(-1)?.length).toBeGreaterThan(0)
   })
 
@@ -232,65 +266,72 @@ describe('geometry Worker lifecycle', () => {
     ['entityId', 'entity:'],
     ['operationId', 'op:'],
     ['instanceId', 'entity:'],
-  ] as const)('fails a 257-code-unit %s before success transfer and recovers on the same Worker', async (field, prefix) => {
-    const valid = {
-      entityId: identity('entity:', 256),
-      operationId: identity('op:', 256),
-      instanceId: identity('entity:', 256, 'i'),
-    }
-    const oversized = identity(prefix, 257, field === 'instanceId' ? 'j' : 'z')
-    const invalid = { ...valid, [field]: oversized }
-    parseOpenSCADMock
-      .mockResolvedValueOnce(identityResult(invalid))
-      .mockResolvedValueOnce(identityResult(valid))
-    const scope = new FakeWorkerScope()
-    vi.stubGlobal('self', scope)
-    await import('../src/workers/geometry.worker')
-    const firstSource = 'cube(1);'
+  ] as const)(
+    'fails a 257-code-unit %s before success transfer and recovers on the same Worker',
+    async (field, prefix) => {
+      const valid = {
+        entityId: identity('entity:', 256),
+        operationId: identity('op:', 256),
+        instanceId: identity('entity:', 256, 'i'),
+      }
+      const oversized = identity(prefix, 257, field === 'instanceId' ? 'j' : 'z')
+      const invalid = { ...valid, [field]: oversized }
+      parseOpenSCADMock.mockResolvedValueOnce(identityResult(invalid)).mockResolvedValueOnce(identityResult(valid))
+      const scope = new FakeWorkerScope()
+      vi.stubGlobal('self', scope)
+      await import('../src/workers/geometry.worker')
+      const firstSource = 'cube(1);'
 
-    scope.dispatchMessage({
-      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build',
-      documentRevision: 1,
-      jobId: 1,
-      source: firstSource,
-      sourceSha256: sha256Hex(firstSource),
-      quality: 'full',
-    })
+      scope.dispatchMessage({
+        protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+        type: 'build',
+        documentRevision: 1,
+        jobId: 1,
+        source: firstSource,
+        sourceSha256: sha256Hex(firstSource),
+        quality: 'full',
+      })
 
-    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({
-      jobId: 1,
-      status: 'failed',
-      phase: 'serializing',
-      error: {
-        name: 'GeometryWorkerProtocolError',
-        code: 'WORKER_RESULT_UNPUBLISHABLE',
-        message: `Geometry result cannot be published under protocol v${GEOMETRY_WORKER_PROTOCOL_VERSION}`,
-      },
-    }))
-    const firstJobEvents = scope.events.filter(event => event.jobId === 1)
-    expect(firstJobEvents.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)))
-      .toHaveLength(1)
-    expect(firstJobEvents.some(event => event.status === 'succeeded')).toBe(false)
-    expect(JSON.stringify(firstJobEvents.at(-1))).not.toContain(oversized.slice(0, 256))
-    expect(scope.transfers.filter((_transfer, index) => scope.events[index]?.jobId === 1).flat()).toHaveLength(0)
+      await vi.waitFor(() =>
+        expect(scope.events.at(-1)).toMatchObject({
+          jobId: 1,
+          status: 'failed',
+          phase: 'serializing',
+          error: {
+            name: 'GeometryWorkerProtocolError',
+            code: 'WORKER_RESULT_UNPUBLISHABLE',
+            message: `Geometry result cannot be published under protocol v${GEOMETRY_WORKER_PROTOCOL_VERSION}`,
+          },
+        }),
+      )
+      const firstJobEvents = scope.events.filter(event => event.jobId === 1)
+      expect(
+        firstJobEvents.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)),
+      ).toHaveLength(1)
+      expect(firstJobEvents.some(event => event.status === 'succeeded')).toBe(false)
+      expect(JSON.stringify(firstJobEvents.at(-1))).not.toContain(oversized.slice(0, 256))
+      expect(scope.transfers.filter((_transfer, index) => scope.events[index]?.jobId === 1).flat()).toHaveLength(0)
 
-    const secondSource = 'cube(2);'
-    scope.dispatchMessage({
-      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build',
-      documentRevision: 2,
-      jobId: 2,
-      source: secondSource,
-      sourceSha256: sha256Hex(secondSource),
-      quality: 'full',
-    })
+      const secondSource = 'cube(2);'
+      scope.dispatchMessage({
+        protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+        type: 'build',
+        documentRevision: 2,
+        jobId: 2,
+        source: secondSource,
+        sourceSha256: sha256Hex(secondSource),
+        quality: 'full',
+      })
 
-    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({ jobId: 2, status: 'succeeded' }))
-    expect(scope.events.filter(event => event.jobId === 2
-      && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status))).toHaveLength(1)
-    expect(parseOpenSCADMock).toHaveBeenCalledTimes(2)
-  })
+      await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({ jobId: 2, status: 'succeeded' }))
+      expect(
+        scope.events.filter(
+          event => event.jobId === 2 && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status),
+        ),
+      ).toHaveLength(1)
+      expect(parseOpenSCADMock).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it('ignores a replayed active job id without replacing or duplicating its terminal', async () => {
     let finish!: (result: {
@@ -302,9 +343,11 @@ describe('geometry Worker lifecycle', () => {
       reduced: false
       timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }) => void
-    parseOpenSCADMock.mockReturnValue(new Promise(resolve => {
-      finish = resolve
-    }))
+    parseOpenSCADMock.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve
+      }),
+    )
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
     await import('../src/workers/geometry.worker')
@@ -321,7 +364,12 @@ describe('geometry Worker lifecycle', () => {
     scope.dispatchMessage(request)
     scope.dispatchMessage(request)
     finish({
-      meshes: [], warnings: [], volume: 1, surfaceArea: 6, quality: 'full', reduced: false,
+      meshes: [],
+      warnings: [],
+      volume: 1,
+      surfaceArea: 6,
+      quality: 'full',
+      reduced: false,
       timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     })
 
@@ -332,7 +380,11 @@ describe('geometry Worker lifecycle', () => {
 
   it('tombstones a terminal job id but continues with the next monotonic id', async () => {
     parseOpenSCADMock.mockImplementation(async source => ({
-      meshes: [], warnings: [], volume: source.length, surfaceArea: 0, quality: 'full' as const,
+      meshes: [],
+      warnings: [],
+      volume: source.length,
+      surfaceArea: 0,
+      quality: 'full' as const,
       reduced: false,
       timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     }))
@@ -361,8 +413,11 @@ describe('geometry Worker lifecycle', () => {
     await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({ jobId: 8, status: 'succeeded' }))
     expect(parseOpenSCADMock).toHaveBeenCalledTimes(2)
     expect(scope.events.filter(event => event.jobId === 7 && event.status === 'accepted')).toHaveLength(1)
-    expect(scope.events.filter(event => event.jobId === 7
-      && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status))).toHaveLength(1)
+    expect(
+      scope.events.filter(
+        event => event.jobId === 7 && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status),
+      ),
+    ).toHaveLength(1)
   })
 
   it('executes a B-rep source without invoking the mesh parser', async () => {
@@ -381,16 +436,18 @@ describe('geometry Worker lifecycle', () => {
       quality: 'full',
     })
 
-    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({
-      status: 'succeeded',
-      execution: {
-        languageContract: 'openscad-viewer/brep-1',
-        engineClass: 'brep',
-        semanticProgramVersion: 'semantic-program-contract-v1',
-        evidence: 'runtime',
-        automaticFallback: false,
-      },
-    }))
+    await vi.waitFor(() =>
+      expect(scope.events.at(-1)).toMatchObject({
+        status: 'succeeded',
+        execution: {
+          languageContract: 'openscad-viewer/brep-1',
+          engineClass: 'brep',
+          semanticProgramVersion: 'semantic-program-contract-v1',
+          evidence: 'runtime',
+          automaticFallback: false,
+        },
+      }),
+    )
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
     expect(warmGeometryKernelMock).toHaveBeenCalledTimes(1)
   })
@@ -403,22 +460,32 @@ describe('geometry Worker lifecycle', () => {
     const newer = '// @language openscad-viewer/brep-1\ncube(2);'
     scope.dispatchMessage({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build', documentRevision: 2, jobId: 2, source: newer,
-      sourceSha256: sha256Hex(newer), quality: 'full',
+      type: 'build',
+      documentRevision: 2,
+      jobId: 2,
+      source: newer,
+      sourceSha256: sha256Hex(newer),
+      quality: 'full',
     })
     await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
 
     const malformed = '// @engine manifold\ncube(1);'
     scope.dispatchMessage({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build', documentRevision: 1, jobId: 3, source: malformed,
-      sourceSha256: sha256Hex(malformed), quality: 'full',
-    })
-    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({
+      type: 'build',
+      documentRevision: 1,
       jobId: 3,
-      status: 'failed',
-      error: { code: 'LANGUAGE_CONTRACT_UNSUPPORTED' },
-    }))
+      source: malformed,
+      sourceSha256: sha256Hex(malformed),
+      quality: 'full',
+    })
+    await vi.waitFor(() =>
+      expect(scope.events.at(-1)).toMatchObject({
+        jobId: 3,
+        status: 'failed',
+        error: { code: 'LANGUAGE_CONTRACT_UNSUPPORTED' },
+      }),
+    )
     expect(scope.events.some(event => event.jobId === 3 && event.status === 'stale')).toBe(false)
     expect(warmGeometryKernelMock).toHaveBeenCalledTimes(1)
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
@@ -434,7 +501,11 @@ describe('geometry Worker lifecycle', () => {
       reduced: false
       timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }) => void
-    parseOpenSCADMock.mockReturnValue(new Promise(resolve => { finish = resolve }))
+    parseOpenSCADMock.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve
+      }),
+    )
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
     await import('../src/workers/geometry.worker')
@@ -442,16 +513,24 @@ describe('geometry Worker lifecycle', () => {
     const valid = 'cube(1);'
     scope.dispatchMessage({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build', documentRevision: 1, jobId: 1, source: valid,
-      sourceSha256: sha256Hex(valid), quality: 'full',
+      type: 'build',
+      documentRevision: 1,
+      jobId: 1,
+      source: valid,
+      sourceSha256: sha256Hex(valid),
+      quality: 'full',
     })
     await vi.waitFor(() => expect(parseOpenSCADMock).toHaveBeenCalledOnce())
 
     const malformed = '// @engine brep\ncube(2);'
     scope.dispatchMessage({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build', documentRevision: 2, jobId: 2, source: malformed,
-      sourceSha256: sha256Hex(malformed), quality: 'full',
+      type: 'build',
+      documentRevision: 2,
+      jobId: 2,
+      source: malformed,
+      sourceSha256: sha256Hex(malformed),
+      quality: 'full',
     })
     expect(scope.events.at(-1)).toMatchObject({
       jobId: 2,
@@ -460,7 +539,12 @@ describe('geometry Worker lifecycle', () => {
     })
 
     finish({
-      meshes: [], warnings: [], volume: 1, surfaceArea: 6, quality: 'full', reduced: false,
+      meshes: [],
+      warnings: [],
+      volume: 1,
+      surfaceArea: 6,
+      quality: 'full',
+      reduced: false,
       timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     })
     await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({ jobId: 1, status: 'succeeded' }))
@@ -473,7 +557,9 @@ describe('geometry Worker lifecycle', () => {
       finishInitialization = resolve
     })
     warmGeometryKernelMock.mockReturnValue(pendingInitialization)
-    parseOpenSCADMock.mockResolvedValue(identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }))
+    parseOpenSCADMock.mockResolvedValue(
+      identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }),
+    )
 
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
@@ -508,20 +594,21 @@ describe('geometry Worker lifecycle', () => {
       reason: 'superseded',
     })
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
-    scope.dispatchMessage({...build, jobId: 2, quality: 'full'})
+    scope.dispatchMessage({ ...build, jobId: 2, quality: 'full' })
     finishInitialization()
-    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({jobId: 2, status: 'succeeded'}))
+    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({ jobId: 2, status: 'succeeded' }))
     expect(warmGeometryKernelMock).toHaveBeenCalledTimes(1)
     expect(parseOpenSCADMock).toHaveBeenCalledTimes(1)
-    expect(scope.events.filter(event => event.jobId === 1 && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status))).toHaveLength(1)
+    expect(
+      scope.events.filter(
+        event => event.jobId === 1 && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status),
+      ),
+    ).toHaveLength(1)
   })
 
   it('stops a running parse cooperatively when a cancel message arrives mid-build', async () => {
-    const { AbortedError } = await import('../src/services/openscadParser')
-    parseOpenSCADMock.mockImplementation(async (
-      _source: string,
-      options?: { shouldAbort?: () => boolean },
-    ) => {
+    const { AbortedError } = await import('../src/language/openscadParser')
+    parseOpenSCADMock.mockImplementation(async (_source: string, options?: { shouldAbort?: () => boolean }) => {
       // Simulate the parser's cooperative yield loop: spin macrotasks so the
       // queued cancel message is delivered, then honor shouldAbort.
       for (let spins = 0; spins < 200; spins++) {
@@ -564,11 +651,8 @@ describe('geometry Worker lifecycle', () => {
   })
 
   it('supersedes a running parse cooperatively when a newer build arrives', async () => {
-    const { AbortedError } = await import('../src/services/openscadParser')
-    parseOpenSCADMock.mockImplementation(async (
-      source: string,
-      options?: { shouldAbort?: () => boolean },
-    ) => {
+    const { AbortedError } = await import('../src/language/openscadParser')
+    parseOpenSCADMock.mockImplementation(async (source: string, options?: { shouldAbort?: () => boolean }) => {
       for (let spins = 0; spins < 200; spins++) {
         // setImmediate yields to the event loop like setTimeout(0), without the
         // ~15.6 ms Windows timer granularity that would exceed vi.waitFor's budget.
@@ -610,8 +694,9 @@ describe('geometry Worker lifecycle', () => {
     })
 
     await vi.waitFor(() => {
-      const job1Terminal = scope.events.find(event => event.jobId === 1
-        && (event.status === 'stale' || event.status === 'cancelled'))
+      const job1Terminal = scope.events.find(
+        event => event.jobId === 1 && (event.status === 'stale' || event.status === 'cancelled'),
+      )
       expect(job1Terminal).toMatchObject({ status: 'stale' })
       const job2Terminal = scope.events.find(event => event.jobId === 2 && event.status === 'succeeded')
       expect(job2Terminal).toBeDefined()
@@ -620,11 +705,9 @@ describe('geometry Worker lifecycle', () => {
 
   it('publishes one positioned failure when a model assertion rejects the build', async () => {
     const source = 'cube(1);\nassert(false, "invalid model");'
-    parseOpenSCADMock.mockRejectedValue(new OpenSCADParseError(
-      source,
-      source.indexOf('assert'),
-      "Assertion 'false' failed: invalid model",
-    ))
+    parseOpenSCADMock.mockRejectedValue(
+      new OpenSCADParseError(source, source.indexOf('assert'), "Assertion 'false' failed: invalid model"),
+    )
 
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
@@ -643,9 +726,7 @@ describe('geometry Worker lifecycle', () => {
     await vi.waitFor(() => {
       expect(scope.events.at(-1)?.status).toBe('failed')
     })
-    expect(scope.events.map(event => event.status)).toEqual([
-      'accepted', 'started', 'progress', 'failed',
-    ])
+    expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'progress', 'failed'])
     expect(scope.events.at(-1)).toMatchObject({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       documentRevision: 7,
@@ -664,8 +745,9 @@ describe('geometry Worker lifecycle', () => {
         column: 1,
       },
     })
-    expect(scope.events.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)))
-      .toHaveLength(1)
+    expect(
+      scope.events.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)),
+    ).toHaveLength(1)
   })
 
   it('keeps runtime provenance when success serialization fails after the build', async () => {
@@ -692,23 +774,27 @@ describe('geometry Worker lifecycle', () => {
       quality: 'full',
     })
 
-    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({
-      status: 'failed',
-      execution: {
-        engineClass: 'mesh',
-        evidence: 'runtime',
-        quality: 'full',
-      },
-      error: { name: 'DataCloneError' },
-    }))
+    await vi.waitFor(() =>
+      expect(scope.events.at(-1)).toMatchObject({
+        status: 'failed',
+        execution: {
+          engineClass: 'mesh',
+          evidence: 'runtime',
+          quality: 'full',
+        },
+        error: { name: 'DataCloneError' },
+      }),
+    )
   })
 
   it('keeps cancellation terminal when an assertion failure settles after cancel', async () => {
     const source = 'assert(false, "cancelled guard");'
     let rejectParse!: (reason?: unknown) => void
-    parseOpenSCADMock.mockReturnValue(new Promise((_resolve, reject) => {
-      rejectParse = reject
-    }))
+    parseOpenSCADMock.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectParse = reject
+      }),
+    )
 
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
@@ -731,11 +817,7 @@ describe('geometry Worker lifecycle', () => {
       jobId: 12,
       reason: 'user',
     })
-    rejectParse(new OpenSCADParseError(
-      source,
-      0,
-      "Assertion 'false' failed: cancelled guard",
-    ))
+    rejectParse(new OpenSCADParseError(source, 0, "Assertion 'false' failed: cancelled guard"))
 
     await vi.waitFor(() => {
       expect(scope.events.at(-1)).toMatchObject({
@@ -745,7 +827,8 @@ describe('geometry Worker lifecycle', () => {
       })
     })
     expect(scope.events.some(event => event.status === 'failed')).toBe(false)
-    expect(scope.events.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)))
-      .toHaveLength(1)
+    expect(
+      scope.events.filter(event => ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status)),
+    ).toHaveLength(1)
   })
 })

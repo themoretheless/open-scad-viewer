@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0592",
+  "testedBase": "da07896b7e1342f0a0b509957a58712309159692",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 171,
+  "scope": [
+    "Enclose stations of normalized arc length using exact rational fractions and bounded total length.",
+    "Verify exact fraction targets, seam splits, closure endpoint ownership, and certified brackets under one cell limit."
+  ],
+  "logSha256": "ef459f37059a28185081d4f7909e03c82cd5f3e9fff687015e96378b5d8c51af",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "1b285047b7a3b56339a5f248996a8b61bcb05d488ee2a4e6f73f562328fb0d01",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2750cdc037bac41ca61f7afe4cd8a63e0143a10f57f84c94c6bb4386f5f499ea"
+  }
+}

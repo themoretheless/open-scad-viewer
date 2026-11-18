@@ -3,9 +3,9 @@ import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {createBrepBox,exactValence3CornerBlend,transformNurbsBrep} from '../src/services/geometry/brep'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
-import {importDirectStepV9} from '../src/services/cadNurbsStep'
+import {createBrepBox,exactValence3CornerBlend,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
+import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
 const directory=resolve(process.argv[2]??'output/qualification/corner-blend')
 mkdirSync(directory,{recursive:true})
 const min=[-7,3,-2],max=[3,11,4],source=createBrepBox(min,max)

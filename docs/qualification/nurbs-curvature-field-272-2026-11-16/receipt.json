@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0272",
+  "testedBase": "bfb6c8509326dd274de0bfc5246f7365f4d610aa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 17,
+  "scope": [
+    "Bounds the signed implicit second derivative on the certified contour. Exact rational coefficient proofs preserve constant derivatives even when unreduced degree exceeds the Bernstein hull limit.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "6cdba87d8b85f8accda13f48bd188c2b5367040146bca263c3bb8db5b2d18c72",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "65f1ca083542c7c808e06b878cf697ca791852755c54e19c2fe0a4b0c48cccdd",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs": "5a79d04113c011c2ed6c6f977c359b74c03c84c44d8b66ddd26d7d91a1a05345",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "09ef93139f7ff1a3e144fbd37f5cf9e96b61ba6d13473cca5217ddc9b2b02d4f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "180372d100b3158615c45fee072cb294c095bc0ad34d2c218c99856ea65a42d7"
+  }
+}

@@ -1,13 +1,13 @@
-import { computed, onUnmounted, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'vue'
-import type { DirectBody, DirectDocument, DirectSketch, Point2 } from '../../services/directModeling'
-import type { MainSolidResults } from '../../services/mainSolidProtocol'
-import type { NurbsCurve } from '../../services/nurbsCurve'
-import { SolidCurveDisplayQueue } from '../../services/solidCurveDisplayQueue'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
-import { SolidProfileDisplayQueue } from '../../services/solidProfileDisplayQueue'
-import { SolidSketchSnapPreparation } from '../../services/solidSketchSnapPreparation'
-import { SolidSnapPreparation } from '../../services/solidSnapPreparation'
-import { SolidSurfaceDisplayQueue } from '../../services/solidSurfaceDisplayQueue'
+import { computed, onUnmounted, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'svet'
+import type { DirectBody, DirectDocument, DirectSketch, Point2 } from '../../app/directModeling'
+import type { MainSolidResults } from '../../kernel/mainSolidProtocol'
+import type { NurbsCurve } from '../../kernel/nurbsCurve'
+import { SolidCurveDisplayQueue } from '../../kernel/solidCurveDisplayQueue'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
+import { SolidProfileDisplayQueue } from '../../kernel/solidProfileDisplayQueue'
+import { SolidSketchSnapPreparation } from '../../kernel/solidSketchSnapPreparation'
+import { SolidSnapPreparation } from '../../kernel/solidSnapPreparation'
+import { SolidSurfaceDisplayQueue } from '../../kernel/solidSurfaceDisplayQueue'
 
 type SolidTopology = MainSolidResults['topology']
 
@@ -106,12 +106,21 @@ export function useDisplayAndSnapQueues(options: UseDisplayAndSnapQueuesOptions)
     topologyRequest = topologyWorker
       .run({ kind: 'topology', mesh: body.mesh })
       .then(result => {
-        if (generation !== topologyGeneration || options.document.value !== source || options.selectedBody.value !== body) return null
+        if (
+          generation !== topologyGeneration ||
+          options.document.value !== source ||
+          options.selectedBody.value !== body
+        )
+          return null
         topology.value = result
         return result
       })
       .catch(() => {
-        if (generation === topologyGeneration && options.document.value === source && options.selectedBody.value === body) {
+        if (
+          generation === topologyGeneration &&
+          options.document.value === source &&
+          options.selectedBody.value === body
+        ) {
           topologyBody = undefined
           topologyRequest = null
           topologyRetryVisible.value = true
@@ -174,7 +183,9 @@ export function useDisplayAndSnapQueues(options: UseDisplayAndSnapQueuesOptions)
   })
   function profileLoops(sketch: DirectSketch): Point2[][] {
     void profileDisplayVersion.value
-    return sketch.retainedProfile ? profileDisplayQueue.get({ id: sketch.id, profile: sketch.retainedProfile }) ?? [] : [sketch.points]
+    return sketch.retainedProfile
+      ? (profileDisplayQueue.get({ id: sketch.id, profile: sketch.retainedProfile }) ?? [])
+      : [sketch.points]
   }
 
   const surfaceDisplayWorker = createSolidPreviewWorker()
@@ -314,7 +325,10 @@ export function useDisplayAndSnapQueues(options: UseDisplayAndSnapQueuesOptions)
     surfaceDisplayErrors.value = []
     if (!options.props.open || !options.kernelReady.value) return
     const generation = surfaceDisplayGeneration
-    const items = [...(options.document.value.surfaces ?? []), ...(options.getAdvancedPreviewDocument()?.surfaces ?? [])]
+    const items = [
+      ...(options.document.value.surfaces ?? []),
+      ...(options.getAdvancedPreviewDocument()?.surfaces ?? []),
+    ]
     surfaceDisplayPending.value = items.length > 0
     const result = await surfaceDisplayQueue.prepare(items)
     if (generation !== surfaceDisplayGeneration) return

@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0499",
+  "testedBase": "4201ad171f21f351b70096838e0f4e138650e843",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "exact_affine_curve_clock_contracts",
+    "--test",
+    "exact_affine_surface_clock_contracts",
+    "--test",
+    "exact_affine_trim_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 61,
+  "scope": [
+    "Match the first derivatives exactly with a positive affine clock change on the right curve before merging.",
+    "Use an exact positive tangent ratio to change the right clock, store each mapped knot exactly and merge with the remaining work budget."
+  ],
+  "logSha256": "916aca0e16f5c6c69a530289a2e57a1b7dc47f16bcb21f0f67bede373e508328",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "645b15b66d7c490ad16b07c4b7f9ce25edd48501109516b02929840ef8e659b6",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "519fbae295a733f7e9517b60415e38b202d9c340e18585400ccf337a5d0ac380",
+    "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs": "dd94251f0181525261d65d31d232df8816d0f373aa86caad9792629caba91449"
+  }
+}

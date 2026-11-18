@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0356",
+  "testedBase": "d03c4ec8835983df8a0a618b209e6815fac01930",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 44,
+  "scope": [
+    "Assemble closed common material components and singleton contacts from the exact ordered quadratic section.",
+    "Exact section events are included as authored boundaries or classified through incident open gaps. Proven and possible closed components retain isolated contacts and unresolved material."
+  ],
+  "logSha256": "0ed208892967f5c7e2d283cf1ebeb4a6aa4a64646835092cd3de18d09f8be96b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "62da6a956d52165fc2e455d33e3be585b6960ec8c8a7c776b56b9137ddbeb049",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "de7a5896d1e5d0526b70f2e9fb306e2e9da52f63824c3e86c2ef1359fd2c9183",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "4789ce63ca5b26bd468046175e59d1c12abca27e30284736657df9275a5a9553",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "c86e8a8a9d8509495efff1cab8ec0d41c78b8360994047c36905d96ec41b24e7",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section.rs": "43d135467e50a26e92c02c4b4a2d615376ae48704f3ac52cce8b9194b722904c",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs": "b7d16c125d058c8336b1e73a4b65c0c97f7fa456dd10b15c97190fa0533d928f"
+  }
+}

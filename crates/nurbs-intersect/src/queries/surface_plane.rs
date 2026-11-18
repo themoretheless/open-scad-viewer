@@ -73,7 +73,7 @@ pub(crate) fn admit_ruled_parameter_bounds(bounds: Vec<[Interval; 2]>) -> Result
         }
         // Endpoint Bernstein coefficients enclose actual endpoint residuals.
         // Equal strict signs mean that the plane lies outside that ruling.
-        for r in [row.first().unwrap(), row.last().unwrap()] {
+        for r in [&row[0], &row[row.len() - 1]] {
             if r[0].sign() != 0 && r[0].sign() == r[1].sign() {
                 return Err(invalid("Ruled trace leaves the source parameter domain"));
             }
@@ -84,18 +84,20 @@ pub(crate) fn admit_ruled_parameter_bounds(bounds: Vec<[Interval; 2]>) -> Result
                 "Ruled parameter range remains unresolved at the subdivision limit",
             ));
         }
+        let n = row.len();
         let mut work = row;
-        let mut left = vec![work[0]];
-        let mut right = vec![*work.last().unwrap()];
-        while work.len() > 1 {
-            work = work
-                .windows(2)
-                .map(|r| {
-                    std::array::from_fn(|axis| r[0][axis].add(r[1][axis]).mul(Interval::exact(0.5)))
-                })
-                .collect();
+        let mut left = Vec::with_capacity(n);
+        let mut right = Vec::with_capacity(n);
+        left.push(work[0]);
+        right.push(work[n - 1]);
+        for len in (1..n).rev() {
+            for i in 0..len {
+                work[i] = std::array::from_fn(|axis| {
+                    work[i][axis].add(work[i + 1][axis]).mul(Interval::exact(0.5))
+                });
+            }
             left.push(work[0]);
-            right.push(*work.last().unwrap());
+            right.push(work[len - 1]);
         }
         right.reverse();
         pending.push((right, depth + 1));
@@ -207,8 +209,9 @@ pub(crate) fn diagonal_segments(
             };
             breaks.push((t, uv, [false; 2]));
         }
-        if let Some((axis, knot)) = crossing {
-            let b = breaks.last_mut().unwrap();
+        if let Some((axis, knot)) = crossing
+            && let Some(b) = breaks.last_mut()
+        {
             if b.2[axis] && b.1[axis] != knot {
                 return Err(invalid("Distinct UV knots collapse to one trace parameter"));
             }
@@ -257,6 +260,30 @@ pub(crate) fn diagonal_segments(
     }
     Ok(result)
 }
+/// Join a degree-matched Bezier span onto a multispan curve without tolerance
+/// welding: only identical Cartesian endpoint values can share a control point.
+pub(crate) fn append_elevated_span(
+    joined: &mut Curve,
+    segment: &Curve,
+    degree: usize,
+) -> Result<()> {
+    if joined.control_points.last() != segment.control_points.first() {
+        return Err(invalid(
+            "Converted span endpoints do not coincide numerically",
+        ));
+    }
+    let factor = joined.weights[joined.weights.len() - 1] / segment.weights[0];
+    joined.knots.pop();
+    joined.knots.extend_from_slice(&segment.knots[degree + 1..]);
+    joined
+        .control_points
+        .extend_from_slice(&segment.control_points[1..]);
+    joined
+        .weights
+        .extend(segment.weights[1..].iter().map(|w| w * factor));
+    Ok(())
+}
+
 pub(crate) fn diagonal_multispan(
     surface: &Surface,
     plane: Plane,
@@ -267,20 +294,7 @@ pub(crate) fn diagonal_multispan(
     let mut result: Option<Curve> = None;
     for segment in diagonal_segments(surface, plane, start, end)? {
         if let Some(joined) = &mut result {
-            if joined.control_points.last() != segment.control_points.first() {
-                return Err(invalid(
-                    "Converted span endpoints do not coincide numerically",
-                ));
-            }
-            let factor = joined.weights.last().unwrap() / segment.weights[0];
-            joined.knots.pop();
-            joined.knots.extend_from_slice(&segment.knots[degree + 1..]);
-            joined
-                .control_points
-                .extend_from_slice(&segment.control_points[1..]);
-            joined
-                .weights
-                .extend(segment.weights[1..].iter().map(|w| w * factor));
+            append_elevated_span(joined, &segment, degree)?;
         } else {
             result = Some(segment);
         }
@@ -581,8 +595,6 @@ pub fn surface_plane(
             report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
             continue;
         }
-        let lower: Vec<_> = values.iter().step_by(2).copied().collect();
-        let upper: Vec<_> = values.iter().skip(1).step_by(2).copied().collect();
         let boundary_scale = piece.weights[0][1] / piece.weights[0][0];
         let proportional_boundaries = boundary_scale.is_finite()
             && boundary_scale > 0.
@@ -591,7 +603,8 @@ pub fn surface_plane(
                 .control_points
                 .iter()
                 .all(|row| plane.distance(point3(&row[0])) == plane.distance(point3(&row[1])));
-        if lower.iter().zip(&upper).all(|(a, b)| a.value == b.value) || proportional_boundaries {
+        let equal_bounds = values.as_chunks::<2>().0.iter().all(|pair| pair[0].value == pair[1].value);
+        if equal_bounds || proportional_boundaries {
             // A plane parallel to every ruling reduces to a boundary-curve
             // root query. Each root carries its parameter interval through to
             // a whole generator line; no sampled 3D curve fitting is needed.
@@ -659,18 +672,21 @@ pub fn surface_plane(
             }
             continue;
         }
-        let side = |v: &[Coefficient]| {
-            if v.iter().all(|c| c.bound.sign() == 1) {
-                1
-            } else if v.iter().all(|c| c.bound.sign() == -1) {
-                -1
+        let side_step = |offset: usize| {
+            let mut it = values.iter().skip(offset).step_by(2);
+            let Some(first) = it.next() else { return 0; };
+            let s = first.bound.sign();
+            if s != 0 && it.all(|c| c.bound.sign() == s) {
+                s
             } else {
                 0
             }
         };
-        let lower_zero = lower.iter().all(|c| c.value == 0.);
-        let upper_zero = upper.iter().all(|c| c.value == 0.);
-        if (lower_zero && side(&upper) != 0) || (upper_zero && side(&lower) != 0) {
+        let lower_side = side_step(0);
+        let upper_side = side_step(1);
+        let lower_zero = values.iter().step_by(2).all(|c| c.value == 0.);
+        let upper_zero = values.iter().skip(1).step_by(2).all(|c| c.value == 0.);
+        if (lower_zero && upper_side != 0) || (upper_zero && lower_side != 0) {
             let v = if lower_zero { domain[2] } else { domain[3] };
             // A continuous shared knot is owned by the preceding V span.
             // Full-multiplicity discontinuities retain both independent sides.
@@ -692,7 +708,7 @@ pub fn surface_plane(
             }
             continue;
         }
-        if side(&lower) * side(&upper) == -1 {
+        if lower_side * upper_side == -1 {
             // Full cross-ruling branch: the denominator cannot vanish because
             // the two boundary curves are uniformly on opposite plane sides.
             let trace = SurfaceTrace::Ruled {

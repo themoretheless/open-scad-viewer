@@ -159,6 +159,11 @@ fn interior_constraints_keep_full_g2_on_four_original_noniso_support_traces() {
         compatibility_tolerance: 1e-9,
         max_controls: 256,
     };
+    let work = boundary::MappedWork {
+        max_cells: 100000,
+        max_coefficients: 2000000,
+        max_exact: 1000000,
+    };
     let result = boundary::solve_from_mapped_supports(
         supports,
         corner_options,
@@ -168,15 +173,13 @@ fn interior_constraints_keep_full_g2_on_four_original_noniso_support_traces() {
         }],
         Options::default(),
         [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
-        1000000,
+        work,
     )
     .unwrap();
     assert!(result.admission().admitted && result.admission().direct_admitted);
     assert_eq!(result.admission().direct_original_seams.len(), 4);
     assert!(result.admission().corner.interior.certified);
-    let replay = result.reverify(100000, 2000000, 1000000).unwrap();
+    let replay = result.reverify(work).unwrap();
     assert!(replay.admitted && replay.direct_admitted);
     assert_eq!(result.original_supports()[0].surface, &source);
     assert!((result.surface().evaluate(0.5, 0.5).unwrap().point[2] - 0.03).abs() < 1e-8);

@@ -74,20 +74,20 @@ impl<'a> Emitter<'a> {
         // Hidden targets execute their embedded checks on first use. A previously
         // evaluated target is only rendered again when the bounded cache was full.
         self.eval.suppress_checks = previously_emitted;
-        let result = self.emit(
-            target,
+        let result = self.emit(EmitRequest {
+            key: target,
             nodes,
             scope,
-            "/assertion_target",
-            1,
-            if effects_only {
+            path: "/assertion_target",
+            depth: 1,
+            expected: if effects_only {
                 GeometryType::Any
             } else {
                 GeometryType::Solid
             },
-            None,
-            true,
-        );
+            parent: None,
+            allow_assembly: true,
+        });
         self.eval.suppress_checks = false;
         let source = self.lines.join("\n");
         self.lines = lines;
@@ -149,16 +149,16 @@ pub fn compile(document: &Value) -> Result<Value> {
     };
     let checks = emitter.eval.validate_checks()?;
     let global_scope = emitter.eval.global_scope.clone();
-    emitter.emit(
-        str_at(document, "root"),
-        &main,
-        &global_scope,
-        "",
-        1,
-        GeometryType::Solid,
-        None,
-        true,
-    )?;
+    emitter.emit(EmitRequest {
+        key: str_at(document, "root"),
+        nodes: &main,
+        scope: &global_scope,
+        path: "",
+        depth: 1,
+        expected: GeometryType::Solid,
+        parent: None,
+        allow_assembly: true,
+    })?;
     let mut geometry_assertions = checks.geometry_assertions.as_array().unwrap().clone();
     let mut constraint_report = checks.constraint_report.as_array().unwrap().clone();
     if geometry_assertions.len()

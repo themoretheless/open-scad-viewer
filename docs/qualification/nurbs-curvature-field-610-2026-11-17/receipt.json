@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0610",
+  "testedBase": "5a8234129d9e288a7040c16dd383bbf25f53dada",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 198,
+  "scope": [
+    "Enclose the centroid and centroid-relative inertia of a uniformly dense trimmed surface on one partition.",
+    "Verify analytic central inertia entries and guard against publishing centroid-relative properties without a positive area proof."
+  ],
+  "logSha256": "2e5b43e6270153f38eb01d5fa15db64cdc88d62936c35073c76510363819385e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e3b554264a732305a9ec4b72ae0add88520559a98d7482d69de053a443ae188f",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "990519b217e28a7a218f801ab394c0d8a77931f18b7c576847a9c608e9001fe1"
+  }
+}

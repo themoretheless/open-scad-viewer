@@ -3,15 +3,6 @@
 //! the `extern "C"` surface the TypeScript host (`services/geometry`) uses.
 //! Responses are returned as packed u64 (len << 32 | ptr), which is sound
 //! because wasm32 linear memory pointers fit 32 bits.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 
 #[unsafe(no_mangle)]
 pub extern "C" fn abi_alloc(len: usize) -> usize {
@@ -227,6 +218,26 @@ pub extern "C" fn abi_solid_analysis_cancel(job: u32) {
     geometry_bridge::abi::abi_solid_analysis_cancel(job)
 }
 
+/// Unified start/step/cancel protocol for long kernel jobs.
+/// # Safety
+/// The operand id range must be a live caller-owned allocation.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_job_boolean_start(ids_ptr: usize, ids_len: usize, op: u32) -> u64 {
+    unsafe { geometry_bridge::abi::abi_job_boolean_start(ids_ptr, ids_len, op) }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_job_render_start(id: u32, crease_cosine: f64) -> u64 {
+    geometry_bridge::abi::abi_job_render_start(id, crease_cosine)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_job_step(job: u32, budget: u32) -> u64 {
+    geometry_bridge::abi::abi_job_step(job, budget)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_job_cancel(job: u32) {
+    geometry_bridge::abi::abi_job_cancel(job)
+}
+
 /// # Safety
 /// The handle must reference a live result from `abi_bvh_build`,
 /// `abi_semantic_edges`, `abi_render_mesh` or `abi_analyze_solid`.
@@ -242,6 +253,12 @@ pub unsafe extern "C" fn abi_array_free(handle: usize) {
     unsafe { geometry_bridge::abi::abi_array_free(handle) }
 }
 
+/// Manifold export surface version; checked by the TS wrappers at startup.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_manifold_abi_version() -> u32 {
+    geometry_bridge::abi::abi_manifold_abi_version()
+}
+
 /// # Safety
 /// vp/vl and ip/il must reference live caller-owned buffers; read only.
 #[unsafe(no_mangle)]
@@ -251,8 +268,9 @@ pub unsafe extern "C" fn abi_manifold_check(
     ip: usize,
     il: usize,
     fmt: u32,
+    sliver_area: f64,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_manifold_check(vp, vl, ip, il, fmt) }
+    unsafe { geometry_bridge::abi::abi_manifold_check(vp, vl, ip, il, fmt, sliver_area) }
 }
 
 /// # Safety
@@ -267,8 +285,11 @@ pub unsafe extern "C" fn abi_manifold_repair(
     fmt: u32,
     epsilon: f64,
     mode: u32,
+    remove_isolated: u32,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_manifold_repair(vp, vl, ip, il, fmt, epsilon, mode) }
+    unsafe {
+        geometry_bridge::abi::abi_manifold_repair(vp, vl, ip, il, fmt, epsilon, mode, remove_isolated)
+    }
 }
 
 /// # Safety
@@ -282,6 +303,36 @@ pub unsafe extern "C" fn abi_manifold_metrics(
     fmt: u32,
 ) -> u64 {
     unsafe { geometry_bridge::abi::abi_manifold_metrics(vp, vl, ip, il, fmt) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn abi_manifold_diagnostics(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    density: f64,
+    min_thickness: f64,
+    clearance_threshold: f64,
+    max_work: u32,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_manifold_diagnostics(
+            vp,
+            vl,
+            ip,
+            il,
+            fmt,
+            density,
+            min_thickness,
+            clearance_threshold,
+            max_work,
+        )
+    }
 }
 
 /// # Safety
@@ -302,11 +353,24 @@ pub unsafe extern "C" fn abi_manifold_boolean(
     op: u32,
     weld_epsilon: f64,
     relative_tolerance: f64,
+    max_work: u32,
 ) -> u64 {
     unsafe {
         geometry_bridge::abi::abi_manifold_boolean(
-            a_vp, a_vl, a_ip, a_il, a_fmt, b_vp, b_vl, b_ip, b_il, b_fmt, op,
-            weld_epsilon, relative_tolerance,
+            a_vp,
+            a_vl,
+            a_ip,
+            a_il,
+            a_fmt,
+            b_vp,
+            b_vl,
+            b_ip,
+            b_il,
+            b_fmt,
+            op,
+            weld_epsilon,
+            relative_tolerance,
+            max_work,
         )
     }
 }
@@ -314,21 +378,30 @@ pub unsafe extern "C" fn abi_manifold_boolean(
 /// # Safety
 /// Byte range must be a live caller-owned allocation from this module.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn abi_mesh_decode(format:u32,ptr:usize,len:usize)->u64{
- unsafe{geometry_bridge::abi::abi_mesh_decode(format,ptr,len)}
+pub unsafe extern "C" fn abi_mesh_decode(format: u32, ptr: usize, len: usize) -> u64 {
+    unsafe { geometry_bridge::abi::abi_mesh_decode(format, ptr, len) }
 }
 /// # Safety
 /// Float range must be a live caller-owned allocation from this module.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn abi_mesh_soup_render(ptr:usize,len:usize)->u64{
- unsafe{geometry_bridge::abi::abi_mesh_soup_render(ptr,len)}
+pub unsafe extern "C" fn abi_mesh_soup_render(ptr: usize, len: usize) -> u64 {
+    unsafe { geometry_bridge::abi::abi_mesh_soup_render(ptr, len) }
 }
 
 /// # Safety
 /// vp/vl must reference a live caller-owned f64 buffer, read only.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn abi_transparent_bsp(width:usize,vp:usize,vl:usize,limit:usize,operations:usize,tolerance:f64)->u64 {
-    unsafe { geometry_bridge::abi::abi_transparent_bsp(width,vp,vl,limit,operations,tolerance) }
+pub unsafe extern "C" fn abi_transparent_bsp(
+    width: usize,
+    vp: usize,
+    vl: usize,
+    limit: usize,
+    operations: usize,
+    tolerance: f64,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_transparent_bsp(width, vp, vl, limit, operations, tolerance)
+    }
 }
 
 #[unsafe(no_mangle)]

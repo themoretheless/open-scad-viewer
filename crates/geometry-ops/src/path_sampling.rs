@@ -37,7 +37,7 @@ pub fn sample(path: &[Vec<f64>], fractions: &[f64]) -> Result<Vec<Vec<f64>>> {
     let mut out = Vec::with_capacity(fractions.len());
     for fraction in fractions {
         let mut distance = fraction.clamp(0., 1.) * total;
-        let mut point = path.last().unwrap().clone();
+        let mut point = path[path.len() - 1].clone();
         for (i, &length) in lengths.iter().enumerate() {
             if distance <= length || i == lengths.len() - 1 {
                 let t = if length > 0. { distance / length } else { 0. };

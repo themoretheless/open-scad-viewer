@@ -1,0 +1,468 @@
+{
+  "baseCommit": "5d38f17c47662a10ebe3d030af3771b92ffc9cd6",
+  "status": "native-qualified",
+  "catalogueCapability": "NURBS-0244",
+  "scope": "Exact oriented non-unit area-normal rational surface fields over every original UVcell. Not normalized vectors, regularity/body orientation/topology proof, installed artifact or whole-application qualification.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "50139f444138475090d2242b6e90a1b237b3d1033285b0908019a0a40c1e6b3c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs": "4bf68ee823cbdc2ee0fcca66505ad3d07d8234344b4432d6a817d94aff2ab511",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "7449b6ca4f84690284f25b0bfd2673d1bf293b19dd9cff58726f2f53df8d005f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "d8a320834c296b7e1c39bc64008bbb8b6aff05e092e23f7bf37950879fece193",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/content.rs": "88c741945ab98489aed27c16fc6e18b1524cf307d61300e95a53e69c75fbc6e9",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/src/editing/rational_factor/polynomial.rs": "fb5ddabb8e7b294868b5447b7eed52180febaf5bac827cec908840bb532e3da5",
+    "crates/nurbs-core/tests/exact_area_normal_contracts.rs": "83a45a3bac989bd6ec044f011f978d658feb9570d2216bf8287faf079b3f90b5",
+    "crates/nurbs-core/tests/exact_area_normal_mixed_weights.rs": "3af27b7d3d0559b63b1b629e2d03dd1294ef3a663f7e4d449572709c761fb61c",
+    "docs/qualification/nurbs-exact-area-normal-2026-11-03/exact_oracle.py": "5ecfe2f3c3b47ef44d22da1ecd61f6045c55f2d6bf4719c98b552619b509cf90",
+    "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/exact_oracle.py": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2"
+  },
+  "explicitTestEnvironment": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-rational-reduction-target-20261102",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "commands": {
+    "native247-default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--test",
+        "exact_area_normal_contracts",
+        "--test",
+        "exact_surface_derivative_content",
+        "--test",
+        "exact_surface_derivative_contracts",
+        "--test",
+        "exact_surface_derivative_boundaries",
+        "--test",
+        "exact_derivative_rational_spans",
+        "--test",
+        "exact_derivative_contracts",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T01:22:24.578026+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T01:26:00.645249+00:00"
+    },
+    "native247-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib",
+        "--test",
+        "exact_area_normal_contracts",
+        "--test",
+        "exact_surface_derivative_content",
+        "--test",
+        "exact_surface_derivative_contracts",
+        "--test",
+        "exact_surface_derivative_boundaries",
+        "--test",
+        "exact_derivative_rational_spans",
+        "--test",
+        "exact_derivative_contracts",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T01:26:00.645701+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T01:30:29.965796+00:00"
+    }
+  },
+  "extraCommands": {
+    "no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--test",
+        "exact_area_normal_mixed_weights",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T01:31:22.768693+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T01:31:23.559762+00:00"
+    },
+    "default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "exact_area_normal_mixed_weights",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T01:31:23.560009+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T01:31:24.317945+00:00"
+    }
+  },
+  "extraTestEpochNote": "The standalone mixed-variable weight test was added after main runner launch. Library algorithm sources stayed byte-identical; it was separately compiled/executed in both modes. Final oracle combines actual default logs.",
+  "tests": {
+    "default": {
+      "passed": 2339,
+      "ignored": 1,
+      "libraryPassed": 2258,
+      "newAreaNormalTests": 14,
+      "relatedNativeContracts": 67,
+      "mainGroups": [
+        [
+          2258,
+          0,
+          1
+        ],
+        [
+          13,
+          0,
+          0
+        ],
+        [
+          10,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ]
+      ],
+      "extraMixedWeightTest": 1
+    },
+    "no-codec": {
+      "passed": 2134,
+      "ignored": 1,
+      "libraryPassed": 2053,
+      "newAreaNormalTests": 14,
+      "relatedNativeContracts": 67,
+      "mainGroups": [
+        [
+          2053,
+          0,
+          1
+        ],
+        [
+          13,
+          0,
+          0
+        ],
+        [
+          10,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ]
+      ],
+      "extraMixedWeightTest": 1
+    }
+  },
+  "totalFinalRustExecutions": 4473,
+  "oracle": {
+    "acceptedSourceRecords": 10,
+    "outputPatches": 32,
+    "negativeControls": 10,
+    "positiveGlobalGaugeControl": true,
+    "definitionsSha256": "53764d150429099ce2fedc8d07c6fcd526f1e77a6f527586a4154aab4ad38a6d",
+    "sourceReconstructionSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Exact original homogeneous tensor reconstruction, physical U/V partial numerators, signed cross product and fourth-power denominator; fresh actual output full-cell identities and coverage. Not unit normals, regularity, body-outward orientation, topology, WASM/editor or evaluator-bit qualification."
+  },
+  "previousSurfacePartialFieldsOracle": {
+    "existingSourceRecords": 17,
+    "newSourceRecords": 4,
+    "currentOutputPatches": 67,
+    "changedExistingRepresentations": 2,
+    "changedExistingPatchEncodings": 18,
+    "negativeControls": 10,
+    "positiveGlobalGaugeControl": true,
+    "currentDefinitionsSha256": "dfc24cec058d331c798c2fa1b18b8053e964b1b904141ed9f90934cbab1610ce",
+    "verifierSourceSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Every prior and new actual output independently satisfies full bivariate original-source partial identity, original UV clocks and cell cover. Source/axis multiset unchanged; binary net representations intentionally may shrink. No old topology/certificate or installed artifact authority transferred."
+  },
+  "previousCurveFieldOracle": {
+    "acceptedDefinitions": 12,
+    "pieces": 21,
+    "negativeControls": 8,
+    "definitionsSha256": "2bc474b5aec93cb5c5b0b51d6a548c95b3f09d879647c68efbaa0e781b4346bc",
+    "scope": "Exact full-domain polynomial derivative identities from independently reconstructed original Cox-de Boor basis, absolute clock, actual stored output bits and complete one-sided span cover. No sampling, topology, JSON/WASM/editor qualification."
+  },
+  "previousProjectiveOracle": {
+    "acceptedDefinitions": 12,
+    "negativeControls": 8,
+    "definitionsSha256": "6ad55f0db3c0381fb740c8c2666ea40ec0f1316cf351346540111fde70fe1084",
+    "scope": "Exact permutation determinant, common homogeneous coefficient identity for actual serialized output over unchanged full basis and strictly signed whole-domain denominator. No sampled identity, evaluator-bit, topology, WASM or application claim."
+  },
+  "previousCurveFactorOracle": {
+    "passed": 8,
+    "failed": 0,
+    "checks": {
+      "elevated-primitive": true,
+      "constant": true,
+      "degree25": true,
+      "negative-factor": true,
+      "rational-clock": true,
+      "3d-clock": true,
+      "wrong-clock-detected": true,
+      "per-pole-weight-sign-change-detected": true
+    },
+    "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+    "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+  },
+  "previousSurfaceFactorOracle": {
+    "acceptedDefinitions": 6,
+    "negativeControls": 4,
+    "failed": 0,
+    "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+    "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+    "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+  },
+  "unitInventory": {
+    "previousNames": 2259,
+    "retainedNames": 2259,
+    "removedNames": [],
+    "namesSha256": "961fd250796271108082815873ebe7af8be2915a0cad4fd32b0b738e08e30a00",
+    "previousSurfacePartialAndContentDefinitionsLiteralEqual": true,
+    "scope": "Library executable only; integration tests additional."
+  },
+  "limits": {
+    "maxExactWork": 1000000,
+    "rationalBits": 4096,
+    "outputDegree": 25,
+    "geometryLimitsChanged": false
+  },
+  "catalogue": {
+    "target": 1000,
+    "specified": 244,
+    "integrated": 79,
+    "native": 165,
+    "unallocated": 756
+  },
+  "ownership": "Existing editing root and shared exact_surface_derivative field engine. No new root alias; previous partial-field outputs remain literal equal.",
+  "remainingQualification": [
+    "General mixed-variable GCD and exhaustive alternate positive-weight/degree search",
+    "JSON/WASM/Rush/editor/STEP and current-source production/main delivery",
+    "Original1000 scope remains active"
+  ],
+  "archives": {
+    "native247-contracts-first.log.gz": {
+      "bytes": 3014,
+      "sha256": "f646bf9d1698895cab3e3adffc8a872fd56b32de916259ac13e1654e693039d7",
+      "decodedSha256": "66d922885dac911c8af131173e88f9398c882e1ad7ca0e3407e290bf4d051fe2"
+    },
+    "native247-contracts-r2.log.gz": {
+      "bytes": 3064,
+      "sha256": "732643032e93511cc20d46ce26360d8fc337223bfeb645b682be00edbfb5c7ea",
+      "decodedSha256": "4cc8595615fe2ed3b7ec2ca31157eff1cd0386f4946e79db6fa6c1e685c03a88"
+    },
+    "native247-default.log.gz": {
+      "bytes": 65516,
+      "sha256": "d8afa38346180e772c59223c37baacf95940deb408bbe1e02efdd5f5a4e94f44",
+      "decodedSha256": "55cfe4638db506a024d5627215a6d45ec0fbc5e823706bcf4f76d8f7512373df"
+    },
+    "native247-no-codec.log.gz": {
+      "bytes": 55033,
+      "sha256": "c90df77acb8b201eb01dfe29037760688a60e8b1969823a2659d0d5333b0855f",
+      "decodedSha256": "5c51a3eb9d738beab69913badf52193ba72ec314c89e75cb52b3ecb7923cf825"
+    },
+    "native247-extra-default.log.gz": {
+      "bytes": 1097,
+      "sha256": "f2e3f8ec5c79cde58e0dc9455a40bfc46a4f0b7074eed05cc5d2590edd747a73",
+      "decodedSha256": "646933bfe5ac40e7847db76b37ec02b57ba5971c47ca6043b30b41d4d82b2261"
+    },
+    "native247-extra-no-codec.log.gz": {
+      "bytes": 885,
+      "sha256": "970ea452065f2190449b646c66e4d3df0e742090af30bcd190943b9bb87bcc11",
+      "decodedSha256": "fdc52e30a4f484395066c9f59eb7803c92f126a64cb4ab235c21ef699e45d5b3"
+    },
+    "native247-combined-default.log.gz": {
+      "bytes": 66333,
+      "sha256": "df2b39685883a14c4b27a10ecb4461f0ea9bdda7aac00c079dceb4c5ad4ed105",
+      "decodedSha256": "6f9d615520542cc9e73698d6efa64ed600df97ad1994af47d4f579d79d1433b1"
+    },
+    "native247-source-inputs.json.gz": {
+      "bytes": 548,
+      "sha256": "b46ab3dd8067b3417395495976b55d160b2646e37f9cf9eb84e82c9dd196cfee",
+      "decodedSha256": "cdd764f5d8c077f1ea31193f0baacb8e69c380b8df697a817305de427ea0d497"
+    },
+    "native247-final-source-inputs.json.gz": {
+      "bytes": 602,
+      "sha256": "87f0d8e930633c093f99b0b5c120634be926faf3aec019e1db8a7ae41da3b68f",
+      "decodedSha256": "0b2684d49e222ef2e88a5195737cd7fdfb642ecf4614c0ab5fc640604508d5e5"
+    },
+    "native247-runner-state.json.gz": {
+      "bytes": 382,
+      "sha256": "5f43b7ee7eaa63757e98bef99eec72077713806b12f4c88a0924db7c6d01e663",
+      "decodedSha256": "d9805e6fccaa03930c475b1f0a339ad7419537d7b367a6644a4ba006b914b233"
+    },
+    "native247-extra-state.json.gz": {
+      "bytes": 288,
+      "sha256": "d5295392c0629183b6cf277832b8d301677f1ac17ba1dc02b2b6b901459ff454",
+      "decodedSha256": "60b6d40f8bfc1535e02bea64bdac87a6309a512fb7195845370fdabea89419d8"
+    },
+    "native247-unit-inventory.json.gz": {
+      "bytes": 230,
+      "sha256": "9e61dd8933bbc2d77c2edc8de1212ea46a87edd1d9967d92a6ce774d5c805739",
+      "decodedSha256": "f11fafac431412023a66f1cb05d1bae4c49cdeb0fc866112494271c0c307aa7c"
+    },
+    "native247-oracle-final.json.gz": {
+      "bytes": 429,
+      "sha256": "2252a8c71afff04db65daf1800cc2565af3a175cb91ca7c8291a02e4d3f41999",
+      "decodedSha256": "1fce532284c604a6c373dc0d758d07b7c72c3ec357c92169953082730d5a6d65"
+    },
+    "native247-surface-field-regression.json.gz": {
+      "bytes": 464,
+      "sha256": "77d2b243ea69e88e483d8ae4b77a2b01239ff0351c881505d9a281b6bf432008",
+      "decodedSha256": "7785019fa2355398af890df52bc678ff251976ee0482bcdd0dbd8315e39810c2"
+    },
+    "native247-curve-field-regression.json.gz": {
+      "bytes": 318,
+      "sha256": "a059e513f7e9f19be57653bfa5d24177540a54934ba7cbac1974fb25e88da5c1",
+      "decodedSha256": "9b371f60e06afd71287163c2a2375686103cdff70affdff63c1fc2159998fa54"
+    },
+    "native247-projective-regression.json.gz": {
+      "bytes": 304,
+      "sha256": "7822c5f74876ab8c637a8f5628052688855115ee2f845c052b145c5518c5d8a4",
+      "decodedSha256": "935f079e8ec9a274cc22d7e2e2202ad231414b8da96ddd7b913eb6b1e840a29d"
+    },
+    "native247-curve-factor-regression.json.gz": {
+      "bytes": 362,
+      "sha256": "4e1aa48b2019a197f03ce53bfa662a991a9726df4579036903bed18afb60ae1e",
+      "decodedSha256": "2b1149e31e59531f263438c5a69c4aa3c968ac2f15d9e236754b6016bf72a1d1"
+    },
+    "native247-surface-factor-regression.json.gz": {
+      "bytes": 424,
+      "sha256": "8af4615fdbd373bef219f36da1892e09ccdc5b6aa63eda9de21e68a498f40e5d",
+      "decodedSha256": "1b2dbe9d754d84affb1ce20b38fe1e584ed65f815555ef1379e95331505f4aaf"
+    }
+  },
+  "checks": {
+    "apiMap": "244 registered roots,244 entries; existing editing owner",
+    "catalogue": "244/1000=79integrated+165native;756unallocated;0errors",
+    "architecture": "54 existing oversized pins,0 layer violations",
+    "diffCheck": "passed"
+  }
+}

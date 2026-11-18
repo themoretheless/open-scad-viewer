@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import { OPENSCAD_2021_01_BUILTIN_MODULES } from '../src/core/openScad2021Contract'
-import { AbortedError, OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
+import { AbortedError, OpenSCADParseError, parseOpenSCAD } from '../src/language/openscadParser'
 import { EXAMPLES } from '../src/data/examples'
-import { matchMeshesByProvenance } from '../src/services/meshInspection'
+import { matchMeshesByProvenance } from '../src/kernel/meshInspection'
 
 function bounds(meshes: MeshData[]) {
   const min = [Infinity, Infinity, Infinity]
@@ -22,9 +22,7 @@ function bounds(meshes: MeshData[]) {
 describe('OpenSCAD parser and geometry evaluator', () => {
   it('reports bind as its own nonnegative phase', async () => {
     const result = await parseOpenSCAD('cube(1);')
-    expect(Object.keys(result.timings)).toEqual([
-      'parseMs', 'bindMs', 'initializeMs', 'evaluateMs', 'analyzeMs',
-    ])
+    expect(Object.keys(result.timings)).toEqual(['parseMs', 'bindMs', 'initializeMs', 'evaluateMs', 'analyzeMs'])
     expect(result.timings.bindMs).toBeGreaterThanOrEqual(0)
     expect(result.timings.parseMs).toBeGreaterThanOrEqual(0)
   })
@@ -106,14 +104,21 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     await expect(parseOpenSCAD('assert(true, detail = "nope");')).rejects.toThrow('does not accept argument detail')
     await expect(parseOpenSCAD('assert(_0 = true);')).rejects.toThrow('does not accept argument _0')
     await expect(parseOpenSCAD('assert(condition = true, _1 = "nope");')).rejects.toThrow('does not accept argument _1')
-    await expect(parseOpenSCAD('assert(true, condition = true);')).rejects.toThrow('condition was provided more than once')
-    await expect(parseOpenSCAD('assert(true, "one", message = "two");')).rejects.toThrow('message was provided more than once')
-    await expect(parseOpenSCAD('assert(true, missing_message); cube(1);')).rejects.toThrow('Unknown variable missing_message')
+    await expect(parseOpenSCAD('assert(true, condition = true);')).rejects.toThrow(
+      'condition was provided more than once',
+    )
+    await expect(parseOpenSCAD('assert(true, "one", message = "two");')).rejects.toThrow(
+      'message was provided more than once',
+    )
+    await expect(parseOpenSCAD('assert(true, missing_message); cube(1);')).rejects.toThrow(
+      'Unknown variable missing_message',
+    )
   })
 
   it('rejects expression-form assert explicitly', async () => {
-    await expect(parseOpenSCAD('value = assert(true); cube(1);'))
-      .rejects.toThrow('Expression-form assert() is not supported; use statement assert()')
+    await expect(parseOpenSCAD('value = assert(true); cube(1);')).rejects.toThrow(
+      'Expression-form assert() is not supported; use statement assert()',
+    )
   })
 
   it('performs real boolean difference', async () => {
@@ -132,9 +137,14 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   it.each([16, 36, 64, 100])('subtracts %i separated cutters that are taller than the base', async count => {
     const side = Math.sqrt(count)
     const step = 80 / side
-    const holes = Array.from({ length: count }, (_, i) =>
-      `translate([${-40 + step / 2 + (i % side) * step}, ${-40 + step / 2 + Math.floor(i / side) * step}, 0]) cylinder(h = 12, r = 3, center = true);`)
-    const result = await parseOpenSCAD(`$fn = 32;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${holes.join('\n  ')}\n}`)
+    const holes = Array.from(
+      { length: count },
+      (_, i) =>
+        `translate([${-40 + step / 2 + (i % side) * step}, ${-40 + step / 2 + Math.floor(i / side) * step}, 0]) cylinder(h = 12, r = 3, center = true);`,
+    )
+    const result = await parseOpenSCAD(
+      `$fn = 32;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${holes.join('\n  ')}\n}`,
+    )
     const holeArea = 16 * 9 * Math.sin(Math.PI / 16)
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(86 * 86 * 8 - count * holeArea * 8, 3)
@@ -143,9 +153,13 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   })
 
   it('subtracts many separated pockets that need real clipping', async () => {
-    const pockets = Array.from({ length: 16 }, (_, i) =>
-      `translate([${-30 + (i % 4) * 20}, ${-30 + Math.floor(i / 4) * 20}, 4]) sphere(r = 3);`)
-    const result = await parseOpenSCAD(`$fn = 16;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${pockets.join('\n  ')}\n}`)
+    const pockets = Array.from(
+      { length: 16 },
+      (_, i) => `translate([${-30 + (i % 4) * 20}, ${-30 + Math.floor(i / 4) * 20}, 4]) sphere(r = 3);`,
+    )
+    const result = await parseOpenSCAD(
+      `$fn = 16;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${pockets.join('\n  ')}\n}`,
+    )
     expect(result.meshes).toHaveLength(1)
     // Each pocket removes half of a polyhedral sphere of radius 3 (about 50 mm³).
     expect(result.volume).toBeLessThan(86 * 86 * 8 - 16 * 40)
@@ -154,7 +168,9 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   })
 
   it('unions separated dense bodies above the BSP admission cap without clipping', async () => {
-    const result = await parseOpenSCAD('$fn = 128; union() { sphere(r = 30); translate([90, 0, 0]) sphere(r = 30); translate([180, 0, 0]) sphere(r = 30); }')
+    const result = await parseOpenSCAD(
+      '$fn = 128; union() { sphere(r = 30); translate([90, 0, 0]) sphere(r = 30); translate([180, 0, 0]) sphere(r = 30); }',
+    )
     const single = await parseOpenSCAD('$fn = 128; sphere(r = 30);')
     expect(result.meshes).toHaveLength(1)
     expect(result.meshes[0].indices.length).toBe(3 * single.meshes[0].indices.length)
@@ -182,11 +198,14 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   })
 
   it('evaluates recursive, defaulted, named and anonymous functions in the full profile', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       function factorial(n, acc = 1) = n <= 1 ? acc : factorial(n - 1, acc * n);
       callback = function(value) value + 1;
       cube([factorial(4), callback(2), [2, 3, 4].z]);
-    `, { languageProfile: 'openscad/stable-2021.01' })
+    `,
+      { languageProfile: 'openscad/stable-2021.01' },
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(24 * 3 * 4, 5)
@@ -194,10 +213,9 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   })
 
   it('uses OpenSCAD exponent, unary and right-associative precedence in the full profile', async () => {
-    const result = await parseOpenSCAD(
-      'cube([-2^2 + 5, 2^-2 * 4, 2^3^2 / 512]);',
-      { languageProfile: 'openscad/stable-2021.01' },
-    )
+    const result = await parseOpenSCAD('cube([-2^2 + 5, 2^-2 * 4, 2^3^2 / 512]);', {
+      languageProfile: 'openscad/stable-2021.01',
+    })
     expect(bounds(result.meshes)).toEqual({ min: [0, 0, 0], max: [1, 1, 1] })
   })
 
@@ -218,8 +236,7 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     expect(preview.meshes).toHaveLength(5)
     expect(new Set(previewIds).size).toBe(5)
     expect(fullIds).toEqual(previewIds)
-    expect(matchMeshesByProvenance(preview.meshes, full.meshes, { sameSourceSnapshot: true }))
-      .toEqual([0, 1, 2, 3, 4])
+    expect(matchMeshesByProvenance(preview.meshes, full.meshes, { sameSourceSnapshot: true })).toEqual([0, 1, 2, 3, 4])
     expect(full.meshes[0].indices.length).toBeGreaterThan(preview.meshes[0].indices.length)
 
     const references = preview.meshes.map(mesh => mesh.provenance.find(run => run.source)?.source)
@@ -245,10 +262,7 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
       cube(2);
     `)
 
-    expect(after.meshes.map(mesh => mesh.entityId)).toEqual([
-      before.meshes[1].entityId,
-      before.meshes[0].entityId,
-    ])
+    expect(after.meshes.map(mesh => mesh.entityId)).toEqual([before.meshes[1].entityId, before.meshes[0].entityId])
     expect(after.meshes[1].provenance[0].source?.start).not.toBe(before.meshes[0].provenance[0].source?.start)
     expect(matchMeshesByProvenance(before.meshes, after.meshes)).toEqual([1, 0])
   })
@@ -349,7 +363,10 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     for (const [name, source] of Object.entries(EXAMPLES)) {
       const result = await parseOpenSCAD(source)
       expect(result.meshes.length, name).toBeGreaterThan(0)
-      expect(result.meshes.every(mesh => mesh.vertices.every(Number.isFinite)), name).toBe(true)
+      expect(
+        result.meshes.every(mesh => mesh.vertices.every(Number.isFinite)),
+        name,
+      ).toBe(true)
     }
   })
 
@@ -364,8 +381,7 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   })
 
   it('executes the canonical polyhedron smoke with a positive physical volume', async () => {
-    const source = OPENSCAD_2021_01_BUILTIN_MODULES
-      .find(entry => entry.name === 'polyhedron')!.smoke.source
+    const source = OPENSCAD_2021_01_BUILTIN_MODULES.find(entry => entry.name === 'polyhedron')!.smoke.source
     const result = await parseOpenSCAD(source, {
       languageProfile: 'openscad/stable-2021.01',
     })
@@ -418,11 +434,18 @@ describe('cooperative cancellation (shouldAbort)', () => {
     let clock = 0
     // A single primitive has no long statement loop. Reaching this many
     // checkpoints requires the resumable BVH path before publication.
-    await expect(parseOpenSCAD('sphere(r=3, $fn=128);', {
-      shouldAbort: () => yields >= 80,
-      now: () => { clock += 60; return clock },
-      yieldControl: async () => { yields++ },
-    })).rejects.toBeInstanceOf(AbortedError)
+    await expect(
+      parseOpenSCAD('sphere(r=3, $fn=128);', {
+        shouldAbort: () => yields >= 80,
+        now: () => {
+          clock += 60
+          return clock
+        },
+        yieldControl: async () => {
+          yields++
+        },
+      }),
+    ).rejects.toBeInstanceOf(AbortedError)
     expect(yields).toBe(80)
     const next = await parseOpenSCAD('cube(3);', { shouldAbort: () => false })
     expect(next.volume).toBeCloseTo(27, 5)
@@ -434,11 +457,18 @@ describe('cooperative cancellation (shouldAbort)', () => {
     let clock = 0
     // The unchanged sphere BVH completed within 179 adapter checkpoints in
     // the preceding qualification; this boundary exercises edge extraction.
-    await expect(parseOpenSCAD('sphere(r=3, $fn=128);', {
-      shouldAbort: () => yields >= 240,
-      now: () => { clock += 60; return clock },
-      yieldControl: async () => { yields++ },
-    })).rejects.toBeInstanceOf(AbortedError)
+    await expect(
+      parseOpenSCAD('sphere(r=3, $fn=128);', {
+        shouldAbort: () => yields >= 240,
+        now: () => {
+          clock += 60
+          return clock
+        },
+        yieldControl: async () => {
+          yields++
+        },
+      }),
+    ).rejects.toBeInstanceOf(AbortedError)
     expect(yields).toBe(240)
     const next = await parseOpenSCAD('cube(3);', { shouldAbort: () => false })
     expect(next.volume).toBeCloseTo(27, 5)
@@ -457,8 +487,14 @@ describe('cooperative cancellation (shouldAbort)', () => {
     const result = parseOpenSCAD('for (i = [0:80]) cube([1, 1, 1]);', {
       shouldAbort: () => cancelled,
       // Each clock read advances past YIELD_EVERY_MS so yieldIfDue actually sleeps.
-      now: () => { clock += 60; return clock },
-      yieldControl: async () => { yields++; cancelled = true },
+      now: () => {
+        clock += 60
+        return clock
+      },
+      yieldControl: async () => {
+        yields++
+        cancelled = true
+      },
     })
 
     await expect(result).rejects.toBeInstanceOf(AbortedError)
@@ -472,8 +508,14 @@ describe('cooperative cancellation (shouldAbort)', () => {
     let clock = 0
     const result = parseOpenSCAD('module row() { for (i = [0:80]) cube([1, 1, 1]); } row();', {
       shouldAbort: () => cancelled,
-      now: () => { clock += 60; return clock },
-      yieldControl: async () => { yields++; cancelled = true },
+      now: () => {
+        clock += 60
+        return clock
+      },
+      yieldControl: async () => {
+        yields++
+        cancelled = true
+      },
     })
 
     await expect(result).rejects.toBeInstanceOf(AbortedError)
@@ -485,8 +527,13 @@ describe('cooperative cancellation (shouldAbort)', () => {
     let clock = 0
     const result = await parseOpenSCAD('for (i = [0:2]) cube([1, 1, 1]);', {
       shouldAbort: () => false,
-      now: () => { clock += 60; return clock },
-      yieldControl: async () => { yields++ },
+      now: () => {
+        clock += 60
+        return clock
+      },
+      yieldControl: async () => {
+        yields++
+      },
     })
     expect(result.meshes.length).toBeGreaterThan(0)
     // Mid-loop checks (range too small to hit every-25) + forced post-eval yield.

@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0567",
+  "testedBase": "7f94302d0ea19c90782f8953908c6d6908ac1d00",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_binding_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Associate directed exact original contour parameters with persistent B-rep edge IDs.",
+    "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal."
+  ],
+  "logSha256": "fd90bbc6249837a2a632f569e2cae9d67664fad0d95ecc792487cf8241ff7501",
+  "sourceSha256": {
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "0e0c5ba42828cef8bd8c365430a36eff427243de07c15e8d60c250a4cddfcedb",
+    "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs": "472494a2891fe065bd47c350f3fc8f6bb5c0cc139b060ca13ec58a79fc04f0c3"
+  }
+}

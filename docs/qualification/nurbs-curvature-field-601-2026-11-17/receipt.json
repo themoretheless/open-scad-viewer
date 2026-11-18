@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0601",
+  "testedBase": "51937a79a756c8c61d191c7ea457b0e5a95259ca",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 202,
+  "scope": [
+    "Expose signed projected area along an arbitrary normal through the binary ABI.",
+    "Verify oblique area with holes, opposite normals, invalid normals and inadequate cells through the shared geometry dispatch."
+  ],
+  "logSha256": "6c92d0e497d44a2fbac02b1cccfa99c4268d15013e24600363faf2255b15d819",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "ae178ab5ebca56f13779a673ceda0c31ccabf6d46e8433da4ee811059c69caa8",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "1d297534b4052bc05bd2c8aa8729df2973f1856c7aab0f902b5c5f2f85646acb",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "4641ee1070bbd579a4f352fe7e31300d15105cd96a27be96d76a35a4c8212752",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "0a7b5c39133acff9c3953b1a4f2b83b357833e3f62b7a33221704893ce5417fe"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

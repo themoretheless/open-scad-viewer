@@ -52,9 +52,11 @@ pub fn g2_traces(
         supports,
         traces,
         o,
-        tolerances,
-        max_cells,
-        max_exact,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
         None,
     )
 }
@@ -122,11 +124,10 @@ pub(super) fn qualify(
     supports: [&Surface; 2],
     traces: [Trace; 2],
     o: Options,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
+    budget: crate::surface_g2_pcurves::G2Budget,
     target: Option<&Curve>,
 ) -> Result<TraceReport> {
+        let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     let mut r = TraceReport {
         construction,
         support_seams: Vec::new(),
@@ -173,13 +174,8 @@ pub(super) fn qualify(
             let patch_pc = line([[d[0], side as f64], [d[1], side as f64]], d);
             let edge = patch.iso(Axis::V, side as f64)?;
             let proof = surface_g2_pcurves::inspect(
-                &edge,
-                [&pc, &patch_pc],
-                [supports[side], patch],
-                [false, false],
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                surface_g2_pcurves::PcurveSeam { curve: &edge, pcurves: [&pc, &patch_pc], surfaces: [supports[side], patch], reversed: [false, false] },
+                surface_g2_pcurves::G2PcurveTolerance { position: tolerances[0], normal: tolerances[1], curvature: tolerances[2] },
                 max_cells - r.cells,
                 max_exact - r.exact_work,
             )?;
@@ -197,14 +193,8 @@ pub(super) fn qualify(
                 continue;
             }
             let proof = crate::surface_g2::inspect(
-                &r.construction.patches[i - 1],
-                crate::surface_join::Boundary::UMax,
-                patch,
-                crate::surface_join::Boundary::UMin,
-                false,
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                crate::surface_g2::SurfaceSeam { a: &r.construction.patches[i - 1], ea: crate::surface_join::Boundary::UMax, b: patch, eb: crate::surface_join::Boundary::UMin, reverse: false },
+                crate::surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
                 max_cells - r.cells,
             )?;
             r.cells += proof.cells;

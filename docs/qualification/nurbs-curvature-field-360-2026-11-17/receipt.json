@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0360",
+  "testedBase": "d8b1d6d0aa562bd4d1b8c21a35851ffb7593b30d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 51,
+  "scope": [
+    "Subdivide exact homogeneous plane residual and weight nets to certify separated and possible contact regions.",
+    "Exact dyadic subdivision preserves the homogeneous quotient on every leaf. Regions cover the original knot cells and retain uncertainty on depth-limited leaves."
+  ],
+  "logSha256": "ddd3bda50d7a45c0db455811cfefeb02fdfcc54ef051b01499050daf51ba0146",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "aec90b341181b32525469c0caaa94240b5a3bcaa58f832d35f1f02d393736988",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "e78d3b997700decfc6642cf9174a317a8c46d861a34220d0bae96cbf3e05268c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "e14129baa0e940cc7b5bdcd91112cee80d4803693c184a542b5c028a62ca0650",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/refinement.rs": "80bc1919801a01f8c66a6e5d4bc3dd864e05fea2847c5d6c5b7dd96944d65fe9",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs": "034cddeb6ea363f71fffce76ce0b743b227b4f5e65f459c23b6076e0ca7fc9a3"
+  }
+}

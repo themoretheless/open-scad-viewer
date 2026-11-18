@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0458",
+  "testedBase": "7791fb8b33db30e2df244ed65da5311f567f0d20",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 240,
+  "scope": [
+    "Compute the exact area centroid of a simple planar polygon, including concavity.",
+    "Verify a simple planar region and integrate signed triangle first moments in an exact support projection. Orientation cancels during normalization."
+  ],
+  "logSha256": "aeedcade7c2cfda5356fd9987a49b093f3acb270b280aa5a2bdf5e51a5dfc02a",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "c234587049a640feb5e3dee5c198b5fe9f8eae4c134aa58913e497d830c3bf50",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "21e7fde7601b4e4a4fd7e84fb4dcfda26dee20ee5f118f2e3374bac053ca0c09",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "fd225be6430af2da100a9e12b30c70f3522d0c439a32d9dfdd321901224aa4ba",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

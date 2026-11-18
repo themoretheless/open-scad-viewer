@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0359",
+  "testedBase": "1d81c1018a6173f75f66638a27e11b6225e54092",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 48,
+  "scope": [
+    "Certify the signed plane residual on every original rational surface knot cell.",
+    "The exact Bernstein ratios bound the plane residual over each closed original UV cell. Exact corners can certify straddling. Mixed coefficient signs without opposing corner witnesses are unresolved."
+  ],
+  "logSha256": "e6fcd559ec8a61bfdb75bf896dfd91fe5d162dde2b2e1f5ba547fcf7c628dacc",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "73d7876e127efbb53b0da70dfb4d077e6fc4fe260484e63a6e8a899059a78d5b",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "94c51eb4b83d7cf8aa50d322dc280b7a618d1c5c806f6996a5e50e5d8645ada5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "8841a7500d8151c2540a4be275e6e98b75228b65fb880dbc7339b3447204dcaf"
+  }
+}

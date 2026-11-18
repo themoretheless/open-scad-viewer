@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0512",
+  "testedBase": "036eb09a2fa981bec6513a7ff55c2df40fd962b4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 78,
+  "scope": [
+    "Partition one shifted period into ordered clamped subcurves under one budget without returning partial output.",
+    "Rotate or insert the requested seam once, validate ordered cuts against the lifted domain, and independently clamp each exact restriction."
+  ],
+  "logSha256": "35e4483b08876d2387a70c58017e74622249b8f7bc3215e067b52eda3059e5db",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "9c277a5807df51c829633b7b6ab1e86d588f9b8f954b27c8857ae9bb69e554eb",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "09d3c244e1d4717dac33e430f9b781fd5d8ad15c06b72b131c5731b2a3df7ea2"
+  }
+}

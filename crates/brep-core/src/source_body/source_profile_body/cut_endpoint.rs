@@ -1,0 +1,698 @@
+//! source profile body operations: cut_endpoint.
+use super::*;
+use nurbs_core::interval_eval::Interval as I;
+use nurbs_core::normal_alignment::ProfilePathReport;
+
+/// Upper sine-squared bound of a path report that claims alignment.
+fn qualified_upper(angular: &ProfilePathReport) -> Result<f64> {
+    angular
+        .upper_sine_squared
+        .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Bound endpoint and path work"))
+}
+
+/// Seam whose proposed-face UV path is a pair of affine lines on fixed
+/// natural boundaries, checked first at both endpoints and then along the
+/// whole path against the neighbor's proposed or original surface.
+struct AffineSeam<'p, 'a> {
+    profile: &'p WeightProfile<'a>,
+    other: Option<&'p WeightProfile<'a>>,
+    original: &'p Surface,
+    lines: [[[f64; 2]; 2]; 2],
+    threshold: f64,
+    cells: usize,
+    spans: usize,
+}
+
+impl AffineSeam<'_, '_> {
+    fn fresh_report() -> ProfilePathReport {
+        ProfilePathReport {
+            aligned: None,
+            cells: 0,
+            spans: 0,
+            accepted_cells: 0,
+            upper_sine_squared: None,
+            pending: vec![[0., 1.]],
+            reason: "profile-path-work-limit",
+        }
+    }
+
+    /// Endpoint prepass; `Err` carries the refusing report.
+    fn endpoints(&self) -> Result<std::result::Result<(ProfilePathReport, f64), ProfilePathReport>> {
+        let mut pre = Self::fresh_report();
+        let mut endpoint_upper = 0_f64;
+        for end in 0..2 {
+            if pre.cells == self.cells || pre.spans == self.spans {
+                return Ok(Err(pre));
+            }
+            let rectangles = std::array::from_fn(|side| self.lines[side][end].map(|x| [x, x]));
+            pre.cells += 1;
+            let budget = self.spans - pre.spans;
+            let r = match self.other {
+                Some(other) => {
+                    self.profile
+                        .inspect_profile_normals(other, rectangles, self.threshold, budget)?
+                }
+                None => self.profile.inspect_original_normals(
+                    self.original,
+                    rectangles,
+                    self.threshold,
+                    budget,
+                )?,
+            };
+            pre.spans += r.spans;
+            if r.aligned != Some(true) {
+                pre.pending.push([end as f64; 2]);
+                pre.reason = if r.reason == "span-limit" {
+                    "profile-path-work-limit"
+                } else if r.aligned == Some(false) {
+                    pre.aligned = Some(false);
+                    "profile-path-angular-mismatch"
+                } else {
+                    "profile-seam-endpoint-normal-unresolved"
+                };
+                return Ok(Err(pre));
+            }
+            let interval = r
+                .sine_squared_interval
+                .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Bound endpoint and path work"))?;
+            endpoint_upper = endpoint_upper.max(interval[1]);
+            pre.accepted_cells += 1;
+        }
+        if pre.cells == self.cells || pre.spans == self.spans {
+            return Ok(Err(pre));
+        }
+        Ok(Ok((pre, endpoint_upper)))
+    }
+
+    /// Whole-path inspection with the prepass work and bound folded in.
+    fn path(&self, pre: ProfilePathReport, endpoint_upper: f64) -> Result<ProfilePathReport> {
+        let (cells, spans) = (self.cells - pre.cells, self.spans - pre.spans);
+        let mut angular = match self.other {
+            Some(other) => {
+                self.profile
+                    .inspect_profile_path(other, self.lines, self.threshold, cells, spans)?
+            }
+            None => self.profile.inspect_original_path(
+                self.original,
+                self.lines,
+                self.threshold,
+                cells,
+                spans,
+            )?,
+        };
+        angular.cells += pre.cells;
+        angular.spans += pre.spans;
+        angular.accepted_cells += pre.accepted_cells;
+        if let Some(upper) = angular.upper_sine_squared.as_mut() {
+            *upper = upper.max(endpoint_upper);
+        }
+        Ok(angular)
+    }
+}
+
+/// Section end at `parameter` on a selected edge use that must be affine
+/// along `axis` on the preserved natural `boundary` of its face.
+struct AffineCut<'e> {
+    edge: &'e crate::source_shared_edge::SharedEdge,
+    side: usize,
+    axis: usize,
+    parameter: f64,
+    boundary: f64,
+}
+
+impl AffineCut<'_> {
+    /// Canonical carrier enclosure of the cut, or `None` when the selected
+    /// use is not an affine natural-boundary line through the parameter.
+    fn canonical(&self, profile: &WeightProfile<'_>) -> Result<Option<I>> {
+        let Self {
+            edge,
+            side,
+            axis,
+            parameter,
+            boundary,
+        } = *self;
+        let use_ = &edge.uses()[side];
+        let c = use_.curve();
+        if !same(use_.surface(), profile.source())
+            || c.periodic
+            || c.degree != 1
+            || c.control_points.len() != 2
+            || c.weights[0] != c.weights[1]
+            || c.control_points
+                .iter()
+                .any(|p| p.len() != 2 || p[1 - axis] != boundary)
+            || c.control_points[0][axis] == c.control_points[1][axis]
+        {
+            return Ok(None);
+        }
+        let ends = [c.control_points[0][axis], c.control_points[1][axis]];
+        if parameter < ends[0].min(ends[1]) || parameter > ends[0].max(ends[1]) {
+            return Ok(None);
+        }
+        let normalized = I::point(parameter)
+            .sub(I::point(ends[0]))?
+            .div_signed(I::point(ends[1]).sub(I::point(ends[0]))?)?
+            .intersect(0., 1.)?;
+        let d = c.domain();
+        let t = I::point(d[0])
+            .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
+            .intersect(d[0], d[1])?;
+        Ok(Some(
+            crate::source_seam_tangency::map(edge, side, t)?.intersect(0., 1.)?,
+        ))
+    }
+
+    /// Whether both retained original uses still own the canonical cut.
+    fn retained(&self, canonical: I) -> Result<bool> {
+        let edge = self.edge;
+        if !edge.maps_complete_canonical_source()
+            && !edge.covers_retained_canonical_interval([canonical.lo, canonical.hi])?
+        {
+            return Ok(false);
+        }
+        for current in 0..2 {
+            let t = crate::source_seam_tangency::inverse(edge, current, canonical)?;
+            let ends = edge.uses()[current].parameter_bounds();
+            if t.lo < ends[0][1].min(ends[1][1]) || t.hi > ends[0][0].max(ends[1][0]) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
+    /// Neighbor UV and world enclosures of the cut; `None` when the span
+    /// budget is exhausted before both curves are charged.
+    #[allow(clippy::type_complexity)]
+    fn enclose(
+        &self,
+        canonical: I,
+        max_spans: usize,
+        spans: &mut usize,
+    ) -> Result<Option<([[f64; 2]; 2], [[f64; 2]; 3])>> {
+        let edge = self.edge;
+        let neighbor = 1 - self.side;
+        let nc = edge.uses()[neighbor].curve();
+        let t = crate::source_seam_tangency::inverse(edge, neighbor, canonical)?;
+        let world = edge.world();
+        let d = world.domain();
+        let w = I::point(d[0])
+            .add(canonical.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
+            .intersect(d[0], d[1])?;
+        for (curve, t) in [(nc, t), (world, w)] {
+            let spent = span_work::touched_spans(curve, t);
+            if spent > max_spans - *spans {
+                return Ok(None);
+            }
+            *spans += spent;
+        }
+        let uv = nurbs_core::interval_eval::evaluate_interval(nc, t)?;
+        let point = nurbs_core::interval_eval::evaluate_interval(world, w)?;
+        Ok(Some((
+            [[uv[0].lo, uv[0].hi], [uv[1].lo, uv[1].hi]],
+            std::array::from_fn(|k| [point[k].lo, point[k].hi]),
+        )))
+    }
+}
+impl<'a> Proposal<'a> {
+/// Bind a new section end to both retained original edge uses. The selected
+    /// use must be affine on a preserved natural boundary; its neighbor may
+    /// have a nonlinear pcurve. No world-distance test grants ownership.
+    pub fn cut_endpoint<'p>(
+        &'p self,
+        face: usize,
+        axis: usize,
+        parameter: f64,
+        high: bool,
+        index: usize,
+        max_spans: usize,
+    ) -> Result<CutEndpointReport<'p, 'a>> {
+        let profile = self
+            .profile(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose a proposed face"))?;
+        let section = profile.section(axis, parameter)?;
+        let shell = self.body.geometry().shell();
+        let addresses = shell
+            .uses()
+            .get(index)
+            .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose an owned edge"))?;
+        if max_spans > span_work::MAX_WORK {
+            return Err(Error::new("BREP_PROFILE_CUT", "Bound cut parameter work"));
+        }
+        let mut out = CutEndpointReport {
+            endpoint: None,
+            spans: 0,
+            reason: "profile-cut-carrier-unproven",
+        };
+        let Some(side) = addresses.iter().position(|u| u.face == face) else {
+            return Ok(out);
+        };
+        let edge = &shell.edges()[index];
+        let regions = shell
+            .regions()
+            .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose an owned edge"))?;
+        if (0..2).any(|i| {
+            !same(
+                edge.uses()[i].surface(),
+                regions[addresses[i].face].loops()[0][0].surface(),
+            )
+        }) {
+            return Ok(out);
+        }
+        let cut = AffineCut {
+            edge,
+            side,
+            axis,
+            parameter,
+            boundary: section.range()[usize::from(high)],
+        };
+        let Some(canonical) = cut.canonical(profile)? else {
+            return Ok(out);
+        };
+        if !cut.retained(canonical)? {
+            out.reason = "profile-cut-retained-parameter-unproven";
+            return Ok(out);
+        }
+        let Some((neighbor_uv, world)) = cut.enclose(canonical, max_spans, &mut out.spans)? else {
+            out.reason = "profile-cut-work-limit";
+            return Ok(out);
+        };
+        out.endpoint = Some(CutEndpoint {
+            proposal: self,
+            face,
+            neighbor: addresses[1 - side].face,
+            edge: index,
+            axis,
+            parameter,
+            high,
+            canonical: [canonical.lo, canonical.hi],
+            neighbor_uv,
+            world,
+        });
+        out.reason = "profile-cut-endpoint-owned";
+        Ok(out)
+    }
+/// Derive both UV paths from private original carrier ownership and compare
+    /// each incident face's actual original or proposed weight representation.
+    pub fn qualify_seam<'p>(
+        &'p self,
+        face: usize,
+        neighbor: usize,
+        max_edges: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<SeamReport<'p, 'a>> {
+        self.qualify_selected_seam([face, neighbor], None, max_edges, threshold, cells, spans)
+    }
+/// Qualify a single owned edge; never reuse another edge between its faces.
+    pub fn qualify_edge<'p>(
+        &'p self,
+        edge: usize,
+        max_edges: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<SeamReport<'p, 'a>> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(edge)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned edge"))?;
+        let mut faces = [uses[0].face, uses[1].face];
+        if self.profile(faces[0]).is_none() {
+            faces.reverse();
+        }
+        self.qualify_selected_seam(
+            faces,
+            Some(edge),
+            max_edges,
+            threshold,
+            cells,
+            spans,
+        )
+    }
+pub(super) fn qualify_selected_seam<'p>(
+        &'p self,
+        [face, neighbor]: [usize; 2],
+        edge: Option<usize>,
+        max_edges: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<SeamReport<'p, 'a>> {
+        let mut out = SeamReport {
+            seam: None,
+            angular: None,
+            reason: "profile-seam-carrier-unproven",
+        };
+        let profile = self
+            .profile(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose a proposed face"))?;
+        let map = match edge {
+            Some(edge) => crate::source_shared_chord_map::prepare_edge(
+                self.body,
+                [face, neighbor],
+                edge,
+                max_edges,
+            )?,
+            None => {
+                crate::source_shared_chord_map::prepare(self.body, [face, neighbor], max_edges)?
+            }
+        };
+        let Some(map) = map else {
+            if let Some(index) = edge.filter(|index| *index < max_edges) {
+                let angular =
+                    self.inspect_curved_edge(face, neighbor, index, threshold, cells, spans)?;
+                out.reason = angular.reason;
+                if angular.aligned == Some(true) {
+                    out.seam = Some(Seam {
+                        proposal: self,
+                        faces: [face, neighbor],
+                        edge: index,
+                        threshold,
+                        upper: qualified_upper(&angular)?,
+                    });
+                }
+                out.angular = Some(angular);
+            }
+            return Ok(out);
+        };
+        let axes = map.fixed_axes();
+        let fixed = map.fixed_values();
+        let free = map.free_endpoints();
+        let lines = std::array::from_fn(|side| {
+            std::array::from_fn(|end| {
+                std::array::from_fn(|axis| {
+                    if axis == axes[side] {
+                        fixed[side]
+                    } else {
+                        free[side][end]
+                    }
+                })
+            })
+        });
+        if !(1..=span_work::MAX_WORK).contains(&cells) || !(1..=span_work::MAX_WORK).contains(&spans)
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Bound endpoint and path work",
+            ));
+        }
+        let seam = AffineSeam {
+            profile,
+            other: self.profile(neighbor),
+            original: map.surfaces()[1],
+            lines,
+            threshold,
+            cells,
+            spans,
+        };
+        let angular = match seam.endpoints()? {
+            Ok((pre, endpoint_upper)) => seam.path(pre, endpoint_upper)?,
+            Err(pre) => {
+                out.reason = pre.reason;
+                out.angular = Some(pre);
+                return Ok(out);
+            }
+        };
+        out.reason = angular.reason;
+        if angular.aligned == Some(true) {
+            out.seam = Some(Seam {
+                proposal: self,
+                faces: [face, neighbor],
+                edge: map.edge(),
+                threshold,
+                upper: qualified_upper(&angular)?,
+            });
+        }
+        out.angular = Some(angular);
+        Ok(out)
+    }
+/// Bind angular qualification to two owned section roots on one carrier.
+    /// The interval covers their exact transported enclosures; it is not made
+    /// from independently rounded canonical endpoint scalars.
+    pub fn qualify_root_ended_seam<'p>(
+        &'p self,
+        parts: [&CutPartition<'_, 'p, 'a>; 2],
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<RootEndedSeamReport<'p, 'a>> {
+        if spans > 100000
+            || !(1..=100000).contains(&cells)
+            || !threshold.is_finite()
+            || !(0. ..1.).contains(&threshold)
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Bound root-ended seam angular and carrier work",
+            ));
+        }
+        let mut out = RootEndedSeamReport {
+            seam: None,
+            carrier_spans: 0,
+            angular: None,
+            reason: "profile-root-seam-ownership-unproven",
+        };
+        let ends = [parts[0].endpoint, parts[1].endpoint];
+        if ends.iter().any(|e| !std::ptr::eq(e.proposal, self))
+            || ends[0].edge != ends[1].edge
+            || ends[0].face != ends[1].face
+            || ends[0].neighbor != ends[1].neighbor
+            || ends[0].axis != ends[1].axis
+            || ends[0].high != ends[1].high
+            || ends[0].parameter == ends[1].parameter
+        {
+            return Ok(out);
+        }
+        let shell = self.body.geometry().shell();
+        let edge = &shell.edges()[ends[0].edge];
+        let side = usize::from(shell.uses()[ends[0].edge][0].face != ends[0].face);
+        let mut points = Vec::new();
+        for part in parts {
+            if out.carrier_spans == spans {
+                out.reason = "profile-root-seam-carrier-work-limit";
+                return Ok(out);
+            }
+            let checked = crate::source_carrier_point::qualify(
+                edge,
+                &part.point,
+                side,
+                spans - out.carrier_spans,
+            )?;
+            out.carrier_spans += checked.spans;
+            out.reason = checked.reason;
+            let Some(point) = checked.point else {
+                return Ok(out);
+            };
+            points.push(point);
+        }
+        let ranges = [points[0].canonical_bounds(), points[1].canonical_bounds()];
+        if !(ranges[0][1] < ranges[1][0] || ranges[1][1] < ranges[0][0]) {
+            out.reason = "profile-root-seam-order-unproven";
+            return Ok(out);
+        }
+        let canonical = [
+            ranges[0][0].min(ranges[1][0]),
+            ranges[0][1].max(ranges[1][1]),
+        ];
+        if out.carrier_spans == spans {
+            out.reason = "profile-root-seam-angular-work-limit";
+            return Ok(out);
+        }
+        let angular = self.qualify_edge_interval(
+            ends[0].edge,
+            canonical,
+            threshold,
+            cells,
+            spans - out.carrier_spans,
+        )?;
+        out.reason = angular.angular.reason;
+        if let Some(restricted) = angular.seam {
+            out.seam = Some(RootEndedSeam {
+                restricted,
+                points: [points.remove(0), points.remove(0)],
+                face: ends[0].face,
+                axis: ends[0].axis,
+                parameters: [ends[0].parameter, ends[1].parameter],
+                high: ends[0].high,
+            });
+            out.reason = "profile-root-ended-seam-qualified";
+        }
+        out.angular = Some(angular.angular);
+        Ok(out)
+    }
+/// Qualify only the requested interval of an owned original carrier.
+    /// UVs are freshly enclosed from both original pcurves and canonical maps.
+    pub fn qualify_edge_interval<'p>(
+        &'p self,
+        edge: usize,
+        canonical: [f64; 2],
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<RestrictedSeamReport<'p, 'a>> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(edge)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned interval edge"))?;
+        let mut faces = [uses[0].face, uses[1].face];
+        if self.profile(faces[0]).is_none() {
+            faces.reverse();
+        }
+        if self.profile(faces[0]).is_none() {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Require an owned corrected face",
+            ));
+        }
+        let angular = self.inspect_curved_edge_interval(
+            crate::source_profile_body::EdgeInterval {
+                face: faces[0],
+                neighbor: faces[1],
+                index: edge,
+                canonical,
+            },
+            threshold,
+            cells,
+            spans,
+        )?;
+        let seam = if angular.aligned == Some(true) {
+            Some(RestrictedSeam {
+                proposal: self,
+                faces,
+                edge,
+                canonical,
+                threshold,
+                upper: qualified_upper(&angular)?,
+            })
+        } else {
+            None
+        };
+        Ok(RestrictedSeamReport { seam, angular })
+    }
+/// Original nonlinear pcurves remain source-owned; inverse canonical maps
+    /// and complete curve-span enclosures replace manually supplied UV lines.
+    pub(super) fn inspect_curved_edge(
+        &self,
+        face: usize,
+        neighbor: usize,
+        index: usize,
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        self.inspect_curved_edge_interval(
+            crate::source_profile_body::EdgeInterval {
+                face,
+                neighbor,
+                index,
+                canonical: [0., 1.],
+            },
+            threshold,
+            max_cells,
+            max_spans,
+        )
+    }
+pub(super) fn inspect_curved_edge_interval(
+        &self,
+        edge: EdgeInterval,
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        self.inspect_curved_edge_interval_policy(
+            edge,
+            threshold,
+            max_cells,
+            max_spans,
+            None,
+            false,
+        )
+    }
+pub(crate) fn inspect_original_neighbor_interval(
+        &self,
+        edge: EdgeInterval,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let EdgeInterval {
+            face,
+            neighbor,
+            index,
+            ..
+        } = edge;
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(index)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned edge"))?;
+        if face == neighbor
+            || !uses.iter().any(|u| u.face == face)
+            || !uses.iter().any(|u| u.face == neighbor)
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Require the actual incident neighbor",
+            ));
+        }
+        self.inspect_curved_edge_interval_policy(
+            edge,
+            threshold,
+            cells,
+            spans,
+            None,
+            true,
+        )
+    }
+/// Diagnostic full-edge limit angles on the owned nonlinear pcurve map.
+    /// This does not issue a regular seam or admit a collapsed vertex.
+    pub fn inspect_edge_pole_limit_angles(
+        &self,
+        face: usize,
+        index: usize,
+        high: bool,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(index)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned edge"))?;
+        let side = uses
+            .iter()
+            .position(|u| u.face == face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an incident proposed face"))?;
+        if self.profile(face).is_none() || self.profile(uses[1 - side].face).is_some() {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Require proposed face and unchanged neighbor",
+            ));
+        }
+        self.inspect_curved_edge_interval_policy(
+            EdgeInterval {
+                face,
+                neighbor: uses[1 - side].face,
+                index,
+                canonical: [0., 1.],
+            },
+            threshold,
+            cells,
+            spans,
+            Some(high),
+            false,
+        )
+    }
+}

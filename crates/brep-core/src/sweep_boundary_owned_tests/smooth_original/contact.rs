@@ -18,9 +18,14 @@ fn owned_contact_fit_c2_volume_keeps_material_trims_and_c0_cap_wall() {
     let start=endpoint(1.,0.);let end=endpoint(1.125,2.);
     let before=(source.surface.clone(),source.trims.clone(),profiles.clone(),guide.clone());
     let original=OriginalSmoothVolumeLimits{order:2,cells:1000000,exact_work:1000000,products:1000000};
-    let certify=|l|construct_with_original_smooth_volume(&sweep,&[4],5,
-        [&source,&source],[&start,&end],1e-8,0.05,limits(),
-        [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],l).unwrap();
+    let certify=|l|construct_with_original_smooth_volume(
+        SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source,&source] },
+        [&start,&end],
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
+        limits(),
+        [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],
+        l,
+    ).unwrap();
     let result=certify(original);
     let OriginalSmoothBodyAttempt::Certified(body)=result else {
         let OriginalSmoothBodyAttempt::Refused(r)=result else{unreachable!()};
@@ -40,7 +45,13 @@ fn owned_contact_fit_c2_volume_keeps_material_trims_and_c0_cap_wall() {
     }
     let mut broken=LoftCap{surface:source.surface.clone(),trims:source.trims.clone()};
     broken.trims[0][0].control_points[0][0]=0.125;
-    assert!(matches!(construct_with_original_smooth_volume(&sweep,&[4],5,[&broken,&source],[&start,&end],
-        1e-8,0.05,limits(),[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],original).unwrap(),OriginalSmoothBodyAttempt::Refused(_)));
+    assert!(matches!(construct_with_original_smooth_volume(
+        SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&broken,&source] },
+        [&start,&end],
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
+        limits(),
+        [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],
+        original,
+    ).unwrap(),OriginalSmoothBodyAttempt::Refused(_)));
     assert_eq!(before,(source.surface.clone(),source.trims.clone(),profiles.clone(),guide.clone()));
 }

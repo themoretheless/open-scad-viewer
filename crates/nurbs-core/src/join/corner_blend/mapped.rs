@@ -116,9 +116,11 @@ fn run(
             support.pcurve,
             support.direction,
             &constructed.surface,
-            half,
-            max_cells - cells,
-            max_coefficients - coefficients,
+            surface_collar::CollarBudget {
+                tolerances: half,
+                max_cells: max_cells - cells,
+                max_work: max_coefficients - coefficients,
+            },
         )?;
         cells += proof.cells;
         coefficients += proof.coefficient_work;
@@ -138,9 +140,11 @@ fn run(
             references,
             traces,
             options,
-            half,
-            legacy_cells,
-            max_exact,
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: half,
+                max_cells: legacy_cells,
+                max_exact,
+            },
             legacy_coefficients,
         )?
     } else {
@@ -212,9 +216,11 @@ fn run(
             supports[side].direction,
             &actual,
             gain,
-            tolerances,
-            max_cells - cells,
-            max_coefficients - coefficients,
+            surface_collar::CollarBudget {
+                tolerances,
+                max_cells: max_cells - cells,
+                max_work: max_coefficients - coefficients,
+            },
         )?;
         cells += proof.cells;
         coefficients += proof.coefficient_work;
@@ -292,7 +298,7 @@ fn original_side_chart(s: &Surface, side: usize, reverse_along: bool) -> Option<
         return None;
     }
     let mut out = if side < 2 {
-        crate::surface_edit::transpose(s).ok()?
+        crate::core::surface_transpose::transpose(s).ok()?
     } else {
         s.clone()
     };

@@ -393,7 +393,7 @@ pub fn intersect_plane_cone(
             let num = [[x0, 0., 1. / ll], [0., 1., 0.]];
             let den = [1., 0., 0.];
             // Finite height, nappe and patch half-planes in (x, y).
-            let hps = conic_halfplanes(&plane, &cone, &rect, q, e1, e2, g, s, d0, t_apex, band);
+            let hps = conic_halfplanes(&plane, &cone, ConicSectionFrame { q, e1, e2, g, s, d0, t_apex, band });
             let big = 1e6 * terms;
             let t_band = band + 1e-12 * terms;
             let (intervals, tangent) = clip_conic_t(num, den, -big, big, &hps, t_band);
@@ -449,7 +449,7 @@ pub fn intersect_plane_cone(
             let ah = (hh / (-a2)).sqrt();
             let bh = hh.sqrt();
             let center3: [f64; 3] = std::array::from_fn(|i| q[i] + x_c * e1[i]);
-            let hps = conic_halfplanes(&plane, &cone, &rect, q, e1, e2, g, s, d0, t_apex, band);
+            let hps = conic_halfplanes(&plane, &cone, ConicSectionFrame { q, e1, e2, g, s, d0, t_apex, band });
             for br in [-1., 1.] {
                 // x = x_c + br a (1+t^2)/(1-t^2), y = 2 b t/(1-t^2), |t| < 1.
                 let num = [[x_c + br * ah, 0., br * ah - x_c], [0., 2. * bh, 0.]];
@@ -495,23 +495,35 @@ pub fn intersect_plane_cone(
     }
 }
 
+pub(super) struct ConicSectionFrame {
+    pub q: [f64; 3],
+    pub e1: [f64; 3],
+    pub e2: [f64; 3],
+    pub g: f64,
+    pub s: f64,
+    pub d0: f64,
+    pub t_apex: f64,
+    pub band: f64,
+}
+
 /// Finite height, nappe and patch-rectangle half-planes in the plane's
 /// (x, y) coordinates (x along the in-plane axis projection e1, y along
 /// e2 = normal x e1, origin at the apex projection Q).
-#[allow(clippy::too_many_arguments)]
 pub(super) fn conic_halfplanes(
     plane: &CanonicalPlane,
     cone: &CanonicalCone,
-    rect: &[Halfplane2; 4],
-    q: [f64; 3],
-    e1: [f64; 3],
-    e2: [f64; 3],
-    g: f64,
-    s: f64,
-    d0: f64,
-    t_apex: f64,
-    band: f64,
+    frame: ConicSectionFrame,
 ) -> Vec<Halfplane2> {
+    let ConicSectionFrame {
+        q,
+        e1,
+        e2,
+        g,
+        s,
+        d0,
+        t_apex,
+        band,
+    } = frame;
     let m = cone.slope;
     let mut hps = vec![
         // Height: 0 <= t_apex + g d0 + s x <= h.
@@ -541,7 +553,6 @@ pub(super) fn conic_halfplanes(
     let bv = dot(e2, plane.v) / v2;
     let u_q = dot(sub(q, plane.origin), plane.u) / u2;
     let v_q = dot(sub(q, plane.origin), plane.v) / v2;
-    let _ = rect;
     hps.push(Halfplane2 {
         normal: [au, bu],
         offset: 1. - u_q,

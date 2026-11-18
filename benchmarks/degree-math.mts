@@ -1,5 +1,5 @@
 import {performance} from 'node:perf_hooks'
-import {languageRequest,warmLanguageKernel} from '../src/services/languages/kernel.ts'
+import {languageRequest,warmLanguageKernel} from '../src/language/languages/kernel.ts'
 await warmLanguageKernel()
 const count=4096
 const calls=Array.from({length:count},(_,i)=>({function:i%2?'cos':'sin',args:[i>>1]}))
@@ -9,7 +9,7 @@ for(const size of [1,2,32,256,1024]){
  const timings=Array.from({length:7},()=>run(size)).sort((a,b)=>a-b)
  console.log(JSON.stringify({batch:size,values:count,medianMs:timings[3],nsPerValue:timings[3]*1e6/count}))
 }
-const {evaluateDegreeScalar,evaluateDegreeBatch}=await import('../src/services/openScadDegreeMath.ts')
+const {evaluateDegreeScalar,evaluateDegreeBatch}=await import('../src/language/openScadDegreeMath.ts')
 for(const [mode,run] of [
  ['production-pairs',()=>{for(const call of calls)evaluateDegreeScalar(call.function as 'sin'|'cos',call.args)}],
  ['adapter-batch',()=>evaluateDegreeBatch(calls as {function:'sin'|'cos';args:number[]}[])],

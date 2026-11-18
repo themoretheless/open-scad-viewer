@@ -27,7 +27,7 @@
 //! full box (never `None`); a zero-length chord (pole-like segment) skips the
 //! clip in that direction and also returns the current box unchanged.
 use super::{next_down, next_up};
-use crate::foundation::guards::{Budget, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_point};
 use crate::{Result, check, curve::Curve};
 
 /// Hard bound on alternating clip rounds inside one `clip_pair` call; the

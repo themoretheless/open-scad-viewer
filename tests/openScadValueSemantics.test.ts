@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TT, type RangeValue, type Value } from '../src/services/openscadCompiler'
+import { TT, type RangeValue, type Value } from '../src/language/openscadCompiler'
 import {
   formatOpenScadValue,
   materializeOpenScadRange,
@@ -8,7 +8,7 @@ import {
   openScadTruthy,
   openScadUnary,
   type OpenScadValueSemanticsContext,
-} from '../src/services/openScadValueSemantics'
+} from '../src/language/semantic/openScadValueSemantics'
 
 function harness() {
   const warnings: string[] = []
@@ -31,10 +31,42 @@ describe('shared OpenSCAD 2021.01 value semantics', () => {
     expect(binary(TT.Minus, [5, 7], [1, 2, 99]).value).toEqual([4, 5])
     expect(binary(TT.Star, [1, 2], [3, 4]).value).toBe(11)
     expect(binary(TT.Star, 2, [3, 4]).value).toEqual([6, 8])
-    expect(binary(TT.Star, [[1, 2], [3, 4]], [5, 6]).value).toEqual([17, 39])
-    expect(binary(TT.Star, [5, 6], [[1, 2], [3, 4]]).value).toEqual([23, 34])
-    expect(binary(TT.Star, [[1, 2], [3, 4]], [[5, 6], [7, 8]]).value)
-      .toEqual([[19, 22], [43, 50]])
+    expect(
+      binary(
+        TT.Star,
+        [
+          [1, 2],
+          [3, 4],
+        ],
+        [5, 6],
+      ).value,
+    ).toEqual([17, 39])
+    expect(
+      binary(
+        TT.Star,
+        [5, 6],
+        [
+          [1, 2],
+          [3, 4],
+        ],
+      ).value,
+    ).toEqual([23, 34])
+    expect(
+      binary(
+        TT.Star,
+        [
+          [1, 2],
+          [3, 4],
+        ],
+        [
+          [5, 6],
+          [7, 8],
+        ],
+      ).value,
+    ).toEqual([
+      [19, 22],
+      [43, 50],
+    ])
     expect(binary(TT.Slash, [6, 8], 2).value).toEqual([3, 4])
     expect(binary(TT.Slash, 12, [3, 4]).value).toEqual([4, 3])
     expect(openScadUnary(TT.Minus, [1, 2], harness().context)).toEqual([-1, -2])
@@ -70,7 +102,10 @@ describe('shared OpenSCAD 2021.01 value semantics', () => {
 
   it('compares ranges by begin, step and represented item count', () => {
     const range = (start: number, step: number, end: number): RangeValue => ({
-      kind: 'range-value', start, step, end,
+      kind: 'range-value',
+      start,
+      step,
+      end,
     })
 
     expect(binary(TT.EqEq, range(0, 1, 2), range(0, 1, 2.5)).value).toBe(true)

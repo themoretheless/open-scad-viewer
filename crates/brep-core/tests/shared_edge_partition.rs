@@ -1,7 +1,4 @@
-use brep_core::{
-    ChangeKind, Model,
-    feature_ops::edge_partition::{self, Limits},
-};
+use brep_core::{ChangeKind, Model, feature_ops::edge_partition::{self, Limits}};
 fn cube() -> Model {
     brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap()
 }

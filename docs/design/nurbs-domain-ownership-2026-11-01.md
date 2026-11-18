@@ -57,3 +57,83 @@ r69: Jordan nesting forest принадлежит существующему tri
 compound normal-offset regions — `offsets::surface_offset::contact_curve`.
 Новые public roots/пункты каталога не добавлены (242/200). Canonical coedges
 не меняют исходные UV definitions; world lift вычисления и replay остаются Rust.
+
+NURBS-0241: `editing::exact_projective` и его закрытый `proof` принадлежат
+существующему разделу `editing` (зарегистрированному корневому владельцу
+`editing` в `nurbs-api-domains.json`). Нового корневого alias нет. Здесь
+находятся ограниченная точная матричная арифметика, общая проективная калибровка
+всей контрольной сетки и проверка сохранения исходного базиса; topology/BRep
+полномочия модулю не назначены.
+
+NURBS-0242: `editing::exact_derivative` и закрытые `extraction`/`proof`
+принадлежат существующему владельцу `editing`. Это построение новой геометрии
+поля производной на исходных интервалах, а не изменение точечных differential
+queries. Старый API дифференциалов и topology-полномочия не изменяются.
+
+NURBS-0243: `editing::exact_surface_derivative` и его закрытые polynomial,
+extraction/storage принадлежат зарегистрированному владельцу `editing`.
+Строятся новые поверхности векторных полей частных производных на всех
+исходных UV-ячейках; API точечных differential queries и BRep не меняется.
+
+NURBS-0243 admission: закрытый `editing::exact_surface_derivative::content`
+принадлежит тому же `editing`. Общий U-/V-множитель сокращается сразу во всех
+полиномиальных каналах сетки; это улучшение существующего API, не новый пункт.
+
+NURBS-0244: `editing::exact_surface_derivative::area_normal` принадлежит
+существующему владельцу `editing`. Строится ориентированное НЕ единичное поле
+`S_u × S_v` на всех исходных UV-ячейках; направления наружу тела, единичная
+нормаль и сертификат регулярности этому геометрическому API не назначаются.
+
+NURBS-0245: `editing::exact_surface_derivative::metric` принадлежит `editing`.
+Возвращает носитель трёх скалярных полей `[E,F,G]` на всех исходных UV-ячейках;
+это построение метрических коэффициентов, не сертификат регулярности/топологии
+и не замена точечным differential/variational queries.
+
+NURBS-0246: `editing::exact_surface_derivative::mixed_partial` и закрытый
+`mixed` принадлежат `editing`. Порядок1..3 согласован с существующими
+рациональными jet-ограничениями; точные поля вторых/третьих смешанных производных
+не подменяются точечными конечными разностями или сертификатом гладкости узлов.
+
+NURBS-0247: `editing::exact_derivative::curve_order` and its private `higher`
+helper remain under the existing editing owner. One original-source homogeneous
+recurrence builds order1..3 vector fields; no new root alias or numeric pointwise
+jet owner is introduced. Order1 retains the original public path and work trace.
+
+NURBS-0248: `editing::exact_derivative::squared_speed` and its private `speed`
+helper belong to the existing editing field-construction owner. The first
+coordinate carries the scalar squared speed; other coordinates are zero and
+not spatial positions. No new root, pointwise-analysis or topology owner.
+
+NURBS-0249 exact curve binormal field: `editing::exact_derivative::binormal` owns
+construction of the unnormalized Cprime cross Csecond field in native editing.
+The private `binormal` module forms the target directly from original homogeneous
+polynomials. Extraction, storage and proof stay in their existing owners.
+Native credit is backed by exact identities and complete regression target coverage; no regularity or curvature certificate is issued by this vector-field API.
+
+NURBS-0250 exact squared curvature: `editing::exact_derivative::squared_curvature`
+and private `curvature` remain under editing field construction. This constructs
+a scalar field, while pointwise curve analysis keeps its existing owner.
+Original source regularity must be proved before any cancellation; output
+identity alone must never extend curvature through a stationary source point.
+
+NURBS-0251 bounded binary storage of differential fields belongs to
+`editing::bounded_differential`, nested under the already registered editing
+owner (no new compatibility root). Original source targets remain owned by
+`editing::exact_derivative`; shared access is crate-private and preserves the
+exact public APIs and work traces. Storage proposals carry no authority until
+fresh full-span residual bounds against actual stored bits pass. This family has native credit after full current-source default/no-codec
+regression and independent continuous error verification.
+
+NURBS-0252 bounded surface differential fields belong to
+`editing::bounded_surface_differential` under the registered editing owner.
+Original tensor targets, reductions and coefficient conversion remain with
+`exact_surface_derivative`; only crate-private access is shared. Flat storage
+proposals and outward scalar error rounding reuse the bounded curve owner.
+A surface-specific tensor residual proof must admit actual stored bits over
+every original UV cell; no per-row gauge or source certificate transfer.
+
+Pending torsion-field construction remains under editing: exact targets in
+`exact_derivative::torsion` and its private helper; bounded storage in
+`bounded_differential::torsion`. The public bounded Field enum is unchanged.
+Original nonzero binormal must be proved before quotient cancellation. This
+constructs a scalar field, not a sampled point-query or a unit Frenet frame.

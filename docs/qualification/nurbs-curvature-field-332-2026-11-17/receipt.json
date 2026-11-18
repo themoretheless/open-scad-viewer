@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0332",
+  "testedBase": "54150e37772229242d17c1947417e036610bd189",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "certified_planar_boundary_distance_contracts",
+    "--test",
+    "certified_planar_perimeter_contracts",
+    "--test",
+    "exact_planar_trim_projection_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Enclose point-to-trim distance over every projected rational boundary including holes, with a certified witness.",
+    "Closed rational world-plane contours, including holes. The witness proves an upper bound; ties may return any suitable sampled witness."
+  ],
+  "logSha256": "a95a8434cefbca91177ca9e41c915e27a7ab403ada9addd88ceae95e7076025c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "b44ca7b51b46928845b71eaacfa7a8040e08802d55275dc04c1e89b94347682b",
+    "crates/nurbs-core/src/analysis/planar_boundary_distance.rs": "0698f1a4bffd8aa3b5a97bd901815b04604bdfbc1e3a54393ac6943c6410a6cb",
+    "crates/nurbs-foundation/src/distance/subdivision.rs": "6da74f47f3ef7e4bb8a541ac0bb58d5bef06bd8169c6016c6f97520ddd4c6b4a",
+    "crates/nurbs-core/tests/certified_planar_boundary_distance_contracts.rs": "0fe02916f637d5348ac4614b99ac4ed1be814ca6ee2d461d69c4eed47999eead"
+  }
+}

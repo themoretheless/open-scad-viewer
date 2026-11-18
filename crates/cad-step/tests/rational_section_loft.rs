@@ -80,6 +80,19 @@ fn invalid_holes_joins_correspondence_and_nonplanar_caps_refuse() {
     nonplanar[0][0].control_points[1][2] = 0.1;
     assert!(rational_section_loft(&[nonplanar, end.clone()]).is_err());
     let mut weight = end.clone();
+    weight[0][0].weights[1] *= 2.;
+    let weighted = rational_section_loft(&[start.clone(), weight.clone()]).unwrap();
+    // Homogeneous lofting supports independently weighted section bases.
+    let retained = weighted.faces[0].surface.iso(Axis::V, 1.).unwrap();
+    let [a, b] = retained.domain();
+    for fraction in [0., 0.25, 0.5, 0.75, 1.] {
+        let actual = retained.evaluate(a + (b - a) * fraction).unwrap().point;
+        let expected = weight[0][0].evaluate(0.25 * fraction).unwrap().point;
+        assert!(actual.iter().zip(expected).all(|(x, y)| (x - y).abs() < 1e-12));
+    }
+    assert!(weighted.validate().unwrap().topology_valid);
+    weight[0][0].weights[1] = 0.;
+    assert!(rational_section_loft(&[start.clone(), weight.clone()]).is_err());
     weight[0][0].weights[1] = -1.;
     assert!(rational_section_loft(&[start.clone(), weight]).is_err());
     assert!(rational_section_loft(&[start]).is_err());
@@ -200,8 +213,8 @@ fn bent_path_preserves_rational_hollow_section_and_nonparallel_caps() {
     .unwrap();
     assert!(approx.levels.last().unwrap().accepted);
     assert_eq!(body.validate().unwrap().boundary_edge_count, 0);
-    let (text, _, _) = brep_core::export_step_v5(&body).unwrap();
-    let (restored, _, _) = brep_core::import_step_v5(&text).unwrap();
+    let (text, _, _) = cad_step::export_step_v5(&body).unwrap();
+    let (restored, _, _) = cad_step::import_step_v5(&text).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(restored.faces.len(), body.faces.len());
     let caps = &body.faces[body.faces.len() - 2..];
@@ -460,9 +473,9 @@ fn closed_progressive_hollow_body_owns_periodic_seam_and_inner_shell() {
             2
         );
     }
-    let (text, _, _) = brep_core::export_step_v5(&body).unwrap();
+    let (text, _, _) = cad_step::export_step_v5(&body).unwrap();
     assert!(text.contains("BREP_WITH_VOIDS"));
-    let (restored, _, _) = brep_core::import_step_v5(&text).unwrap();
+    let (restored, _, _) = cad_step::import_step_v5(&text).unwrap();
     assert_eq!(restored.bodies[0].inner_shells.len(), 1);
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
 }
@@ -510,8 +523,7 @@ fn authored_frames_keep_hollow_body_manifold_caps() {
     let normal=constant_vector_law([1.,0.,0.]).unwrap();
     let axes=constant_vector_law([1.;3]).unwrap();
     let center=constant_vector_law([0.;3]).unwrap();
-    let (model,evidence)=brep_core::progressive_authored_profile_body(&circles(0.,1.),
-        &path,&scale,&twist,&axis,&normal,&axes,&center,Options {
+    let (model,evidence)=brep_core::progressive_authored_profile_body(&circles(0.,1.), nurbs_core::progressive_sweep::AuthoredSweepLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, axis_scale: &axes, center: &center }, Options {
         normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
         spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.005,
     }).unwrap();
@@ -552,8 +564,7 @@ fn common_contact_anchor_retains_rational_outer_and_hole_body() {
     let axes=constant_vector_law([1.;3]).unwrap();
     let center=constant_vector_law([0.;3]).unwrap();
     let loops=vec![vec![profiles[0].clone()],vec![profiles[1].clone()]];
-    let (public,evidence)=brep_core::progressive_guided_profile_body(&loops,&path,&scale,&twist,
-        &rail,Some((0,0.)),&axes,&center,Options {
+    let (public,evidence)=brep_core::progressive_guided_profile_body(&loops, nurbs_core::progressive_sweep::ContactSweepLaws { path: &path, scale: &scale, twist: &twist, guide: &rail, axis_scale: &axes, center: &center }, Some((0,0.)), Options {
         normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
         spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.001,
     }).unwrap();
@@ -568,8 +579,8 @@ fn common_contact_anchor_retains_rational_outer_and_hole_body() {
     assert_eq!(model.validate().unwrap().boundary_edge_count,0);
     assert_eq!(model.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(model.shells[0].closed);
-    let (step,_,_)=brep_core::export_step_v5(&model).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&model).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert_eq!(restored.faces.len(),model.faces.len());
@@ -605,8 +616,8 @@ fn fixed_original_transport_bound_reaches_hollow_brep_and_step_without_global_pr
     assert!(report.error_certificate_cells<=10000);
     assert_eq!(body.validate().unwrap().boundary_edge_count,0);
     assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&body).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,
@@ -628,8 +639,8 @@ fn fixed_normal_original_transport_bound_reaches_hollow_brep_and_step_without_gl
     assert!(report.error_certificate_cells<=10000);
     assert_eq!(body.validate().unwrap().boundary_edge_count,0);
     assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&body).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,
@@ -655,8 +666,8 @@ fn frenet_curved_hollow_body_retains_original_error_and_native_step_topology(){
     assert!(report.error_certificate_cells<=10000);
     assert_eq!(body.validate().unwrap().boundary_edge_count,0);
     assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&body).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(brep_core::progressive_profile_body(&profiles,&path,&scale,&twist,

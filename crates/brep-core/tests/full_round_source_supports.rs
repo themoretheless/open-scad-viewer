@@ -1,7 +1,4 @@
-use brep_core::{
-    feature_ops::full_round_curved::{build, source_supports},
-    Model,
-};
+use brep_core::{feature_ops::full_round_curved::{build, source_supports}, Model};
 use nurbs_core::curve::Curve;
 fn source(weight: f64) -> Model {
     let c = |p: [[f64; 2]; 3]| Curve {

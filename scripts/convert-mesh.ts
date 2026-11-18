@@ -18,8 +18,8 @@ import {
   MESH_IMPORT_FORMATS,
   type MeshExportFormat,
   type MeshImportFormat,
-} from '../src/services/meshConvert'
-import { MeshImportError } from '../src/services/meshImport'
+} from '../src/exchange/meshConvert'
+import { MeshImportError } from '../src/exchange/meshImport'
 
 interface Options {
   input: string

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { QUALITY_TARGETS } from '../src/core/qualityTargets'
 import type { GeometryScene } from '../src/core/scene'
 import { geometrySceneTransferables } from '../src/core/scene'
-import { buildSceneAabbIndex, querySceneAabbIndex } from '../src/services/sceneAabbIndex'
+import { buildSceneAabbIndex, querySceneAabbIndex } from '../src/render/sceneAabbIndex'
 
 describe('deterministic scale targets', () => {
   it('indexes and queries 1,000 scene bodies with a bounded binary hierarchy', () => {
@@ -26,13 +26,15 @@ describe('deterministic scale targets', () => {
     const scene: GeometryScene = {
       version: 1,
       assets: [{ version: 1, id: 'asset:scale-target', vertices, indices }],
-      entities: [{
-        id: 'entity:scale-target',
-        geometryAssetId: 'asset:scale-target',
-        color: [1, 1, 1, 1],
-        transform,
-        inspection: { state: 'absent', version: 1 },
-      }],
+      entities: [
+        {
+          id: 'entity:scale-target',
+          geometryAssetId: 'asset:scale-target',
+          color: [1, 1, 1, 1],
+          transform,
+          inspection: { state: 'absent', version: 1 },
+        },
+      ],
     }
 
     const transferables = geometrySceneTransferables(scene)

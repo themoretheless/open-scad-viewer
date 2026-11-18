@@ -2,12 +2,7 @@
 //! sections. Final B-rep correspondence/regularity/admission remain mandatory.
 use super::{circle_sweep_repair, sweep_section_projection};
 use crate::{Error, Result, curve::Curve, numerics::error_upper};
-#[derive(Clone, Copy)]
-pub struct Budget {
-    pub quantum: f64,
-    pub tolerance: f64,
-    pub max_work: Option<f64>,
-}
+pub use sweep_section_projection::Budget;
 pub struct CapCorrection {
     pub budget: Budget,
     pub authored_frame: bool,
@@ -55,16 +50,22 @@ pub fn correct_selected(
     let projected = if let Some(c) = cap {
         let b = c.budget;
         let r = if let Some(mask) = endpoints {
-            sweep_section_projection::project_miter_caps_selected(retained, points, closed, c.authored_frame, axis, b.quantum, b.tolerance, b.max_work, mask)?
+            sweep_section_projection::project_miter_caps_selected(
+                retained,
+                points,
+                closed,
+                c.authored_frame,
+                axis,
+                b,
+                mask,
+            )?
         } else { sweep_section_projection::project_miter_caps(
             retained,
             points,
             closed,
             c.authored_frame,
             axis,
-            b.quantum,
-            b.tolerance,
-            b.max_work,
+            b,
         )? };
         if r.sections.is_none() || r.wall_displacement_upper.is_none() {
             return Err(invalid(format!(
@@ -189,8 +190,19 @@ mod tests {
         let points = [[0.,0.,0.],[0.,0.,10.]];
         let circle = circle_sweep_repair::repair(&input,2_f64.powi(-40),1e-9,Some(1000000.)).unwrap();
         let circle_sections = circle.sections.as_ref().unwrap();
-        let cap = sweep_section_projection::project_miter_caps_selected(circle_sections,&points,false,false,None,
-            2_f64.powi(-40),0.02,Some(1000000.),[false,true]).unwrap();
+        let cap = sweep_section_projection::project_miter_caps_selected(
+            circle_sections,
+            &points,
+            false,
+            false,
+            None,
+            sweep_section_projection::Budget {
+                quantum: 2_f64.powi(-40),
+                tolerance: 0.02,
+                max_work: Some(1000000.),
+            },
+            [false,true],
+        ).unwrap();
         let combined = correct_selected(&input,&points,false,Some(budget(1e-9)),
             Some(CapCorrection {budget:budget(0.02),authored_frame:false}),None,Some([false,true])).unwrap().unwrap();
         assert_eq!(combined.sections,cap.sections);

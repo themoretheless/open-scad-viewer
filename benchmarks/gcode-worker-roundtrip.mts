@@ -3,9 +3,9 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {Worker} from 'node:worker_threads'
-import {GcodePreviewWorker,type GcodeWorkerPort} from '../src/services/gcodePreviewWorker'
-import {executeGcodePreviewAsync} from '../src/services/gcodePreviewRuntime'
-import type {GcodePreviewRequest,GcodePreviewDocument} from '../src/services/gcodePreviewProtocol'
+import {GcodePreviewWorker,type GcodeWorkerPort} from '../src/fabrication/gcodePreviewWorker'
+import {executeGcodePreviewAsync} from '../src/fabrication/gcodePreviewRuntime'
+import type {GcodePreviewRequest,GcodePreviewDocument} from '../src/fabrication/gcodePreviewProtocol'
 import identity from '../src/generated/geometry-kernels/identity'
 
 const artifact=readFileSync('public/wasm/geometry-kernel.wasm')

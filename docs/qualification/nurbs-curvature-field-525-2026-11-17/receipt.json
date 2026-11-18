@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0525",
+  "testedBase": "a9ffe2ab1be464c23801548c6313f9eb70e7615f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 107,
+  "scope": [
+    "Elevate clamped transverse axes in exact homogeneous arithmetic and assemble the common knot basis.",
+    "Elevate lower transverse degrees on the homogeneous tensor, store one surface gauge, and refine the knot union before assembly."
+  ],
+  "logSha256": "f2deb02cab3b9026dc32922b538e8ba6fff454b273bd211da9ea1775831739c6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "20901baa10cda0a8a5523dccaf3c4026b221ddf7fa1087fa2de76ba3b3b7358f",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "57b512694a7f4652423702c87a39b31752e8382c70909b2a3b16bf18ddb2a6eb"
+  }
+}

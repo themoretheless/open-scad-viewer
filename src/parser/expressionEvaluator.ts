@@ -1,12 +1,12 @@
-import type { CadKernelHandle } from '../services/cadKernelOps'
+import type { CadKernelHandle } from '../kernel/cadKernelOps'
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import type { SceneEntityId, SourceOperationId } from '../core/mesh'
-import { AbortedError, OpenSCADParseError, positionKernelError } from '../services/openscadErrors'
+import { AbortedError, OpenSCADParseError, positionKernelError } from '../language/openscadErrors'
 import {
   createDeferredOpenScadBuiltinArguments,
   evaluateOpenScadBuiltinFunction,
   type OpenScadBuiltinValue,
-} from '../services/openScadBuiltinFunctions'
+} from '../language/openScadBuiltinFunctions'
 import {
   TT,
   type CallNode,
@@ -14,14 +14,14 @@ import {
   type ExpressionArgument,
   type FunctionValue,
   type Value,
-} from '../services/openscadCompiler'
+} from '../language/openscadCompiler'
 import {
   formatOpenScadValue,
   openScadIndex,
   openScadMember,
   openScadTruthy,
   openScadUnary,
-} from '../services/openScadValueSemantics'
+} from '../language/semantic/openScadValueSemantics'
 import {
   MAX_EVAL_OPS,
   MAX_EVALUATED_VALUE_UNITS,
@@ -37,22 +37,11 @@ import {
   registerArrayValue,
   stableOverlayContext,
   type StableFunctionValue,
-} from '../services/openScadStableExpressionEval'
-import {
-  queryPreparedOpenScadDxfCross,
-  queryPreparedOpenScadDxfDimension,
-} from '../services/openScadImport'
-import type { RGBA } from '../services/openscadColors'
-import {
-  StableBuiltinValueError,
-  type EvalContext,
-  type Shape3D,
-} from './types'
-import {
-  callExpressionArguments,
-  finiteNumber,
-  truthy,
-} from './astDiscovery'
+} from '../language/openScadStableExpressionEval'
+import { queryPreparedOpenScadDxfCross, queryPreparedOpenScadDxfDimension } from '../exchange/openScadImport'
+import type { RGBA } from '../language/openscadColors'
+import { StableBuiltinValueError, type EvalContext, type Shape3D } from './types'
+import { callExpressionArguments, finiteNumber, truthy } from './astDiscovery'
 
 export function currentEntityId(ctx: EvalContext): SceneEntityId {
   return boundedSceneEntityId(ctx.instancePath)
@@ -98,10 +87,23 @@ export function kernelCall<T>(ctx: EvalContext, p: number, run: () => T): T {
   }
 }
 
+export async function kernelCallAsync<T>(ctx: EvalContext, p: number, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    if (error instanceof OpenSCADParseError || error instanceof AbortedError) throw error
+    throw positionKernelError(ctx.source, p, error)
+  }
+}
+
 export function registerStringValue(value: string, ctx: EvalContext, p: number, limitLabel = 'Evaluation'): string {
   ctx.valueBudget.used += Math.max(1, value.length)
   if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {
-    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`)
+    evaluationError(
+      ctx,
+      p,
+      `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`,
+    )
   }
   return value
 }
@@ -116,12 +118,13 @@ export function resolveStableVariable(name: string, ctx: EvalContext): { found: 
     const local = scope.resolveLocalVariable(
       name,
       visibleBefore,
-      (expression, site) => evalExpression(expression, {
-        ...ctx,
-        env: site.env,
-        stableScope: site.scope,
-        scopeVisibleBefore: site.visibleBefore,
-      }),
+      (expression, site) =>
+        evalExpression(expression, {
+          ...ctx,
+          env: site.env,
+          stableScope: site.scope,
+          scopeVisibleBefore: site.visibleBefore,
+        }),
       message => warn(ctx, message),
     )
     if (local.found) return local
@@ -153,7 +156,9 @@ export const {
   resolveStableVariable: (name, ctx) => resolveStableVariable(name, ctx),
   warn: (ctx, _position, message) => warn(ctx, message),
   scopeWarn: (ctx, _position, message) => warn(ctx, message),
-  echoWarn: (ctx, _position, message) => { ctx.warnings.push(message) },
+  echoWarn: (ctx, _position, message) => {
+    ctx.warnings.push(message)
+  },
   finiteNumber: (value, ctx, position, label) => finiteNumber(value, ctx, position, label),
 })
 
@@ -240,7 +245,8 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
   }
   const evaluate = (child: Expr) => evalExpression(child, ctx, depth + 1)
   switch (expr.kind) {
-    case 'literal': return expr.value
+    case 'literal':
+      return expr.value
     case 'identifier': {
       if (expr.name === 'PI') return Math.PI
       const resolved = isStableProfile(ctx)
@@ -269,8 +275,12 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
         const start = evaluate(expr.start)
         const end = evaluate(expr.end)
         const step = expr.step === undefined ? 1 : evaluate(expr.step)
-        if (typeof start !== 'number' || typeof step !== 'number' || typeof end !== 'number'
-          || ![start, step, end].every(Number.isFinite)) {
+        if (
+          typeof start !== 'number' ||
+          typeof step !== 'number' ||
+          typeof end !== 'number' ||
+          ![start, step, end].every(Number.isFinite)
+        ) {
           warn(ctx, 'Invalid range bounds produce undef')
           return undefined
         }
@@ -289,7 +299,8 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       const forward = step > 0
       for (let value = start; forward ? value <= end + 1e-10 : value >= end - 1e-10; value += step) {
         values.push(value)
-        if (values.length > MAX_RANGE_ITEMS) evaluationError(ctx, expr.p, `Range exceeds ${MAX_RANGE_ITEMS.toLocaleString()} items`)
+        if (values.length > MAX_RANGE_ITEMS)
+          evaluationError(ctx, expr.p, `Range exceeds ${MAX_RANGE_ITEMS.toLocaleString()} items`)
       }
       return registerArrayValue(values, ctx, expr.p)
     }
@@ -300,10 +311,12 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       const number = finiteNumber(value, ctx, expr.p, 'unary operand')
       return expr.op === TT.Minus ? -number : number
     }
-    case 'binary': return evalBinaryExpression(expr, ctx, depth)
-    case 'ternary': return (isStableProfile(ctx) ? openScadTruthy(evaluate(expr.test)) : truthy(evaluate(expr.test)))
-      ? evaluate(expr.yes)
-      : evaluate(expr.no)
+    case 'binary':
+      return evalBinaryExpression(expr, ctx, depth)
+    case 'ternary':
+      return (isStableProfile(ctx) ? openScadTruthy(evaluate(expr.test)) : truthy(evaluate(expr.test)))
+        ? evaluate(expr.yes)
+        : evaluate(expr.no)
     case 'index': {
       const value = evaluate(expr.value)
       if (isStableProfile(ctx)) {
@@ -311,7 +324,7 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       }
       const index = Math.trunc(finiteNumber(evaluate(expr.index), ctx, expr.p, 'index'))
       if (Array.isArray(value) || typeof value === 'string') return value[index] as Value
-      evaluationError(ctx, expr.p, 'Only vectors and strings can be indexed')
+      return evaluationError(ctx, expr.p, 'Only vectors and strings can be indexed')
     }
     case 'member': {
       const value = evaluate(expr.value)
@@ -320,7 +333,7 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
         const index = ({ x: 0, y: 1, z: 2 } as const)[expr.name as 'x' | 'y' | 'z']
         if (index !== undefined) return value[index]
       }
-      evaluationError(ctx, expr.p, `Value has no member ${expr.name}`)
+      return evaluationError(ctx, expr.p, `Value has no member ${expr.name}`)
     }
     case 'function': {
       const value: FunctionValue = {
@@ -335,7 +348,8 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       }
       return value
     }
-    case 'call': return evalFunctionCall(expr, ctx, depth)
+    case 'call':
+      return evalFunctionCall(expr, ctx, depth)
     case 'let': {
       if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, 'let expression is not supported')
       const env = evaluateSequentialBindings(expr.args, ctx, depth + 1)
@@ -364,15 +378,11 @@ export function compatibilityString(value: Value): string {
   return formatOpenScadValue(value)
 }
 
-export function evalDxfQueryBuiltin(
-  expr: Extract<Expr, { kind: 'call' }>,
-  ctx: EvalContext,
-  depth: number,
-): Value {
+export function evalDxfQueryBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, depth: number): Value {
   const name = expr.name as 'dxf_dim' | 'dxf_cross'
-  const supported = new Set(name === 'dxf_dim'
-    ? ['file', 'layer', 'origin', 'scale', 'name']
-    : ['file', 'layer', 'origin', 'scale'])
+  const supported = new Set(
+    name === 'dxf_dim' ? ['file', 'layer', 'origin', 'scale', 'name'] : ['file', 'layer', 'origin', 'scale'],
+  )
   const values = new Map<string, Value>()
   for (const argument of expr.args) {
     const value = evalExpression(argument.value, ctx, depth + 1)
@@ -394,26 +404,16 @@ export function evalDxfQueryBuiltin(
   const rawScale = values.get('scale')
   const common = {
     layer: compatibilityString(values.get('layer')),
-    ...(values.has('origin')
-      ? { origin: rawOrigin as unknown as readonly [number, number] }
-      : {}),
+    ...(values.has('origin') ? { origin: rawOrigin as unknown as readonly [number, number] } : {}),
     ...(typeof rawScale === 'number' ? { scale: rawScale } : {}),
   }
-  const result = name === 'dxf_dim'
-    ? queryPreparedOpenScadDxfDimension(
-        ctx.project,
-        ctx.importAssets,
-        sourcePath,
-        specifier,
-        { ...common, name: compatibilityString(values.get('name')) },
-      )
-    : queryPreparedOpenScadDxfCross(
-        ctx.project,
-        ctx.importAssets,
-        sourcePath,
-        specifier,
-        common,
-      )
+  const result =
+    name === 'dxf_dim'
+      ? queryPreparedOpenScadDxfDimension(ctx.project, ctx.importAssets, sourcePath, specifier, {
+          ...common,
+          name: compatibilityString(values.get('name')),
+        })
+      : queryPreparedOpenScadDxfCross(ctx.project, ctx.importAssets, sourcePath, specifier, common)
   for (const diagnostic of result.diagnostics) warn(ctx, diagnostic.message)
   if (result.value === undefined || typeof result.value === 'number') return result.value
   return [result.value[0], result.value[1]]
@@ -434,8 +434,7 @@ export function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalCont
   const evaluateArgument = (arg: ExpressionArgument): Value => {
     // OpenSCAD deliberately permits probing an undeclared bare name with
     // is_undef() without emitting the ordinary unknown-variable warning.
-    if (isStableProfile(ctx) && name === 'is_undef' && expr.args.length === 1
-      && arg.value.kind === 'identifier') {
+    if (isStableProfile(ctx) && name === 'is_undef' && expr.args.length === 1 && arg.value.kind === 'identifier') {
       if (arg.value.name === 'PI') return Math.PI
       const resolved = resolveStableVariable(arg.value.name, ctx)
       return resolved.found ? resolved.value : undefined
@@ -443,39 +442,35 @@ export function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalCont
     return evalExpression(arg.value, ctx, depth + 1)
   }
   const values = isStableProfile(ctx)
-    ? createDeferredOpenScadBuiltinArguments(
-        expr.args.length,
-        index => evaluateArgument(expr.args[index]),
-      )
+    ? createDeferredOpenScadBuiltinArguments(expr.args.length, index => {
+        const arg = expr.args[index]
+        return arg ? evaluateArgument(arg) : undefined
+      })
     : expr.args.map(evaluateArgument)
   let result: ReturnType<typeof evaluateOpenScadBuiltinFunction>
   try {
-    result = evaluateOpenScadBuiltinFunction(
-      name,
-      values as OpenScadBuiltinValue[],
-      {
-        error: message => {
-          if (isStableProfile(ctx)) throw new StableBuiltinValueError(message)
-          return evaluationError(ctx, expr.p, message)
-        },
-        warning: message => warn(ctx, message),
-        registerArray: (items, label) => {
-          if (items.length > MAX_VALUE_ELEMENTS) {
-            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
-          }
-          return registerArrayValue([...items] as Value[], ctx, expr.p, label)
-        },
-        registerString: (value, label) => {
-          if (value.length > MAX_VALUE_ELEMENTS) {
-            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
-          }
-          return registerStringValue(value, ctx, expr.p, label)
-        },
-        random: Math.random,
-        parentModule: moduleDepth => ctx.moduleStack.at(-1 - moduleDepth),
-        isFunction: value => isFunctionValue(value as Value),
+    result = evaluateOpenScadBuiltinFunction(name, values as OpenScadBuiltinValue[], {
+      error: message => {
+        if (isStableProfile(ctx)) throw new StableBuiltinValueError(message)
+        return evaluationError(ctx, expr.p, message)
       },
-    )
+      warning: message => warn(ctx, message),
+      registerArray: (items, label) => {
+        if (items.length > MAX_VALUE_ELEMENTS) {
+          evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
+        }
+        return registerArrayValue([...items] as Value[], ctx, expr.p, label)
+      },
+      registerString: (value, label) => {
+        if (value.length > MAX_VALUE_ELEMENTS) {
+          evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
+        }
+        return registerStringValue(value, ctx, expr.p, label)
+      },
+      random: Math.random,
+      parentModule: moduleDepth => ctx.moduleStack.at(-1 - moduleDepth),
+      isFunction: value => isFunctionValue(value as Value),
+    })
   } catch (error) {
     if (!(error instanceof StableBuiltinValueError)) throw error
     warn(ctx, error.message)

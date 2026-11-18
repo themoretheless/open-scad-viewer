@@ -1,11 +1,11 @@
-import { computed, nextTick, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, nextTick, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import type { SectionAxis } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
-import { clamp } from '../services/math3d'
-import { inspectMesh } from '../services/meshInspection'
-import type { PickHit } from '../services/rendererContracts'
-import type { SceneController, SceneState } from '../services/sceneController'
-import type { WebGPURenderer } from '../services/webgpuRenderer'
+import { clamp } from '../kernel/geometry/math3d'
+import { inspectMesh } from '../kernel/meshInspection'
+import type { PickHit } from '../render/rendererContracts'
+import type { SceneController, SceneState } from '../app/sceneController'
+import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseSectionPlaneControlsOptions {
   gpuOk: Ref<boolean>
@@ -19,16 +19,8 @@ export interface UseSectionPlaneControlsOptions {
 }
 
 export function useSectionPlaneControls(options: UseSectionPlaneControlsOptions) {
-  const {
-    gpuOk,
-    sceneMeshes,
-    meshVisibility,
-    isolated,
-    selectedMesh,
-    sceneState,
-    sceneController,
-    getRenderer,
-  } = options
+  const { gpuOk, sceneMeshes, meshVisibility, isolated, selectedMesh, sceneState, sceneController, getRenderer } =
+    options
 
   const sectionEnabled = computed(() => sceneState.value.section.enabled)
   const sectionAxis = computed(() => sceneState.value.section.axis)
@@ -57,8 +49,8 @@ export function useSectionPlaneControls(options: UseSectionPlaneControlsOptions)
     return { min, max, step: Math.max(0.001, span / 500) }
   })
 
-  const sectionAvailable = computed(() =>
-    gpuOk.value && sceneMeshes.value.some((_, index) => isSectionMeshVisible(index)),
+  const sectionAvailable = computed(
+    () => gpuOk.value && sceneMeshes.value.some((_, index) => isSectionMeshVisible(index)),
   )
 
   function applySection() {

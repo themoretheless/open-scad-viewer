@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "nativeTests": 26,
+  "bridgeTests": 11,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "ff9f197190d37861e051d6d77e1957a4c90e25e230b6f0fe97221159ada601a8",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/identity.rs": "e1dd0b8556af286433e0756fc278b38e19b10b10b6d3a95e34e861618da319bb",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/edge.rs": "7090901a8bd354562ec749805837c66c566320d5c4446e91939f0bb614125c21",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "a7a0d750247b512ed81fad9124ca85963efc3f7d12b25429f300a9cc95e5bda4",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "d45b2d7b7d27d8332e7375ff8cf2384d7b87d3a17aee6425df162bb77ef4032d",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "4b0aac55347afa2d42a836b8b358c0c5d3e7a04c7e9e1d70766c41ec9da66dc3"
+  },
+  "scope": "Original clamped constant-weight multi-span graph charts via exact Greville linear precision and original tensor B-spline quadric membership; natural UV, outer edges and original work ledger retained.",
+  "remaining": [
+    "Nonconstant multi-span rational clocks",
+    "Coupled weights",
+    "General freeform and all branches",
+    "Trim/Body",
+    "WASM runtime for this multi-span extension"
+  ],
+  "sharedCheckoutBuild": "Unrelated in-progress curvature API imports fail; tests passed on isolated HEAD plus exact owned patch."
+}

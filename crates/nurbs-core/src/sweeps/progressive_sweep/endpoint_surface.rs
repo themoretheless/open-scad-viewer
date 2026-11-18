@@ -130,9 +130,7 @@ impl MultiSweep<'_> {
             None
         };
         let result = frame::control_values_with_fit(
-            sweep.path,
-            sweep.scale,
-            sweep.affine_laws,
+            frame::ControlLaws { path: sweep.path, scale: sweep.scale, affine: sweep.affine_laws },
             &coordinates,
             t,
             max_cells - out.cells,

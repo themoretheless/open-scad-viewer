@@ -205,10 +205,9 @@ pub fn interpolate_cartesian_with_control_tangents(
     guides: &[Curve],
     guide_parameters: &[f64],
     controls: &[Vec<[f64; 3]>; 2],
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: crate::construct::surfaces::gordon::CurveAudit,
 ) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    let crate::construct::surfaces::gordon::CurveAudit { tolerance, max_cells, .. } = audit;
     let (authored, normalized) = authored_control_tangent_fields(sections, parameters, controls)?;
     let (surface, curves, _) = interpolate_cartesian_with_tangents(
         sections,
@@ -216,9 +215,7 @@ pub fn interpolate_cartesian_with_control_tangents(
         guides,
         guide_parameters,
         &normalized,
-        tolerance,
-        max_cells,
-        max_map_evaluations,
+        audit,
     )?;
     let mut certificates = Vec::new();
     for end in 0..2 {
@@ -250,9 +247,7 @@ pub fn interpolate_cartesian(
     parameters: &[f64],
     guides: &[Curve],
     guide_parameters: &[f64],
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: crate::construct::surfaces::gordon::CurveAudit,
 ) -> Result<(Surface, Vec<value_codec::Value>)> {
     let (surface, curves, _) = interpolate_cartesian_mode(
         sections,
@@ -260,9 +255,7 @@ pub fn interpolate_cartesian(
         guides,
         guide_parameters,
         None,
-        tolerance,
-        max_cells,
-        max_map_evaluations,
+        audit,
     )?;
     Ok((surface, curves))
 }
@@ -273,9 +266,7 @@ pub fn interpolate_cartesian_with_tangents(
     guides: &[Curve],
     guide_parameters: &[f64],
     tangents: &[Curve; 2],
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: crate::construct::surfaces::gordon::CurveAudit,
 ) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
     interpolate_cartesian_mode(
         sections,
@@ -283,9 +274,7 @@ pub fn interpolate_cartesian_with_tangents(
         guides,
         guide_parameters,
         Some(tangents),
-        tolerance,
-        max_cells,
-        max_map_evaluations,
+        audit,
     )
 }
 fn interpolate_cartesian_mode(
@@ -294,9 +283,7 @@ fn interpolate_cartesian_mode(
     guides: &[Curve],
     guide_parameters: &[f64],
     tangents: Option<&[Curve; 2]>,
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: crate::construct::surfaces::gordon::CurveAudit,
 ) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
     check(
         (2..=86).contains(&sections.len()),
@@ -371,9 +358,7 @@ fn interpolate_cartesian_mode(
             &stations,
             parameters,
             targets,
-            tolerance,
-            max_cells,
-            max_map_evaluations,
+            audit,
         )
     } else {
         let (surface, curves) = crate::gordon::patch_cartesian(
@@ -381,9 +366,7 @@ fn interpolate_cartesian_mode(
             &network,
             &stations,
             parameters,
-            tolerance,
-            max_cells,
-            max_map_evaluations,
+            audit,
         )?;
         Ok((surface, curves, Vec::new()))
     }
@@ -547,9 +530,11 @@ mod cartesian_tests {
             &[0., 1.],
             &[guide.clone()],
             &[0.5],
-            1e-6,
-            50000,
-            200000,
+            crate::construct::surfaces::gordon::CurveAudit {
+                tolerance: 1e-6,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         assert_eq!(certificates.len(), 5);
@@ -562,7 +547,17 @@ mod cartesian_tests {
             }
         }
         assert!(
-            interpolate_cartesian(&sections, &[0., 1.], &[guide], &[0.5], 1e-6, 50000, 1).is_err()
+            interpolate_cartesian(
+                &sections,
+                &[0., 1.],
+                &[guide],
+                &[0.5],
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 1,
+                },
+            ).is_err()
         );
     }
 }
@@ -592,9 +587,11 @@ mod clamped_cartesian_tests {
             &[guide.clone()],
             &[0.5],
             &targets,
-            1e-6,
-            50000,
-            200000,
+            crate::construct::surfaces::gordon::CurveAudit {
+                tolerance: 1e-6,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         assert_eq!(curves.len(), 5);
@@ -650,9 +647,11 @@ mod authored_cartesian_tests {
             &[guide.clone()],
             &[0.],
             &controls,
-            1e-6,
-            50000,
-            200000,
+            crate::construct::surfaces::gordon::CurveAudit {
+                tolerance: 1e-6,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         assert!(
@@ -684,9 +683,11 @@ mod authored_cartesian_tests {
                 &[guide],
                 &[0.],
                 &controls,
-                1e-6,
-                50000,
-                1
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 1,
+                },
             )
             .is_err()
         );
@@ -705,10 +706,12 @@ mod authored_cartesian_tests {
             &[2., 7.],
             &[guide],
             &controls,
-            1e-6,
-            1e-8,
-            50000,
-            200000,
+            crate::loft_alignment::AlignmentLimits {
+                budget: 1e-6,
+                parameter_tolerance: 1e-8,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         let mut conflicting = controls.clone();
@@ -721,9 +724,11 @@ mod authored_cartesian_tests {
                 &[forward],
                 &[0.5],
                 &conflicting,
-                1e-6,
-                50000,
-                200000
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 200000,
+                },
             )
             .is_err()
         );

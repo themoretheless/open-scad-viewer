@@ -1,4 +1,4 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { describe, expect, it } from 'vitest'
 import {
   MeshHistory,
@@ -17,11 +17,11 @@ import {
   subdivideFaces,
   symmetrizeMesh,
   transformMesh,
-} from '../src/services/meshEditing'
-import { isWorkspaceMode, WORKSPACE_MODES } from '../src/services/workspaceModes'
-import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/services/solidBridge'
-import { emptyDirectDocument } from '../src/services/directModeling'
-import { inspectPolygonMesh } from '../src/services/geometry/polygon'
+} from '../src/kernel/meshEditing'
+import { isWorkspaceMode, WORKSPACE_MODES } from '../src/app/workspaceModes'
+import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/kernel/solidBridge'
+import { emptyDirectDocument } from '../src/app/directModeling'
+import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 
 describe('workspace modes', () => {
   it('exposes Solid · Mesh, source being a drawer rather than a workspace', () => {
@@ -80,8 +80,12 @@ describe('mesh editing', () => {
     const b = transformMesh(createBoxMesh([10, 10, 10]), [5, 0, 0], 0, 1)
     const beforeA = stringifyMeshJson(a)
     const beforeB = stringifyMeshJson(b)
-    for (const [operation, volume] of [['union', 1500], ['intersection', 500], ['difference', 500]] as const) {
-      const {mesh, report} = booleanMeshObjectsDetailed(a, b, operation)
+    for (const [operation, volume] of [
+      ['union', 1500],
+      ['intersection', 500],
+      ['difference', 500],
+    ] as const) {
+      const { mesh, report } = booleanMeshObjectsDetailed(a, b, operation)
       expect(report.operation).toBe(operation)
       expect(report.operandRepaired).toEqual([false, false])
       expect(report.isManifold).toBe(true)
@@ -99,7 +103,7 @@ describe('mesh editing', () => {
       indices: Uint32Array.from([0, 2, 1, 0, 1, 3, 1, 2, 3]),
     }
     const box = createBoxMesh([4, 4, 4])
-    const {report} = booleanMeshObjectsDetailed(openTetra, box, 'union')
+    const { report } = booleanMeshObjectsDetailed(openTetra, box, 'union')
     expect(report.operandRepaired).toEqual([true, false])
     expect(report.isManifold).toBe(true)
   })

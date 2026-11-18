@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0544",
+  "testedBase": "ee9fad77f4f4cb5054272920abd7354d9658afbe",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 145,
+  "scope": [
+    "Classify native UV points against periodic copies of a closed polygon lift using exact edge predicates.",
+    "Enumerate exact query translates within the lifted bounds and classify with rational boundary and even-odd crossing tests."
+  ],
+  "logSha256": "23a0bad12e3a8b7d963c4ea44021be4d52179733e45b4065273d376e48862255",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6a58a0a25deedd7b2edd378f49cf683ae3c761603ea906542f64295407d5dce7",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "8c2005e95b005568e1a76fc8e0442039c775061b7c24aa279ebaab8048dbf028"
+  }
+}

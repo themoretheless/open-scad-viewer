@@ -95,8 +95,9 @@ fn gear_bodies_tessellate_closed() {
 
 #[test]
 fn gears_take_part_in_booleans() {
-    // A bore drilled after the fact: the planar/ruled walls meet the
-    // cylinder through the exact and tolerant paths.
+    // A bore drilled after the fact: the core is fail-closed on the ruled
+    // tooth walls, and the certified drill family resolves it because the
+    // cylinder only pierces the planar caps.
     let spur = gear(&GearSpec {
         module: 2.,
         teeth: 20,
@@ -114,14 +115,14 @@ fn gears_take_part_in_booleans() {
         ],
     )
     .unwrap();
-    let bored = operations::boolean(&spur, &drill, "difference")
+    let bored = brep_intersect::cylinder_drill_boolean(&spur, &drill, "difference")
         .unwrap_or_else(|e| panic!("bore: {} {}", e.code, e.message));
     bored.validate().unwrap();
     let v = closed(&bored, "bored gear");
     let v_full = closed(&spur, "spur");
     assert!(v < v_full && v > 0.5 * v_full);
     // Two meshing spur gears with backlash: interleaved teeth, no material
-    // in common, one union of two separated bodies.
+    // in common.
     let mate = transform::affine(
         &gear(&GearSpec {
             module: 2.,
@@ -141,8 +142,12 @@ fn gears_take_part_in_booleans() {
         ],
     )
     .unwrap();
+    // The pair is a union of straight prisms on a common axis whose wall
+    // profiles are certified apart, so it keeps both bodies unchanged.
     let pair = operations::boolean(&spur, &mate, "union")
         .unwrap_or_else(|e| panic!("pair: {} {}", e.code, e.message));
-    assert_eq!(pair.bodies.len(), 2);
-    closed(&pair, "meshing pair");
+    pair.validate().unwrap();
+    let v_mate = closed(&mate, "mate");
+    let v_pair = closed(&pair, "meshing pair");
+    assert!((v_pair - v_full - v_mate).abs() < 1e-6 * v_pair, "{v_pair} vs {v_full} + {v_mate}");
 }

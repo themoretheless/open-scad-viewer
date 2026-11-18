@@ -88,20 +88,10 @@ fn sewn_contacts_have_whole_original_support_g2_curvature_and_global_embedding()
             }
         }
         assert_eq!(uses.len(), 2);
-        let proof = nurbs_core::surface_g2_pcurves::inspect_owned(
-            &model.edges[edge].curve,
-            [&uses[0].1, &uses[1].1],
-            [
+        let proof = nurbs_core::surface_g2_pcurves::inspect_owned(nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &model.edges[edge].curve, pcurves: [&uses[0].1, &uses[1].1], surfaces: [
                 &model.faces[uses[0].0].surface,
                 &model.faces[uses[1].0].surface,
-            ],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
-            100_000,
-            1_000_000,
-        )
+            ], reversed: [false; 2] }, nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 }, 100_000, 1_000_000)
         .unwrap();
         assert!(proof.report.positions.proven);
         assert_eq!(

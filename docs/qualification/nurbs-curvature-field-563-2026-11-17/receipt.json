@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0563",
+  "testedBase": "2807e663b4115ef8fee997dad983d0cc56cb73a3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 139,
+  "scope": [
+    "Locate every generated edge on the source contour, oriented segment, and local interval.",
+    "Verify seam-split intervals, holes, chunk parameter resets, and rejection of incomplete edge partitions."
+  ],
+  "logSha256": "bc5ccd19e6d19ba849dd596841a9f51e8a660832443c9e78465300e18b53a2fe",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "5fa0eeb2f4b3c178022a86751c64ea9fe73ad0fa5d70fe12a537cb1260bae03b",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "bdfb1db8c3733814e491e969e8365257dfef9966f93b4c85657044c916e80b3f"
+  }
+}

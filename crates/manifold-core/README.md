@@ -26,6 +26,12 @@ and slicers require this property.
   orientation unification via dual-graph BFS. It never drops faces to hide
   non-manifold edges or pinches; what it cannot fix is reported in
   `RepairReport.residual` (a `ManifoldReport` on the repaired mesh).
+- `repair_with_options(positions, indices, &RepairOptions)` — Full/Conservative
+  repair with work, split and fill budgets (`RepairBudgetExhausted` carries a
+  deterministic partial result), hole-filling limits (loop length, area,
+  plane deviation), stitching of self-touching boundary loops, duplicate-face
+  removal, outward orientation by volume, bounded fixed-point iteration and
+  per-triangle `source_triangles`.
 - `validate_vertex_links(vertex_count, indices)` — strict solid vertex-link
   validation (degree-2 link cycle, single fan). Canonical implementation
   used by the `polygon-core` boolean kernels.
@@ -33,18 +39,32 @@ and slicers require this property.
   characteristic, per-component breakdown (boundary edges, genus for closed
   components), signed volume (winding sign exposes inward orientation),
   surface area, watertight flag.
+- `diagnostics` (re-exported at the crate root), every pass with a typed
+  `DiagnosticsError` and a work budget:
+  - `self_intersections` — intersecting triangle pairs via a `mesh-query`
+    box-hierarchy broadphase and exact filtered orientation predicates;
+    edge/corner neighbours meeting only on the shared element are excluded.
+  - `wall_thickness` — inward ray from every triangle centroid (min/max
+    thickness, thin triangles below a threshold) plus an outward ray for the
+    free gap in front of each face (`min_gap`).
+  - `clearance` — closest triangle pair of every shell pair below a gap
+    threshold (complete below the threshold).
+  - `mass_properties` — volume, mass, center of mass and inertia tensor at a
+    given density for closed meshes.
 
 Edge incidence statistics are computed by the canonical packed-edge kernel
 in `mesh-topology` (`EdgeUses`); vertex links and repair live here.
 
-`mesh-topology` is the only runtime dependency; there is no polygon, host,
-bridge, or WASM dependency. `positions` are f64 xyz triples, `indices` are
+`mesh-topology` and `mesh-query` (box hierarchy, closest point on triangle)
+are the only runtime dependencies; there is no polygon, host, bridge, or
+WASM dependency. `positions` are f64 xyz triples, `indices` are
 triangle corners.
 
 ## WASM / TypeScript
 
 Exposed through `geometry-bridge` (`abi_manifold_check`,
-`abi_manifold_repair`, `abi_manifold_metrics`, results via `abi_array_field`)
+`abi_manifold_repair`, `abi_manifold_metrics`, `abi_manifold_diagnostics`,
+results via `abi_array_field`)
 and re-exported by `geometry-wasm`. TypeScript wrappers live in
 `src/services/geometry/manifoldAnalysis.ts`.
 

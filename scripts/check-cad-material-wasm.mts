@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {inspectMaterialChord,inspectMaterialSegment,materialExpectation,validMaterial} from '../src/services/solidMaterialVolume'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {inspectMaterialChord,inspectMaterialSegment,materialExpectation,validMaterial} from '../src/kernel/solidMaterialVolume'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const fixtures=JSON.parse(readFileSync(process.argv[3]??'docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-segment/contract.json','utf8')).cases
 const cases=[]

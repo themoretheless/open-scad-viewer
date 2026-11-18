@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0327",
+  "testedBase": "68589122a7ff78ee7e9497ff6f4a86439e8ea8b5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_principal_plane_moment_contracts",
+    "--test",
+    "exact_world_plane_mass_contracts",
+    "--test",
+    "bounded_world_plane_mass_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 4,
+  "scope": [
+    "Recover the exact in-plane signed spectrum of the centroidal world tensor without rounding its square roots.",
+    "Exact polynomial and rational-linear boundaries and nonzero signed area. Returns the algebraic spectrum without selecting directions."
+  ],
+  "logSha256": "5b7f24a732665914f962a134417a6c77522ccac088612db5fddb3db3d182aac3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs": "99dc7de67c19a0aab7d09f733a4bce144002116afd7791b2eefee3ab314a4c08",
+    "crates/nurbs-core/tests/exact_principal_plane_moment_contracts.rs": "3bafbbe2dcc86a958ff64058f009f3c5d54c232fe7313350e55b0f4145a676c2"
+  }
+}

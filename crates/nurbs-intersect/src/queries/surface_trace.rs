@@ -216,24 +216,7 @@ impl SurfaceTrace {
                         }
                         .to_curve()?;
                         if let Some(joined) = &mut result {
-                            // Do not weld geometrically nearby endpoints: only identical
-                            // Cartesian endpoint values can share a control point here.
-                            if joined.control_points.last() != segment.control_points.first() {
-                                return Err(invalid(
-                                    "Converted span endpoints do not coincide numerically",
-                                ));
-                            }
-                            let factor = joined.weights.last().unwrap() / segment.weights[0];
-                            joined.knots.pop();
-                            joined
-                                .knots
-                                .extend_from_slice(&segment.knots[result_degree + 1..]);
-                            joined
-                                .control_points
-                                .extend_from_slice(&segment.control_points[1..]);
-                            joined
-                                .weights
-                                .extend(segment.weights[1..].iter().map(|w| w * factor));
+                            append_elevated_span(joined, &segment, result_degree)?;
                         } else {
                             result = Some(segment);
                         }

@@ -111,12 +111,14 @@ fn tolerance_qualified_uv_is_not_automatically_world_qualified() {
     let mut p = periodic_trim::split_approximated(
         &c,
         [[0., 4.], [0., 1.]],
-        1e-8,
-        0.001,
-        8,
-        16,
-        10000,
-        30000,
+        periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.001,
+            max_pieces: 8,
+            max_seams: 16,
+            search_work: 10000,
+            admission_work: 30000,
+        },
     )
     .unwrap()
     .partition
@@ -364,12 +366,14 @@ fn combined_surface_admission_publishes_exact_and_approximate_chart_cycles() {
             periodic_trim::split_approximated(
                 &c,
                 [[0., 4.], [0., 1.]],
-                1e-8,
-                0.01,
-                16,
-                32,
-                10000,
-                30000,
+                periodic_trim::SeamSplitLimits {
+                    parameter_tolerance: 1e-8,
+                    uv_tolerance: 0.01,
+                    max_pieces: 16,
+                    max_seams: 32,
+                    search_work: 10000,
+                    admission_work: 30000,
+                },
             )
             .unwrap()
             .partition
@@ -484,12 +488,14 @@ fn combined_world_tolerance_failure_stops_before_uv_publication() {
     let mut p = periodic_trim::split_approximated(
         &c,
         [[0., 4.], [0., 1.]],
-        1e-8,
-        0.01,
-        16,
-        32,
-        10000,
-        30000,
+        periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
     )
     .unwrap()
     .partition
@@ -532,12 +538,14 @@ fn approximate_weighted_chart_retains_original_isotopy_and_candidate_winding() {
     let partition = periodic_trim::split_approximated(
         &source,
         [[0., 4.], [0., 1.]],
-        1e-8,
-        0.01,
-        16,
-        32,
-        10000,
-        30000,
+        periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
     )
     .unwrap()
     .partition
@@ -579,12 +587,14 @@ fn approximate_weighted_chart_does_not_bypass_source_topology_or_budget() {
     let mut partition = periodic_trim::split_approximated(
         &source,
         [[0., 4.], [0., 1.]],
-        1e-8,
-        0.01,
-        16,
-        32,
-        10000,
-        30000,
+        periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
     )
     .unwrap()
     .partition
@@ -604,12 +614,14 @@ fn approximate_weighted_chart_does_not_bypass_source_topology_or_budget() {
     let p = periodic_trim::split_approximated(
         &source,
         [[0., 4.], [0., 1.]],
-        1e-8,
-        0.01,
-        16,
-        32,
-        10000,
-        30000,
+        periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
     )
     .unwrap()
     .partition

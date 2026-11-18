@@ -297,21 +297,27 @@ fn continue_cover(
                     }
                 }
                 if !inside
-                    || !bounds.slope(0, x.span, axis, level, x.part, &spans[0], &u[0], sign, ctx)?
-                    || !bounds.slope(1, y.span, axis, level, y.part, &spans[1], &u[1], sign, ctx)?
+                    || !bounds.slope(
+                        bounds::PieceKey { side: 0, span: x.span, axis, level, part: x.part },
+                        &spans[0],
+                        &u[0],
+                        sign,
+                        ctx,
+                    )?
+                    || !bounds.slope(
+                        bounds::PieceKey { side: 1, span: y.span, axis, level, part: y.part },
+                        &spans[1],
+                        &u[1],
+                        sign,
+                        ctx,
+                    )?
                 {
                     continue;
                 }
                 if !bounds.cofactor(
-                    x.span,
-                    y.span,
-                    axis,
-                    level,
-                    x.part,
-                    y.part,
+                    bounds::BoxKey { a: x.span, b: y.span, axis, level, pa: x.part, pb: y.part },
                     &proof.cofactors[axis],
-                    spans,
-                    u,
+                    bounds::StripKnots { spans, u },
                     ctx,
                 )? {
                     continue;

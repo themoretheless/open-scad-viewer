@@ -60,13 +60,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let skin = report.fillet.surface.as_ref().unwrap();
         for (side, contact) in contacts.iter().enumerate() {
             let proof = nurbs_core::surface_g2_pcurves::inspect(
-                &contact.curve,
-                [&contact.support_pcurve, &contact.fillet_pcurve],
-                [if side == 0 { &a } else { &b }, skin],
-                [false, false],
-                1e-6,
-                1e-5,
-                1e-4,
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &contact.curve, pcurves: [&contact.support_pcurve, &contact.fillet_pcurve], surfaces: [if side == 0 { &a } else { &b }, skin], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
                 100000,
                 1000000,
             )?;
@@ -75,19 +70,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 proof.geometric.decision, proof.geometric.cells, proof.geometric
             );
         }
-        let radius = brep_core::fillet_radius::inspect(
-            [&a, &b],
-            report.fillet.surface.as_ref().unwrap(),
-            [&contacts[0], &contacts[1]],
-            &RadiusLaw::Linear {
+        let radius = brep_core::fillet_radius::inspect([&a, &b], report.fillet.surface.as_ref().unwrap(), [&contacts[0], &contacts[1]], brep_core::fillet_radius::RadiusCheck { law: &RadiusLaw::Linear {
                 start: 1.,
                 end: 1.5,
-            },
-            [1., sign],
-            1e-6,
-            100000,
-            1000000,
-        )?;
+            }, sides: [1., sign], tolerance_mm: 1e-6, max_cells: 100000, max_exact: 1000000 })?;
         println!(
             "radius={:?} reason={} upper={:?}",
             radius.decision, radius.reason, radius.maximum_center_gap_mm

@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0379",
+  "testedBase": "f0be10b0cb0ead07e530102a34f3bde1220c46e1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 83,
+  "scope": [
+    "Find free boundary cycles on an exact section plane and attach validated caps without a manual edge list.",
+    "Exact rational pole residuals identify eligible free edges, and source vertex identities assemble complete cycles. Discovery and attachment share a work budget."
+  ],
+  "logSha256": "240c1716223071ca9541e9b5beb5d59a4b406991e715c99b7dd5c190aab44022",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "205a459fda9039e4797bd7d6953650409c66ab38b06859acd5b5298a8c36e930",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "3022f483e501246cc43e1844aded7d3dc5110c821be8c6515af6468120a259cd",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "84b098940cf474afdf6b627c03a4d8ef310e26bfbfe06640676984cdda967a1a",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "9f16b3d75c41f7b3f492b4cefce33c959ed60c23028dbb50db6e9012b290f20c"
+  }
+}

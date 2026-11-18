@@ -1,0 +1,13 @@
+{
+  "distinct_tests_passed": 37,
+  "source_sha256": {
+    "crates/brep-core/tests/root_model.rs": "67bcb32b50f50a97b2f1332712075b9fab1cb59ed7986dc1954ea148141c4765",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "c64263c046086ef68f7169b790059fd95013505f4d19d2a90ec80ef8b4e54827",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/clock_consequence.rs": "3bfd5f181f73aad49e2ddd360eabfaab4b585af8069081c95efa585b9281a2ad",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "db462289b1989d2a0aaac46aeffd4635b7c827b8742b5c4b711d2ea3aa10479e",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point/cross_axis.rs": "62f52e595958feab6ce382b39053312b0c3a5ac736417e979d74fbcb27b725e9",
+    "crates/nurbs-core/tests/ss_affine_point_charts.rs": "791ff085c99935f6d86c7595c121f733d2d0b0bfc7e92d9913b28afe1b64e1b3"
+  },
+  "scope": "Exact original-equation target-clock generation, original native root selection and generated cross-axis paired BRep junctions",
+  "remaining": "Third-face constraint generation and complete roots, localized branch identity, cross-source junctions, full arrangements/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

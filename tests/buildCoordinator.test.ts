@@ -5,7 +5,7 @@ import {
   type CoordinatorTimers,
   type PublishedGeometryBuild,
   type WorkerLike,
-} from '../src/services/buildCoordinator'
+} from '../src/app/buildCoordinator'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   type GeometrySweepPreview,
@@ -14,8 +14,9 @@ import {
   type GeometryBuildSuccess,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from '../src/services/geometryWorkerProtocol'
+} from '../src/kernel/geometryWorkerProtocol'
 import type { MeshData } from '../src/core/mesh'
+import { geometrySceneFromMeshes } from '../src/core/scene'
 
 class FakeWorker implements WorkerLike {
   readonly messages: GeometryWorkerRequest[] = []
@@ -87,8 +88,7 @@ class FakeTimers implements CoordinatorTimers {
   advance(delayMs: number) {
     const target = this.now + delayMs
     for (;;) {
-      const next = [...this.callbacks].filter(([, timer]) => timer.at <= target)
-        .sort((a, b) => a[1].at - b[1].at)[0]
+      const next = [...this.callbacks].filter(([, timer]) => timer.at <= target).sort((a, b) => a[1].at - b[1].at)[0]
       if (!next) break
       this.now = next[1].at
       this.callbacks.delete(next[0])
@@ -121,7 +121,7 @@ function success(request: GeometryBuildRequest): GeometryBuildSuccess {
       ...planGeometrySourceExecution('cube(1);', { quality: request.quality, purpose: request.quality }),
       evidence: 'runtime',
     },
-    meshes: [],
+    scene: geometrySceneFromMeshes([]),
     warnings: [],
     volume: request.documentRevision,
     surfaceArea: 0,
@@ -146,21 +146,12 @@ function accepted(request: GeometryBuildRequest): GeometryWorkerEvent {
 function emptyMeshWithSourceEnd(end: number): MeshData {
   return {
     entityId: 'entity:span-test',
-    vertices: new Float32Array([
-      0, 0, 0, 0, 0, 1,
-      1, 0, 0, 0, 0, 1,
-      0, 1, 0, 0, 0, 1,
-    ]),
+    vertices: new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1]),
     indices: new Uint32Array([0, 1, 2]),
     edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
     faceIds: new Uint32Array([0]),
     color: [1, 1, 1, 1],
-    transform: new Float32Array([
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1,
-    ]),
+    transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
     bvh: {
       version: 1,
       vertexStride: 6,
@@ -170,12 +161,14 @@ function emptyMeshWithSourceEnd(end: number): MeshData {
       nodes: new Uint32Array([0, 0x80000001]),
       triangles: new Uint32Array([0]),
     },
-    provenance: [{
-      triangleStart: 0,
-      triangleEnd: 1,
-      backside: false,
-      source: { id: 1, originalId: 1, start: 0, end, label: 'span' },
-    }],
+    provenance: [
+      {
+        triangleStart: 0,
+        triangleEnd: 1,
+        backside: false,
+        source: { id: 1, originalId: 1, start: 0, end, label: 'span' },
+      },
+    ],
     topology: { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 },
   }
 }
@@ -183,7 +176,7 @@ function emptyMeshWithSourceEnd(end: number): MeshData {
 function harness(options: { grace?: number; timers?: FakeTimers; silence?: number } = {}) {
   const workers: FakeWorker[] = []
   const published: PublishedGeometryBuild[] = []
-  const previews:GeometrySweepPreview[]=[]
+  const previews: GeometrySweepPreview[] = []
   let restarts = 0
   const coordinator = new BuildCoordinator({
     workerFactory: () => {
@@ -192,22 +185,32 @@ function harness(options: { grace?: number; timers?: FakeTimers; silence?: numbe
       return worker
     },
     onPublish: outcome => published.push(outcome),
-    onSweepPreview:preview=>previews.push(preview),
+    onSweepPreview: preview => previews.push(preview),
     supersedeGraceMs: options.grace,
     workerSilenceTimeoutMs: options.silence,
-    onWorkerRestart: () => { restarts++ },
+    onWorkerRestart: () => {
+      restarts++
+    },
     timers: options.timers,
     now: () => options.timers?.now ?? 100,
   })
-  return { coordinator, workers, published, previews, get restarts() { return restarts } }
+  return {
+    coordinator,
+    workers,
+    published,
+    previews,
+    get restarts() {
+      return restarts
+    },
+  }
 }
 
 describe('BuildCoordinator', () => {
   it('coalesces repeated exact build keys without growing the worker queue', () => {
     const { coordinator, workers, published } = harness()
-    const jobIds = Array.from({ length: 100 }, () => (
-      coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'preview' })
-    ))
+    const jobIds = Array.from({ length: 100 }, () =>
+      coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'preview' }),
+    )
 
     expect(new Set(jobIds)).toEqual(new Set([jobIds[0]]))
     const [onlyRequest] = buildRequests(workers[0])
@@ -230,7 +233,11 @@ describe('BuildCoordinator', () => {
     workers[0].emitMessage(accepted(preview))
     workers[0].emitMessage(success(preview))
     expect(published.map(result => result.quality)).toEqual(['preview'])
-    expect(coordinator.state).toMatchObject({ status: 'building', requestedQuality: 'full', publishedQuality: 'preview' })
+    expect(coordinator.state).toMatchObject({
+      status: 'building',
+      requestedQuality: 'full',
+      publishedQuality: 'preview',
+    })
 
     workers[0].emitMessage(success(full))
     expect(published.map(result => result.quality)).toEqual(['preview', 'full'])
@@ -327,8 +334,9 @@ describe('BuildCoordinator', () => {
   it('rejects revision aliasing and messages from a mismatched protocol', () => {
     const { coordinator, workers, published } = harness()
     coordinator.requestBuild({ documentRevision: 3, source: 'cube(3);', quality: 'preview' })
-    expect(() => coordinator.requestBuild({ documentRevision: 3, source: 'cube(4);', quality: 'full' }))
-      .toThrow(/exactly one source snapshot/)
+    expect(() => coordinator.requestBuild({ documentRevision: 3, source: 'cube(4);', quality: 'full' })).toThrow(
+      /exactly one source snapshot/,
+    )
 
     workers[0].emitMessage({ id: 1, ok: true })
     expect(workers[0].terminated).toBe(true)
@@ -410,7 +418,7 @@ describe('BuildCoordinator', () => {
     const request = buildRequests(workers[0])[0]
     workers[0].emitMessage({
       ...success(request),
-      meshes: [emptyMeshWithSourceEnd(request.source.length + 1)],
+      scene: geometrySceneFromMeshes([emptyMeshWithSourceEnd(request.source.length + 1)]),
     })
 
     expect(workers[0].terminated).toBe(true)
@@ -477,7 +485,7 @@ describe('BuildCoordinator', () => {
     coordinator.requestBuild({ documentRevision: 62, source, quality: 'full' })
     const request = buildRequests(workers[0])[0]
     const originalMesh = emptyMeshWithSourceEnd(source.length)
-    const terminal = { ...success(request), meshes: [originalMesh] }
+    const terminal = { ...success(request), scene: geometrySceneFromMeshes([originalMesh]) }
     workers[0].emitMessage(terminal)
 
     const outcome = published.at(-1) as GeometryBuildSuccess
@@ -530,7 +538,10 @@ describe('BuildCoordinator', () => {
       sourceSha256: request.sourceSha256,
       execution: success(request).execution,
       error: {
-        name: 'OpenSCADParseError', message: 'at EOF', start: source.length, end: source.length,
+        name: 'OpenSCADParseError',
+        message: 'at EOF',
+        start: source.length,
+        end: source.length,
       },
       durationMs: 1,
     }
@@ -552,13 +563,18 @@ describe('BuildCoordinator', () => {
   })
 })
 
-
 describe('coordinator measurement boundaries', () => {
   it('measures main-clock latency independently of Worker time and counts coalesced requests once', () => {
     const worker = new FakeWorker()
     let now = 100
     let result: PublishedGeometryBuild | undefined
-    const coordinator = new BuildCoordinator({ workerFactory: () => worker, now: () => now, onPublish: event => { result = event } })
+    const coordinator = new BuildCoordinator({
+      workerFactory: () => worker,
+      now: () => now,
+      onPublish: event => {
+        result = event
+      },
+    })
     const input = { documentRevision: 1, source: 'cube(1);', quality: 'preview' as const }
     const job = coordinator.requestBuild(input)
     expect(coordinator.requestBuild(input)).toBe(job)
@@ -615,8 +631,12 @@ describe('coordinator Worker silence recovery', () => {
     expect(h.workers).toHaveLength(2)
     expect(h.workers.every(worker => worker.terminated)).toBe(true)
     expect(h.published).toHaveLength(1)
-    expect(h.published[0]).toMatchObject({ jobId: first, status: 'failed', hostElapsedMs: 200,
-      error: { name: 'TimeoutError', code: 'WORKER_TIMEOUT' } })
+    expect(h.published[0]).toMatchObject({
+      jobId: first,
+      status: 'failed',
+      hostElapsedMs: 200,
+      error: { name: 'TimeoutError', code: 'WORKER_TIMEOUT' },
+    })
     expect(h.coordinator.state).toMatchObject({ status: 'failed', activeJobIds: [] })
     expect(timers.size).toBe(0)
     const manual = h.coordinator.requestBuild(input)
@@ -692,27 +712,42 @@ describe('coordinator Worker silence recovery', () => {
     expect(workers[0].terminated).toBe(true)
     expect(published).toHaveLength(1)
     expect(published[0]).toMatchObject({ status: 'succeeded', quality: 'full' })
-    expect(coordinator.state).toMatchObject({ status: 'ready', requestedQuality: 'full',
-      publishedQuality: 'full', jobId: fullId, activeJobIds: [], error: null })
+    expect(coordinator.state).toMatchObject({
+      status: 'ready',
+      requestedQuality: 'full',
+      publishedQuality: 'full',
+      jobId: fullId,
+      activeJobIds: [],
+      error: null,
+    })
     expect(timers.size).toBe(0)
   })
 
-  it.each(['error', 'messageerror', 'protocol'] as const)('preserves full geometry when the leftover preview Worker has a %s failure', failure => {
-    const timers = new FakeTimers()
-    const { coordinator, workers, published } = harness({ timers, silence: 100 })
-    coordinator.requestBuild({ documentRevision: 1, source: 'sphere(1);', quality: 'preview' })
-    const fullId = coordinator.requestBuild({ documentRevision: 1, source: 'sphere(1);', quality: 'full' })
-    workers[0].emitMessage(success(buildRequests(workers[0])[1]))
-    if (failure === 'error') workers[0].emitError()
-    else if (failure === 'messageerror') workers[0].emitMessageError()
-    else workers[0].emitMessage({ invalid: 'protocol' })
-    expect(workers[0].terminated).toBe(true)
-    expect(published).toHaveLength(1)
-    expect(published[0]).toMatchObject({ status: 'succeeded', quality: 'full' })
-    expect(coordinator.state).toMatchObject({ status: 'ready', requestedQuality: 'full',
-      publishedQuality: 'full', jobId: fullId, activeJobIds: [], error: null })
-    expect(timers.size).toBe(0)
-  })
+  it.each(['error', 'messageerror', 'protocol'] as const)(
+    'preserves full geometry when the leftover preview Worker has a %s failure',
+    failure => {
+      const timers = new FakeTimers()
+      const { coordinator, workers, published } = harness({ timers, silence: 100 })
+      coordinator.requestBuild({ documentRevision: 1, source: 'sphere(1);', quality: 'preview' })
+      const fullId = coordinator.requestBuild({ documentRevision: 1, source: 'sphere(1);', quality: 'full' })
+      workers[0].emitMessage(success(buildRequests(workers[0])[1]))
+      if (failure === 'error') workers[0].emitError()
+      else if (failure === 'messageerror') workers[0].emitMessageError()
+      else workers[0].emitMessage({ invalid: 'protocol' })
+      expect(workers[0].terminated).toBe(true)
+      expect(published).toHaveLength(1)
+      expect(published[0]).toMatchObject({ status: 'succeeded', quality: 'full' })
+      expect(coordinator.state).toMatchObject({
+        status: 'ready',
+        requestedQuality: 'full',
+        publishedQuality: 'full',
+        jobId: fullId,
+        activeJobIds: [],
+        error: null,
+      })
+      expect(timers.size).toBe(0)
+    },
+  )
 
   it('does not replenish the full retry allowance when preview succeeds', () => {
     const timers = new FakeTimers()
@@ -727,8 +762,13 @@ describe('coordinator Worker silence recovery', () => {
     timers.advance(100)
     expect(workers).toHaveLength(2)
     expect(published).toHaveLength(2)
-    expect(published[1]).toMatchObject({ jobId: full.jobId, quality: 'full', status: 'failed',
-      hostElapsedMs: 230, error: { code: 'WORKER_TIMEOUT' } })
+    expect(published[1]).toMatchObject({
+      jobId: full.jobId,
+      quality: 'full',
+      status: 'failed',
+      hostElapsedMs: 230,
+      error: { code: 'WORKER_TIMEOUT' },
+    })
     expect(timers.size).toBe(0)
   })
 
@@ -779,7 +819,8 @@ describe('coordinator Worker silence recovery', () => {
     staleGrace()
     expect(timers.size).toBe(0)
     expect(workers).toHaveLength(1)
-    expect(workers[0].terminated).toBe(true)
+    // Cancel keeps the warm Worker (cooperative kernel jobs); dispose terminates it.
+    expect(workers[0].terminated).toBe(operation === 'dispose')
     expect(published).toEqual([])
     expect(coordinator.state.status).toBe(operation === 'dispose' ? 'disposed' : 'cancelled')
   })
@@ -791,7 +832,10 @@ describe('coordinator Worker silence recovery', () => {
     workers[0].emitMessageError()
     expect(workers[0].terminated).toBe(true)
     expect(workers[0].listeners.get('messageerror')?.size).toBe(0)
-    expect(published[0]).toMatchObject({ status: 'failed', error: { message: 'Could not deserialize a geometry Worker message' } })
+    expect(published[0]).toMatchObject({
+      status: 'failed',
+      error: { message: 'Could not deserialize a geometry Worker message' },
+    })
     expect(timers.size).toBe(0)
     coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
     workers[1].emitMessage(success(buildRequests(workers[1])[0]))
@@ -824,7 +868,10 @@ describe('coordinator Worker silence recovery', () => {
         factories++
         if (factories === 2 && mode === 'factory') throw new Error('retry factory failed')
         const worker = new FakeWorker()
-        if (factories === 2) worker.postMessage = () => { throw new Error('retry post failed') }
+        if (factories === 2)
+          worker.postMessage = () => {
+            throw new Error('retry post failed')
+          }
         workers.push(worker)
         return worker
       },
@@ -836,8 +883,11 @@ describe('coordinator Worker silence recovery', () => {
     expect(factories).toBe(2)
     expect(workers.every(worker => worker.terminated)).toBe(true)
     expect(published).toHaveLength(1)
-    expect(published[0]).toMatchObject({ status: 'failed', quality: 'full',
-      error: { message: `retry ${mode} failed` } })
+    expect(published[0]).toMatchObject({
+      status: 'failed',
+      quality: 'full',
+      error: { message: `retry ${mode} failed` },
+    })
     expect(coordinator.state).toMatchObject({ status: 'failed', activeJobIds: [] })
     expect(timers.size).toBe(0)
     coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
@@ -847,23 +897,103 @@ describe('coordinator Worker silence recovery', () => {
   })
 })
 
+it('routes current sweep previews separately and drops stale or superseded previews', () => {
+  const { coordinator, workers, published, previews } = harness({ grace: 300 })
+  coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+  const first = workers[0]!.messages[0] as GeometryBuildRequest
+  const preview = (request: GeometryBuildRequest) => ({
+    ...accepted(request),
+    status: 'sweep-preview',
+    phase: 'compiling',
+    nodeId: 'sweep',
+    sections: 5,
+    accepted: false,
+    sampledControlDeviation: 0.1,
+    budget: 0.01,
+    meshes: [],
+  })
+  workers[0]!.emitMessage(preview(first))
+  expect(first.acknowledgeSweepPreviews).toBe(true)
+  expect(workers[0]!.messages.at(-1)).toMatchObject({
+    type: 'sweep-preview-ack',
+    jobId: first.jobId,
+    sourceSha256: first.sourceSha256,
+    nodeId: 'sweep',
+    sections: 5,
+  })
+  expect(previews).toHaveLength(1)
+  expect(published).toHaveLength(0)
+  expect(coordinator.state.publishedQuality).toBeNull()
+  coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
+  workers[0]!.emitMessage(preview(first))
+  expect(previews).toHaveLength(1)
+  coordinator.cancel('user')
+  workers[0]!.emitMessage(preview(first))
+  expect(previews).toHaveLength(1)
+})
 
-it('routes current sweep previews separately and drops stale or superseded previews',()=>{
- const {coordinator,workers,published,previews}=harness({grace:300})
- coordinator.requestBuild({documentRevision:1,source:'cube(1);',quality:'full'})
- const first=workers[0]!.messages[0] as GeometryBuildRequest
- const preview=(request:GeometryBuildRequest)=>({...accepted(request),status:'sweep-preview',phase:'compiling',
-  nodeId:'sweep',sections:5,accepted:false,sampledControlDeviation:.1,budget:.01,meshes:[]})
- workers[0]!.emitMessage(preview(first))
- expect(first.acknowledgeSweepPreviews).toBe(true)
- expect(workers[0]!.messages.at(-1)).toMatchObject({type:'sweep-preview-ack',jobId:first.jobId,sourceSha256:first.sourceSha256,nodeId:'sweep',sections:5})
- expect(previews).toHaveLength(1)
- expect(published).toHaveLength(0)
- expect(coordinator.state.publishedQuality).toBeNull()
- coordinator.requestBuild({documentRevision:2,source:'cube(2);',quality:'full'})
- workers[0]!.emitMessage(preview(first))
- expect(previews).toHaveLength(1)
- coordinator.cancel('user')
- workers[0]!.emitMessage(preview(first))
- expect(previews).toHaveLength(1)
+describe('BuildCoordinator cooperative cancellation', () => {
+  const cancelled = (request: GeometryBuildRequest): GeometryWorkerEvent =>
+    ({
+      ...accepted(request),
+      status: 'cancelled',
+      phase: 'compiling',
+      reason: 'user',
+      durationMs: 1,
+    }) as GeometryWorkerEvent
+
+  it('cancels through the worker protocol and reuses the same Worker for later builds', () => {
+    const timers = new FakeTimers()
+    const { coordinator, workers, published } = harness({ grace: 300, timers })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    const first = buildRequests(workers[0]!)[0]!
+    coordinator.cancel('user')
+    expect(workers).toHaveLength(1)
+    expect(workers[0]!.terminated).toBe(false)
+    expect(workers[0]!.messages.at(-1)).toMatchObject({ type: 'cancel', jobId: first.jobId, reason: 'user' })
+    expect(coordinator.state).toMatchObject({ status: 'cancelled', activeJobIds: [] })
+    // The worker acknowledges within its next kernel step; nothing is published.
+    workers[0]!.emitMessage(cancelled(first))
+    expect(published).toHaveLength(0)
+
+    coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
+    expect(workers).toHaveLength(1)
+    const second = buildRequests(workers[0]!).at(-1)!
+    expect(second.documentRevision).toBe(2)
+    workers[0]!.emitMessage(success(second))
+    expect(published.map(result => result.jobId)).toEqual([second.jobId])
+    expect(coordinator.diagnostics).toMatchObject({ workerStarts: 1, hardRestarts: 0 })
+  })
+
+  it('waits for a cancelled job to acknowledge before reusing the Worker, and replaces it only after the grace', () => {
+    const timers = new FakeTimers()
+    const { coordinator, workers, published } = harness({ grace: 300, timers })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    const first = buildRequests(workers[0]!)[0]!
+    coordinator.cancel('user')
+    coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
+    expect(buildRequests(workers[0]!)).toHaveLength(1)
+    workers[0]!.emitMessage(cancelled(first))
+    const second = buildRequests(workers[0]!).at(-1)!
+    expect(second.documentRevision).toBe(2)
+    expect(workers[0]!.terminated).toBe(false)
+    workers[0]!.emitMessage(success(second))
+    expect(published.map(result => result.jobId)).toEqual([second.jobId])
+
+    // A job that never yields keeps the hard boundary: grace expiry replaces the Worker.
+    coordinator.requestBuild({ documentRevision: 3, source: 'cube(3);', quality: 'full' })
+    coordinator.cancel('user')
+    coordinator.requestBuild({ documentRevision: 4, source: 'cube(4);', quality: 'full' })
+    timers.advance(300)
+    expect(workers[0]!.terminated).toBe(true)
+    expect(workers).toHaveLength(2)
+    expect(buildRequests(workers[1]!).at(-1)!.documentRevision).toBe(4)
+  })
+
+  it('dispose still terminates the Worker', () => {
+    const { coordinator, workers } = harness({ grace: 300 })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    coordinator.dispose()
+    expect(workers[0]!.terminated).toBe(true)
+  })
 })

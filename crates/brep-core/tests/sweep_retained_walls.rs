@@ -1,4 +1,4 @@
-use brep_core::{rational_section_loft,sweep_retained_walls};
+use brep_core::{rational_section_loft, sweep_retained_walls};
 use nurbs_core::{curve::Curve,primitives::line};
 fn ring(z:f64)->Vec<Vec<Curve>>{
     let p=[[0.,0.,z],[2.,0.,z],[2.,2.,z],[0.,2.,z]];

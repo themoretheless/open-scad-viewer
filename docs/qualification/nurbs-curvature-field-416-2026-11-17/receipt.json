@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0416",
+  "testedBase": "aa8aa475c8c2b7a95d29b42910b754a1e1c20ce8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 156,
+  "scope": [
+    "Enclose the total length of transverse contours, including holes and disconnected components.",
+    "Exact rational section vertices yield squared spatial segment lengths. Integer roots enclose the sum to the requested width, counting both exterior and interior contours."
+  ],
+  "logSha256": "61c32ec60c62c7dabecff923569d55ab8a7ae263c8ba1b5d2fd504e3f959a962",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "04219cdffa374fd56dde5f0d861d676e7f669d3d6330c448acbb46306835e0cb",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/mod.rs": "df53bb317079ae08b4d08f95000c3165c001c353303fd908881bb10a88d5fc11",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "0ca14af814e7dd4165608bbe9f530605fffd9445f6059eabff2af90f1fe72b5d",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs": "62ad24d2c14039b87340069035be0b09bfa62404d91082b0911f91e86a919a8f"
+  }
+}

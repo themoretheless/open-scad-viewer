@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
-import { getShader, listShaders } from '../src/services/shaders'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
+import { getShader, listShaders } from '../src/render/shaders'
 
 /**
  * WebGPU draw validation the other renderer fakes skip: every group of the
@@ -12,18 +12,38 @@ import { getShader, listShaders } from '../src/services/shaders'
  * checked, not string markers.
  */
 
-interface FakeBindGroupLayout { entries: unknown[] }
-interface FakePipelineLayout { groups: FakeBindGroupLayout[]; immediateSize: number }
-interface FakeBindGroup { layout: FakeBindGroupLayout; entries: Array<{ resource?: unknown }> }
-interface FakeTexture { size: unknown; createView(): { texture: FakeTexture }; destroy(): void }
-interface FakePipeline { layout: FakePipelineLayout; code: string }
+interface FakeBindGroupLayout {
+  entries: unknown[]
+}
+interface FakePipelineLayout {
+  groups: FakeBindGroupLayout[]
+  immediateSize: number
+}
+interface FakeBindGroup {
+  layout: FakeBindGroupLayout
+  entries: Array<{ resource?: unknown }>
+}
+interface FakeTexture {
+  size: unknown
+  createView(): { texture: FakeTexture }
+  destroy(): void
+}
+interface FakePipeline {
+  layout: FakePipelineLayout
+  code: string
+}
 
 function fakeTexture(size: unknown): FakeTexture {
   const texture: FakeTexture = { size, createView: () => ({ texture }), destroy: () => undefined }
   return texture
 }
 
-function validatingEncoder(errors: string[], context: string, labelOf: (pipeline: FakePipeline) => string, attachment?: FakeTexture) {
+function validatingEncoder(
+  errors: string[],
+  context: string,
+  labelOf: (pipeline: FakePipeline) => string,
+  attachment?: FakeTexture,
+) {
   let pipeline: FakePipeline | null = null
   let groups: Array<FakeBindGroup | undefined> = []
   const check = (call: string) => {
@@ -35,15 +55,19 @@ function validatingEncoder(errors: string[], context: string, labelOf: (pipeline
     pipeline.layout.groups.forEach((layout, index) => {
       const group = groups[index]
       if (!group) errors.push(`${context}: ${call} with ${label}: no bind group set at group(${index})`)
-      else if (group.layout !== layout) errors.push(`${context}: ${call} with ${label}: group(${index}) layout mismatch`)
+      else if (group.layout !== layout)
+        errors.push(`${context}: ${call} with ${label}: group(${index}) layout mismatch`)
     })
   }
   return {
-    setPipeline: (next: FakePipeline) => { pipeline = next },
+    setPipeline: (next: FakePipeline) => {
+      pipeline = next
+    },
     setBindGroup: (index: number, group: FakeBindGroup) => {
       groups[index] = group
-      const samplesAttachment = attachment && group.entries.some(entry =>
-        (entry.resource as { texture?: unknown } | undefined)?.texture === attachment)
+      const samplesAttachment =
+        attachment &&
+        group.entries.some(entry => (entry.resource as { texture?: unknown } | undefined)?.texture === attachment)
       if (samplesAttachment) errors.push(`${context}: group(${index}) samples the pass's own depth attachment`)
     },
     setVertexBuffer: () => undefined,
@@ -51,7 +75,10 @@ function validatingEncoder(errors: string[], context: string, labelOf: (pipeline
     setImmediates: () => undefined,
     draw: () => check('draw'),
     drawIndexed: () => check('drawIndexed'),
-    executeBundles: () => { pipeline = null; groups = [] },
+    executeBundles: () => {
+      pipeline = null
+      groups = []
+    },
     end: () => undefined,
     finish: () => ({}),
   }
@@ -64,22 +91,37 @@ function validatingDevice(errors: string[], labelOf: (pipeline: FakePipeline) =>
     createTexture: (descriptor: { size: unknown }) => fakeTexture(descriptor.size),
     createSampler: () => ({}),
     createBuffer: () => ({ destroy: () => undefined }),
-    createBindGroupLayout: (descriptor: { entries: unknown[] }): FakeBindGroupLayout => ({ entries: descriptor.entries }),
-    createPipelineLayout: (descriptor: { bindGroupLayouts: FakeBindGroupLayout[]; immediateSize?: number }): FakePipelineLayout => ({
+    createBindGroupLayout: (descriptor: { entries: unknown[] }): FakeBindGroupLayout => ({
+      entries: descriptor.entries,
+    }),
+    createPipelineLayout: (descriptor: {
+      bindGroupLayouts: FakeBindGroupLayout[]
+      immediateSize?: number
+    }): FakePipelineLayout => ({
       groups: [...descriptor.bindGroupLayouts],
       immediateSize: descriptor.immediateSize ?? 0,
     }),
     createShaderModule: (descriptor: { code: string }) => ({ code: descriptor.code }),
     createBindGroup: (descriptor: FakeBindGroup) => ({ layout: descriptor.layout, entries: descriptor.entries }),
-    createRenderPipeline: (descriptor: { layout: FakePipelineLayout; vertex: { module: { code: string } } }): FakePipeline => ({
+    createRenderPipeline: (descriptor: {
+      layout: FakePipelineLayout
+      vertex: { module: { code: string } }
+    }): FakePipeline => ({
       layout: descriptor.layout,
       code: descriptor.vertex.module.code,
     }),
     createRenderBundleEncoder: () => validatingEncoder(errors, 'render bundle', labelOf),
     createCommandEncoder: () => ({
-      beginRenderPass: (descriptor: { colorAttachments: unknown[]; depthStencilAttachment?: { view: { texture?: FakeTexture } } }) =>
-        validatingEncoder(errors, descriptor.colorAttachments.length ? 'main pass' : 'shadow pass', labelOf,
-          descriptor.depthStencilAttachment?.view.texture),
+      beginRenderPass: (descriptor: {
+        colorAttachments: unknown[]
+        depthStencilAttachment?: { view: { texture?: FakeTexture } }
+      }) =>
+        validatingEncoder(
+          errors,
+          descriptor.colorAttachments.length ? 'main pass' : 'shadow pass',
+          labelOf,
+          descriptor.depthStencilAttachment?.view.texture,
+        ),
       finish: () => ({}),
     }),
   }
@@ -98,7 +140,7 @@ type Internal = Record<string, unknown> & {
   buildGrid(): void
   dev: GPUDevice
   pipelines: {
-    getRenderPipeline(device:GPUDevice,id:string,flavor?:{variant?:string}):FakePipeline
+    getRenderPipeline(device: GPUDevice, id: string, flavor?: { variant?: string }): FakePipeline
     pipelineCache: Map<string, FakePipeline>
     objBGL: FakeBindGroupLayout
     matcapBGL: FakeBindGroupLayout
@@ -160,7 +202,7 @@ describe('WebGPURenderer bind-group validation', () => {
     const declaredGroup2: Record<string, FakeBindGroupLayout> = { meshMatcap: matcapBGL, meshPbr: envBGL }
     for (const spec of listShaders()) {
       for (const variant of spec.supportsVariants ? ['uniform', 'instanced'] : ['uniform']) {
-        const pipeline = internal.pipelines.getRenderPipeline(internal.dev,spec.id, { variant })
+        const pipeline = internal.pipelines.getRenderPipeline(internal.dev, spec.id, { variant })
         const declared = [...pipeline.code.matchAll(/@group\((\d+)\)/g)].map(match => Number(match[1]))
         const label = `${spec.id}/${variant}`
         expect(pipeline.layout.groups.length, label).toBeGreaterThanOrEqual(Math.max(...declared) + 1)
@@ -185,12 +227,15 @@ describe('WebGPURenderer bind-group validation', () => {
     expect(errors).toEqual([])
   })
 
-  it.each(['phong', 'matcap', 'pbr', 'toon', 'unlit'])('section caps after %s surfaces bind every layout group', model => {
-    const { internal, errors } = harness({ shadingModel: model })
-    internal.sectionEnabled = true
-    internal.render()
-    expect(errors).toEqual([])
-  })
+  it.each(['phong', 'matcap', 'pbr', 'toon', 'unlit'])(
+    'section caps after %s surfaces bind every layout group',
+    model => {
+      const { internal, errors } = harness({ shadingModel: model })
+      internal.sectionEnabled = true
+      internal.render()
+      expect(errors).toEqual([])
+    },
+  )
 
   it.each(['phong', 'matcap', 'pbr', 'toon', 'unlit'])('transparent %s surfaces bind every layout group', model => {
     const { internal, errors } = harness({ shadingModel: model, alpha: 0.4 })
@@ -231,8 +276,14 @@ describe('WebGPURenderer bind-group validation', () => {
       internal.gridVisible = gridVisible
       internal.measurementVB = {}
       internal.measurementVC = 2
-      for (const slot of ['sourceFaceSlot', 'sourceLineSlot', 'selectionFaceSlot', 'selectionLineSlot', 'deepSelectionLineSlot']) {
-        internal[slot] = { buffer: {}, capacity: 1, count: 2 }
+      for (const slot of [
+        'sourceFaceSlot',
+        'sourceLineSlot',
+        'selectionFaceSlot',
+        'selectionLineSlot',
+        'deepSelectionLineSlot',
+      ]) {
+        Object.assign(internal.overlays[slot], { buffer: {}, capacity: 1, count: 2 })
       }
       internal.render()
       expect(errors, `gridVisible=${gridVisible}`).toEqual([])

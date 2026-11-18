@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createSelectionSurfacePublisher } from '../src/services/selectionSurfacePublisher'
+import { createSelectionSurfacePublisher } from '../src/app/selectionSurfacePublisher'
 import type { MeshData } from '../src/core/mesh'
 
 function mesh(): MeshData {
@@ -8,7 +8,15 @@ function mesh(): MeshData {
     vertices: new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1]),
     indices: new Uint32Array([0, 1, 2]),
     faceIds: new Uint32Array([0]),
-    bvh: { version: 1, vertexStride: 6, leafSize: 8, nodeCount: 0, bounds: new Float32Array(), nodes: new Uint32Array(), triangles: new Uint32Array() },
+    bvh: {
+      version: 1,
+      vertexStride: 6,
+      leafSize: 8,
+      nodeCount: 0,
+      bounds: new Float32Array(),
+      nodes: new Uint32Array(),
+      triangles: new Uint32Array(),
+    },
     edgeIndices: new Uint32Array(),
     color: [1, 1, 1, 1],
     transform: new Float32Array(16),

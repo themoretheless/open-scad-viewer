@@ -30,12 +30,14 @@ fn main() {
     };
     eprintln!("phase=joint-strips");
     let strips = match r::build_trihedral_strips_with_profile(
-        &source,
-        0,
-        0,
-        &requested,
-        0.5,
-        2.,
+        r::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.5,
+            span_mm: 2.,
+        },
         striplimits,
         0.214,
     ) {
@@ -93,9 +95,11 @@ fn main() {
         [1e-7, 1e-5, 1e-4],
         1e-8,
         0.001,
-        100000,
-        20000000,
-        1000000,
+        r::CollarWork {
+            max_cells: 100000,
+            max_coefficients: 20000000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let a = 1. / 2f64.sqrt();

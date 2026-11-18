@@ -1,0 +1,49 @@
+{
+  "tested_base": "e904fa33b9d0aa4041497a3d9b2d0c3c476acac4",
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "06137d676d3abb5b291c92bbda8ad9afd263d97597d977f48d618f2198bcd547",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity.rs": "4e7959e55ec6026a8fec00b9be5b2ea6559ad54412d98310831519f75d6810c1",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity/topology.rs": "90bb4d02d2fc1b74f727321560aed30cd7e7303bda9e0a6ce33223011a36c98e",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "0b58498f5f40a0b8ef4f66ba719e2ef54c5bc95f25eafc2e1a4933f54251d992",
+    "crates/brep-core/src/mixed_root_model/transfer.rs": "536a46b617a336192ed55e0f3a6a15016d5472b65e24fec255c0f9daf1778ad8",
+    "crates/brep-core/tests/mixed_topology_transfer.rs": "6b2407729fbbdd948a24029093b6c8a4dac9572817775696b76c60352fce780b"
+  },
+  "tests_passed": 20,
+  "suites": {
+    "mixed_topology_transfer": 3,
+    "mixed_root_cut": 3,
+    "nested_census_arrangement": 5,
+    "root_model": 2,
+    "ray_parity": 7
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0
+  },
+  "scope": "Lossless unsplit mixed topology transfer; source/target snapshot-bound map composition; cavity body ancestry and shell orientation",
+  "preserves": [
+    "literal root selectors and original source graphs",
+    "world-edge/root-pcurve binding",
+    "rational UV/world curves and coedge direction",
+    "coedge trim subranges and lift metadata",
+    "all vertex/edge/loop/face/shell/body indices",
+    "existing cavities and body ownership",
+    "operation-relative shell orientation"
+  ],
+  "negative_checks": [
+    "foreign intermediate snapshot with equal geometry cannot compose",
+    "invalid source indices return no mapping",
+    "forged root world-edge binding rejected"
+  ],
+  "remaining": [
+    "complete arbitrary mixed shell forest and multiple nested cavities",
+    "edge splitting/merging lineage through general Boolean and patterns",
+    "persistent IDs and construction-history branch reconciliation",
+    "arbitrary SS singular/coincident and periodic/pole strata",
+    "full finite-face trim and cross-source rim stitching",
+    "general intersecting Boolean and healing",
+    "actual bridge/WASM delivery",
+    "broader offset/fillet/quad/G2 parity requires its own full audit"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

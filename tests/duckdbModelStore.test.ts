@@ -10,10 +10,7 @@ import {
   MAX_STORED_BUILD_COUNT,
   MAX_STORED_REVISIONS_PER_MODEL,
 } from '../src/mcp/duckdbModelStore'
-import {
-  ModelRevisionConflictError,
-  type RecordBuildInput,
-} from '../src/mcp/modelStore'
+import { ModelRevisionConflictError, type RecordBuildInput } from '../src/mcp/modelStore'
 import {
   GEOMETRY_MANIFEST_ARCHIVE,
   LEGACY_MANIFOLD_EXECUTION,
@@ -44,10 +41,7 @@ async function temporaryDatabasePath(fileName = 'catalog.duckdb') {
   return join(directory, fileName)
 }
 
-async function withRawDatabase(
-  path: string,
-  operation: (connection: DuckDBConnection) => Promise<void>,
-) {
+async function withRawDatabase(path: string, operation: (connection: DuckDBConnection) => Promise<void>) {
   const instance = await DuckDBInstance.create(path)
   const connection = await instance.connect()
   try {
@@ -82,9 +76,7 @@ function successfulBuildInput(id: string): RecordBuildInput {
   }
 }
 
-function runtimeExecution(
-  overrides: Partial<GeometryExecutionDescriptor> = {},
-): GeometryExecutionDescriptor {
+function runtimeExecution(overrides: Partial<GeometryExecutionDescriptor> = {}): GeometryExecutionDescriptor {
   return {
     ...planGeometrySourceExecution('cube(1);', { quality: 'full', purpose: 'full' }),
     evidence: 'runtime',
@@ -92,9 +84,7 @@ function runtimeExecution(
   }
 }
 
-function plannedBrepExecution(
-  overrides: Partial<GeometryExecutionDescriptor> = {},
-): GeometryExecutionDescriptor {
+function plannedBrepExecution(overrides: Partial<GeometryExecutionDescriptor> = {}): GeometryExecutionDescriptor {
   return {
     languageContract: 'openscad-viewer/brep-1',
     requiredCapabilities: ['geometry.brep', 'nurbs.curves'],
@@ -144,12 +134,14 @@ describe('DuckDbModelStore', () => {
       expectedRevision: 0,
     })
     expect(edited.revision).toBe(1)
-    await expect(store.saveModel({
-      id: 'gear',
-      name: 'Stale edit',
-      source: 'cube(2);',
-      expectedRevision: 0,
-    })).rejects.toBeInstanceOf(ModelRevisionConflictError)
+    await expect(
+      store.saveModel({
+        id: 'gear',
+        name: 'Stale edit',
+        source: 'cube(2);',
+        expectedRevision: 0,
+      }),
+    ).rejects.toBeInstanceOf(ModelRevisionConflictError)
     await expect(store.getModel('gear')).resolves.toMatchObject({
       name: 'Gear',
       source: 'teeth = 16; cube(teeth);',
@@ -220,10 +212,12 @@ describe('DuckDbModelStore', () => {
     })
     await expect(store.getModelRevision('revisioned', 3)).resolves.toBeNull()
 
-    expect((await store.listModelRevisions('revisioned')).map(revision => ({
-      revision: revision.revision,
-      sourceLength: revision.sourceLength,
-    }))).toEqual([
+    expect(
+      (await store.listModelRevisions('revisioned')).map(revision => ({
+        revision: revision.revision,
+        sourceLength: revision.sourceLength,
+      })),
+    ).toEqual([
       { revision: 2, sourceLength: sources[2].length },
       { revision: 1, sourceLength: sources[1].length },
       { revision: 0, sourceLength: sources[0].length },
@@ -242,14 +236,15 @@ describe('DuckDbModelStore', () => {
       })
     }
 
-    await expect(store.saveModel({
-      id: 'bounded-revisions',
-      name: 'Bounded',
-      source: MAX_STORED_REVISIONS_PER_MODEL % 2 === 0 ? '' : ' ',
-      expectedRevision: MAX_STORED_REVISIONS_PER_MODEL - 1,
-    })).rejects.toThrow(/limited to 256 source revisions/)
-    expect(await store.listModelRevisions('bounded-revisions', 500))
-      .toHaveLength(MAX_STORED_REVISIONS_PER_MODEL)
+    await expect(
+      store.saveModel({
+        id: 'bounded-revisions',
+        name: 'Bounded',
+        source: MAX_STORED_REVISIONS_PER_MODEL % 2 === 0 ? '' : ' ',
+        expectedRevision: MAX_STORED_REVISIONS_PER_MODEL - 1,
+      }),
+    ).rejects.toThrow(/limited to 256 source revisions/)
+    expect(await store.listModelRevisions('bounded-revisions', 500)).toHaveLength(MAX_STORED_REVISIONS_PER_MODEL)
   }, 30_000)
 
   it('uses bound parameters for values that look like SQL', async () => {
@@ -329,11 +324,9 @@ describe('DuckDbModelStore', () => {
 
   it('persists planned B-rep provenance for an unavailable-engine failure', async () => {
     const store = await memoryStore()
-    const source = [
-      '// @language openscad-viewer/brep-1',
-      '// @requires geometry.brep nurbs.curves',
-      'cube(1);',
-    ].join('\n')
+    const source = ['// @language openscad-viewer/brep-1', '// @requires geometry.brep nurbs.curves', 'cube(1);'].join(
+      '\n',
+    )
     const model = await store.saveModel({ id: 'brep-part', name: 'B-rep part', source })
     const execution = plannedBrepExecution()
     const build = await store.recordBuild({
@@ -379,32 +372,34 @@ describe('DuckDbModelStore', () => {
     })
     await expect(store.getBuild(build.id)).resolves.toEqual(build)
 
-    expect(() => store.recordBuild({
-      id: 'brep-contradictory-diagnostic',
-      modelId: model.id,
-      modelRevision: model.revision,
-      source,
-      sourceSha256: sourceDigest(source),
-      quality: 'full',
-      durationMs: 0,
-      warnings: [],
-      status: 'failed',
-      error: {
-        contractVersion: 1,
-        name: 'EngineUnavailableError',
-        message: 'contradictory route',
-        code: 'engine_unavailable',
-        retryable: false,
-        details: {
-          language_contract: 'legacy/current',
-          engine_class: 'mesh',
-          engine_key: 'manifold-wasm-v1',
-          availability_cause: 'not-deployed',
-          automatic_fallback: false,
+    expect(() =>
+      store.recordBuild({
+        id: 'brep-contradictory-diagnostic',
+        modelId: model.id,
+        modelRevision: model.revision,
+        source,
+        sourceSha256: sourceDigest(source),
+        quality: 'full',
+        durationMs: 0,
+        warnings: [],
+        status: 'failed',
+        error: {
+          contractVersion: 1,
+          name: 'EngineUnavailableError',
+          message: 'contradictory route',
+          code: 'engine_unavailable',
+          retryable: false,
+          details: {
+            language_contract: 'legacy/current',
+            engine_class: 'mesh',
+            engine_key: 'manifold-wasm-v1',
+            availability_cause: 'not-deployed',
+            automatic_fallback: false,
+          },
         },
-      },
-      execution,
-    })).toThrow(/route details contradict execution provenance/)
+        execution,
+      }),
+    ).toThrow(/route details contradict execution provenance/)
   })
 
   it('requires versioned diagnostics from new writes and enforces the frozen retry policy', async () => {
@@ -424,26 +419,34 @@ describe('DuckDbModelStore', () => {
     await expect(store.recordBuild(base)).resolves.toMatchObject({
       error: { contractVersion: 1, code: 'internal_error', retryable: true },
     })
-    expect(() => store.recordBuild({
-      ...base,
-      id: 'diagnostic-missing-version',
-      error: { name: 'Error', message: 'legacy-shaped', code: 'internal_error', retryable: true },
-    } as unknown as Parameters<typeof store.recordBuild>[0])).toThrow(/contract version 1/)
-    expect(() => store.recordBuild({
-      ...base,
-      id: 'diagnostic-unknown-code',
-      error: { ...base.error, code: 'invented_code' },
-    } as unknown as Parameters<typeof store.recordBuild>[0])).toThrow(/frozen public taxonomy/)
-    expect(() => store.recordBuild({
-      ...base,
-      id: 'diagnostic-wrong-retry',
-      error: { ...base.error, retryable: false },
-    })).toThrow(/frozen retry policy/)
-    expect(() => store.recordBuild({
-      ...base,
-      id: 'diagnostic-extra-field',
-      error: { ...base.error, extra: 'x'.repeat(200_000) },
-    } as unknown as Parameters<typeof store.recordBuild>[0])).toThrow(/unknown field extra/)
+    expect(() =>
+      store.recordBuild({
+        ...base,
+        id: 'diagnostic-missing-version',
+        error: { name: 'Error', message: 'legacy-shaped', code: 'internal_error', retryable: true },
+      } as unknown as Parameters<typeof store.recordBuild>[0]),
+    ).toThrow(/contract version 1/)
+    expect(() =>
+      store.recordBuild({
+        ...base,
+        id: 'diagnostic-unknown-code',
+        error: { ...base.error, code: 'invented_code' },
+      } as unknown as Parameters<typeof store.recordBuild>[0]),
+    ).toThrow(/frozen public taxonomy/)
+    expect(() =>
+      store.recordBuild({
+        ...base,
+        id: 'diagnostic-wrong-retry',
+        error: { ...base.error, retryable: false },
+      }),
+    ).toThrow(/frozen retry policy/)
+    expect(() =>
+      store.recordBuild({
+        ...base,
+        id: 'diagnostic-extra-field',
+        error: { ...base.error, extra: 'x'.repeat(200_000) },
+      } as unknown as Parameters<typeof store.recordBuild>[0]),
+    ).toThrow(/unknown field extra/)
 
     const mutable = {
       ...base,
@@ -577,42 +580,56 @@ describe('DuckDbModelStore', () => {
     const source = '// @language openscad-viewer/brep-1\n// @requires geometry.brep\ncube(1);'
     const model = await store.saveModel({ id: 'routed-brep', name: 'Routed B-rep', source })
 
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('wrong-source-route'),
-      modelId: model.id,
-      modelRevision: model.revision,
-      source,
-      sourceSha256: sourceDigest(source),
-    })).toThrow(/match the exact source routing header/)
-
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('wrong-inline-source-route'),
-      source,
-      sourceSha256: sourceDigest(source),
-    })).toThrow(/match the exact source routing header/)
-
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('unknown-manifest'),
-      execution: runtimeExecution({ capabilityManifestVersion: 'manifold-node-v999' }),
-    })).toThrow(/unknown capability manifest/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('altered-engine-identity'),
-      execution: runtimeExecution({ engineKey: 'manifold-wasm-v2' }),
-    })).toThrow(/does not match its immutable capability manifest/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('altered-manifest-digest'),
-      execution: runtimeExecution({ manifestDigest: '0'.repeat(64) }),
-    })).toThrow(/does not match its immutable capability manifest/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('altered-manifest-limits'),
-      execution: runtimeExecution({
-        effectiveLimits: { sourceCharacters: 249_999, triangles: 750_000 },
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('wrong-source-route'),
+        modelId: model.id,
+        modelRevision: model.revision,
+        source,
+        sourceSha256: sourceDigest(source),
       }),
-    })).toThrow(/limits are not attested/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('unqualified-runtime-capability'),
-      execution: runtimeExecution({ requiredCapabilities: ['nurbs.curves'] }),
-    })).toThrow(/unqualified capability/)
+    ).toThrow(/match the exact source routing header/)
+
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('wrong-inline-source-route'),
+        source,
+        sourceSha256: sourceDigest(source),
+      }),
+    ).toThrow(/match the exact source routing header/)
+
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('unknown-manifest'),
+        execution: runtimeExecution({ capabilityManifestVersion: 'manifold-node-v999' }),
+      }),
+    ).toThrow(/unknown capability manifest/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('altered-engine-identity'),
+        execution: runtimeExecution({ engineKey: 'manifold-wasm-v2' }),
+      }),
+    ).toThrow(/does not match its immutable capability manifest/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('altered-manifest-digest'),
+        execution: runtimeExecution({ manifestDigest: '0'.repeat(64) }),
+      }),
+    ).toThrow(/does not match its immutable capability manifest/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('altered-manifest-limits'),
+        execution: runtimeExecution({
+          effectiveLimits: { sourceCharacters: 249_999, triangles: 750_000 },
+        }),
+      }),
+    ).toThrow(/limits are not attested/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('unqualified-runtime-capability'),
+        execution: runtimeExecution({ requiredCapabilities: ['nurbs.curves'] }),
+      }),
+    ).toThrow(/unqualified capability/)
 
     expect(await store.listBuilds()).toEqual([])
   })
@@ -622,14 +639,26 @@ describe('DuckDbModelStore', () => {
     const build = await store.recordBuild(successfulBuildInput('integrity-build'))
     const data = new Uint8Array([1, 2, 3])
 
-    expect(() => store.storeArtifact({
-      buildId: build.id, format: 'stl', fileName: 'bad.stl', mimeType: 'model/obj',
-      sha256: digest(data), data,
-    })).toThrow(/mimeType/)
-    expect(() => store.storeArtifact({
-      buildId: build.id, format: 'stl', fileName: 'bad.stl', mimeType: 'model/stl',
-      sha256: '0'.repeat(64), data,
-    })).toThrow(/match artifact data/)
+    expect(() =>
+      store.storeArtifact({
+        buildId: build.id,
+        format: 'stl',
+        fileName: 'bad.stl',
+        mimeType: 'model/obj',
+        sha256: digest(data),
+        data,
+      }),
+    ).toThrow(/mimeType/)
+    expect(() =>
+      store.storeArtifact({
+        buildId: build.id,
+        format: 'stl',
+        fileName: 'bad.stl',
+        mimeType: 'model/stl',
+        sha256: '0'.repeat(64),
+        data,
+      }),
+    ).toThrow(/match artifact data/)
     expect(await store.listArtifacts()).toEqual([])
   })
 
@@ -639,8 +668,13 @@ describe('DuckDbModelStore', () => {
     const build = await original.recordBuild(successfulBuildInput('corrupt-build'))
     const data = new Uint8Array([4, 5, 6])
     const artifact = await original.storeArtifact({
-      id: 'corrupt-artifact', buildId: build.id, format: 'stl', fileName: 'part.stl',
-      mimeType: 'model/stl', sha256: digest(data), data,
+      id: 'corrupt-artifact',
+      buildId: build.id,
+      format: 'stl',
+      fileName: 'part.stl',
+      mimeType: 'model/stl',
+      sha256: digest(data),
+      data,
     })
     await original.close()
     await withRawDatabase(path, async connection => {
@@ -658,15 +692,18 @@ describe('DuckDbModelStore', () => {
     const build = await original.recordBuild(successfulBuildInput('corrupt-execution-build'))
     await original.close()
     await withRawDatabase(path, async connection => {
-      await connection.run(`
+      await connection.run(
+        `
         UPDATE mcp_builds SET execution_json = $execution_json WHERE id = $id
-      `, {
-        id: build.id,
-        execution_json: JSON.stringify({
-          ...runtimeExecution(),
-          automaticFallback: true,
-        }),
-      })
+      `,
+        {
+          id: build.id,
+          execution_json: JSON.stringify({
+            ...runtimeExecution(),
+            automaticFallback: true,
+          }),
+        },
+      )
     })
 
     const reopened = await DuckDbModelStore.open(path)
@@ -700,13 +737,16 @@ describe('DuckDbModelStore', () => {
     await badDigest.close()
 
     await withRawDatabase(path, async connection => {
-      await connection.run(`
+      await connection.run(
+        `
         UPDATE mcp_builds SET source_sha256 = $digest, execution_json = $execution WHERE id = $id
-      `, {
-        id: build.id,
-        digest: sourceDigest(source),
-        execution: JSON.stringify(runtimeExecution()),
-      })
+      `,
+        {
+          id: build.id,
+          digest: sourceDigest(source),
+          execution: JSON.stringify(runtimeExecution()),
+        },
+      )
     })
     const badRoute = await DuckDbModelStore.open(path)
     stores.push(badRoute)
@@ -726,35 +766,51 @@ describe('DuckDbModelStore', () => {
     await original.close()
 
     await withRawDatabase(path, async connection => {
-      const rows = await (await connection.run(`
+      const rows = await (
+        await connection.run(
+          `
         SELECT source_snapshot, source_attestation FROM mcp_builds WHERE id = $id
-      `, { id: build.id })).getRowObjectsJS()
+      `,
+          { id: build.id },
+        )
+      ).getRowObjectsJS()
       expect(rows[0]?.source_snapshot).toBe(source)
       expect(rows[0]?.source_attestation).toBe('inline-snapshot')
-      await expect(connection.run(`
+      await expect(
+        connection.run(
+          `
         UPDATE mcp_builds SET source_snapshot = NULL WHERE id = $id
-      `, { id: build.id })).rejects.toThrow()
+      `,
+          { id: build.id },
+        ),
+      ).rejects.toThrow()
     })
 
     await withRawDatabase(path, async connection => {
-      await connection.run(`
+      await connection.run(
+        `
         UPDATE mcp_builds SET source_snapshot = $source WHERE id = $id
-      `, { id: build.id, source: 'sphere(1);' })
+      `,
+        { id: build.id, source: 'sphere(1);' },
+      )
     })
     const badDigest = await DuckDbModelStore.open(path)
     await expect(badDigest.getBuild(build.id)).rejects.toThrow(/immutable source snapshot/)
     await badDigest.close()
 
     await withRawDatabase(path, async connection => {
-      await connection.run(`
+      await connection.run(
+        `
         UPDATE mcp_builds
         SET source_snapshot = $source, execution_json = $execution
         WHERE id = $id
-      `, {
-        id: build.id,
-        source,
-        execution: JSON.stringify(runtimeExecution()),
-      })
+      `,
+        {
+          id: build.id,
+          source,
+          execution: JSON.stringify(runtimeExecution()),
+        },
+      )
     })
     const badRoute = await DuckDbModelStore.open(path)
     stores.push(badRoute)
@@ -793,20 +849,26 @@ describe('DuckDbModelStore', () => {
     await migrated.close()
 
     await withRawDatabase(path, async connection => {
-      await connection.run(`
+      await connection.run(
+        `
         UPDATE mcp_builds
         SET source_attestation = 'inline-snapshot', source_snapshot = NULL
         WHERE id = $id
-      `, { id: second.id })
+      `,
+        { id: second.id },
+      )
     })
     const missingSnapshot = await DuckDbModelStore.open(path)
     await expect(missingSnapshot.getBuild(second.id)).rejects.toThrow(/contradicts its attestation class/)
     await missingSnapshot.close()
 
     await withRawDatabase(path, async connection => {
-      await connection.run(`
+      await connection.run(
+        `
         UPDATE mcp_builds SET source_attestation = 'unknown-evidence' WHERE id = $id
-      `, { id: second.id })
+      `,
+        { id: second.id },
+      )
     })
     const unknownMarker = await DuckDbModelStore.open(path)
     stores.push(unknownMarker)
@@ -821,12 +883,14 @@ describe('DuckDbModelStore', () => {
     await withRawDatabase(path, async connection => {
       await connection.run('UPDATE mcp_builds SET execution_json = $execution WHERE id = $id', {
         id: build.id,
-        execution: JSON.stringify(plannedBrepExecution({
-          evidence: 'legacy-backfill',
-          requiredCapabilities: [],
-          effectiveLimits: {},
-          purpose: 'full',
-        })),
+        execution: JSON.stringify(
+          plannedBrepExecution({
+            evidence: 'legacy-backfill',
+            requiredCapabilities: [],
+            effectiveLimits: {},
+            purpose: 'full',
+          }),
+        ),
       })
     })
 
@@ -838,43 +902,57 @@ describe('DuckDbModelStore', () => {
   it('rejects non-finite build values without adding partial history', async () => {
     const store = await memoryStore()
 
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('nan-duration'),
-      durationMs: Number.NaN,
-    })).toThrow(/durationMs/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('infinite-volume'),
-      metrics: {
-        ...successfulBuildInput('unused').metrics!,
-        volume: Number.POSITIVE_INFINITY,
-      },
-    })).toThrow(/finite and non-negative/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('fallback-enabled'),
-      execution: {
-        ...runtimeExecution(),
-        automaticFallback: true,
-      } as unknown as GeometryExecutionDescriptor,
-    })).toThrow(/disable automatic fallback/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('quality-mismatch'),
-      execution: runtimeExecution({ quality: 'preview' }),
-    })).toThrow(/quality must match/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('route-mismatch'),
-      execution: runtimeExecution({
-        languageContract: 'openscad-viewer/brep-1',
-        engineClass: 'mesh',
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('nan-duration'),
+        durationMs: Number.NaN,
       }),
-    })).toThrow(/contradicts the language-contract engine route/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('planned-success'),
-      execution: runtimeExecution({ evidence: 'planned' }),
-    })).toThrow(/succeeded build cannot have planned-only/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('missing-execution'),
-      execution: undefined as unknown as GeometryExecutionDescriptor,
-    })).toThrow(/execution provenance is required/)
+    ).toThrow(/durationMs/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('infinite-volume'),
+        metrics: {
+          ...successfulBuildInput('unused').metrics!,
+          volume: Number.POSITIVE_INFINITY,
+        },
+      }),
+    ).toThrow(/finite and non-negative/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('fallback-enabled'),
+        execution: {
+          ...runtimeExecution(),
+          automaticFallback: true,
+        } as unknown as GeometryExecutionDescriptor,
+      }),
+    ).toThrow(/disable automatic fallback/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('quality-mismatch'),
+        execution: runtimeExecution({ quality: 'preview' }),
+      }),
+    ).toThrow(/quality must match/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('route-mismatch'),
+        execution: runtimeExecution({
+          languageContract: 'openscad-viewer/brep-1',
+          engineClass: 'mesh',
+        }),
+      }),
+    ).toThrow(/contradicts the language-contract engine route/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('planned-success'),
+        execution: runtimeExecution({ evidence: 'planned' }),
+      }),
+    ).toThrow(/succeeded build cannot have planned-only/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('missing-execution'),
+        execution: undefined as unknown as GeometryExecutionDescriptor,
+      }),
+    ).toThrow(/execution provenance is required/)
 
     expect(await store.listBuilds()).toEqual([])
   })
@@ -890,29 +968,37 @@ describe('DuckDbModelStore', () => {
       expectedRevision: 0,
     })
 
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('model-only'),
-      modelId: first.id,
-    })).toThrow(/provided together/)
-    expect(() => store.recordBuild({
-      ...successfulBuildInput('revision-only'),
-      modelRevision: first.revision,
-    })).toThrow(/provided together/)
-    await expect(store.recordBuild({
-      ...successfulBuildInput('cross-model-revision'),
-      modelId: first.id,
-      modelRevision: second.revision,
-    })).rejects.toThrow()
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('model-only'),
+        modelId: first.id,
+      }),
+    ).toThrow(/provided together/)
+    expect(() =>
+      store.recordBuild({
+        ...successfulBuildInput('revision-only'),
+        modelRevision: first.revision,
+      }),
+    ).toThrow(/provided together/)
+    await expect(
+      store.recordBuild({
+        ...successfulBuildInput('cross-model-revision'),
+        modelId: first.id,
+        modelRevision: second.revision,
+      }),
+    ).rejects.toThrow()
     expect(await store.listBuilds()).toEqual([])
 
     const unrelatedSource = 'cube(9);'
-    await expect(store.recordBuild({
-      ...successfulBuildInput('wrong-snapshot-hash'),
-      modelId: first.id,
-      modelRevision: first.revision,
-      source: unrelatedSource,
-      sourceSha256: sourceDigest(unrelatedSource),
-    })).rejects.toThrow(/must match the referenced immutable model revision/)
+    await expect(
+      store.recordBuild({
+        ...successfulBuildInput('wrong-snapshot-hash'),
+        modelId: first.id,
+        modelRevision: first.revision,
+        source: unrelatedSource,
+        sourceSha256: sourceDigest(unrelatedSource),
+      }),
+    ).rejects.toThrow(/must match the referenced immutable model revision/)
 
     const build = await store.recordBuild({
       ...successfulBuildInput('paired-build'),
@@ -920,16 +1006,18 @@ describe('DuckDbModelStore', () => {
       modelRevision: first.revision,
       sourceSha256: sourceDigest(first.source),
     })
-    await expect(store.storeArtifact({
-      id: 'mismatched-artifact',
-      buildId: build.id,
-      modelId: second.id,
-      format: 'stl',
-      fileName: 'mismatched.stl',
-      mimeType: 'model/stl',
-      sha256: digest(new Uint8Array([1])),
-      data: new Uint8Array([1]),
-    })).rejects.toThrow(/modelId must match/)
+    await expect(
+      store.storeArtifact({
+        id: 'mismatched-artifact',
+        buildId: build.id,
+        modelId: second.id,
+        format: 'stl',
+        fileName: 'mismatched.stl',
+        mimeType: 'model/stl',
+        sha256: digest(new Uint8Array([1])),
+        data: new Uint8Array([1]),
+      }),
+    ).rejects.toThrow(/modelId must match/)
     expect(await store.listArtifacts()).toEqual([])
 
     const artifact = await store.storeArtifact({
@@ -981,10 +1069,58 @@ describe('DuckDbModelStore', () => {
     const current = await DuckDbModelStore.open(path)
     await current.close()
     await withRawDatabase(path, async connection => {
-      await connection.run('INSERT INTO mcp_schema_migrations (version) VALUES (7)')
+      await connection.run('INSERT INTO mcp_schema_migrations (version) VALUES (8)')
     })
 
-    await expect(DuckDbModelStore.open(path)).rejects.toThrow(/schema 7 is newer than supported schema 6/)
+    await expect(DuckDbModelStore.open(path)).rejects.toThrow(/schema 8 is newer than supported schema 7/)
+  })
+
+  it('migrates schema v6 catalogs to v7 and persists AP242 STEP artifacts', async () => {
+    const path = await temporaryDatabasePath()
+    const original = await DuckDbModelStore.open(path)
+    const build = await original.recordBuild(successfulBuildInput('v6-step-migration'))
+    await original.close()
+
+    await withRawDatabase(path, async connection => {
+      await connection.run('DELETE FROM mcp_schema_migrations WHERE version >= 7')
+      await connection.run(`
+        CREATE TABLE mcp_artifacts_v6 AS SELECT * FROM mcp_artifacts
+      `)
+      await connection.run('DROP TABLE mcp_artifacts')
+      await connection.run(`
+        CREATE TABLE mcp_artifacts (
+          id VARCHAR PRIMARY KEY,
+          build_id VARCHAR NOT NULL,
+          model_id VARCHAR,
+          format VARCHAR NOT NULL CHECK (format IN ('stl', 'obj')),
+          file_name VARCHAR NOT NULL,
+          mime_type VARCHAR NOT NULL,
+          sha256 VARCHAR NOT NULL,
+          byte_length BIGINT NOT NULL CHECK (byte_length >= 0),
+          data BLOB NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+          FOREIGN KEY (build_id) REFERENCES mcp_builds(id),
+          FOREIGN KEY (model_id) REFERENCES mcp_models(id)
+        )
+      `)
+      await connection.run('INSERT INTO mcp_artifacts SELECT * FROM mcp_artifacts_v6')
+      await connection.run('DROP TABLE mcp_artifacts_v6')
+    })
+
+    const migrated = await DuckDbModelStore.open(path)
+    stores.push(migrated)
+    const stepBytes = new TextEncoder().encode('ISO-10303-21;\nEND-ISO-10303-21;\n')
+    const artifact = await migrated.storeArtifact({
+      buildId: build.id,
+      format: 'step',
+      fileName: 'solid.step',
+      mimeType: 'model/step',
+      sha256: createHash('sha256').update(stepBytes).digest('hex'),
+      data: stepBytes,
+    })
+    expect(artifact).toMatchObject({ format: 'step', mimeType: 'model/step', fileName: 'solid.step' })
+    const fetched = await migrated.getArtifact(artifact.id)
+    expect(new TextDecoder().decode(fetched?.data)).toContain('ISO-10303-21;')
   })
 
   it('migrates schema v2 builds with explicit legacy Manifold execution provenance', async () => {
@@ -1117,16 +1253,20 @@ describe('DuckDbModelStore', () => {
             created_at TIMESTAMP NOT NULL DEFAULT current_timestamp
           )
         `)
-        await connection.run(`
+        await connection.run(
+          `
           INSERT INTO mcp_models (id, name, source, revision)
           VALUES ($id, $name, $source, $revision)
-        `, {
-          id: 'legacy-model',
-          name: 'Legacy',
-          source: 'cylinder(h=5, r=2);',
-          revision: 7,
-        })
-        await connection.run(`
+        `,
+          {
+            id: 'legacy-model',
+            name: 'Legacy',
+            source: 'cylinder(h=5, r=2);',
+            revision: 7,
+          },
+        )
+        await connection.run(
+          `
           INSERT INTO mcp_builds (
             id, model_id, model_revision, source_sha256, quality, status,
             duration_ms, warnings_json, mesh_count, triangle_count, volume,
@@ -1135,13 +1275,15 @@ describe('DuckDbModelStore', () => {
             $id, $model_id, $model_revision, $source_sha256, 'full', 'failed',
             0, '[]', NULL, NULL, NULL, NULL, NULL, $error_json
           )
-        `, {
-          id: 'legacy-mismatched-build',
-          model_id: 'legacy-model',
-          model_revision: 7,
-          source_sha256: 'b'.repeat(64),
-          error_json: JSON.stringify({ name: 'Error', message: 'legacy failure' }),
-        })
+        `,
+          {
+            id: 'legacy-mismatched-build',
+            model_id: 'legacy-model',
+            model_revision: 7,
+            source_sha256: 'b'.repeat(64),
+            error_json: JSON.stringify({ name: 'Error', message: 'legacy failure' }),
+          },
+        )
       })
 
       const migrated = await DuckDbModelStore.open(path)
@@ -1211,8 +1353,9 @@ describe('DuckDbModelStore', () => {
     }
 
     await expect(store.getBuild('retained-build-0000')).resolves.toBeNull()
-    await expect(store.getBuild(`retained-build-${String(MAX_STORED_BUILD_COUNT).padStart(4, '0')}`))
-      .resolves.toBeTruthy()
+    await expect(
+      store.getBuild(`retained-build-${String(MAX_STORED_BUILD_COUNT).padStart(4, '0')}`),
+    ).resolves.toBeTruthy()
     expect(await store.listBuilds({ limit: MAX_STORED_BUILD_COUNT })).toHaveLength(MAX_STORED_BUILD_COUNT)
   }, 30_000)
 
@@ -1233,8 +1376,9 @@ describe('DuckDbModelStore', () => {
     }
 
     await expect(store.getArtifact('retained-artifact-0000')).resolves.toBeNull()
-    await expect(store.getArtifact(`retained-artifact-${String(MAX_STORED_ARTIFACT_COUNT).padStart(4, '0')}`))
-      .resolves.toBeTruthy()
+    await expect(
+      store.getArtifact(`retained-artifact-${String(MAX_STORED_ARTIFACT_COUNT).padStart(4, '0')}`),
+    ).resolves.toBeTruthy()
     expect(await store.listArtifacts(MAX_STORED_ARTIFACT_COUNT)).toHaveLength(MAX_STORED_ARTIFACT_COUNT)
   }, 30_000)
 })

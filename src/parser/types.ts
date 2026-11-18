@@ -1,6 +1,6 @@
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import type { MeshSourceReference, SceneEntityId } from '../core/mesh'
-import type { CadKernelHandle, CadKernelOps } from '../services/cadKernelOps'
+import type { CadKernelHandle, CadKernelOps } from '../kernel/cadKernelOps'
 import type {
   CallNode,
   FunctionNode,
@@ -8,14 +8,16 @@ import type {
   OpenScadLanguageProfile,
   Statement,
   Value,
-} from '../services/openscadCompiler'
-import { AbortedError } from '../services/openscadErrors'
-import type { RGBA } from '../services/openscadColors'
-import type { PreparedOpenScadImportAssets } from '../services/openScadImport'
-import type { OpenScadProject } from '../services/openScadProject'
-import type { OpenScadStableScope } from '../services/openScadStableScope'
-import type { PreparedOpenScadSurfaceAssets } from '../services/openScadSurface'
-import type { PreparedOpenScadTextAssets } from '../services/openScadText'
+} from '../language/openscadCompiler'
+import { AbortedError } from '../language/openscadErrors'
+import type { RGBA } from '../language/openscadColors'
+import type { PreparedOpenScadImportAssets } from '../exchange/openScadImport'
+import type { OpenScadProject } from '../language/openScadProject'
+import type { OpenScadStableScope } from '../language/openScadStableScope'
+import type { PreparedOpenScadSurfaceAssets } from '../language/openScadSurface'
+import type { PreparedOpenScadTextAssets } from '../language/openScadText'
+
+export type ExportMeshQuality = 'viewport' | 'high' | 'ultra'
 
 export interface ParseOptions {
   /**
@@ -25,10 +27,12 @@ export interface ParseOptions {
    */
   recordExactSolids?: boolean
   /** Versioned frontend profile. The legacy public route remains subset@1. */
-  languageProfile?: OpenScadLanguageProfile
-  quality?: GeometryQuality
+  languageProfile?: OpenScadLanguageProfile | undefined
+  quality?: GeometryQuality | undefined
+  /** Optional export-only tessellation density boost ('viewport' | 'high' | 'ultra'). */
+  exportQuality?: ExportMeshQuality | undefined
   /** Host animation position exposed as OpenSCAD's dynamic `$t` (0..1). */
-  animationTime?: number
+  animationTime?: number | undefined
   /**
    * Cooperative cancellation probe. The evaluator yields to the event loop
    * periodically (top-level statements and long `for` / `intersection_for`
@@ -37,30 +41,33 @@ export interface ParseOptions {
    * still will not yield mid-call — BuildCoordinator's worker-replacement grace
    * remains that hard boundary.
    */
-  shouldAbort?: () => boolean
+  shouldAbort?: (() => boolean) | undefined
   /**
    * Liveness hook invoked after each successful yield. A hosting worker can
    * forward it as a (throttled) progress heartbeat so a watchdog can tell
    * "alive but heavy" from "wedged" instead of killing legitimate long builds.
    */
-  onYield?: () => void
+  onYield?: (() => void) | undefined
   /** Approximate sweep levels; never authoritative scene results. */
-  onSweepPreview?: import('../services/rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
+  onSweepPreview?: import('../language/rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview'] | undefined
   /** Injectable monotonic clock for deterministic phase-timing tests. */
   now?: () => number
   /** Injectable macrotask yield used by cooperative-cancellation tests. */
   yieldControl?: () => Promise<void>
 }
 
-export type ParseOpenScadProjectOptions = Omit<ParseOptions, 'languageProfile'>
+export type ParseOpenScadProjectOptions = Omit<ParseOptions, 'languageProfile'> & {
+  /** Project-relative library directories searched after the importer's directory. */
+  readonly libraryPaths?: readonly string[] | undefined
+}
 
 /** @deprecated Prefer the kernel-neutral GeometryEvaluationResult contract. */
 export type ParseResult = GeometryEvaluationResult
 
 export const MAX_SOURCE_LENGTH = 250_000
 export const MAX_AST_NODES = 25_000
-export const MAX_SHAPES = 1_000
-export const MAX_TRIANGLES = 750_000
+export const MAX_SHAPES = 4_000
+export const MAX_TRIANGLES = 3_000_000
 /** Cap on linear_extrude slices — passed straight into the geometry kernel,
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 export const MAX_EXTRUDE_SLICES = 512
@@ -93,6 +100,11 @@ export class CooperativeCheckpoint {
     this.enabled = shouldAbort !== undefined || onYield !== undefined
   }
 
+  /** True when a host observes this evaluation (abort or liveness callbacks). */
+  get cooperative(): boolean {
+    return this.enabled
+  }
+
   poll(): void {
     if (this.shouldAbort?.()) throw new AbortedError()
   }
@@ -111,21 +123,22 @@ export class CooperativeCheckpoint {
 export interface EvalContext {
   kernel: CadKernelOps
   source: string
-  project?: OpenScadProject
-  importAssets?: PreparedOpenScadImportAssets
-  surfaceAssets?: PreparedOpenScadSurfaceAssets
-  textAssets?: PreparedOpenScadTextAssets
+  project?: OpenScadProject | undefined
+  importAssets?: PreparedOpenScadImportAssets | undefined
+  surfaceAssets?: PreparedOpenScadSurfaceAssets | undefined
+  textAssets?: PreparedOpenScadTextAssets | undefined
   languageProfile: OpenScadLanguageProfile
   env: Map<string, Value>
   functions: Map<string, FunctionNode>
   modules: Map<string, ModuleNode>
   warnings: string[]
   quality: GeometryQuality
+  exportQuality?: ExportMeshQuality | undefined
   sourceReferences: Map<number, MeshSourceReference>
-  callChildren?: Statement[] | PassedCallChildren
+  callChildren?: Statement[] | PassedCallChildren | undefined
   functionStack: string[]
   moduleStack: string[]
-  stableScope?: OpenScadStableScope
+  stableScope?: OpenScadStableScope | undefined
   scopeVisibleBefore?: number
   depth: number
   /** Shared mutable evaluation budget — one object across all ctx spreads. */
@@ -151,11 +164,21 @@ export interface PassedCallChildren {
   readonly statements: readonly Statement[]
   readonly env: ReadonlyMap<string, Value>
   readonly scope: OpenScadStableScope
-  readonly continuation?: Statement[] | PassedCallChildren
+  readonly continuation?: Statement[] | PassedCallChildren | undefined
 }
 
-export interface Shape2D { dimension: 2; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
-export interface Shape3D { dimension: 3; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
+export interface Shape2D {
+  dimension: 2
+  geometry: CadKernelHandle
+  color: RGBA
+  entityId: SceneEntityId
+}
+export interface Shape3D {
+  dimension: 3
+  geometry: CadKernelHandle
+  color: RGBA
+  entityId: SceneEntityId
+}
 export type Shape = Shape2D | Shape3D
 
 export class StableViewportRootSelection {

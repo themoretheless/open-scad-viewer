@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 
 const stable = { languageProfile: 'openscad/stable-2021.01' as const }
 
@@ -38,10 +38,7 @@ describe('direct stable module resolution wiring', () => {
   })
 
   it('uses the profile radius and floor-scaled segments for partial rotate_extrude', async () => {
-    const result = await parseOpenSCAD(
-      'rotate_extrude(angle=90,$fa=12,$fs=2) translate([10,0]) square([1,1]);',
-      stable,
-    )
+    const result = await parseOpenSCAD('rotate_extrude(angle=90,$fa=12,$fs=2) translate([10,0]) square([1,1]);', stable)
 
     // Full-circle resolution is 30 and OpenSCAD 2021 floors 30*90/360 to 7.
     expect(triangleCount(result)).toBe(60)

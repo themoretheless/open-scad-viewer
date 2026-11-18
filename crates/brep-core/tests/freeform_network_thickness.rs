@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::{freeform_network::thicken_with_caps, planar_network::Limits};
+use brep_core::shell_thickness::{freeform_network::thicken_with_caps, planar_network::{Limits, OffsetSettings}};
 use nurbs_core::surface::Surface;
 fn patch(x: f64) -> Surface {
     Surface {
@@ -31,10 +31,12 @@ fn nonplanar_network_keeps_shared_seams_and_original_caps() {
             &sources,
             &caps,
             &[false, false],
-            d,
-            0.05,
-            32768,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: d,
+                normal_tolerance: 0.05,
+                normal_cells: 32768,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
         )
         .unwrap();
@@ -69,11 +71,13 @@ fn reversed_source_chart_uses_oriented_normal() {
             &sources,
             &caps,
             &[false, true],
-            0.1,
-            0.05,
-            32768,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.05,
+                normal_cells: 32768,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_ok()
     );
@@ -82,11 +86,13 @@ fn reversed_source_chart_uses_oriented_normal() {
             &sources,
             &caps,
             &[false, false],
-            0.1,
-            0.05,
-            32768,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.05,
+                normal_cells: 32768,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -100,11 +106,13 @@ fn invalid_caps_and_networks_do_not_produce_bodies() {
             &sources,
             &caps,
             &[false, false],
-            0.1,
-            0.05,
-            1,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.05,
+                normal_cells: 1,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -117,11 +125,13 @@ fn invalid_caps_and_networks_do_not_produce_bodies() {
             &sources,
             &broken,
             &[false, false],
-            0.1,
-            0.05,
-            32768,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.05,
+                normal_cells: 32768,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -132,11 +142,13 @@ fn invalid_caps_and_networks_do_not_produce_bodies() {
             &disconnected,
             &c,
             &[false, false],
-            0.1,
-            0.05,
-            32768,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.05,
+                normal_cells: 32768,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -161,10 +173,12 @@ fn nonplanar_t_network_partitions_original_seam_without_an_internal_wall() {
         &sources,
         &caps,
         &[false; 3],
-        0.1,
-        0.08,
-        32768,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.08,
+            normal_cells: 32768,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -207,10 +221,12 @@ fn rational_cylindrical_network_has_continuously_verified_radial_caps() {
         &sources,
         &caps,
         &[false; 2],
-        0.1,
-        0.01,
-        32768,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 32768,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -257,11 +273,13 @@ fn normal_allowance_is_shared_across_patches_and_saved_model_roundtrips() {
             &sources,
             &caps,
             &[false; 2],
-            0.1,
-            1e-8,
-            1,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 1e-8,
+                normal_cells: 1,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -269,10 +287,12 @@ fn normal_allowance_is_shared_across_patches_and_saved_model_roundtrips() {
         &sources,
         &caps,
         &[false; 2],
-        0.1,
-        1e-8,
-        2,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 1e-8,
+            normal_cells: 2,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -287,8 +307,30 @@ fn normal_allowance_is_shared_across_patches_and_saved_model_roundtrips() {
     }
     let mut low = Limits::default();
     low.exact_work = 1;
-    assert!(thicken_with_caps(&sources, &caps, &[false; 2], 0.1, 1e-8, 2, 1e-7, low).is_err());
+    assert!(thicken_with_caps(
+        &sources,
+        &caps,
+        &[false; 2],
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 1e-8,
+            normal_cells: 2,
+            sewing_tolerance: 1e-7,
+        },
+        low,
+    ).is_err());
     let mut low = Limits::default();
     low.proof.max_cells = 1;
-    assert!(thicken_with_caps(&sources, &caps, &[false; 2], 0.1, 1e-8, 2, 1e-7, low).is_err());
+    assert!(thicken_with_caps(
+        &sources,
+        &caps,
+        &[false; 2],
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 1e-8,
+            normal_cells: 2,
+            sewing_tolerance: 1e-7,
+        },
+        low,
+    ).is_err());
 }

@@ -6,11 +6,7 @@ use crate::{
     surface_join::{Boundary, Decision, boundary_box},
     surface_shape_operator,
 };
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Orientation {
-    Same,
-    Opposite,
-}
+pub use crate::analysis::surface_boundary::Orientation;
 #[derive(Clone, Debug)]
 pub struct BranchBounds {
     pub normal_lower: f64,
@@ -98,15 +94,12 @@ fn mapped(nodes: &[[f64; 2]], t: [f64; 2]) -> Result<[f64; 2]> {
     Ok([y.lo, y.hi])
 }
 fn cell(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
+    seam: SurfaceSeam<'_>,
     t: [f64; 2],
     nodes: &[[f64; 2]],
     position_exact: bool,
 ) -> Result<Cell> {
+    let SurfaceSeam { a, ea, b, eb, reverse } = seam;
     let upper = match (
         shape(a, ea, t, false)?,
         shape(b, eb, mapped(nodes, t)?, reverse)?,
@@ -153,57 +146,57 @@ fn cell(
 /// Normal chord tolerance is dimensionless; tensor tolerance is a Frobenius
 /// bound in inverse-length units. One orientation must pass the ENTIRE seam.
 /// No inferred or nonaffine seam correspondence is claimed by this API.
-pub fn inspect(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
-    position_tolerance: f64,
-    normal_tolerance: f64,
-    tensor_tolerance: f64,
-    max_cells: usize,
-) -> Result<Report> {
+pub fn inspect(seam: SurfaceSeam<'_>, tolerance: G2Tolerance, max_cells: usize) -> Result<Report> {
+    let SurfaceSeam { a, ea, b, eb, reverse } = seam;
+    let G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance } = tolerance;
     inspect_with_correspondence(
-        a,
-        ea,
-        b,
-        eb,
-        reverse,
+        SurfaceSeam { a, ea, b, eb, reverse },
         &[[0., 0.], [1., 1.]],
-        position_tolerance,
-        normal_tolerance,
-        tensor_tolerance,
+        G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance },
         max_cells,
     )
+}
+/// The shared boundary of two surfaces: each surface with its edge, and whether the second edge
+/// runs against the first.
+#[derive(Clone, Copy)]
+pub struct SurfaceSeam<'a> {
+    pub a: &'a Surface,
+    pub ea: Boundary,
+    pub b: &'a Surface,
+    pub eb: Boundary,
+    pub reverse: bool,
+}
+/// Position, normal and curvature-tensor tolerances of a G2 seam check.
+#[derive(Clone, Copy, Debug)]
+pub struct G2Tolerance {
+    pub position: f64,
+    pub normal: f64,
+    pub tensor: f64,
 }
 /// Inspect a supplied monotone bijection. Exceeding tolerance disproves this
 /// relation only; it does not disprove the existence of another correspondence.
 /// Exhausted work or unproved regularity returns `Unresolved`.
 pub fn inspect_with_correspondence(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
+    seam: SurfaceSeam<'_>,
     nodes: &[[f64; 2]],
-    position_tolerance: f64,
-    normal_tolerance: f64,
-    tensor_tolerance: f64,
+    tolerance: G2Tolerance,
     max_cells: usize,
 ) -> Result<Report> {
     check(nodes.first()==Some(&[0.,0.])&&nodes.last()==Some(&[1.,1.]),
         "Full G2 correspondence must cover both complete boundaries")?;
-    inspect_boundary_ranges(a,ea,b,eb,reverse,nodes,position_tolerance,normal_tolerance,tensor_tolerance,max_cells)
+    inspect_boundary_ranges(seam, nodes, tolerance, max_cells)
 }
 /// Inspect only the explicitly declared normalized boundary ranges. Reports
 /// cover these ranges, never the omitted parts. Source surfaces are evaluated
 /// directly: no rounded trimming or reconstruction substitutes their geometry.
 pub fn inspect_boundary_ranges(
-    a:&Surface,ea:Boundary,b:&Surface,eb:Boundary,reverse:bool,
-    nodes:&[[f64;2]],position_tolerance:f64,normal_tolerance:f64,
-    tensor_tolerance:f64,max_cells:usize,
+    seam: SurfaceSeam<'_>,
+    nodes: &[[f64; 2]],
+    tolerance: G2Tolerance,
+    max_cells: usize,
 )->Result<Report> {
+    let SurfaceSeam { a, ea, b, eb, reverse } = seam;
+    let G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance } = tolerance;
     check(
         nodes.len() >= 2
             && nodes.len() <= 1025
@@ -237,7 +230,7 @@ pub fn inspect_boundary_ranges(
         && crate::surface_join::identical_boundary(a,ea,b,eb);
     let mut cells = nodes
         .windows(2)
-        .map(|w| cell(a, ea, b, eb, reverse, [w[0][0], w[1][0]], nodes,position_exact))
+        .map(|w| cell(SurfaceSeam { a, ea, b, eb, reverse }, [w[0][0], w[1][0]], nodes, position_exact))
         .collect::<Result<Vec<_>>>()?;
     let mut work = cells.len();
     let mut lower = [[0_f64; 2]; 2];
@@ -334,7 +327,7 @@ pub fn inspect_boundary_ranges(
         }
         cells.swap_remove(index);
         for t in [[t[0], mid], [mid, t[1]]] {
-            let c = cell(a, ea, b, eb, reverse, t, nodes,position_exact)?;
+            let c = cell(SurfaceSeam { a, ea, b, eb, reverse }, t, nodes, position_exact)?;
             position_lower = position_lower.max(c.position[0]);
             for s in 0..2 {
                 for k in 0..2 {
@@ -360,17 +353,13 @@ pub struct InferredReport {
 }
 
 pub fn inspect_inferred(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
+    seam: SurfaceSeam<'_>,
     segments: usize,
-    position_tolerance: f64,
-    normal_tolerance: f64,
-    tensor_tolerance: f64,
+    tolerance: G2Tolerance,
     max_cells: usize,
 ) -> Result<InferredReport> {
+    let SurfaceSeam { a, ea, b, eb, reverse } = seam;
+    let G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance } = tolerance;
     a.validate()?;
     b.validate()?;
     check(
@@ -433,15 +422,9 @@ pub fn inspect_inferred(
     let candidate_monotone = nodes.windows(2).all(|w| w[0][1] < w[1][1]);
     let verification = if candidate_monotone {
         Some(inspect_with_correspondence(
-            a,
-            ea,
-            b,
-            eb,
-            reverse,
+            SurfaceSeam { a, ea, b, eb, reverse },
             &nodes,
-            position_tolerance,
-            normal_tolerance,
-            tensor_tolerance,
+            G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance },
             max_cells,
         )?)
     } else {

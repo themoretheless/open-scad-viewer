@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0493",
+  "testedBase": "6f27b5842060e23fb6b20c1b966eb0ad5b5ce11b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 40,
+  "scope": [
+    "Join an ordered chain of NURBS curves using one exact global weight gauge.",
+    "Compose exact weight scales at every join and store the complete chain only once. Any structural or representability refusal leaves no partially joined output."
+  ],
+  "logSha256": "89b3f553ec0178f32b39e472043453f6650aad480004f2168ddc3eb6a38bfd87",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "9231b253491d39f55cdd169cf42c6513bb45668672991af542241c7670d4c0e7",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ad03d52282e5080fd56f2d11c6d24b6e2e6fb484d05d54df586cab398e45c82d"
+  }
+}

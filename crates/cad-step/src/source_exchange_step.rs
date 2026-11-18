@@ -1,7 +1,7 @@
 //! Original source carriers with bounded endpoint trims in an AP242 candidate.
 //! Independent reader qualification is required; no Model/editing certificate.
-use crate::step_interchange_v3::{Writer, emit_curve_source, emit_surface_source, refs_text};
-use brep_core::{source_exchange_endpoints as endpoints, source_exchange_trims as trims};
+use crate::{step_interchange_v3::{Writer, emit_curve_source, emit_surface_source, refs_text}};
+use brep_core::source_exchange_endpoints as endpoints;
 use nurbs_core::{Error, Result};
 use std::collections::BTreeMap;
 pub struct Candidate {
@@ -19,32 +19,18 @@ fn trim(w: &mut Writer, curve: usize, t: [f64; 2]) -> usize {
 }
 /// Native authority comes only from a private Body, original recipes and fresh
 /// endpoint/trim gates. Original curves and surfaces are emitted unchanged.
-pub fn prepare(
-    body: &brep_core::source_volume::Body,
+pub fn prepare<E: endpoints::ExchangeCarrier>(
+    body: &brep_core::source_volume::Body<E>,
     tolerance_mm: f64,
     limits: endpoints::Limits,
     max_trim_work: usize,
 ) -> Result<Option<Candidate>> {
-    if !(1..=10_000_000).contains(&max_trim_work) {
-        return Err(invalid("Choose bounded positive trim work"));
-    }
+    let Some(plan) = brep_core::source_exchange_plan::prepare(body, tolerance_mm, limits, max_trim_work)? else {
+        return Ok(None);
+    };
+    let (points, trims) = (&plan.points, &plan.trims);
     let shell = body.geometry().shell();
-    let regions = shell
-        .regions()
-        .ok_or_else(|| invalid("Original source regions required"))?;
-    let report = endpoints::prepare(body, tolerance_mm, limits)?;
-    let Some(points) = report.prepared else {
-        return Ok(None);
-    };
-    let Some(pole_work) = shell.poles().len().checked_mul(2) else {
-        return Err(invalid("Pole trim count overflow"));
-    };
-    let Some(trim_work) = max_trim_work.checked_sub(pole_work).filter(|w| *w > 0) else {
-        return Ok(None);
-    };
-    let Some(trims) = trims::prepare(body, &points, tolerance_mm, trim_work)? else {
-        return Ok(None);
-    };
+    let regions = shell.regions().ok_or_else(|| invalid("Original source regions required"))?;
     let mut w = Writer::new();
     let mut vertices = BTreeMap::new();
     for v in points.vertices() {
@@ -70,11 +56,11 @@ pub fn prepare(
             let address = shell.uses()[index][slot];
             usages.insert(
                 (address.face, address.wire, address.edge),
-                (index, edge.reversed()[slot]),
+                (index, edge.restriction_reversed(slot)),
             );
-            let source = emit_curve_source(&mut w, edge.uses()[slot].curve());
+            let source = emit_curve_source(&mut w, edge.fragment(slot).curve());
             let mut t = numeric.uses()[slot];
-            if edge.reversed()[slot] {
+            if edge.restriction_reversed(slot) {
                 t.reverse();
             }
             let pc = trim(&mut w, source, t);
@@ -89,7 +75,7 @@ pub fn prepare(
         ));
         let address = shell.uses()[index][0];
         let mut ids = shell.vertices()[address.face][address.wire][address.edge];
-        if edge.reversed()[0] {
+        if edge.restriction_reversed(0) {
             ids.reverse();
         }
         edge_entities.push(w.emit(format!(
@@ -186,15 +172,10 @@ pub fn prepare(
     if text.len() > 32 * 1024 * 1024 {
         return Err(invalid("Source STEP output limit"));
     }
-    let error = trims
-        .edges()
-        .iter()
-        .flat_map(|e| e.error_upper().into_iter().flatten())
-        .chain(points.vertices().iter().map(|v| v.error_upper))
-        .fold(0., f64::max);
+    debug_assert_eq!((vertices.len(), edge_entities.len(), faces.len()), (plan.vertices, plan.edges, plan.faces));
     Ok(Some(Candidate {
         text,
-        endpoint_error_upper: error,
+        endpoint_error_upper: plan.endpoint_error_upper,
         vertices: vertices.len(),
         edges: edge_entities.len(),
         faces: faces.len(),

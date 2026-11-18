@@ -1,9 +1,9 @@
-import { computed, ref } from 'vue'
+import { computed, ref } from 'svet'
 import { resolveFormaTokens } from '../forma/tokens'
 import type { Language } from '../i18n/appStrings'
-import { storageGet, storageGetEnum, storageSet } from '../services/safeStorage'
-import { customizeTokens, normalizeHex } from '../services/themeCustomization'
-import { resolveTheme, themeCanvasColor, THEME_SELECTIONS, type ThemeSelection } from '../services/themePreferences'
+import { storageGet, storageGetEnum, storageSet } from '../core/safeStorage'
+import { customizeTokens, normalizeHex } from '../app/themeCustomization'
+import { resolveTheme, themeCanvasColor, THEME_SELECTIONS, type ThemeSelection } from '../app/themePreferences'
 
 export interface AppearanceOptions {
   /** Called after every application of the preferences with the effective canvas colour. */
@@ -17,7 +17,8 @@ export interface AppearanceOptions {
 export function useAppearance(options: AppearanceOptions) {
   const lang = ref<Language>(storageGetEnum<Language>('scad-lang', ['ru', 'en'], 'ru'))
   const legacyThemeRaw = storageGet('scad-theme')
-  const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
+  const legacyTheme: ThemeSelection =
+    legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
   const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection', THEME_SELECTIONS, legacyTheme)
   const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
   const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -29,7 +30,10 @@ export function useAppearance(options: AppearanceOptions) {
 
   function effectiveCanvasColor() {
     const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-    const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
+    const tokens = {
+      ...theme.tokens,
+      ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }),
+    }
     return themeCanvasColor({ ...theme, tokens })
   }
 
@@ -39,7 +43,10 @@ export function useAppearance(options: AppearanceOptions) {
     document.documentElement.dataset.themePreset = themeSelection.value
     document.documentElement.lang = lang.value
     document.documentElement.style.colorScheme = theme.scheme
-    const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
+    const tokens = {
+      ...theme.tokens,
+      ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }),
+    }
     const formaTokens = resolveFormaTokens(theme.scheme, tokens)
     for (const [token, value] of Object.entries({ ...tokens, ...formaTokens })) {
       document.documentElement.style.setProperty(token, value)
@@ -93,8 +100,19 @@ export function useAppearance(options: AppearanceOptions) {
   }
 
   return {
-    lang, themeSelection, customAccent, customBase, effectiveTokens, isDark,
-    setCustomColor, effectiveCanvasColor, resetCustomColors,
-    toggleLang, toggleTheme, applyPreferences, attachSystemTheme, detachSystemTheme,
+    lang,
+    themeSelection,
+    customAccent,
+    customBase,
+    effectiveTokens,
+    isDark,
+    setCustomColor,
+    effectiveCanvasColor,
+    resetCustomColors,
+    toggleLang,
+    toggleTheme,
+    applyPreferences,
+    attachSystemTheme,
+    detachSystemTheme,
   }
 }

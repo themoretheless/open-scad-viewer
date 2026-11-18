@@ -2,7 +2,6 @@ import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 import { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { GeometryQuality } from '../src/core/build'
 import {
   ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
@@ -11,7 +10,7 @@ import {
   type GeometryBuildPurpose,
   type GeometryEngineRegistrySnapshot,
 } from '../src/core/geometryExecution'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 import {
   DIRECT_GEOMETRY_IDENTITY,
   DIRECT_GEOMETRY_PROTOCOL_VERSION,
@@ -84,11 +83,12 @@ class ControlledWorker extends EventEmitter {
   }
 
   request(): DirectGeometryRequest {
-    const request = this.posted.find((value): value is DirectGeometryRequest => (
-      value !== null && typeof value === 'object'
-      && ((value as { type?: unknown }).type === 'build'
-        || (value as { type?: unknown }).type === 'capabilities')
-    ))
+    const request = this.posted.find(
+      (value): value is DirectGeometryRequest =>
+        value !== null &&
+        typeof value === 'object' &&
+        ((value as { type?: unknown }).type === 'build' || (value as { type?: unknown }).type === 'capabilities'),
+    )
     if (!request) throw new Error('Worker has not received a direct geometry request')
     return request
   }
@@ -258,59 +258,92 @@ describe('DirectGeometrySupervisor', () => {
   it('joins a real failed build before admitting a fresh successful worker', async () => {
     const supervisor = new DirectGeometrySupervisor({ jobDeadlineMs: 20_000, startupTimeoutMs: REAL_WORKER_STARTUP_MS })
     supervisors.add(supervisor)
-    await expect(supervisor.build('assert(false, "join failure path");', 'full', 'analysis')).rejects.toThrow('join failure path')
+    await expect(supervisor.build('assert(false, "join failure path");', 'full', 'analysis')).rejects.toThrow(
+      'join failure path',
+    )
     await expect(supervisor.build('cube(2);', 'full', 'analysis')).resolves.toMatchObject({ result: { volume: 8 } })
     expect(supervisor.snapshot()).toMatchObject({
-      workersStarted: 2, workersJoined: 2, quarantined: false, admittedJobs: 0,
+      workersStarted: 2,
+      workersJoined: 2,
+      quarantined: false,
+      admittedJobs: 0,
     })
   }, 90_000)
 
   it('admits a delayed cold kernel under the worker startup deadline', async () => {
     const supervisor = new DirectGeometrySupervisor({
-      workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
-        workerData: {delayMs: 350}, env: {}, stdout: true, stderr: true,
-      }),
-      startupTimeoutMs: REAL_WORKER_STARTUP_MS, jobDeadlineMs: 20_000,
+      workerFactory: () =>
+        new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
+          workerData: { delayMs: 350 },
+          env: {},
+          stdout: true,
+          stderr: true,
+        }),
+      startupTimeoutMs: REAL_WORKER_STARTUP_MS,
+      jobDeadlineMs: 20_000,
     })
     supervisors.add(supervisor)
     await expect(supervisor.build('cube(2);', 'full', 'analysis')).resolves.toMatchObject({
-      result: {volume: 8, surfaceArea: 24},
+      result: { volume: 8, surfaceArea: 24 },
     })
     await expect(supervisor.capabilities()).resolves.toMatchObject({
-      engines: [{engineClass: 'mesh', availability: 'available'}, {engineClass: 'brep', availability: 'available'}],
+      engines: [
+        { engineClass: 'mesh', availability: 'available' },
+        { engineClass: 'brep', availability: 'available' },
+      ],
     })
-    expect(supervisor.snapshot()).toMatchObject({workersStarted: 2, workersJoined: 2, admittedJobs: 0})
+    expect(supervisor.snapshot()).toMatchObject({ workersStarted: 2, workersJoined: 2, admittedJobs: 0 })
   }, 90_000)
 
   it('terminates and joins a real worker whose cold kernel exceeds startup deadline', async () => {
     const supervisor = new DirectGeometrySupervisor({
-      workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
-        workerData: {delayMs: 60_000}, env: {}, stdout: true, stderr: true,
-      }),
-      startupTimeoutMs: 1_000, jobDeadlineMs: 10_000,
+      workerFactory: () =>
+        new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
+          workerData: { delayMs: 60_000 },
+          env: {},
+          stdout: true,
+          stderr: true,
+        }),
+      startupTimeoutMs: 1_000,
+      jobDeadlineMs: 10_000,
     })
     supervisors.add(supervisor)
     await expect(supervisor.build('cube(2);', 'full', 'analysis')).rejects.toBeInstanceOf(DirectGeometryStartupError)
-    expect(supervisor.snapshot()).toMatchObject({workersStarted: 1, workersJoined: 1, admittedJobs: 0, quarantined: false})
+    expect(supervisor.snapshot()).toMatchObject({
+      workersStarted: 1,
+      workersJoined: 1,
+      admittedJobs: 0,
+      quarantined: false,
+    })
   }, 15_000)
 
   it('cancels and joins during real cold initialization before any started handshake', async () => {
     const supervisor = new DirectGeometrySupervisor({
-      workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
-        workerData: {delayMs: 60_000}, env: {}, stdout: true, stderr: true,
-      }),
-      startupTimeoutMs: 5_000, jobDeadlineMs: 10_000,
+      workerFactory: () =>
+        new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
+          workerData: { delayMs: 60_000 },
+          env: {},
+          stdout: true,
+          stderr: true,
+        }),
+      startupTimeoutMs: 5_000,
+      jobDeadlineMs: 10_000,
     })
     supervisors.add(supervisor)
     const controller = new AbortController()
     const result = supervisor.build('cube(2);', 'full', 'analysis', controller.signal)
     const timer = setTimeout(() => controller.abort(), 100)
     try {
-      await expect(result).rejects.toMatchObject({name: 'AbortError'})
+      await expect(result).rejects.toMatchObject({ name: 'AbortError' })
     } finally {
       clearTimeout(timer)
     }
-    expect(supervisor.snapshot()).toMatchObject({workersStarted: 1, workersJoined: 1, admittedJobs: 0, quarantined: false})
+    expect(supervisor.snapshot()).toMatchObject({
+      workersStarted: 1,
+      workersJoined: 1,
+      admittedJobs: 0,
+      quarantined: false,
+    })
   }, 15_000)
 
   it('runs one disposable worker at a time and joins before settlement or the next FIFO job', async () => {
@@ -325,7 +358,14 @@ describe('DirectGeometrySupervisor', () => {
     workers[0].sendStarted()
     workers[0].sendBuildSuccess()
     let firstSettled = false
-    void first.then(() => { firstSettled = true }, () => { firstSettled = true })
+    void first.then(
+      () => {
+        firstSettled = true
+      },
+      () => {
+        firstSettled = true
+      },
+    )
     await flushMicrotasks()
 
     expect(firstSettled).toBe(false)
@@ -364,8 +404,7 @@ describe('DirectGeometrySupervisor', () => {
 
     await expect(supervisor.close()).resolves.toBeUndefined()
     const outcomes = await settlements
-    expect(outcomes.every(outcome => outcome.status === 'rejected'
-      && expectAbort(outcome.reason))).toBe(true)
+    expect(outcomes.every(outcome => outcome.status === 'rejected' && expectAbort(outcome.reason))).toBe(true)
   })
 
   it('rejects aborted or invalid direct runtime inputs before Worker admission', async () => {
@@ -373,22 +412,13 @@ describe('DirectGeometrySupervisor', () => {
     const controller = new AbortController()
     controller.abort()
 
-    await expect(supervisor.build(
-      'cube(1);',
-      'full',
-      'analysis',
-      controller.signal,
-    )).rejects.toSatisfy(expectAbort)
-    await expect(supervisor.build(
-      'x'.repeat(250_001),
-      'full',
-      'analysis',
-    )).rejects.toMatchObject({ name: 'GeometryLanguageContractError' })
-    await expect(supervisor.build(
-      'cube(1);',
-      'full',
-      'invalid' as GeometryBuildPurpose,
-    )).rejects.toBeInstanceOf(TypeError)
+    await expect(supervisor.build('cube(1);', 'full', 'analysis', controller.signal)).rejects.toSatisfy(expectAbort)
+    await expect(supervisor.build('x'.repeat(250_001), 'full', 'analysis')).rejects.toMatchObject({
+      name: 'GeometryLanguageContractError',
+    })
+    await expect(supervisor.build('cube(1);', 'full', 'invalid' as GeometryBuildPurpose)).rejects.toBeInstanceOf(
+      TypeError,
+    )
     expect(workers).toHaveLength(0)
   })
 
@@ -438,14 +468,23 @@ describe('DirectGeometrySupervisor', () => {
     controller.abort()
     await wait(5)
 
-    expect(workers[0].posted).toContainEqual(expect.objectContaining({
-      type: 'cancel',
-      reason: 'cancelled',
-      workerEpoch: 1,
-    }))
+    expect(workers[0].posted).toContainEqual(
+      expect.objectContaining({
+        type: 'cancel',
+        reason: 'cancelled',
+        workerEpoch: 1,
+      }),
+    )
     expect(workers[0].terminateCalls).toBe(1)
     let settled = false
-    void build.then(() => { settled = true }, () => { settled = true })
+    void build.then(
+      () => {
+        settled = true
+      },
+      () => {
+        settled = true
+      },
+    )
     await flushMicrotasks()
     expect(settled).toBe(false)
 
@@ -460,8 +499,7 @@ describe('DirectGeometrySupervisor', () => {
       jobDeadlineMs: 500,
       cancelGraceMs: 0,
     })
-    await expect(supervisor.build('cube(1);', 'full', 'analysis'))
-      .rejects.toBeInstanceOf(DirectGeometryStartupError)
+    await expect(supervisor.build('cube(1);', 'full', 'analysis')).rejects.toBeInstanceOf(DirectGeometryStartupError)
     expect(supervisor.snapshot()).toMatchObject({ workersJoined: 1, quarantined: false })
 
     const recovered = supervisor.build('cube(2);', 'full', 'analysis')
@@ -601,8 +639,12 @@ describe('DirectGeometrySupervisor', () => {
         const worker = new ControlledWorker(epoch)
         Object.defineProperty(worker, 'stdout', {
           value: {
-            unpipe: () => { throw new Error('fixture drain failure') },
-            resume: () => { throw new Error('fixture resume failure') },
+            unpipe: () => {
+              throw new Error('fixture drain failure')
+            },
+            resume: () => {
+              throw new Error('fixture resume failure')
+            },
           },
         })
         workers.push(worker)

@@ -6,7 +6,7 @@
 //! минимальной кривизной; рост — очередью с проверкой угла нормалей.
 
 use crate::analysis::cloud_normals::{GridIndex, dot3, norm3, unit_normal};
-use crate::{Result, check, numeric, numeric_err};
+use crate::{Result, check, numeric_err};
 use math_core::{Acceleration, local_point_planes};
 
 /// Максимальное число точек облака.

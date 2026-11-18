@@ -31,6 +31,13 @@ fn run(
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
+    if matches!(mode, 7 | 8) {
+        // Both first cross-weight jets vanish at the join, but only the left
+        // second weight jet is nonzero. C1 must not be mistaken for C2.
+        for p in &mut net[0] {
+            p[3] *= 2.;
+        }
+    }
     if mode == 3 {
         net[3][1][2] = net[3][1][2].next_up();
     }
@@ -82,7 +89,7 @@ fn run(
         .collect::<Vec<_>>();
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(&arena, &tolerance, limits, cancel);
-    let order = if matches!(mode, 4 | 5 | 6) { 1 } else { 2 };
+    let order = if matches!(mode, 4 | 5 | 6 | 8) { 1 } else { 2 };
     rational_bspline_tensor_knot_continuity(
         &mut ctx,
         RationalTensorSource {
@@ -244,4 +251,18 @@ fn nonpolynomial_rational_c2_crosses_both_original_knot_directions_and_their_ver
         "nonpolynomial rational C2 original knot crossing: work={}",
         r.work_used
     );
+}
+
+#[test]
+fn stationary_first_weight_jet_does_not_hide_a_second_weight_jet_jump() {
+    for transpose in [false, true] {
+        assert_eq!(
+            run(0.5, 8, transpose, Limits::default(), None).outcome,
+            BezierIdentity::Equal
+        );
+        assert_eq!(
+            run(0.5, 7, transpose, Limits::default(), None).outcome,
+            BezierIdentity::Different
+        );
+    }
 }

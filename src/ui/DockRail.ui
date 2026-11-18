@@ -1,9 +1,12 @@
 component DockRail {
     tokens { gap: "4px"; }
     Column {
-        class: "dock-rail"; role: "tablist"; ariaLabel: state.sidebarLabel; ariaOrientation: "vertical"; gap: tokens.gap;
-        for tab in state.tabs key tab.id {
-            IconButton { id: tab.domId; role: "tab"; ariaLabel: tab.label; title: tab.label; active: state.dockTab === tab.id; ariaSelected: state.dockTab === tab.id; ariaControls: "dock-panel"; tabindex: state.dockTab === tab.id ? 0 : -1; clicked -> actions.selectDockTab(tab.id); keydown -> actions.dockTabKeydown(); SvgIcon { path: tab.iconPath; } }
+        class: "dock-rail"; gap: tokens.gap;
+        Column {
+            class: "dock-rail-tabs"; role: "tablist"; ariaLabel: state.sidebarLabel; ariaOrientation: "vertical"; gap: tokens.gap;
+            for tab in state.tabs key tab.id {
+                IconButton { id: tab.domId; role: "tab"; ariaLabel: tab.label; title: tab.label; active: state.dockTab === tab.id; ariaSelected: state.dockTab === tab.id; ariaControls: "dock-panel"; tabindex: state.dockTab === tab.id ? 0 : -1; clicked -> actions.selectDockTab(tab.id); keydown -> actions.dockTabKeydown(); SvgIcon { path: tab.iconPath; } }
+            }
         }
         Spacer { class: "dock-rail-spacer"; }
         IconButton { class: "dock-close"; ariaLabel: state.closeSidebarLabel; title: state.closeSidebarLabel; text: "×"; clicked -> actions.closeDock(); }

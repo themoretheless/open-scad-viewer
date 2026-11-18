@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { defaultGeometryKernel } from '../src/services/cadGeometryKernel'
-import { OpenScadProject, type OpenScadProjectFileInput } from '../src/services/openScadProject'
+import { defaultGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { OpenScadProject, type OpenScadProjectFileInput } from '../src/language/openScadProject'
 import {
   OPENSCAD_2021_TEXT_EM_SCALE,
   OPENSCAD_TEXT_MAX_CODE_POINTS,
@@ -12,18 +12,13 @@ import {
   renderOpenScadText,
   type OpenScadTextContour,
   type OpenScadTextParameters,
-} from '../src/services/openScadText'
+} from '../src/language/openScadText'
 
-const BASIC = new Uint8Array(readFileSync(
-  new URL('./fixtures/Basic-Regular.ttf', import.meta.url),
-))
-const BASIC_LICENSE = readFileSync(
-  new URL('./fixtures/Basic-OFL.txt', import.meta.url),
-)
-const BASIC_METADATA = JSON.parse(readFileSync(
-  new URL('./fixtures/Basic-Regular.metadata.json', import.meta.url),
-  'utf8',
-)) as Record<string, unknown>
+const BASIC = new Uint8Array(readFileSync(new URL('./fixtures/Basic-Regular.ttf', import.meta.url)))
+const BASIC_LICENSE = readFileSync(new URL('./fixtures/Basic-OFL.txt', import.meta.url))
+const BASIC_METADATA = JSON.parse(
+  readFileSync(new URL('./fixtures/Basic-Regular.metadata.json', import.meta.url), 'utf8'),
+) as Record<string, unknown>
 const NOTO_ROOT = new URL('../node_modules/harfbuzzjs/test/fonts/noto/', import.meta.url)
 const NOTO_SANS = new Uint8Array(readFileSync(new URL('NotoSans-Regular.ttf', NOTO_ROOT)))
 const NOTO_ARABIC = new Uint8Array(readFileSync(new URL('NotoSansArabic-Variable.ttf', NOTO_ROOT)))
@@ -42,11 +37,10 @@ function basicProject(): OpenScadProject {
 
 async function renderBasic(parameters: OpenScadTextParameters) {
   const project = basicProject()
-  return renderOpenScadText(
-    project,
-    await prepareOpenScadTextAssets(project),
-    { font: 'Basic:style=Regular', ...parameters },
-  )
+  return renderOpenScadText(project, await prepareOpenScadTextAssets(project), {
+    font: 'Basic:style=Regular',
+    ...parameters,
+  })
 }
 
 function signedArea(contour: OpenScadTextContour): number {
@@ -61,10 +55,12 @@ function signedArea(contour: OpenScadTextContour): number {
 
 describe('independent OpenSCAD text service', () => {
   it('indexes only bounded project-VFS fonts and resolves Fontconfig family/style names', async () => {
-    expect(createHash('sha256').update(BASIC).digest('hex'))
-      .toBe('f2487f20e2241002d007831ec0e7e9c24ad39e36b49492326c79f3d70fd3b270')
-    expect(createHash('sha256').update(BASIC_LICENSE).digest('hex'))
-      .toBe('d3dbe81ed315fba5ab88aa2ceb53f92892e4f58e405f31e07e0156b15ddb9b60')
+    expect(createHash('sha256').update(BASIC).digest('hex')).toBe(
+      'f2487f20e2241002d007831ec0e7e9c24ad39e36b49492326c79f3d70fd3b270',
+    )
+    expect(createHash('sha256').update(BASIC_LICENSE).digest('hex')).toBe(
+      'd3dbe81ed315fba5ab88aa2ceb53f92892e4f58e405f31e07e0156b15ddb9b60',
+    )
     expect(BASIC_METADATA).toMatchObject({
       sourceRepository: 'https://github.com/SorkinType/Basic',
       sourceCommit: '202e65ac93bd6977e83b2f10db6b1467e0b348db',
@@ -78,19 +74,23 @@ describe('independent OpenSCAD text service', () => {
     const prepared = await prepareOpenScadTextAssets(project)
 
     expect(prepared.rejected).toEqual([])
-    expect(prepared.fonts).toEqual([expect.objectContaining({
-      path: 'fonts/Basic-Regular.ttf',
-      family: 'Basic',
-      style: 'Regular',
-      fullName: 'Basic Regular',
-      postscriptName: 'Basic-Regular',
-      unitsPerEm: 2_048,
-    })])
+    expect(prepared.fonts).toEqual([
+      expect.objectContaining({
+        path: 'fonts/Basic-Regular.ttf',
+        family: 'Basic',
+        style: 'Regular',
+        fullName: 'Basic Regular',
+        postscriptName: 'Basic-Regular',
+        unitsPerEm: 2_048,
+      }),
+    ])
     expect(OPENSCAD_2021_TEXT_EM_SCALE).toBe(1.3888)
-    expect(renderOpenScadText(project, prepared, {
-      text: 'A',
-      font: 'Basic:style=Regular',
-    }).font.path).toBe('fonts/Basic-Regular.ttf')
+    expect(
+      renderOpenScadText(project, prepared, {
+        text: 'A',
+        font: 'Basic:style=Regular',
+      }).font.path,
+    ).toBe('fonts/Basic-Regular.ttf')
   })
 
   it('matches the pinned OpenSCAD 2021 Basic A oracle bounds and alignment', async () => {
@@ -126,15 +126,12 @@ describe('independent OpenSCAD text service', () => {
     expect(layout.glyphs).toHaveLength(2)
     expect(layout.glyphs.map(glyph => glyph.contours.length)).toEqual([2, 2])
     for (const glyph of layout.glyphs) {
-      expect(Math.sign(signedArea(glyph.contours[0])))
-        .toBe(-Math.sign(signedArea(glyph.contours[1])))
+      expect(Math.sign(signedArea(glyph.contours[0]))).toBe(-Math.sign(signedArea(glyph.contours[1])))
     }
 
     const session = await defaultGeometryKernel.openSession()
     try {
-      const sections = layout.glyphs.map(glyph => (
-        session.module.CrossSection.ofPolygons(glyph.contours, 'EvenOdd')
-      ))
+      const sections = layout.glyphs.map(glyph => session.module.CrossSection.ofPolygons(glyph.contours, 'EvenOdd'))
       expect(sections.every(section => !section.isEmpty())).toBe(true)
       expect(sections.every(section => section.area() > 0)).toBe(true)
       const union = session.module.CrossSection.union(sections)
@@ -174,14 +171,15 @@ describe('independent OpenSCAD text service', () => {
   it('uses HarfBuzz GPOS kerning and GSUB ligatures instead of codepoint boxes', async () => {
     const project = projectWith([{ kind: 'blob', path: 'fonts/NotoSans-Regular.ttf', data: NOTO_SANS }])
     const prepared = await prepareOpenScadTextAssets(project)
-    const render = (text: string) => renderOpenScadText(project, prepared, {
-      text,
-      font: 'Noto Sans:style=Regular',
-      size: 10,
-      language: 'en',
-      script: 'latin',
-      direction: 'ltr',
-    })
+    const render = (text: string) =>
+      renderOpenScadText(project, prepared, {
+        text,
+        font: 'Noto Sans:style=Regular',
+        size: 10,
+        language: 'en',
+        script: 'latin',
+        direction: 'ltr',
+      })
 
     const a = render('A')
     const v = render('V')
@@ -226,15 +224,23 @@ describe('independent OpenSCAD text service', () => {
   })
 
   it('resolves explicit font files relative to the defining source path', async () => {
-    const project = projectWith([
-      { kind: 'source', path: 'models/lib/label.scad', source: '' },
-      { kind: 'blob', path: 'models/fonts/Basic-Regular.ttf', data: BASIC },
-    ], 'models/main.scad')
+    const project = projectWith(
+      [
+        { kind: 'source', path: 'models/lib/label.scad', source: '' },
+        { kind: 'blob', path: 'models/fonts/Basic-Regular.ttf', data: BASIC },
+      ],
+      'models/main.scad',
+    )
     const prepared = await prepareOpenScadTextAssets(project)
-    const layout = renderOpenScadText(project, prepared, {
-      text: 'A',
-      font: '../fonts/Basic-Regular.ttf',
-    }, 'models/lib/label.scad')
+    const layout = renderOpenScadText(
+      project,
+      prepared,
+      {
+        text: 'A',
+        font: '../fonts/Basic-Regular.ttf',
+      },
+      'models/lib/label.scad',
+    )
 
     expect(layout.font.path).toBe('models/fonts/Basic-Regular.ttf')
   })
@@ -242,32 +248,44 @@ describe('independent OpenSCAD text service', () => {
   it('never falls back to ambient fonts and reports malformed VFS fonts with typed errors', async () => {
     const empty = projectWith([])
     const emptyPrepared = await prepareOpenScadTextAssets(empty)
-    expect(() => renderOpenScadText(empty, emptyPrepared, {
-      text: 'A',
-      font: 'Basic:style=Regular',
-    })).toThrow(expect.objectContaining({
-      name: OpenScadTextError.name,
-      code: 'E_TEXT_FONT_NOT_FOUND',
-    }))
+    expect(() =>
+      renderOpenScadText(empty, emptyPrepared, {
+        text: 'A',
+        font: 'Basic:style=Regular',
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        name: OpenScadTextError.name,
+        code: 'E_TEXT_FONT_NOT_FOUND',
+      }),
+    )
 
-    const malformed = projectWith([{
-      kind: 'blob',
-      path: 'fonts/bad.ttf',
-      data: Uint8Array.from([0, 1, 2, 3]),
-    }])
+    const malformed = projectWith([
+      {
+        kind: 'blob',
+        path: 'fonts/bad.ttf',
+        data: Uint8Array.from([0, 1, 2, 3]),
+      },
+    ])
     const malformedPrepared = await prepareOpenScadTextAssets(malformed)
-    expect(malformedPrepared.rejected).toEqual([expect.objectContaining({
-      path: 'fonts/bad.ttf',
-      code: 'E_TEXT_FONT_INVALID',
-    })])
-    expect(() => renderOpenScadText(malformed, malformedPrepared, {
-      text: 'A',
-      font: 'fonts/bad.ttf',
-    })).toThrow(expect.objectContaining({
-      name: OpenScadTextError.name,
-      code: 'E_TEXT_FONT_INVALID',
-      details: expect.objectContaining({ fontPath: 'fonts/bad.ttf' }),
-    }))
+    expect(malformedPrepared.rejected).toEqual([
+      expect.objectContaining({
+        path: 'fonts/bad.ttf',
+        code: 'E_TEXT_FONT_INVALID',
+      }),
+    ])
+    expect(() =>
+      renderOpenScadText(malformed, malformedPrepared, {
+        text: 'A',
+        font: 'fonts/bad.ttf',
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        name: OpenScadTextError.name,
+        code: 'E_TEXT_FONT_INVALID',
+        details: expect.objectContaining({ fontPath: 'fonts/bad.ttf' }),
+      }),
+    )
   })
 
   it('bounds text, curves, and project identity before expensive outline expansion', async () => {
@@ -277,22 +295,27 @@ describe('independent OpenSCAD text service', () => {
 
     const project = basicProject()
     const prepared = await prepareOpenScadTextAssets(project)
-    expect(() => renderOpenScadText(project, prepared, {
-      text: 'A'.repeat(OPENSCAD_TEXT_MAX_CODE_POINTS + 1),
-      font: 'Basic',
-    })).toThrow(expect.objectContaining({
-      code: 'E_TEXT_PARAMETER_LIMIT',
-      details: expect.objectContaining({
-        limit: OPENSCAD_TEXT_MAX_CODE_POINTS,
-        actual: OPENSCAD_TEXT_MAX_CODE_POINTS + 1,
+    expect(() =>
+      renderOpenScadText(project, prepared, {
+        text: 'A'.repeat(OPENSCAD_TEXT_MAX_CODE_POINTS + 1),
+        font: 'Basic',
       }),
-    }))
+    ).toThrow(
+      expect.objectContaining({
+        code: 'E_TEXT_PARAMETER_LIMIT',
+        details: expect.objectContaining({
+          limit: OPENSCAD_TEXT_MAX_CODE_POINTS,
+          actual: OPENSCAD_TEXT_MAX_CODE_POINTS + 1,
+        }),
+      }),
+    )
 
     const otherProject = projectWith([
       { kind: 'blob', path: 'fonts/Basic-Regular.ttf', data: BASIC },
       { kind: 'source', path: 'different.scad', source: 'cube();' },
     ])
-    expect(() => renderOpenScadText(otherProject, prepared, { text: 'A', font: 'Basic' }))
-      .toThrow(expect.objectContaining({ code: 'E_TEXT_PROJECT_MISMATCH' }))
+    expect(() => renderOpenScadText(otherProject, prepared, { text: 'A', font: 'Basic' })).toThrow(
+      expect.objectContaining({ code: 'E_TEXT_PROJECT_MISMATCH' }),
+    )
   })
 })

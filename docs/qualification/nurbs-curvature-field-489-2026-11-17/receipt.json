@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0489",
+  "testedBase": "c1b0be2dd3812a4a28fc8fb5d67acf0321739735",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 32,
+  "scope": [
+    "Split an original nonperiodic NURBS curve into two exact restrictions with the original absolute parameter.",
+    "Exact Boehm refinement saturates the split knot, then structural restriction clamps both seam ends with the same weighted pole. Unstoreable refinements publish neither child."
+  ],
+  "logSha256": "36647b9df94bd682c0684573d66cc8c0b66c55570356576632e4268e3206f47b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "89bcb1d8db5b7f25434fd4bf0335e62972f9bad5add9f0dfc24a2ef3ab652ebf",
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "8558136ae29684e7b5b194098dd8f202da96cf5dbc42277cf0d41b0cd25a3ce5",
+    "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs": "17a125077067f254449534ad43a8f3a0a6d612f637e0f50214381c147ddd9e68"
+  }
+}

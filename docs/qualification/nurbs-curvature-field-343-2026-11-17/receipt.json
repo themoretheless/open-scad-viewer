@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0343",
+  "testedBase": "2acf5f6b6919b29001b6098ee6dbadd88587f673",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 16,
+  "scope": [
+    "Store all certified edges of one transverse face pair with a shared budget and strict gaps in XYZ and both trim charts.",
+    "Search reaches only tolerance-certified adjacent endpoint choices. Consecutive stored edges and gaps preserve canonical order and are separated in both Cartesian trim charts. No partial storage is returned."
+  ],
+  "logSha256": "aaceecf3c2b1ff36b00a1b3696568278700fb766f31865fef178a0aa1d4b870f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "f5625cfb7671401b704350d49a449c74687514165e9a35408498f9daf5104381",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs": "4262ac11c8990a00b77b2237e7f28da0b69939df05ab4df0e01f695512781608",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/storage.rs": "cb27e4111e8c3fc32d0d83b858962045ba52c7a1fe0938d821aa3d84cabb6fe2",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/storage/ordered.rs": "7e852e00c83d9464381f077c423e79f79277f4b63b90009b0c26760cfe14439b",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "9747d37d5207c6d604cee29a4c5cefc31ffd272e32226190c646dca9c036f40d"
+  }
+}

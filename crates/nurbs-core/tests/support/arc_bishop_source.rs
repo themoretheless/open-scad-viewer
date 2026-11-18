@@ -1,4 +1,5 @@
 //! Shared original native source for Rust/JSON/WASM/STEP qualification.
+#![allow(dead_code)] // shared by several test targets; each one uses a subset
 use super::nurbs;
 use nurbs::curve::Curve;
 pub fn path(reclock: bool) -> nurbs::curve::Curve {

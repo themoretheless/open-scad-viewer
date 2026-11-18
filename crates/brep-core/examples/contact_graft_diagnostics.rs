@@ -8,9 +8,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &fixture.patch,
         &fixture.mapping,
         &fixture.targets,
-        1e-8,
-        100000,
-        1000000,
+        brep_core::contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )?;
     let limits = brep_core::face_contacts::Limits {
         pairs: 10000,

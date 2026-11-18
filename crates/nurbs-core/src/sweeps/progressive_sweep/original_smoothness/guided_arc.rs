@@ -104,11 +104,13 @@ pub(super) fn certify(
             station,
             p,
             Some(g),
-            offset.as_ref(),
-            None,
-            shared,
-            &zero,
-            None,
+            arc_frames::ArcFrameSources {
+                offset: offset.as_ref(),
+                transport: None,
+                shared_guide: shared,
+                zero: &zero,
+                length: None,
+            },
             max_cells - out.cells,
         )?;
         if let Some(proof) = proof {

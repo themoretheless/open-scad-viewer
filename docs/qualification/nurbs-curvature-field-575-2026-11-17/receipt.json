@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0575",
+  "testedBase": "9e7c72dbd1810e6e0a4e4d99fca6d6cffb2c49eb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 145,
+  "scope": [
+    "Evaluate exact one-sided rational derivatives in original contour direction and retain geometric creases.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "b00d8590faaf0e80c8ce17076148d936203795eee17885ad7aa9458b0f47710c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "ae3caecc53f8a188fd966ab84d3f5fce50f455033ab95420286d4922070f88b1",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "dd893e40cf32e8ba0dfff02fb252d1e2f56987a08824dfc7bb1e5a86d92b88cb"
+  }
+}

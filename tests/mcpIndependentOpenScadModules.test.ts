@@ -1,35 +1,30 @@
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server'
-import {
-  OPENSCAD_2021_01_BUILTIN_MODULES,
-  OPENSCAD_2021_01_SMOKE_FIXTURES,
-} from '../src/core/openScad2021Contract'
+import { OPENSCAD_2021_01_BUILTIN_MODULES, OPENSCAD_2021_01_SMOKE_FIXTURES } from '../src/core/openScad2021Contract'
 import { createOpenScadMcpServer } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
 import type { OfficialOpenScadRuntimeService } from '../src/mcp/officialOpenScadRuntimeService'
 
 const KNOWN_FILE_MODULE_GAPS = new Set<string>()
-const IMPORT_SVG_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(
-  fixture => fixture.id === 'import-square-svg',
-)!
-const SURFACE_DAT_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(
-  fixture => fixture.id === 'heightmap-dat',
-)!
-const TEXT_FONT_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(
-  fixture => fixture.id === 'fontconfig-default-font',
-)!
-const BASIC_TTF_BASE64 = readFileSync(
-  new URL('./fixtures/Basic-Regular.ttf', import.meta.url),
-).toString('base64')
+const IMPORT_SVG_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(fixture => fixture.id === 'import-square-svg')!
+const SURFACE_DAT_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(fixture => fixture.id === 'heightmap-dat')!
+const TEXT_FONT_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(fixture => fixture.id === 'fontconfig-default-font')!
+const BASIC_TTF_BASE64 = readFileSync(new URL('./fixtures/Basic-Regular.ttf', import.meta.url)).toString('base64')
 
 describe('independent OpenSCAD module execution through MCP', () => {
   let close: () => Promise<void>
   let request: (method: string, params?: Record<string, unknown>) => Promise<Record<string, unknown>>
   const upstream = {
-    capabilities: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    check: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    export: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
+    capabilities: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    check: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    export: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
     close: vi.fn(async () => undefined),
   } as unknown as OfficialOpenScadRuntimeService
 
@@ -40,8 +35,8 @@ describe('independent OpenSCAD module execution through MCP', () => {
     const pending = new Map<number, (value: Record<string, unknown>) => void>()
     let nextId = 1
     clientTransport.onmessage = message => {
-      if (!('id' in message) || typeof message.id !== 'number'
-        || (!('result' in message) && !('error' in message))) return
+      if (!('id' in message) || typeof message.id !== 'number' || (!('result' in message) && !('error' in message)))
+        return
       pending.get(message.id)?.(message as Record<string, unknown>)
       pending.delete(message.id)
     }
@@ -84,39 +79,41 @@ describe('independent OpenSCAD module execution through MCP', () => {
 
     for (const entry of OPENSCAD_2021_01_BUILTIN_MODULES) {
       if (KNOWN_FILE_MODULE_GAPS.has(entry.name)) continue
-      const called = await request('tools/call', {
+      const called = (await request('tools/call', {
         name: 'openscad_independent_check',
         arguments: {
           source: entry.smoke.source,
           quality: 'full',
           ...(entry.name === 'surface'
             ? {
-              files: [{
-                path: SURFACE_DAT_FIXTURE.path,
-                text: SURFACE_DAT_FIXTURE.provisioning === 'inline-text'
-                  ? SURFACE_DAT_FIXTURE.text
-                  : '',
-              }],
-            }
+                files: [
+                  {
+                    path: SURFACE_DAT_FIXTURE.path,
+                    text: SURFACE_DAT_FIXTURE.provisioning === 'inline-text' ? SURFACE_DAT_FIXTURE.text : '',
+                  },
+                ],
+              }
             : entry.name === 'import'
               ? {
-                files: [{
-                  path: IMPORT_SVG_FIXTURE.path,
-                  text: IMPORT_SVG_FIXTURE.provisioning === 'inline-text'
-                    ? IMPORT_SVG_FIXTURE.text
-                    : '',
-                }],
-              }
+                  files: [
+                    {
+                      path: IMPORT_SVG_FIXTURE.path,
+                      text: IMPORT_SVG_FIXTURE.provisioning === 'inline-text' ? IMPORT_SVG_FIXTURE.text : '',
+                    },
+                  ],
+                }
               : entry.name === 'text'
                 ? {
-                  files: [{
-                    path: TEXT_FONT_FIXTURE.path,
-                    data_base64: BASIC_TTF_BASE64,
-                  }],
-                }
+                    files: [
+                      {
+                        path: TEXT_FONT_FIXTURE.path,
+                        data_base64: BASIC_TTF_BASE64,
+                      },
+                    ],
+                  }
                 : {}),
         },
-      }) as {
+      })) as {
         isError?: boolean
         structuredContent?: {
           check: {
@@ -145,7 +142,7 @@ describe('independent OpenSCAD module execution through MCP', () => {
   })
 
   it('keeps stable primitive and transform semantics through the independent MCP route', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: `
@@ -159,7 +156,7 @@ describe('independent OpenSCAD module execution through MCP', () => {
         `,
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {

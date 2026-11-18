@@ -1,5 +1,5 @@
-use crate::{Circle, Constraint, Sketch, length, solve, subtract};
 use crate::residuals::jacobian_into;
+use crate::{Circle, Constraint, Sketch, length, solve, subtract};
 
 impl Sketch {
     /// Axis-aligned 2D bounding box `(min_xy, max_xy)` enclosing all points and circles in the sketch.
@@ -61,6 +61,13 @@ impl Sketch {
         }
         let mut j_flat = vec![0.0; m * n];
         jacobian_into(solved, &row_offsets, &mut x, &mut j_flat, n);
+        let scale = solved.characteristic_scale();
+        for value in &mut j_flat {
+            *value /= scale;
+        }
+        if j_flat.iter().any(|value| !value.is_finite()) {
+            return Vec::new();
+        }
 
         let mut basis: Vec<(usize, Vec<f64>)> = Vec::with_capacity(n);
         let mut out = Vec::new();
@@ -77,7 +84,7 @@ impl Sketch {
                 for &(pivot_col, ref b_row) in &basis {
                     let factor = row[pivot_col];
                     if factor != 0.0 {
-                        for col in pivot_col..n {
+                        for col in 0..n {
                             row[col] -= factor * b_row[col];
                         }
                     }
@@ -89,7 +96,7 @@ impl Sketch {
                     && pivot_val.abs() >= 1e-7
                 {
                     let inv = 1.0 / pivot_val;
-                    for v in &mut row[pivot_col..] {
+                    for v in &mut row {
                         *v *= inv;
                     }
                     basis.push((pivot_col, row));
@@ -134,8 +141,7 @@ impl Sketch {
             if !pa[0].is_finite() || !pa[1].is_finite() {
                 continue;
             }
-            for j in (i + 1)..n_pts {
-                let pb = self.points[j];
+            for (j, &pb) in self.points.iter().enumerate().skip(i + 1) {
                 if !pb[0].is_finite() || !pb[1].is_finite() {
                     continue;
                 }
@@ -272,22 +278,80 @@ impl Sketch {
             }
         }
 
-        // 3. Circle-pair EqualRadius.
+        // 3. Line/circle and circle/circle tangency. Suggestions are never applied here.
+        for &(a, b, ux, uy, lu) in &seg_data {
+            for (circle_index, circle) in self.circles.iter().enumerate() {
+                let Some(&center) = self.points.get(circle.center) else {
+                    continue;
+                };
+                if !center.iter().all(|v| v.is_finite()) || !circle.radius.is_finite() {
+                    continue;
+                }
+                let vx = center[0] - self.points[a][0];
+                let vy = center[1] - self.points[a][1];
+                let distance = (ux * vy - uy * vx).abs() / lu;
+                let already = self.constraints.iter().any(|constraint| {
+                    matches!(
+                        *constraint,
+                        Constraint::TangentLineCircle { a: ca, b: cb, circle }
+                            if (ca.min(cb), ca.max(cb)) == (a.min(b), a.max(b))
+                                && circle == circle_index
+                    )
+                });
+                if (distance - circle.radius).abs() <= linear_tol && !already {
+                    suggestions.push(Constraint::TangentLineCircle {
+                        a,
+                        b,
+                        circle: circle_index,
+                    });
+                }
+            }
+        }
+        for i in 0..self.circles.len() {
+            for j in (i + 1)..self.circles.len() {
+                let (Some(&ca), Some(&cb)) = (
+                    self.points.get(self.circles[i].center),
+                    self.points.get(self.circles[j].center),
+                ) else {
+                    continue;
+                };
+                let distance = length(subtract(ca, cb));
+                let external = self.circles[i].radius + self.circles[j].radius;
+                let internal = (self.circles[i].radius - self.circles[j].radius).abs();
+                for (target, internal_flag) in [(external, false), (internal, true)] {
+                    let already = self.constraints.iter().any(|constraint| {
+                        matches!(
+                            *constraint,
+                            Constraint::TangentCircles { a, b, internal }
+                                if (a.min(b), a.max(b)) == (i, j) && internal == internal_flag
+                        )
+                    });
+                    if (distance - target).abs() <= linear_tol && !already {
+                        suggestions.push(Constraint::TangentCircles {
+                            a: i,
+                            b: j,
+                            internal: internal_flag,
+                        });
+                    }
+                }
+            }
+        }
+
+        // 4. Circle-pair EqualRadius.
         for i in 0..self.circles.len() {
             let ra = self.circles[i].radius;
             if !ra.is_finite() {
                 continue;
             }
-            for j in (i + 1)..self.circles.len() {
-                let rb = self.circles[j].radius;
-                if rb.is_finite()
-                    && (ra - rb).abs() <= linear_tol
-                    && !has_pair_constraint(3, i, j)
+            for (j, circle) in self.circles.iter().enumerate().skip(i + 1) {
+                let rb = circle.radius;
+                if rb.is_finite() && (ra - rb).abs() <= linear_tol && !has_pair_constraint(3, i, j)
                 {
                     suggestions.push(Constraint::EqualRadius { a: i, b: j });
                 }
             }
         }
+        suggestions.truncate(4096);
         suggestions
     }
 
@@ -600,8 +664,14 @@ impl Sketch {
         if lu <= dist_prev || lv <= dist_next {
             return None;
         }
-        let t1 = [b[0] + (u[0] / lu) * dist_prev, b[1] + (u[1] / lu) * dist_prev];
-        let t2 = [b[0] + (v[0] / lv) * dist_next, b[1] + (v[1] / lv) * dist_next];
+        let t1 = [
+            b[0] + (u[0] / lu) * dist_prev,
+            b[1] + (u[1] / lu) * dist_prev,
+        ];
+        let t2 = [
+            b[0] + (v[0] / lv) * dist_next,
+            b[1] + (v[1] / lv) * dist_next,
+        ];
         let t1_idx = self.points.len();
         self.points.push(t1);
         let t2_idx = self.points.len();
@@ -613,39 +683,19 @@ impl Sketch {
     /// appends the mirrored points to `self.points`, and optionally appends a
     /// [`Constraint::Symmetric`] for each original/mirrored pair. Returns the new point indices.
     pub fn mirror_points(
-        &mut self,
-        point_indices: &[usize],
-        axis_p0: usize,
-        axis_p1: usize,
-        add_symmetric_constraints: bool,
+        &mut self, point_indices: &[usize], axis_p0: usize, axis_p1: usize, add_symmetric_constraints: bool,
     ) -> Option<Vec<usize>> {
-        if axis_p0 >= self.points.len()
-            || axis_p1 >= self.points.len()
-            || axis_p0 == axis_p1
-            || point_indices.iter().any(|&idx| idx >= self.points.len())
-        {
-            return None;
-        }
-        let p0 = self.points[axis_p0];
-        let p1 = self.points[axis_p1];
-        if !p0[0].is_finite()
-            || !p0[1].is_finite()
-            || !p1[0].is_finite()
-            || !p1[1].is_finite()
-        {
-            return None;
-        }
+        if axis_p0 >= self.points.len() || axis_p1 >= self.points.len() || axis_p0 == axis_p1
+            || point_indices.iter().any(|&idx| idx >= self.points.len()) { return None; }
+        let (p0, p1) = (self.points[axis_p0], self.points[axis_p1]);
+        if !p0[0].is_finite() || !p0[1].is_finite() || !p1[0].is_finite() || !p1[1].is_finite() { return None; }
         let d = subtract(p1, p0);
         let l2 = d[0] * d[0] + d[1] * d[1];
-        if l2 <= 1e-18 {
-            return None;
-        }
+        if l2 <= 1e-18 { return None; }
         let mut reflected = Vec::with_capacity(point_indices.len());
         for &idx in point_indices {
             let p = self.points[idx];
-            if !p[0].is_finite() || !p[1].is_finite() {
-                return None;
-            }
+            if !p[0].is_finite() || !p[1].is_finite() { return None; }
             let v = subtract(p, p0);
             let t = (v[0] * d[0] + v[1] * d[1]) / l2;
             let foot = [p0[0] + t * d[0], p0[1] + t * d[1]];
@@ -657,12 +707,7 @@ impl Sketch {
             self.points.push(pt);
             new_indices.push(new_idx);
             if add_symmetric_constraints {
-                self.constraints.push(Constraint::Symmetric {
-                    a: orig_idx,
-                    b: new_idx,
-                    axis_a: axis_p0,
-                    axis_b: axis_p1,
-                });
+                self.constraints.push(Constraint::Symmetric { a: orig_idx, b: new_idx, axis_a: axis_p0, axis_b: axis_p1 });
             }
         }
         Some(new_indices)
@@ -672,40 +717,24 @@ impl Sketch {
     /// `radius` at `center`, starting at `start_angle_rad`, and appends `EqualLength` constraints
     /// between consecutive closed polygon edges. Returns `Some((vertex_indices, constraint_indices))`.
     pub fn add_regular_polygon(
-        &mut self,
-        center: (f64, f64),
-        radius: f64,
-        sides: usize,
-        start_angle_rad: f64,
+        &mut self, center: (f64, f64), radius: f64, sides: usize, start_angle_rad: f64,
     ) -> Option<(Vec<usize>, Vec<usize>)> {
-        if !(3..=512).contains(&sides)
-            || !center.0.is_finite()
-            || !center.1.is_finite()
-            || !radius.is_finite()
-            || radius <= 1e-9
-            || !start_angle_rad.is_finite()
-            || self.points.len().saturating_add(sides) > 512
-        {
-            return None;
-        }
+        if !(3..=512).contains(&sides) || !center.0.is_finite() || !center.1.is_finite()
+            || !radius.is_finite() || radius <= 1e-9 || !start_angle_rad.is_finite()
+            || self.points.len().saturating_add(sides) > 512 { return None; }
         let mut vertex_indices = Vec::with_capacity(sides);
         for i in 0..sides {
             let theta = start_angle_rad + std::f64::consts::TAU * (i as f64 / sides as f64);
             let (s, c) = theta.sin_cos();
             let pt = [center.0 + radius * c, center.1 + radius * s];
-            if !pt[0].is_finite() || !pt[1].is_finite() || pt[0].abs() > 1e6 || pt[1].abs() > 1e6 {
-                return None;
-            }
+            if !pt[0].is_finite() || !pt[1].is_finite() || pt[0].abs() > 1e6 || pt[1].abs() > 1e6 { return None; }
             let idx = self.points.len();
             self.points.push(pt);
             vertex_indices.push(idx);
         }
         let mut constraint_indices = Vec::with_capacity(sides - 1);
         for i in 0..(sides - 1) {
-            let a = vertex_indices[i];
-            let b = vertex_indices[i + 1];
-            let c = vertex_indices[i + 1];
-            let d = vertex_indices[(i + 2) % sides];
+            let (a, b, c, d) = (vertex_indices[i], vertex_indices[i + 1], vertex_indices[i + 1], vertex_indices[(i + 2) % sides]);
             let ci = self.constraints.len();
             self.constraints.push(Constraint::EqualLength { a, b, c, d });
             constraint_indices.push(ci);
@@ -713,14 +742,59 @@ impl Sketch {
         Some((vertex_indices, constraint_indices))
     }
 
+    /// Adds a bounded circular pattern and represents it with existing equal-radius/equal-side
+    /// constraints. The returned point list starts with `source`; no solver-specific pattern object
+    /// or serialization change is introduced.
+    pub fn add_circular_pattern(
+        &mut self, center: usize, source: usize, count: usize,
+    ) -> crate::Result<(Vec<usize>, Vec<usize>)> {
+        if !(2..=128).contains(&count) || center >= self.points.len() || source >= self.points.len() || center == source
+            || self.points.len().saturating_add(count - 1) > 512
+            || self.constraints.len().saturating_add(2 * (count - 1)) > 2048 {
+            return Err(crate::error("Circular pattern input or budget invalid"));
+        }
+        let (c, p) = (self.points[center], self.points[source]);
+        if !c.iter().chain(&p).all(|v| v.is_finite() && v.abs() <= 1e6) {
+            return Err(crate::error("Circular pattern requires finite coordinates"));
+        }
+        let radial = subtract(p, c);
+        let radius = length(radial);
+        if radius <= 1e-9 { return Err(crate::error("Circular pattern radius must be positive")); }
+        let start = radial[1].atan2(radial[0]);
+        let mut generated = Vec::with_capacity(count - 1);
+        for index in 1..count {
+            let theta = start + std::f64::consts::TAU * index as f64 / count as f64;
+            let (sin, cos) = theta.sin_cos();
+            let point = [c[0] + radius * cos, c[1] + radius * sin];
+            if !point.iter().all(|v| v.is_finite() && v.abs() <= 1e6) {
+                return Err(crate::numerical_error("Non-finite circular pattern point"));
+            }
+            generated.push(point);
+        }
+        let mut points = Vec::with_capacity(count);
+        points.push(source);
+        for point in generated {
+            points.push(self.points.len());
+            self.points.push(point);
+        }
+        let mut constraints = Vec::with_capacity(2 * (count - 1));
+        for &point in &points[1..] {
+            constraints.push(self.constraints.len());
+            self.constraints.push(Constraint::EqualLength { a: center, b: source, c: center, d: point });
+        }
+        for index in 0..count - 1 {
+            constraints.push(self.constraints.len());
+            self.constraints.push(Constraint::EqualLength {
+                a: points[index], b: points[index + 1], c: points[index + 1], d: points[(index + 2) % count],
+            });
+        }
+        Ok((points, constraints))
+    }
+
     /// Estimates remaining degrees of freedom via structural equation count:
     /// `2 * num_points - scalar_constraint_equations_count`.
     pub fn degrees_of_freedom(&self) -> isize {
-        let eqs: usize = self
-            .constraints
-            .iter()
-            .map(Self::constraint_residual_len)
-            .sum();
+        let eqs: usize = self.constraints.iter().map(Self::constraint_residual_len).sum();
         (2 * self.points.len()) as isize - eqs as isize
     }
 }

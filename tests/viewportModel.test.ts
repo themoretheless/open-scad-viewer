@@ -4,7 +4,7 @@ import {
   standardViewForCamera,
   standardViewOrientation,
   type StandardView,
-} from '../src/services/viewportModel'
+} from '../src/render/viewportModel'
 
 describe('viewport model', () => {
   it('round-trips every canonical standard view and treats wrapped yaw as equivalent', () => {

@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0543",
+  "testedBase": "cce2fbb7f182264b334038afe55953525da65c4d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 143,
+  "scope": [
+    "Compute the signed rational central second moments of a closed lifted UV polygon.",
+    "Integrate rational quadratic moments over oriented polygon triangles and translate them to the exact centroid."
+  ],
+  "logSha256": "e6225b28418129aad8ded0af6a4683b932314a4d3063562978f5719b8e1636be",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a725388fcbe3116d7206ad95c7aba17f991041f7e43c4004ba7edf36142c3cd9",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "cdeb9fe1bdef2633ddc5606c8467309fb510bc9238be6cb6390395063bbfe234"
+  }
+}

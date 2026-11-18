@@ -15,8 +15,8 @@ copyVersion(`${q}/plans/brep-capability-qualification-plan-v11.schema.json`,next
 copyVersion(`${q}/brep-capability-evidence-v11.schema.json`,next.evidenceSchema)
 const artifacts=[
   'crates/brep-core/src/close_topology.rs','crates/brep-core/src/lib.rs',
-  'crates/geometry-bridge/src/lib.rs','src/services/geometry/brep.ts',
-  'src/services/geometry/brepCapability.ts','tests/brepQualificationV12.test.ts',
+  'crates/geometry-bridge/src/lib.rs','src/kernel/geometry/brep.ts',
+  'src/kernel/geometry/brepCapability.ts','tests/brepQualificationV12.test.ts',
   'src/generated/geometry-kernels/kernel_bg.wasm',
 ]
 const common=['global-solid-audit/1','persistent-naming/1']
@@ -48,7 +48,7 @@ const specs=[
 ]
 for(const spec of specs){
   const plan=`${q}/plans/${spec.slug}.json`,evidence=`${q}/${spec.slug}-evidence-v12.json`
-  write(plan,{$schema:'./brep-capability-qualification-plan-v12.schema.json',schema:'open-scad-viewer/brep-capability-qualification-plan',schemaVersion:12,planId:spec.slug,gate:{id:'g8-full',name:'brep-full-closed-matrix',version:12},lifecycle:{status:'qualified',qualificationClaim:'finite-cell'},claimBoundary:{candidateClaim:spec.claim,forbiddenClaims:spec.excluded},capability:spec.id,successorOf:spec.successorOf,dependencies:spec.deps.map(capability=>({capability,requiredMaturity:'Qualified'})),scope:{included:spec.included,excluded:spec.excluded},matrix:spec.rows.map(([id,expected])=>({id,expected,blocksQualification:true})),bindings:{implementation:artifacts.slice(0,-1),registry:'src/services/geometry/brepCapability.ts',evidenceJson:evidence},evidence:{state:'qualified',notes:['Only the finite test-backed cells are qualified; excluded cases remain typed refusals.']},resetPolicy:'false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID',unresolvedRows:[]})
+  write(plan,{$schema:'./brep-capability-qualification-plan-v12.schema.json',schema:'open-scad-viewer/brep-capability-qualification-plan',schemaVersion:12,planId:spec.slug,gate:{id:'g8-full',name:'brep-full-closed-matrix',version:12},lifecycle:{status:'qualified',qualificationClaim:'finite-cell'},claimBoundary:{candidateClaim:spec.claim,forbiddenClaims:spec.excluded},capability:spec.id,successorOf:spec.successorOf,dependencies:spec.deps.map(capability=>({capability,requiredMaturity:'Qualified'})),scope:{included:spec.included,excluded:spec.excluded},matrix:spec.rows.map(([id,expected])=>({id,expected,blocksQualification:true})),bindings:{implementation:artifacts.slice(0,-1),registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:evidence},evidence:{state:'qualified',notes:['Only the finite test-backed cells are qualified; excluded cases remain typed refusals.']},resetPolicy:'false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID',unresolvedRows:[]})
   write(evidence,{$schema:'./brep-capability-evidence-v12.schema.json',schema:'open-scad-viewer/brep-capability-evidence',schemaVersion:12,evidenceId:`${spec.slug}-evidence-v12`,capability:spec.id,maturity:'Qualified',state:'qualified',plan,runs:[{id:`native-bridge-wasm-${spec.slug}-2026-09-17-v12`,result:'pass',artifactHash:digest(artifacts)}],oracles:['close_topology::tests::solid_typestate_is_not_weakened','close_topology::tests::radial_fans_and_orientation_are_checked','close_topology::tests::multi_cell_heal_budgets_partitions_and_atomic_refusal','tests/brepQualificationV12.test.ts'],unresolvedRows:[],attestation:{fabricatedRuns:false,note:'Recorded only after native topology, interchange, mutation, budget, bridge and artifact tests passed.'}})
   spec.plan=plan;spec.evidence=evidence
 }

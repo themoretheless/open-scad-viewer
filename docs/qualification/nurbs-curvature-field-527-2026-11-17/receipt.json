@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0527",
+  "testedBase": "be0a7b15f4f175461c9c7762b6c13b5cb119cdac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 111,
+  "scope": [
+    "Remove an interior knot under an exact tensor proof and restore cyclic storage with fewer controls.",
+    "Open the cyclic axis, prove the tensor removal, reclose on the same parameter domain and require a net control reduction."
+  ],
+  "logSha256": "9d0368132c9739e10b89d826d9ca2a6f290a4c5f6e5deb575ea226a6323b3aa2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "80787dccd4a893cbbbd52dc5fd6640c0f4f7c84701ccff20c46da0fc8b9c09c4",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "7b2b97be23f96e4dba16ce8dec22dbe4b61e22f2ef01f20ee61121ffcfcef054"
+  }
+}

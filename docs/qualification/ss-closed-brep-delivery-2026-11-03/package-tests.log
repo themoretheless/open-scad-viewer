@@ -1,0 +1,79 @@
+TAP version 13
+# Subtest: bounded geometry profile preserves encoded flags and reproducible paths
+ok 1 - bounded geometry profile preserves encoded flags and reproducible paths
+  ---
+  duration_ms: 1.121041
+  type: 'test'
+  ...
+# Subtest: geometry-only location policy does not change other kernel build flags
+ok 2 - geometry-only location policy does not change other kernel build flags
+  ---
+  duration_ms: 0.11675
+  type: 'test'
+  ...
+# Subtest: refused oversized geometry package preserves every published artifact
+ok 3 - refused oversized geometry package preserves every published artifact
+  ---
+  duration_ms: 5.649125
+  type: 'test'
+  ...
+# geometry-kernels: wasm unchanged, skipping packaging (stamp hit)
+# language-kernel: wasm unchanged, skipping packaging (stamp hit)
+# photogrammetry: wasm unchanged, skipping packaging (stamp hit)
+# Subtest: all artifacts must match, even after same-size corruption of each file
+ok 4 - all artifacts must match, even after same-size corruption of each file
+  ---
+  duration_ms: 5.991833
+  type: 'test'
+  ...
+# Subtest: missing, truncated and oversized outputs invalidate the cache before reuse
+ok 5 - missing, truncated and oversized outputs invalidate the cache before reuse
+  ---
+  duration_ms: 1.742833
+  type: 'test'
+  ...
+# Subtest: legacy, malformed, oversized and mismatched manifests are misses
+ok 6 - legacy, malformed, oversized and mismatched manifests are misses
+  ---
+  duration_ms: 2.115875
+  type: 'test'
+  ...
+# Subtest: file URLs work and failed snapshots preserve the last complete stamp
+ok 7 - file URLs work and failed snapshots preserve the last complete stamp
+  ---
+  duration_ms: 1.986958
+  type: 'test'
+  ...
+# Subtest: geometry packer repairs every corrupt artifact and invalidates source-only stamps
+ok 8 - geometry packer repairs every corrupt artifact and invalidates source-only stamps
+  ---
+  duration_ms: 6.078375
+  type: 'test'
+  ...
+# Subtest: language packer repairs every corrupt artifact and invalidates source-only stamps
+ok 9 - language packer repairs every corrupt artifact and invalidates source-only stamps
+  ---
+  duration_ms: 5.047875
+  type: 'test'
+  ...
+# Subtest: photogrammetry packer repairs every corrupt artifact and invalidates source-only stamps
+ok 10 - photogrammetry packer repairs every corrupt artifact and invalidates source-only stamps
+  ---
+  duration_ms: 2.716292
+  type: 'test'
+  ...
+# Subtest: failed atomic publication removes temporary files without replacing its destination
+ok 11 - failed atomic publication removes temporary files without replacing its destination
+  ---
+  duration_ms: 1.21875
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 92.990292

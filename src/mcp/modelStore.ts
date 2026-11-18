@@ -1,7 +1,4 @@
-import {
-  MAX_GEOMETRY_SOURCE_CHARACTERS,
-  type GeometryExecutionDescriptor,
-} from '../core/geometryExecution'
+import { MAX_GEOMETRY_SOURCE_CHARACTERS, type GeometryExecutionDescriptor } from '../core/geometryExecution'
 import type { PublicErrorCode } from './errorContract'
 export { isWellFormedUnicode } from '../core/unicode'
 import { isWellFormedUnicode } from '../core/unicode'
@@ -47,11 +44,11 @@ export interface StoredModelRevisionSummary extends Omit<StoredModelRevision, 's
 }
 
 export interface SaveModelInput {
-  id?: string
+  id?: string | undefined
   name: string
   source: string
   /** Optimistic concurrency guard. A new model has revision 0. */
-  expectedRevision?: number
+  expectedRevision?: number | undefined
 }
 
 export interface SaveModelSourceInput {
@@ -94,15 +91,12 @@ export interface BuildMetrics {
   reduced: boolean
 }
 
-export type BuildSourceAttestation =
-  | 'model-revision'
-  | 'inline-snapshot'
-  | 'historical-unattested'
+export type BuildSourceAttestation = 'model-revision' | 'inline-snapshot' | 'historical-unattested'
 
 export interface RecordBuildInput {
   id?: string
-  modelId?: string
-  modelRevision?: number
+  modelId?: string | undefined
+  modelRevision?: number | undefined
   /** Exact source used; inline history persists it, model-backed history binds its revision. */
   source: string
   sourceSha256: string
@@ -116,7 +110,10 @@ export interface RecordBuildInput {
   execution: GeometryExecutionDescriptor
 }
 
-export interface StoredBuild extends Omit<RecordBuildInput, 'id' | 'modelId' | 'modelRevision' | 'source' | 'metrics' | 'error' | 'execution'> {
+export interface StoredBuild extends Omit<
+  RecordBuildInput,
+  'id' | 'modelId' | 'modelRevision' | 'source' | 'metrics' | 'error' | 'execution'
+> {
   id: string
   modelId: string | null
   modelRevision: number | null
@@ -128,12 +125,12 @@ export interface StoredBuild extends Omit<RecordBuildInput, 'id' | 'modelId' | '
   createdAt: string
 }
 
-export type ArtifactFormat = 'stl' | 'obj'
+export type ArtifactFormat = 'stl' | 'obj' | 'step'
 
 export interface StoreArtifactInput {
-  id?: string
+  id?: string | undefined
   buildId: string
-  modelId?: string
+  modelId?: string | undefined
   format: ArtifactFormat
   fileName: string
   mimeType: string
@@ -184,7 +181,7 @@ export interface ModelStore {
   listModelRevisions(id: string, limit?: number): Promise<StoredModelRevisionSummary[]>
   recordBuild(input: RecordBuildInput): Promise<StoredBuild>
   getBuild(id: string): Promise<StoredBuild | null>
-  listBuilds(options?: { modelId?: string; limit?: number }): Promise<StoredBuild[]>
+  listBuilds(options?: { modelId?: string | undefined; limit?: number | undefined }): Promise<StoredBuild[]>
   storeArtifact(input: StoreArtifactInput): Promise<StoredArtifactSummary>
   getArtifact(id: string): Promise<StoredArtifact | null>
   listArtifacts(limit?: number): Promise<StoredArtifactSummary[]>
@@ -198,9 +195,11 @@ export class ModelRevisionConflictError extends Error {
     readonly expectedRevision: number,
     readonly actualRevision: number | null,
   ) {
-    super(actualRevision === null
-      ? `Model ${modelId} does not exist at expected revision ${expectedRevision}`
-      : `Model ${modelId} is at revision ${actualRevision}, expected ${expectedRevision}`)
+    super(
+      actualRevision === null
+        ? `Model ${modelId} does not exist at expected revision ${expectedRevision}`
+        : `Model ${modelId} is at revision ${actualRevision}, expected ${expectedRevision}`,
+    )
     this.name = 'ModelRevisionConflictError'
   }
 }
@@ -218,7 +217,9 @@ export class CatalogQuotaError extends RangeError {
 
 export function validateModelId(id: string): void {
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(id)) {
-    throw new TypeError('Model id must start with an alphanumeric character and contain only letters, digits, ., _, :, or -')
+    throw new TypeError(
+      'Model id must start with an alphanumeric character and contain only letters, digits, ., _, :, or -',
+    )
   }
 }
 
@@ -236,4 +237,3 @@ export function validateModelSource(source: string): void {
     throw new RangeError(`OpenSCAD source exceeds ${MAX_MODEL_SOURCE_LENGTH.toLocaleString('en-US')} characters`)
   }
 }
-

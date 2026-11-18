@@ -233,5 +233,5 @@ pub fn evaluate_tpms_schwarz_p(p: Point, period_mm: f64, thickness_mm: f64) -> f
 }
 
 
-#[path="differential_and_queries/methods_Field_gradient_tetrahedral.rs"]
-mod methods_field_gradient_tetrahedral;
+#[path="differential_and_queries/gradient_tetrahedral.rs"]
+mod gradient_tetrahedral;

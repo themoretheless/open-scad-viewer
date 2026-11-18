@@ -82,7 +82,7 @@ pub fn configure_job_gcode(
     let scale = if options.inches { 25.4 } else { 1.0 };
     for raw in canonical.lines() {
         if raw.starts_with("; open-scad-viewer/print-job ") {
-            writeln!(out, "; open-scad-viewer/configured-job 1").unwrap();
+            writeln!(out, "; open-scad-viewer/configured-job 1").expect("writing to a String cannot fail");
             continue;
         }
         let code = foreign_words::code(raw);
@@ -98,7 +98,7 @@ pub fn configure_job_gcode(
         }
         if command == Some(Command::G(21)) && !started {
             if let Some(target) = options.chamber_temp_c {
-                writeln!(out, "M141 S{target}\nM191 S{target}").unwrap()
+                writeln!(out, "M141 S{target}\nM191 S{target}").expect("writing to a String cannot fail")
             }
             writeln!(
                 out,
@@ -106,7 +106,7 @@ pub fn configure_job_gcode(
                 if options.inches { "G20" } else { "G21" },
                 if options.relative_e { "M83" } else { "M82" }
             )
-            .unwrap();
+            .expect("writing to a String cannot fail");
             started = true;
             continue;
         }
@@ -135,8 +135,8 @@ pub fn configure_job_gcode(
                         }]
                 });
             if options.relative_xyz {
-                writeln!(out, "{}", if absolute { "G90" } else { "G91" }).unwrap();
-                writeln!(out, "{}", if options.relative_e { "M83" } else { "M82" }).unwrap();
+                writeln!(out, "{}", if absolute { "G90" } else { "G91" }).expect("writing to a String cannot fail");
+                writeln!(out, "{}", if options.relative_e { "M83" } else { "M82" }).expect("writing to a String cannot fail");
             }
             if command == Some(Command::G(0)) && options.z_hop_mm > 0.0 && known[2] {
                 let lifted = z + options.z_hop_mm;
@@ -156,7 +156,7 @@ pub fn configure_job_gcode(
                     },
                     job.machine.travel_feedrate_mm_s * 60.0 / scale
                 )
-                .unwrap();
+                .expect("writing to a String cannot fail");
             }
             write!(
                 out,
@@ -167,7 +167,7 @@ pub fn configure_job_gcode(
                     "G1"
                 }
             )
-            .unwrap();
+            .expect("writing to a String cannot fail");
             for (key, value) in values {
                 let axis = match key {
                     b'X' => Some(0),
@@ -200,7 +200,7 @@ pub fn configure_job_gcode(
                 } else {
                     value
                 };
-                write!(out, " {}{:.8}", key as char, converted).unwrap();
+                write!(out, " {}{:.8}", key as char, converted).expect("writing to a String cannot fail");
             }
             out.push('\n');
             if command == Some(Command::G(0)) && options.z_hop_mm > 0.0 && known[2] {
@@ -214,10 +214,10 @@ pub fn configure_job_gcode(
                     },
                     job.machine.travel_feedrate_mm_s * 60.0 / scale
                 )
-                .unwrap()
+                .expect("writing to a String cannot fail")
             }
         } else {
-            writeln!(out, "{raw}").unwrap()
+            writeln!(out, "{raw}").expect("writing to a String cannot fail")
         }
         if out.len() > MAX_OUTPUT_BYTES {
             return Err(invalid("GCODE_LIMIT", "Configured job exceeds 4 MiB"));

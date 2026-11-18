@@ -4,8 +4,8 @@ import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {Worker} from 'node:worker_threads'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import {sourceBodyExpectation,validSourceBody,type SourceBodyOptions} from '../src/services/sourceBody'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import {sourceBodyExpectation,validSourceBody,type SourceBodyOptions} from '../src/kernel/sourceBody'
 
 assert.ok(process.argv[2]&&process.argv[3],'Provide native fixture and output directories')
 const fixture=resolve(process.argv[2]),directory=resolve(process.argv[3])

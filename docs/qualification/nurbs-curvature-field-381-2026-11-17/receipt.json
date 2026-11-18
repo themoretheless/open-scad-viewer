@@ -1,0 +1,42 @@
+{
+  "id": "NURBS-0381",
+  "testedBase": "b2cca8a65c6a6db06ea2d05d7f6ae3971ce29388",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 87,
+  "scope": [
+    "Close a standalone shell with section caps, qualify embedded material orientation and bound its positive volume.",
+    "The existing continuous boundary and material qualification gates body creation. Certified flux integration provides a positive volume enclosure for the admitted chart types."
+  ],
+  "logSha256": "1e6ee863df4f6086b433de4a651cb1c4dda7fe2730eae6b230247673473c2bc3",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "6ab45bf8db08c581b1772db73e05dda6c474e764ec0505100a475498ee2f886e",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "933c3f6df6929bd8d6e927ade9d0238d958fe57c372fefdf3ba719e440023d2a",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "366122592e23a636036d18849b4758727562d59a6ef18cd1d634bb5892dbe419",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "ed8ff8a63b23e2b15a74e849cf3671164c51db8a35e61120b828555de23f6c85",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "1cd3bcb71deb7c244aef7aa89e31623f3e9dd970e1a16ebae86a098403b2407f",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1",
+    "crates/brep-core/tests/support/closed_solid_policy.rs": "b48784952be7e19ab14bba29e675e839fc126d6437bc589d472c8032fa4e0efb"
+  }
+}

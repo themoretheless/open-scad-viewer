@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { buildBinaryStl, buildObj } from '../src/services/meshExport'
-import { identity, scale, translate } from '../src/services/math3d'
-import { buildMeshBvh } from '../src/services/meshBvh'
+import { buildBinaryStl, buildObj } from '../src/exchange/meshExport'
+import { identity, scale, translate } from '../src/kernel/geometry/math3d'
+import { buildMeshBvh } from '../src/kernel/meshBvh'
 
 function triangleMesh(): MeshData {
   const vertices = new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1])
@@ -76,10 +76,7 @@ describe('mesh export', () => {
     const mesh = triangleMesh()
     mesh.transform = identity()
     mesh.vertices = new Float32Array([
-      0, 0, 0, 0, 0, 1,
-      1e-11, 0, 0, 0, 0, 1,
-      0, 1e-11, 0, 0, 0, 1,
-      999, 999, 999, 0, 0, 1,
+      0, 0, 0, 0, 0, 1, 1e-11, 0, 0, 0, 0, 1, 0, 1e-11, 0, 0, 0, 1, 999, 999, 999, 0, 0, 1,
     ])
     expect(new DataView(buildBinaryStl([mesh]).buffer).getUint32(80, true)).toBe(1)
     const obj = buildObj([mesh])

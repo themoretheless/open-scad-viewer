@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0514",
+  "testedBase": "7beb63cee3010a6cba768c2d2f627f0acedf8f75",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 85,
+  "scope": [
+    "Insert a periodic seam in exact homogeneous arithmetic with one common tensor weight gauge.",
+    "Apply cyclic Boehm insertion in exact homogeneous arithmetic to all rows then store one tensor-wide weight gauge before rotating."
+  ],
+  "logSha256": "d2404c342a876f19e8be10d442381a0e222d8280decfd670a5c202662aefc1cb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "bc2c1c9bbd1bae343c7dfb6aa238b908c8d2edee6f23b833d53e59c74447bb90",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "734113a29f790986224ec8c81e3dc59fff2a086acdd071d188d4fb819b7c4cc8",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "138550b8ac23d349cbee72a447f4419fba0ea53df0a6b1a419ea2a879189c7e0"
+  }
+}

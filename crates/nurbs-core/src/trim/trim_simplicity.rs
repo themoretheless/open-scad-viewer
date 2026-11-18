@@ -2,6 +2,13 @@
 //! Failure of a sufficient test is unproven, never evidence of an intersection.
 use crate::{Result, check, curve::Curve, curve_distance, curve_jets, trim_domain};
 mod exact_subdivision;
+mod mobius;
+mod rational_sign;
+pub(crate) fn rational_coordinate_monotone(c:&Curve,cells:&mut usize,max:usize)->Result<bool> {
+    if c.weights.first()==c.weights.last() && c.weights.iter().any(|v|Some(v)!=c.weights.first())
+        && rational_sign::ordered(c,cells,max)? {return Ok(true);}
+    if mobius::prove(c,cells,max)? {Ok(true)} else {rational_sign::prove(c,cells,max)}
+}
 /// Internal exact scalar-coordinate proof, with one shared arithmetic ledger.
 /// A 2D view may have a zero second component; no replacement of source poles
 /// by rounded subdivisions is allowed by the underlying owner.
@@ -559,7 +566,9 @@ pub fn inspect(
                 if monotone_spans(c, &mut cells, max_cells)? {
                     Ok(true)
                 } else {
-                    exact_subdivision::prove(c, &mut cells, max_cells)
+                    if exact_subdivision::prove(c, &mut cells, max_cells)? {Ok(true)}
+                    else if c.weights.iter().any(|w|*w!=c.weights[0]) {rational_coordinate_monotone(c,&mut cells,max_cells)}
+                    else {Ok(false)}
                 }
             }
         })

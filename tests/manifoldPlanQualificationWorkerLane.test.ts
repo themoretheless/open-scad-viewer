@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   ManifoldPlanQualificationWorkerLane,
   type ManifoldPlanQualificationWorkerLike,
-} from '../src/services/manifoldPlanQualificationWorkerLane'
-import type { McpManifoldPlanQualificationRequest } from '../src/services/manifoldPlanQualificationProtocol'
+} from '../src/kernel/manifoldPlanQualificationWorkerLane'
+import type { McpManifoldPlanQualificationRequest } from '../src/kernel/manifoldPlanQualificationProtocol'
 
 class ScriptedWorker implements ManifoldPlanQualificationWorkerLike {
   readonly messages: unknown[] = []
@@ -14,39 +14,40 @@ class ScriptedWorker implements ManifoldPlanQualificationWorkerLike {
 
   postMessage(message: unknown): void {
     this.messages.push(message)
-    if (message === null || typeof message !== 'object'
-      || (message as { type?: unknown }).type !== 'evaluate') return
+    if (message === null || typeof message !== 'object' || (message as { type?: unknown }).type !== 'evaluate') return
     const request = message as McpManifoldPlanQualificationRequest
     if (request.source === 'no-start') return
-    queueMicrotask(() => this.emit({
-      protocolVersion: request.protocolVersion,
-      workerEpoch: request.workerEpoch,
-      jobId: request.jobId,
-      sourceSha256: request.sourceSha256,
-      identity: request.identity,
-      status: 'started',
-    }))
+    queueMicrotask(() =>
+      this.emit({
+        protocolVersion: request.protocolVersion,
+        workerEpoch: request.workerEpoch,
+        jobId: request.jobId,
+        sourceSha256: request.sourceSha256,
+        identity: request.identity,
+        status: 'started',
+      }),
+    )
     if (request.source === 'hang') return
-    const identity = request.source === 'wrong-epoch'
-      ? { ...request.identity, engineKey: 'forged' }
-      : request.identity
-    queueMicrotask(() => this.emit({
-      protocolVersion: request.protocolVersion,
-      workerEpoch: request.workerEpoch,
-      jobId: request.jobId,
-      sourceSha256: request.sourceSha256,
-      identity,
-      status: 'succeeded',
-      result: {
-        meshes: [],
-        warnings: [],
-        volume: 0,
-        surfaceArea: 0,
-        quality: request.quality,
-        reduced: false,
-        timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
-      },
-    }))
+    const identity = request.source === 'wrong-epoch' ? { ...request.identity, engineKey: 'forged' } : request.identity
+    queueMicrotask(() =>
+      this.emit({
+        protocolVersion: request.protocolVersion,
+        workerEpoch: request.workerEpoch,
+        jobId: request.jobId,
+        sourceSha256: request.sourceSha256,
+        identity,
+        status: 'succeeded',
+        result: {
+          meshes: [],
+          warnings: [],
+          volume: 0,
+          surfaceArea: 0,
+          quality: request.quality,
+          reduced: false,
+          timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+        },
+      }),
+    )
   }
 
   terminate(): void {
@@ -56,15 +57,19 @@ class ScriptedWorker implements ManifoldPlanQualificationWorkerLike {
     this.messageErrorListeners.clear()
   }
 
-  addEventListener(type: 'message' | 'error' | 'messageerror', listener: ((event: MessageEvent<unknown>) => void)
-    | ((event: ErrorEvent) => void)): void {
+  addEventListener(
+    type: 'message' | 'error' | 'messageerror',
+    listener: ((event: MessageEvent<unknown>) => void) | ((event: ErrorEvent) => void),
+  ): void {
     if (type === 'message') this.messageListeners.add(listener as (event: MessageEvent<unknown>) => void)
     else if (type === 'error') this.errorListeners.add(listener as (event: ErrorEvent) => void)
     else this.messageErrorListeners.add(listener as (event: MessageEvent<unknown>) => void)
   }
 
-  removeEventListener(type: 'message' | 'error' | 'messageerror', listener: ((event: MessageEvent<unknown>) => void)
-    | ((event: ErrorEvent) => void)): void {
+  removeEventListener(
+    type: 'message' | 'error' | 'messageerror',
+    listener: ((event: MessageEvent<unknown>) => void) | ((event: ErrorEvent) => void),
+  ): void {
     if (type === 'message') this.messageListeners.delete(listener as (event: MessageEvent<unknown>) => void)
     else if (type === 'error') this.errorListeners.delete(listener as (event: ErrorEvent) => void)
     else this.messageErrorListeners.delete(listener as (event: MessageEvent<unknown>) => void)

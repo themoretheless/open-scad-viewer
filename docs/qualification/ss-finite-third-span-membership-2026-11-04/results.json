@@ -1,0 +1,15 @@
+{
+  "distinct_tests_passed": 51,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "520b13b6274b09e68935afac1edc4e125848321596b4c130c768ef14b8a86190",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "0329e2f4d0b6360ff9e9e338394d8717dd5d65e957997ed68693f8ed7f0070b0",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface.rs": "50bd1d67c86ed8dcb8d8026ae64bf71629482cbc412893901a87e36b9f7c8425",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface/membership.rs": "6ddc8fd8ea7a39257ee7b04e87232bfe27b5dce49f48493532b7146bb3bf4152",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface/membership/rational.rs": "2ba5a96f95b3068cdd6ce39e9b3f39b9ec448686403ed2f29c209ca070b0da43",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "3147d8ab03429b089848b6ecc648a467d877770823240b56ab4794a2f7fe9c48",
+    "crates/nurbs-core/tests/ss_third_surface_membership.rs": "3fcfcd6a9a04e2bc7329617c3128bf2f25415226a4f28813f5b4d74e7ce2c212"
+  },
+  "scope": "Sufficient rational-univariate real finite third-span membership proof with exact original equations and original SS graph authority",
+  "remaining": "General algebraic UV lifts, certified exclusions, trimmed-face holes, cross-source junctions, complete arrangements/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

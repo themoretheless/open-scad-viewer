@@ -10,21 +10,34 @@ const library = read('crates/nurbs-core/src/lib.rs').replace(/pub use ([\w:]+)::
 // The catalog describes the compatibility API. Structural parents own the
 // moved modules; their public module re-exports retain the original flat API.
 const exports = [...library.matchAll(/^pub use ((?:crate::)?[\w:]+)(?: as (\w+))?;/gm)]
+// Lower layers live in their own crates (refactor plan O3) and nurbs-core re-exports them:
+// `core::x` is `nurbs-geometry/src/x`, `numerics::x` is `nurbs-numerics/src/x`, and
+// `foundation`, `distance`, `certificates` keep their directory inside `nurbs-foundation/src`.
+const SPLIT = {core: ['crates/nurbs-geometry/src', ''], numerics: ['crates/nurbs-numerics/src', '']}
+for (const name of ['foundation', 'distance', 'certificates']) SPLIT[name] = ['crates/nurbs-foundation/src', name]
+const sourceDir = source => {
+  const [top, ...rest] = source.split('/')
+  const split = SPLIT[top]
+  return split ? [split[0], [split[1], ...rest].filter(Boolean).join('/')] : ['crates/nurbs-core/src', source]
+}
+const moduleFile = source => {
+  const [dir, rel] = sourceDir(source)
+  if (!rel) return [dir + '/lib.rs'].find(p => existsSync(resolve(root, p)))
+  return [dir + '/' + rel + '.rs', dir + '/' + rel + '/mod.rs'].find(p => existsSync(resolve(root, p)))
+}
 const moduleExports = exports.filter(([_, path]) => {
   const source = path.replace(/^crate::/, '').replaceAll('::', '/')
-  if (!existsSync(resolve(root, 'crates/nurbs-core/src', source + '.rs')) &&
-    !existsSync(resolve(root, 'crates/nurbs-core/src', source, 'mod.rs'))) return false
+  if (!moduleFile(source)) return false
   // A re-exported function can share a private source module's name (for
   // example transport::{dispatch, execute}). It is not a public module API.
   const parts = source.split('/'), leaf = parts.pop(), parent = parts.join('/')
-  const parentPath = ['crates/nurbs-core/src/' + parent + '.rs',
-    'crates/nurbs-core/src/' + parent + '/mod.rs'].find(p => existsSync(resolve(root, p)))
+  const parentPath = moduleFile(parent)
   return parentPath && new RegExp(`\\bpub\\s+mod\\s+${leaf}\\s*;`).test(read(parentPath))
 })
 const parents = new Set(moduleExports.map(([_, path]) => path.replace(/^crate::/, '').split('::')[0]))
 const catalogModules = new Set(Object.values(domains).flat())
 const modules = [...new Set([
-  ...[...library.matchAll(/^pub mod (\w+);/gm)].map(x => x[1]).filter(x => x !== 'domains' && (!parents.has(x) || catalogModules.has(x))),
+  ...[...library.matchAll(/^pub (?:mod |use nurbs_foundation::)(\w+)\s*[;{]/gm)].map(x => x[1]).filter(x => x !== 'domains' && (!parents.has(x) || catalogModules.has(x))),
   ...moduleExports.map(([_, path, alias]) => alias ?? path.split('::').at(-1)),
 ])]
 

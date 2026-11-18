@@ -1,0 +1,11 @@
+{
+  "distinct_tests_passed": 75,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/brep-core/src/root_model.rs": "71ae465f8753020b46f72f349bc27fed75aee5b7ee1e501ee4fe8ceb2e815d80",
+    "crates/brep-core/src/root_model/partition.rs": "efa0f21c9d6c18db10714500c93e5bac4d77c5fca2b51982b8ccfd6336ecaae8",
+    "crates/brep-core/tests/root_brep_subdivision.rs": "3b625e6e41d5954f5d0a6ae70426b1dfe63eeff9d3b9ead84124acc91e1e8d3a"
+  },
+  "scope": "Apply qualified original SS edge partitions to an existing immutable root BRep, expanding all coedges and preserving source vertices/face/shell/body data with snapshot-local maps",
+  "remaining": "Cross-source world/UV junctions, global vertex sewing, mixed-pair face arrangements and actual surface-region/material/Boolean/healing operations, general UV/boundary/periodic/pole proofs, persistent lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

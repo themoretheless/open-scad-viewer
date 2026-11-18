@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0585",
+  "testedBase": "7de04811cea4dc1d691ad0b47b06bad0b82176cc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 161,
+  "scope": [
+    "Find a certified original parameter bracket for a target prefix length through seam splits.",
+    "Check inverse brackets across the seam, out-of-range distances, and uncertainty under a shared cell limit."
+  ],
+  "logSha256": "32adc7e21eeeb28724b9e409e261580ef3c852817dd867d5a6b9b25e6fe5273e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "814c7928ee27508ab3fbbc8df6146d1c9ed86d086c1676a7c051239484f11150",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "484e686b94f129c3c69dd6e36083651f12000954287e2bb8040e823fdc6a6cb4"
+  }
+}

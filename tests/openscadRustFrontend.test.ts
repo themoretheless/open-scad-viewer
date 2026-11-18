@@ -8,8 +8,8 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LanguageDiagnosticCode } from '../src/core/languageContract'
-import { compileOpenSCAD, TT, type OpenScadLanguageProfile } from '../src/services/openscadCompiler'
-import { scadCompileRust } from '../src/services/languages/kernel'
+import { compileOpenSCAD, TT, type OpenScadLanguageProfile } from '../src/language/openscadCompiler'
+import { scadCompileRust } from '../src/language/languages/kernel'
 
 interface Fixture {
   contract: string
@@ -20,14 +20,11 @@ interface Fixture {
   evaluateReject: Array<{ name: string; source: string; covers: string[] }>
 }
 
-const fixture = JSON.parse(readFileSync(fileURLToPath(
-  new URL('./fixtures/language-conformance-v1.json', import.meta.url),
-), 'utf8')) as Fixture
+const fixture = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./fixtures/language-conformance-v1.json', import.meta.url)), 'utf8'),
+) as Fixture
 
-const PROFILES: readonly OpenScadLanguageProfile[] = [
-  'openscad-viewer-subset@1',
-  'openscad/stable-2021.01',
-]
+const PROFILES: readonly OpenScadLanguageProfile[] = ['openscad-viewer-subset@1', 'openscad/stable-2021.01']
 
 interface TsOutcome {
   ok: boolean
@@ -46,11 +43,13 @@ function wireAst(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(wireAst)
   if (value !== null && typeof value === 'object') {
     const node = value as Record<string, unknown>
-    return Object.fromEntries(Object.entries(node).flatMap(([key, item]) => {
-      if (key === 'op' && (node.kind === 'binary' || node.kind === 'unary')) return [[key, TT[item as TT]]]
-      if (item === undefined) return node.kind === 'literal' && key === 'value' ? [[key, null]] : []
-      return [[key, wireAst(item)]]
-    }))
+    return Object.fromEntries(
+      Object.entries(node).flatMap(([key, item]) => {
+        if (key === 'op' && (node.kind === 'binary' || node.kind === 'unary')) return [[key, TT[item as TT]]]
+        if (item === undefined) return node.kind === 'literal' && key === 'value' ? [[key, null]] : []
+        return [[key, wireAst(item)]]
+      }),
+    )
   }
   return value
 }
@@ -64,7 +63,12 @@ function compileTs(source: string, profile: OpenScadLanguageProfile): TsOutcome 
     }
   } catch (error) {
     const parseError = error as {
-      code?: string; detail?: string; start: number; end: number; line: number; column: number
+      code?: string
+      detail?: string
+      start: number
+      end: number
+      line: number
+      column: number
     }
     return {
       ok: false,
@@ -126,7 +130,7 @@ describe('openscad-core Rust frontend conformance gate (stage 1)', () => {
       const rust = scadCompileRust(testCase.source)
       expect(rust.ok).toBe(true)
       if (!rust.ok) return
-      const topLevel = rust.ast.map((statement) => {
+      const topLevel = rust.ast.map(statement => {
         const node = statement as { type: string; name?: string }
         return node.type === 'call' ? node.name : node.type
       })
@@ -169,9 +173,13 @@ describe('openscad-core Rust frontend conformance gate (stage 1)', () => {
       expectRustMatchesTs(source(125), profile)
       expect(compileTs(source(126), profile).ok).toBe(true)
       const rust = scadCompileRust(source(126), profile)
-      expect(rust).toEqual({ok: false, error: {
-        code: 'LANGUAGE_TRANSPORT', message: 'Response exceeds transport limit',
-      }})
+      expect(rust).toEqual({
+        ok: false,
+        error: {
+          code: 'LANGUAGE_TRANSPORT',
+          message: 'Response exceeds transport limit',
+        },
+      })
       // A failed serialization must not poison the shared WASM instance.
       expectRustMatchesTs('cube(1);', profile)
     }

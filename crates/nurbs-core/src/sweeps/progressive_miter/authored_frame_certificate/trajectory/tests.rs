@@ -10,8 +10,14 @@ fn orthonormal_pose_norm_keeps_affine_center_fit_and_translation_separate() {
     let frame=ValuesReport {status:Status::Certified,cells:7,
         longitudinal:Some([[-100.,100.];3]),transverse:Some([[-100.,100.];3]),
         binormal:Some([[-100.,100.];3])};
-    let report=control_values_with_fit(&path,&scale,Some((&axes,&center)),&q,
-        [0.,1.],100,frame.clone(),Some(I::point(1.5))).unwrap();
+    let report=control_values_with_fit(
+        ControlLaws { path: &path, scale: &scale, affine: Some((&axes,&center)) },
+        &q,
+        [0.,1.],
+        100,
+        frame.clone(),
+        Some(I::point(1.5)),
+    ).unwrap();
     assert_eq!(report.status,Status::Certified);
     let value=report.values.unwrap()[0];let radius=172_f64.sqrt();
     // Original coefficients after axis/center/fit are exactly [6,6,10].
@@ -24,13 +30,26 @@ fn orthonormal_pose_norm_keeps_affine_center_fit_and_translation_separate() {
         }
     }
     for max in [7,report.cells-1] {
-        let short=control_values_with_fit(&path,&scale,Some((&axes,&center)),&q,
-            [0.,1.],max,frame.clone(),Some(I::point(1.5))).unwrap();
+        let short=control_values_with_fit(
+            ControlLaws { path: &path, scale: &scale, affine: Some((&axes,&center)) },
+            &q,
+            [0.,1.],
+            max,
+            frame.clone(),
+            Some(I::point(1.5)),
+        ).unwrap();
         assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
         assert!(short.cells<=max);
     }
     let unresolved=ValuesReport {status:Status::Unresolved,..frame};
-    let short=control_values_with_fit(&path,&scale,None,&q,[0.,1.],100,unresolved,None).unwrap();
+    let short=control_values_with_fit(
+        ControlLaws { path: &path, scale: &scale, affine: None },
+        &q,
+        [0.,1.],
+        100,
+        unresolved,
+        None,
+    ).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
 }
 fn line(a: [f64; 3], b: [f64; 3], domain: [f64; 2]) -> Curve {
@@ -53,12 +72,7 @@ fn simultaneous_path_scale_affine_and_frame_jets_use_independent_domains() {
     let center = line([0.; 3], [0.5, 0., 1.], [59., 61.]);
     let q = [[2., 2.], [3., 3.], [4., 4.]];
     let report = certify_control_trajectory(
-        &path,
-        &scale,
-        &twist,
-        &axis,
-        &normal,
-        Some((&axes, &center)),
+        AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine: Some((&axes, &center)) },
         q,
         [0., 1.],
         100,
@@ -89,12 +103,7 @@ fn simultaneous_path_scale_affine_and_frame_jets_use_independent_domains() {
     kinked_path.control_points = vec![vec![0., 0., 0.], vec![0., 0., 4.], vec![0., 0., 10.]];
     kinked_path.weights = vec![1.; 3];
     let kinked = certify_control_trajectory(
-        &kinked_path,
-        &scale,
-        &twist,
-        &axis,
-        &normal,
-        Some((&axes, &center)),
+        AuthoredFrameLaws { path: &kinked_path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine: Some((&axes, &center)) },
         q,
         [0., 1.],
         100,
@@ -125,12 +134,7 @@ fn simultaneous_path_scale_affine_and_frame_jets_use_independent_domains() {
     let jet = report.jet.unwrap();
     for t in [0., 0.375, 1.] {
         let endpoint = certify_control_value(
-            &path,
-            &scale,
-            &twist,
-            &axis,
-            &normal,
-            Some((&axes, &center)),
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine: Some((&axes, &center)) },
             q,
             [t, t],
             100,
@@ -176,12 +180,7 @@ fn simultaneous_path_scale_affine_and_frame_jets_use_independent_domains() {
     }
     for budget in [0, 16] {
         let report = certify_control_trajectory(
-            &path,
-            &scale,
-            &twist,
-            &axis,
-            &normal,
-            Some((&axes, &center)),
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine: Some((&axes, &center)) },
             q,
             [0., 1.],
             budget,
@@ -191,12 +190,7 @@ fn simultaneous_path_scale_affine_and_frame_jets_use_independent_domains() {
         assert!(report.jet.is_none() && report.cells <= budget);
         assert!(report.linear_remainder_upper().unwrap().is_none());
         let endpoint = certify_control_value(
-            &path,
-            &scale,
-            &twist,
-            &axis,
-            &normal,
-            Some((&axes, &center)),
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine: Some((&axes, &center)) },
             q,
             [1., 1.],
             budget,

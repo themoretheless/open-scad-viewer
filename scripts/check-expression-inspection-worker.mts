@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {Worker} from 'node:worker_threads'
-import {MainSolidWorkerClient,type MainSolidPort,type MainSolidTiming} from '../src/services/mainSolidWorkerClient'
-import {expressionInspectionExpectation,validExpressionInspection} from '../src/services/expressionShellInspection'
+import {MainSolidWorkerClient,type MainSolidPort,type MainSolidTiming} from '../src/kernel/mainSolidWorkerClient'
+import {expressionInspectionExpectation,validExpressionInspection} from '../src/kernel/expressionShellInspection'
 
 assert.ok(process.argv[2],'Provide a qualification output directory')
 const directory=resolve(process.argv[2])

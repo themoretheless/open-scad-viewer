@@ -9,10 +9,7 @@ import {
   MAX_PENDING_GEOMETRY_JOBS,
 } from '../src/mcp/geometryService'
 import { MAX_MODEL_SOURCE_LENGTH } from '../src/mcp/modelStore'
-import {
-  GeometryBuildEngine,
-  geometryExecutionForError,
-} from '../src/services/geometryBuildEngine'
+import { GeometryBuildEngine, geometryExecutionForError } from '../src/kernel/geometryBuildEngine'
 
 describe('HeadlessGeometryService', () => {
   const service = new HeadlessGeometryService()
@@ -45,16 +42,14 @@ color("red") cube(size);`
     const engine = new GeometryBuildEngine()
     const runtime = {
       capabilities: vi.fn(() => engine.capabilities()),
-      build: vi.fn((
-        source: string,
-        quality: 'preview' | 'full',
-        purpose: 'preview' | 'full' | 'analysis' | 'export',
-        signal?: AbortSignal,
-      ) => engine.buildSource(
-        source,
-        { quality, purpose },
-        { shouldAbort: () => signal?.aborted ?? false },
-      )),
+      build: vi.fn(
+        (
+          source: string,
+          quality: 'preview' | 'full',
+          purpose: 'preview' | 'full' | 'analysis' | 'export',
+          signal?: AbortSignal,
+        ) => engine.buildSource(source, { quality, purpose }, { shouldAbort: () => signal?.aborted ?? false }),
+      ),
     }
     const supervised = new HeadlessGeometryService(engine, runtime)
 
@@ -76,9 +71,7 @@ color("red") cube(size);`
       ],
     })
 
-    await expect(service.analyze(
-      '// @language openscad-viewer/brep-1\ncube(1);',
-    )).resolves.toMatchObject({
+    await expect(service.analyze('// @language openscad-viewer/brep-1\ncube(1);')).resolves.toMatchObject({
       execution: { engineClass: 'brep', automaticFallback: false },
     })
   })
@@ -101,17 +94,16 @@ cube(width);`
     expect(exported.mimeType).toBe('model/stl')
     expect(exported.data.byteLength).toBe(84 + 12 * 50)
 
-    await expect(service.export('cube(1);', 'stl', { maxBytes: 100 }))
-      .rejects.toBeInstanceOf(ArtifactSizeError)
+    await expect(service.export('cube(1);', 'stl', { maxBytes: 100 })).rejects.toBeInstanceOf(ArtifactSizeError)
   })
 
   it('rejects non-finite geometry before analysis or export can expose corrupt meshes', async () => {
     // These source values are finite; conversion to the display/export mesh
     // overflows Float32. This is a geometry failure, not a source parse error.
-    await expect(service.analyze('cube([1e100, 1e100, 1e-200]);'))
-      .rejects.toBeInstanceOf(InvalidGeometryError)
-    await expect(service.export('translate([1e300, 0, 0]) cube(1);', 'stl'))
-      .rejects.toBeInstanceOf(InvalidGeometryError)
+    await expect(service.analyze('cube([1e100, 1e100, 1e-200]);')).rejects.toBeInstanceOf(InvalidGeometryError)
+    await expect(service.export('translate([1e300, 0, 0]) cube(1);', 'stl')).rejects.toBeInstanceOf(
+      InvalidGeometryError,
+    )
   })
 
   it('rejects non-finite Customizer numbers before producing JSON output', async () => {
@@ -122,9 +114,7 @@ cube(width);`
   })
 
   it('bounds the shared headless geometry queue', async () => {
-    const pending = Array.from({ length: MAX_PENDING_GEOMETRY_JOBS }, () => (
-      service.analyze('cube(1);', 'preview')
-    ))
+    const pending = Array.from({ length: MAX_PENDING_GEOMETRY_JOBS }, () => service.analyze('cube(1);', 'preview'))
 
     let busy: unknown
     try {
@@ -154,12 +144,7 @@ cube(width);`
       legacyFailure = error
     }
     try {
-      await service.compile(
-        '// @language openscad-viewer/brep-1\ncube(1);',
-        'full',
-        controller.signal,
-        'full',
-      )
+      await service.compile('// @language openscad-viewer/brep-1\ncube(1);', 'full', controller.signal, 'full')
     } catch (error) {
       brepFailure = error
     }
@@ -182,16 +167,16 @@ cube(width);`
   })
 
   it('rejects Customizer expansion beyond the source and wire budget', () => {
-    expect(() => service.customize('label = "";', {
-      label: 'x'.repeat(MAX_MODEL_SOURCE_LENGTH),
-    })).toThrow(/source exceeds/i)
+    expect(() =>
+      service.customize('label = "";', {
+        label: 'x'.repeat(MAX_MODEL_SOURCE_LENGTH),
+      }),
+    ).toThrow(/source exceeds/i)
   })
 
   it('keeps detailed MCP output bounded without changing total metrics', async () => {
     const count = MAX_ANALYSIS_OBJECTS + 1
-    const source = Array.from({ length: count }, (_, index) => (
-      `translate([${index * 2}, 0, 0]) cube(1);`
-    )).join('\n')
+    const source = Array.from({ length: count }, (_, index) => `translate([${index * 2}, 0, 0]) cube(1);`).join('\n')
     const analysis = await service.analyze(source)
 
     expect(analysis.meshCount).toBe(count)

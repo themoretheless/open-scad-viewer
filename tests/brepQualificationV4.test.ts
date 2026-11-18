@@ -2,10 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import {
-  BREP_CAPABILITY_MATRIX,
-  assertBrepCapabilityAllowsTopology,
-} from '../src/services/geometry/brepCapability'
+import { BREP_CAPABILITY_MATRIX, assertBrepCapabilityAllowsTopology } from '../src/kernel/geometry/brepCapability'
 
 type JsonObject = Record<string, unknown>
 type IndexRow = {
@@ -18,9 +15,7 @@ type IndexRow = {
 }
 
 const root = resolve(import.meta.dirname, '..')
-const readJson = (path: string): JsonObject => (
-  JSON.parse(readFileSync(resolve(root, path), 'utf8')) as JsonObject
-)
+const readJson = (path: string): JsonObject => JSON.parse(readFileSync(resolve(root, path), 'utf8')) as JsonObject
 const v3FrozenPaths = [
   'docs/qualification/plans/brep-capability-qualification-plan-v3.schema.json',
   'docs/qualification/brep-capability-evidence-v3.schema.json',
@@ -41,15 +36,18 @@ const v3FrozenPaths = [
 const frozenV3Digest = (): string => {
   const hash = createHash('sha256')
   for (const path of [...v3FrozenPaths].sort()) {
-    hash.update(path).update('\0').update(readFileSync(resolve(root, path))).update('\n')
+    hash
+      .update(path)
+      .update('\0')
+      .update(readFileSync(resolve(root, path)))
+      .update('\n')
   }
   return hash.digest('hex')
 }
 
 describe('append-only V4 general NURBS Boolean candidate', () => {
   it('keeps the published V3 successor bundle byte-immutable', () => {
-    expect(frozenV3Digest())
-      .toBe('e86cb0af4eda28c37ec4eca7eaa658d6723d261d20b0e58916b960a93f97fc91')
+    expect(frozenV3Digest()).toBe('e86cb0af4eda28c37ec4eca7eaa658d6723d261d20b0e58916b960a93f97fc91')
   })
 
   it('adds exactly one unavailable successor without changing V3 shipped claims', () => {
@@ -65,8 +63,7 @@ describe('append-only V4 general NURBS Boolean candidate', () => {
 
     expect(index.successorOf).toBe('docs/qualification/plans/g8-full-matrix-index-v3.json')
     expect(matrix.successorOf).toBe('docs/qualification/brep-full-closed-matrix-v3.json')
-    expect(release.successorOf)
-      .toBe('docs/qualification/brep-capability-registry-release-full-v3.json')
+    expect(release.successorOf).toBe('docs/qualification/brep-capability-registry-release-full-v3.json')
     expect(rows.slice(0, -1)).toEqual(v3Rows)
     expect(candidate).toEqual({
       id: 'nurbs-boolean-bezier-le3/6',
@@ -135,13 +132,8 @@ describe('append-only V4 general NURBS Boolean candidate', () => {
     expect(scope.included.join('\n')).toMatch(/half-open \[k_i,k_i\+1\) knot-cell ownership/)
     expect(scope.included.join('\n')).toMatch(/UV DCEL/)
     expect(scope.included.join('\n')).toMatch(/closed-solid union, intersection/)
-    for (const refusal of [
-      'Tangency',
-      'coincidence',
-      'Singular poles',
-      'Periodic',
-      'Degree above 3',
-    ]) expect(scope.excluded.join('\n')).toContain(refusal)
+    for (const refusal of ['Tangency', 'coincidence', 'Singular poles', 'Periodic', 'Degree above 3'])
+      expect(scope.excluded.join('\n')).toContain(refusal)
     expect(rows.map(row => row.id)).toEqual([
       'NB6-EXACT-PER-SPAN-BEZIER-DECOMPOSITION',
       'NB6-MULTISPAN-MULTIBRANCH-TRANSVERSE-WALK',
@@ -164,25 +156,21 @@ describe('append-only V4 general NURBS Boolean candidate', () => {
       attestation: { fabricatedRuns: false },
     })
     expect(evidence.unresolvedRows).toEqual(plan.unresolvedRows)
-    expect((evidence.unresolvedRows as unknown[])).toHaveLength(rows.length)
+    expect(evidence.unresolvedRows as unknown[]).toHaveLength(rows.length)
   })
 
   it('keeps runtime topology use unavailable and schemas closed', () => {
-    expect(BREP_CAPABILITY_MATRIX.find(row => row.id === 'nurbs-boolean-bezier-le3/6'))
-      .toMatchObject({
-        maturity: 'Unavailable',
-        permitsTopologyChange: true,
-        qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-6.json',
-      })
-    expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/6'))
-      .toThrow('is Unavailable; refuse topology change')
+    expect(BREP_CAPABILITY_MATRIX.find(row => row.id === 'nurbs-boolean-bezier-le3/6')).toMatchObject({
+      maturity: 'Unavailable',
+      permitsTopologyChange: true,
+      qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-6.json',
+    })
+    expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/6')).toThrow(
+      'is Unavailable; refuse topology change',
+    )
 
-    const planSchema = readJson(
-      'docs/qualification/plans/brep-capability-qualification-plan-v4.schema.json',
-    )
-    const evidenceSchema = readJson(
-      'docs/qualification/brep-capability-evidence-v4.schema.json',
-    )
+    const planSchema = readJson('docs/qualification/plans/brep-capability-qualification-plan-v4.schema.json')
+    const evidenceSchema = readJson('docs/qualification/brep-capability-evidence-v4.schema.json')
     expect(planSchema).toMatchObject({
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       type: 'object',

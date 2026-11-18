@@ -3,7 +3,7 @@ import {
   BREP_CAPABILITY_MATRIX,
   assertBrepCapabilityAllowsTopology,
   brepCapability,
-} from '../src/services/geometry/brepCapability'
+} from '../src/kernel/geometry/brepCapability'
 import {
   cancelGeometryKernel,
   issueGeometryLease,
@@ -12,8 +12,8 @@ import {
   resetGeometryKernelCancel,
   assertGeometryLeaseCurrent,
   GeometryLeaseError,
-} from '../src/services/geometry/kernelLeases'
-import { createSelectionTransferService } from '../src/services/geometry/selectionTransfer'
+} from '../src/kernel/geometry/kernelLeases'
+import { createSelectionTransferService } from '../src/kernel/geometry/selectionTransfer'
 import { topoIdFromParts } from '../src/core/topologyLineage'
 
 describe('B-rep product seam', () => {
@@ -43,15 +43,12 @@ describe('B-rep product seam', () => {
       'certified-brep-tessellation/1',
       'certified-mass-properties/1',
       'step-interchange/3',
-    ]) expect(brepCapability(id)?.maturity, id).toBe('Qualified')
+    ])
+      expect(brepCapability(id)?.maturity, id).toBe('Qualified')
     expect(brepCapability('authorized-heal-gap-le1/1')?.maturity).toBe('Unavailable')
     expect(brepCapability('authorized-heal-gap-le1/2')?.maturity).toBe('Qualified')
-    expect(() => assertBrepCapabilityAllowsTopology('step-interchange/3')).toThrow(
-      /does not permit topology change/,
-    )
-    expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-bezier-le3/1')).toThrow(
-      /does not permit topology change/,
-    )
+    expect(() => assertBrepCapabilityAllowsTopology('step-interchange/3')).toThrow(/does not permit topology change/)
+    expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-bezier-le3/1')).toThrow(/does not permit topology change/)
     expect(() => assertBrepCapabilityAllowsTopology('analytic-boolean/1')).not.toThrow()
     expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/1')).toThrow(
       /Unavailable; refuse topology change/,

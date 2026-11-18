@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0338",
+  "testedBase": "f3503c7f28e069467c80ccfe7597607dec5b8541",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_shared_planar_projection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 8,
+  "scope": [
+    "Solve the exact affine plane intersection with a canonical rational line clock and distinguish coincident and parallel supports.",
+    "Exact support charts. The line is independent of argument order and retains rational coefficients. Trim clipping is separate."
+  ],
+  "logSha256": "0cdf122632e2aa62b152c09ddada40b564061d1495fefd8e23e89cc2de51a4fb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "caf2fb0ebcbada29aff9b51c8f59a3d9eba1e4964820b65b24dd2e726428394e",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "5f553dcd0154637c730f74bc36719fc52e0e138eb6d7e33f7c449b244f82753b",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "c069bdacdb3d384957bf4448f41c7a993cfb1731ee0657ac82a6594c2bb1bb5f"
+  }
+}

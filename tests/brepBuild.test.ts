@@ -1,13 +1,13 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { describe, expect, it } from 'vitest'
 import {
   createBrepGraphBuilder,
   rotationMatrix,
   translationMatrix,
   type BrepValue,
-} from '../src/services/solid/brepGraph'
-import { buildExactSolidBodies, InexactSolidError } from '../src/services/solid/brepBuild'
-import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
+} from '../src/kernel/solid/brepGraph'
+import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
+import { emptyDirectDocument, parseDirectDocument } from '../src/app/directModeling'
 
 const nodeId = (value: BrepValue): string => {
   if (value.kind !== 'node') throw new Error(`Expected an exact node, got ${value.operation}`)
@@ -107,9 +107,7 @@ describe('exact solid build', () => {
 
   it('refuses an inexact root by naming the operation responsible', () => {
     const graph = createBrepGraphBuilder()
-    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }]))
-      .toThrow(InexactSolidError)
-    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }]))
-      .toThrow(/hull/)
+    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }])).toThrow(InexactSolidError)
+    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }])).toThrow(/hull/)
   })
 })

@@ -1,0 +1,60 @@
+    Blocking waiting for file lock on build directory
+warning: module `methods_mean_matrix__coordinate_path` should have a snake case name
+   --> nurbs-core/src/surface_self_chord.rs:688:5
+    |
+688 | mod methods_mean_matrix__coordinate_path;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_mean_matrix_coordinate_path`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: module `methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:254:5
+    |
+254 | mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_crate_surface_weight_profile_weight_profile_inspect_self_chord_pair`
+
+warning: module `methods_rail_constrained_bridge______self_chord_continuous` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:256:5
+    |
+256 | mod methods_rail_constrained_bridge______self_chord_continuous;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_self_chord_continuous`
+
+warning: module `methods_rail_constrained_bridge______inspect_radius_on_domains` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:258:5
+    |
+258 | mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_radius_on_domains`
+
+warning: module `methods_rail_constrained_bridge______section` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:100:5
+    |
+100 | mod methods_rail_constrained_bridge______section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_section`
+
+warning: module `methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:102:5
+    |
+102 | mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_transverse_corrected_injectivity_policy`
+
+warning: module `methods_profile_section___profile` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:252:5
+    |
+252 | mod methods_profile_section___profile;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_section_profile`
+
+warning: module `methods_profile_end_transition___section` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:254:5
+    |
+254 | mod methods_profile_end_transition___section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_end_transition_section`
+
+warning: `nurbs-core` (lib test) generated 8 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 40.54s
+     Running unittests src/lib.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/4a52ebf35f3f013e/out/nurbs_core-4a52ebf35f3f013e)
+
+running 2 tests
+test intersection::ss_intersection::algebraic::gcd::tests::squarefree_node_is_not_erased_by_differentiation ... ok
+test intersection::ss_intersection::algebraic::gcd::tests::recursive_gauss_gcd_preserves_content_and_genuine_multivariate_factors ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2315 filtered out; finished in 0.08s

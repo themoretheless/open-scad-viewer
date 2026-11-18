@@ -1,0 +1,95 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'svet'
+import CadQuantityInput from './CadQuantityInput.svt'
+import type { DirectSketch } from '../app/directModeling'
+import { sketchDimensions, sketchDimensionStatus, editSketchDimension, dimensionSolverExtras, type SketchDimension } from '../app/directDimensions'
+import { addSketchConstraint, sketchConstraintResidual, SKETCH_CONSTRAINT_TOLERANCE_MM, type SketchConstraint } from '../app/sketchConstraints'
+import { addSketchCurveConstraint, solveSketchCurveConstraints, sketchCurveConstraintName, sketchConstraintOwnerResidual, type SketchCurveConstraint } from '../app/sketchCurveConstraints'
+const props=defineProps<{sketch:DirectSketch;locale:string;sketches?:readonly DirectSketch[]}>()
+const emit=defineEmits<{change:[sketch:DirectSketch]}>()
+const kind=ref<'length'|'angle'|'horizontal'|'vertical'|'radius'|'diameter'>('length'),a=ref(0),b=ref(1),c=ref(2),error=ref('')
+const label=(ru:string,en:string)=>props.locale==='ru'?ru:en
+const values=ref<Record<number,number>>({}), valid=ref<Record<number,boolean>>({})
+watch(()=>props.sketch,()=>{values.value={};valid.value={};error.value=''})
+watch(()=>props.sketch.analytic,curve=>{kind.value=curve?'radius':'length'},{immediate:true})
+const constraintState=computed(()=>{try{return sketchDimensionStatus(props.sketch)}catch{return null}})
+const measurements=computed(()=>sketchDimensions(props.sketch).measurements)
+function apply(work:()=>DirectSketch){try{let next=work();if(next.curveConstraints?.length&&props.sketches)next=solveSketchCurveConstraints(next,props.sketches.map(o=>o.id===next.id?next:o));sketchDimensions(next);emit('change',next);error.value=''}catch(e){error.value=e instanceof Error?e.message:String(e);if(error.value.includes('conflict'))error.value=label('Размеры противоречат друг другу или ограничениям. Изменение не применено.','Dimensions conflict with each other or with constraints. The change was not applied.')}}
+function add(){apply(()=>({...props.sketch,dimensions:[...(props.sketch.dimensions??[]),props.sketch.analytic && kind.value!=='diameter'?{kind:'radius'}:kind.value==='radius'||kind.value==='diameter'?{kind:kind.value}:{kind:kind.value,a:a.value,b:b.value,...(kind.value==='angle'?{c:c.value}:{})} as SketchDimension]}))}
+function edit(index:number){if(valid.value[index]!==false&&values.value[index]!==undefined)apply(()=>editSketchDimension(props.sketch,index,values.value[index]))}
+const constraintKind=ref<SketchConstraint['kind']>('horizontal'),segmentA=ref(0),segmentB=ref(1)
+const constrainable=computed(()=>!props.sketch.analytic&&!props.sketch.retainedProfile&&!props.sketch.editablePath&&props.sketch.points.length>=3&&props.sketch.points.length<=16)
+const segments=computed(()=>{const n=props.sketch.points.length;return Array.from({length:props.sketch.closed?n:n-1},(_,i)=>[i,(i+1)%n] as [number,number])})
+const pairKind=computed(()=>constraintKind.value!=='horizontal'&&constraintKind.value!=='vertical'&&constraintKind.value!=='coincident')
+const vertexKind=computed(()=>constraintKind.value==='coincident')
+const constraintSymbol=(kind:SketchConstraint['kind'])=>kind==='horizontal'?'—':kind==='vertical'?'|':kind==='parallel'?'∥':kind==='perpendicular'?'⊥':kind==='coincident'?'●':'='
+function addConstraint(){apply(()=>{if(vertexKind.value)return addSketchConstraint(props.sketch,{kind:'coincident',a:segmentA.value,b:segmentB.value},dimensionSolverExtras(props.sketch));const s1=segments.value[segmentA.value],s2=segments.value[segmentB.value];if(!s1||(pairKind.value&&!s2))throw Error(label('Выберите отрезки эскиза.','Choose sketch segments.'));const constraint:SketchConstraint=pairKind.value?{kind:constraintKind.value as 'parallel',a:s1[0],b:s1[1],c:s2![0],d:s2![1]}:{kind:constraintKind.value as 'horizontal',a:s1[0],b:s1[1]};return addSketchConstraint(props.sketch,constraint,dimensionSolverExtras(props.sketch))})}
+function removeConstraint(index:number){apply(()=>({...props.sketch,constraints:props.sketch.constraints?.filter((_,i)=>i!==index)}))}
+const samePlane=(o:DirectSketch)=>JSON.stringify(o.plane??null)===JSON.stringify(props.sketch.plane??null)
+const curveKind=ref<'concentric'|'equal_radius'|'tangent_circle'|'tangent_internal'|'tangent_line'>('concentric'),curveRef=ref(''),curveSegment=ref(0)
+const curveRefs=computed(()=>(props.sketches??[]).filter(o=>o.id!==props.sketch.id&&samePlane(o)&&(curveKind.value==='tangent_line'?!o.analytic&&!o.retainedProfile&&!o.editablePath&&o.points.length>=2:!!o.analytic)))
+const curveRefSketch=computed(()=>curveRefs.value.find(o=>o.id===curveRef.value)??curveRefs.value[0])
+const refSegments=computed(()=>{const o=curveRefSketch.value;if(!o)return [];const n=o.points.length;return Array.from({length:o.closed?n:n-1},(_,i)=>[i,(i+1)%n] as [number,number])})
+const refName=(id:string)=>(props.sketches??[]).find(o=>o.id===id)?.name??id
+const curveViolated=(c:SketchCurveConstraint)=>{const r=(props.sketches??[]).find(o=>o.id===c.ref);return !!r&&sketchConstraintOwnerResidual(props.sketch,c,r)>SKETCH_CONSTRAINT_TOLERANCE_MM*10}
+function addCurveConstraint(){apply(()=>{const r=curveRefSketch.value;if(!r)throw Error(label('Выберите опорный эскиз на той же плоскости.','Choose a reference sketch on the same plane.'));const k=curveKind.value;let c:SketchCurveConstraint
+ if(k==='tangent_line'){const seg=refSegments.value[curveSegment.value];if(!seg)throw Error(label('Выберите отрезок опорного эскиза.','Choose a segment of the reference sketch.'));c={kind:'tangent_line',ref:r.id,a:seg[0],b:seg[1]}}
+ else if(k==='tangent_circle'||k==='tangent_internal')c={kind:'tangent_circle',ref:r.id,internal:k==='tangent_internal'}
+ else c={kind:k,ref:r.id}
+ return addSketchCurveConstraint(props.sketch,c,props.sketches??[])})}
+function removeCurveConstraint(index:number){apply(()=>{const kept=props.sketch.curveConstraints?.filter((_,i)=>i!==index)??[];const next={...props.sketch};if(kept.length)next.curveConstraints=kept;else delete next.curveConstraints;return next})}
+const isPolyline=(o:DirectSketch)=>!o.analytic&&!o.retainedProfile&&!o.editablePath
+const coincidentOwner=computed(()=>isPolyline(props.sketch)&&props.sketch.points.length>=2)
+const coincidentPoint=ref(0),coincidentRef=ref(''),coincidentTarget=ref(0)
+const coincidentRefs=computed(()=>(props.sketches??[]).filter(o=>o.id!==props.sketch.id&&samePlane(o)&&(!!o.analytic||isPolyline(o))))
+const coincidentRefSketch=computed(()=>coincidentRefs.value.find(o=>o.id===coincidentRef.value)??coincidentRefs.value[0])
+function addCoincident(){apply(()=>{const r=coincidentRefSketch.value;if(!r)throw Error(label('Выберите опорный эскиз на той же плоскости.','Choose a reference sketch on the same plane.'));const c:SketchCurveConstraint={kind:'coincident',ref:r.id,point:coincidentPoint.value,target:r.analytic?'center':coincidentTarget.value};return addSketchCurveConstraint(props.sketch,c,props.sketches??[])})}
+function remove(index:number){apply(()=>({...props.sketch,dimensions:props.sketch.dimensions?.filter((_,i)=>i!==index)}))}
+</script>
+<template>
+  <section class="dimension-panel" aria-label="Sketch dimensions">
+    <strong>{{ label('Размеры эскиза','Sketch dimensions') }}</strong>
+    <small>{{ label('Длина, горизонталь, вертикаль или угол A–B–C. Номера точек показаны на эскизе.','Length, horizontal, vertical or angle A–B–C. Point numbers appear on the sketch.') }}</small>
+    <div><select v-model="kind" aria-label="Dimension kind"><option v-if="!sketch.analytic" value="length">{{ label('Длина · мм','Length · mm') }}</option><option v-if="!sketch.analytic" value="horizontal">{{ label('Горизонталь · мм','Horizontal · mm') }}</option><option v-if="!sketch.analytic" value="vertical">{{ label('Вертикаль · мм','Vertical · mm') }}</option><option v-if="!sketch.analytic" value="angle">{{ label('Угол · °','Angle · °') }}</option><option v-if="sketch.analytic" value="radius">{{ label('Радиус · мм','Radius · mm') }}</option><option v-if="sketch.analytic" value="diameter">{{ label('Диаметр · мм','Diameter · mm') }}</option></select></div>
+    <div v-if="!sketch.analytic && kind!=='radius'&&kind!=='diameter'" class="point-inputs"><label v-for="key in (kind==='angle'?['a','b','c']:['a','b'])" :key="key">{{ key.toUpperCase() }}<select :value="key==='a'?a:key==='b'?b:c" @change="key==='a'?a=Number(($event.target as HTMLSelectElement).value):key==='b'?b=Number(($event.target as HTMLSelectElement).value):c=Number(($event.target as HTMLSelectElement).value)"><option v-for="(_,i) in sketch.points" :key="i" :value="i">{{ i }}</option></select></label></div>
+    <button @click="add">{{ label('Добавить размер','Add dimension') }}</button>
+    <label v-for="(dimension,i) in sketch.dimensions??[]" :key="i" class="dimension-row">{{ dimension.kind==='length'?'↔':dimension.kind==='angle'?'∠':dimension.kind==='horizontal'?'↔h':dimension.kind==='vertical'?'↕':dimension.kind==='radius'?'R':'Ø' }} {{ 'a' in dimension ? dimension.a+'–'+dimension.b : '' }}{{ dimension.kind==='angle'?'–'+dimension.c:'' }}<CadQuantityInput :aria-label="'Dimension '+i" :model-value="values[i]??Number((measurements[i]?.value??0).toFixed(6))" :kind="dimension.kind==='angle'?'angle':'length'" :locale="locale" :min="dimension.kind==='radius' ? .01 : dimension.kind==='diameter' ? .02 : dimension.kind==='length' ? .000001 : dimension.kind==='angle'?-180:-1000000" :max="dimension.kind==='angle'?180:1000000" @update:model-value="values[i]=$event" @validity="valid[i]=$event" @keydown.enter.stop.prevent="edit(i)" />{{ dimension.kind==='angle'?'°':'mm' }}<button :disabled="valid[i]===false || values[i]===undefined" :aria-label="label('Применить размер ','Apply dimension ')+i" @click="edit(i)">✓</button><button :aria-label="label('Удалить размер','Delete dimension')" @click="remove(i)">×</button></label>
+    <small>{{ label('Введите размер и нажмите ✓ или Enter. Одиночная длина перемещает B, угол — C; остальные измерения обновляются.','Enter a value, then press ✓ or Enter. A single length moves B; an angle moves C. Other measurements update.') }}</small>
+    <small>{{ label('Несколько размеров длины решаются совместно для 3–16 точек. Горизонталь и вертикаль задают расстояние по оси, а не ограничение направления.', 'Multiple lengths are solved together for 3–16 points. Horizontal and vertical dimensions measure axis distances, not direction constraints.') }}</small>
+    <small v-if="constraintState" role="status">{{ label('Свободных степеней: ','Degrees of freedom: ')+constraintState.degrees_of_freedom }} · {{ label('включая положение эскиза','including sketch placement') }}<template v-if="constraintState.redundant_equations"> · {{ label('Избыточных размеров: ','Redundant dimensions: ')+constraintState.redundant_equations }}</template></small>
+    <template v-if="constrainable">
+      <strong>{{ label('Ограничения эскиза','Sketch constraints') }}</strong>
+      <small>{{ label('Отрезок задаётся начальной точкой: 0 — отрезок 0–1. Ограничения сохраняются в документе и учитываются при изменении размеров длины.','A segment is named by its start point: 0 is segment 0–1. Constraints are saved in the document and kept when length dimensions change.') }}</small>
+      <div class="point-inputs"><select v-model="constraintKind" aria-label="Constraint kind"><option value="horizontal">{{ label('Горизонтально','Horizontal') }}</option><option value="vertical">{{ label('Вертикально','Vertical') }}</option><option value="parallel">{{ label('Параллельно','Parallel') }}</option><option value="perpendicular">{{ label('Перпендикулярно','Perpendicular') }}</option><option value="equal_length">{{ label('Равная длина','Equal length') }}</option><option value="coincident">{{ label('Совпадение вершин','Coincident vertices') }}</option></select>
+        <template v-if="vertexKind"><select v-model.number="segmentA" aria-label="Constraint vertex A"><option v-for="(_,i) in sketch.points" :key="i" :value="i">{{ i }}</option></select><select v-model.number="segmentB" aria-label="Constraint vertex B"><option v-for="(_,i) in sketch.points" :key="i" :value="i">{{ i }}</option></select></template>
+        <select v-else v-model.number="segmentA" aria-label="Constraint segment A"><option v-for="(seg,i) in segments" :key="i" :value="i">{{ seg[0]+'–'+seg[1] }}</option></select>
+        <select v-if="pairKind" v-model.number="segmentB" aria-label="Constraint segment B"><option v-for="(seg,i) in segments" :key="i" :value="i">{{ seg[0]+'–'+seg[1] }}</option></select></div>
+      <button @click="addConstraint">{{ label('Добавить ограничение','Add constraint') }}</button>
+      <div v-for="(constraint,i) in sketch.constraints??[]" :key="'c'+i" class="dimension-row" :aria-invalid="sketchConstraintResidual(sketch.points,constraint)>SKETCH_CONSTRAINT_TOLERANCE_MM*10">{{ constraintSymbol(constraint.kind) }} {{ constraint.a+'–'+constraint.b }}{{ 'c' in constraint ? ' · '+constraint.c+'–'+constraint.d : '' }}<small v-if="sketchConstraintResidual(sketch.points,constraint)>SKETCH_CONSTRAINT_TOLERANCE_MM*10">{{ label('нарушено','violated') }}</small><button :aria-label="label('Удалить ограничение ','Delete constraint ')+i" @click="removeConstraint(i)">×</button></div>
+    </template>
+    <template v-if="sketch.analytic && sketches">
+      <strong>{{ label('Ограничения окружности','Circle constraints') }}</strong>
+      <small>{{ label('Окружность или дуга следует за опорным эскизом той же плоскости: опорный эскиз не двигается, а при его правке эта окружность пересчитывается.','The circle or arc follows a reference sketch on the same plane: the reference stays put, and this circle is re-solved when the reference is edited.') }}</small>
+      <div class="point-inputs"><select v-model="curveKind" aria-label="Curve constraint kind"><option value="concentric">{{ label('Концентрично','Concentric') }}</option><option value="equal_radius">{{ label('Равный радиус','Equal radius') }}</option><option value="tangent_circle">{{ label('Касание снаружи','Tangent outside') }}</option><option value="tangent_internal">{{ label('Касание внутри','Tangent inside') }}</option><option value="tangent_line">{{ label('Касание отрезка','Tangent to segment') }}</option></select>
+        <select :value="curveRefSketch?.id??''" aria-label="Curve constraint reference" @change="curveRef=($event.target as HTMLSelectElement).value;curveSegment=0"><option v-for="o in curveRefs" :key="o.id" :value="o.id">{{ o.name }}</option></select>
+        <select v-if="curveKind==='tangent_line'" v-model.number="curveSegment" aria-label="Curve constraint segment"><option v-for="(seg,i) in refSegments" :key="i" :value="i">{{ seg[0]+'–'+seg[1] }}</option></select></div>
+      <small v-if="!curveRefs.length">{{ label('Нет подходящего опорного эскиза на этой плоскости.','No suitable reference sketch on this plane.') }}</small>
+      <button :disabled="!curveRefs.length" @click="addCurveConstraint">{{ label('Добавить ограничение окружности','Add circle constraint') }}</button>
+      <div v-for="(constraint,i) in sketch.curveConstraints??[]" :key="'k'+i" class="dimension-row" :aria-invalid="curveViolated(constraint)">{{ sketchCurveConstraintName(constraint,locale) }} · {{ refName(constraint.ref) }}{{ constraint.kind==='tangent_line' ? ' '+constraint.a+'–'+constraint.b : '' }}<small v-if="curveViolated(constraint)">{{ label('нарушено','violated') }}</small><button :aria-label="label('Удалить ограничение окружности ','Delete circle constraint ')+i" @click="removeCurveConstraint(i)">×</button></div>
+    </template>
+    <template v-if="coincidentOwner && sketches">
+      <strong>{{ label('Совпадение точек','Coincident points') }}</strong>
+      <small>{{ label('Вершина ломаной совпадает с вершиной другого эскиза или с центром окружности той же плоскости; опорный эскиз не двигается.','A polyline vertex coincides with a vertex of another sketch or with a circle centre on the same plane; the reference stays put.') }}</small>
+      <div class="point-inputs"><select v-model.number="coincidentPoint" aria-label="Coincident point"><option v-for="(_,i) in sketch.points" :key="i" :value="i">{{ i }}</option></select>
+        <select :value="coincidentRefSketch?.id??''" aria-label="Coincident reference" @change="coincidentRef=($event.target as HTMLSelectElement).value;coincidentTarget=0"><option v-for="o in coincidentRefs" :key="o.id" :value="o.id">{{ o.name }}</option></select>
+        <select v-if="coincidentRefSketch && !coincidentRefSketch.analytic" v-model.number="coincidentTarget" aria-label="Coincident target"><option v-for="(_,i) in coincidentRefSketch.points" :key="i" :value="i">{{ i }}</option></select><small v-else-if="coincidentRefSketch">{{ label('центр','centre') }}</small></div>
+      <small v-if="!coincidentRefs.length">{{ label('Нет подходящего опорного эскиза на этой плоскости.','No suitable reference sketch on this plane.') }}</small>
+      <button :disabled="!coincidentRefs.length" @click="addCoincident">{{ label('Добавить совпадение','Add coincident') }}</button>
+      <div v-for="(constraint,i) in sketch.curveConstraints??[]" :key="'q'+i" class="dimension-row" :aria-invalid="curveViolated(constraint)">● {{ constraint.kind==='coincident' ? constraint.point : '' }} · {{ refName(constraint.ref) }}{{ constraint.kind==='coincident' ? ' '+(constraint.target==='center'?label('центр','centre'):constraint.target) : '' }}<small v-if="curveViolated(constraint)">{{ label('нарушено','violated') }}</small><button :aria-label="label('Удалить совпадение ','Delete coincident ')+i" @click="removeCurveConstraint(i)">×</button></div>
+    </template>
+    <p v-if="error" role="alert">{{ error }}</p>
+  </section>
+</template>
+<style scoped>
+.dimension-panel{display:grid;gap:8px}.dimension-panel small{color:var(--text-dim)}.point-inputs,.dimension-row{display:flex;gap:6px;align-items:center}.dimension-row input{width:85px}button,input,select{font:inherit;color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:4px;padding:5px}.point-inputs label{display:flex;align-items:center;gap:4px}p{color:var(--danger)}
+</style>

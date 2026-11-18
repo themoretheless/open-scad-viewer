@@ -14,9 +14,7 @@ interface QualificationEvent {
   [key: string]: unknown
 }
 
-const serverPath = fileURLToPath(
-  new URL('./fixtures/mcp-shadow-stdio-server.ts', import.meta.url),
-)
+const serverPath = fileURLToPath(new URL('./fixtures/mcp-shadow-stdio-server.ts', import.meta.url))
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
 const liveChildren = new Set<ChildProcessWithoutNullStreams>()
 
@@ -96,10 +94,7 @@ class StdioQualificationClient {
     }
   }
 
-  waitForEvent(
-    predicate: (event: QualificationEvent) => boolean,
-    timeoutMs = 10_000,
-  ): Promise<QualificationEvent> {
+  waitForEvent(predicate: (event: QualificationEvent) => boolean, timeoutMs = 10_000): Promise<QualificationEvent> {
     const existing = this.qualificationEvents.find(predicate)
     if (existing) return Promise.resolve(existing)
     return new Promise((resolve, reject) => {
@@ -123,9 +118,7 @@ class StdioQualificationClient {
     const response = new Promise<JsonRpcResponse>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.responseWaiters.delete(id)
-        reject(new Error(
-          `Timed out waiting for ${method}\nstdout invalid:\n${this.invalidStdoutLines.join('\n')}`,
-        ))
+        reject(new Error(`Timed out waiting for ${method}\nstdout invalid:\n${this.invalidStdoutLines.join('\n')}`))
       }, 10_000)
       this.responseWaiters.set(id, value => {
         clearTimeout(timeout)
@@ -170,10 +163,12 @@ class StdioQualificationClient {
 }
 
 afterEach(async () => {
-  await Promise.all([...liveChildren].map(async child => {
-    if (child.exitCode === null && child.signalCode === null) child.kill()
-    await new Promise<void>(resolve => child.once('close', () => resolve()))
-  }))
+  await Promise.all(
+    [...liveChildren].map(async child => {
+      if (child.exitCode === null && child.signalCode === null) child.kill()
+      await new Promise<void>(resolve => child.once('close', () => resolve()))
+    }),
+  )
 })
 
 function toolContent(response: JsonRpcResponse): Record<string, unknown> {
@@ -206,13 +201,9 @@ describe('qualification-only Manifold shadow over actual MCP stdio', () => {
     await client.waitForEvent(event => event.event === 'shadow-entered-noncooperative-loop')
     expect(client.qualificationEvents.some(event => event.event === 'shadow-settled')).toBe(false)
 
-    const [ping, tools] = await Promise.all([
-      client.request('ping'),
-      client.request('tools/list'),
-    ])
+    const [ping, tools] = await Promise.all([client.request('ping'), client.request('tools/list')])
     expect(ping.error).toBeUndefined()
-    expect((tools.result?.tools as Array<{ name: string }>).map(tool => tool.name))
-      .toContain('openscad_analyze')
+    expect((tools.result?.tools as Array<{ name: string }>).map(tool => tool.name)).toContain('openscad_analyze')
     expect(client.qualificationEvents.some(event => event.event === 'shadow-settled')).toBe(false)
 
     const shadowSettled = await client.waitForEvent(event => event.event === 'shadow-settled')
@@ -231,10 +222,12 @@ describe('qualification-only Manifold shadow over actual MCP stdio', () => {
     // A joined child has no channel left for a late result. Give queued parent
     // work a turn, then verify the only durable record is the primary build.
     await new Promise(resolve => setTimeout(resolve, 100))
-    const firstHistory = toolContent(await client.request('tools/call', {
-      name: 'openscad_build_history',
-      arguments: { limit: 10 },
-    })) as { builds: Array<{ status: string; execution: { semantic_program_version: string } }> }
+    const firstHistory = toolContent(
+      await client.request('tools/call', {
+        name: 'openscad_build_history',
+        arguments: { limit: 10 },
+      }),
+    ) as { builds: Array<{ status: string; execution: { semantic_program_version: string } }> }
     expect(firstHistory.builds).toEqual([
       expect.objectContaining({
         status: 'succeeded',
@@ -250,10 +243,12 @@ describe('qualification-only Manifold shadow over actual MCP stdio', () => {
       build: { status: 'succeeded' },
       analysis: { volume: 27, surface_area: 54 },
     })
-    const finalHistory = toolContent(await client.request('tools/call', {
-      name: 'openscad_build_history',
-      arguments: { limit: 10 },
-    })) as { builds: Array<{ status: string }> }
+    const finalHistory = toolContent(
+      await client.request('tools/call', {
+        name: 'openscad_build_history',
+        arguments: { limit: 10 },
+      }),
+    ) as { builds: Array<{ status: string }> }
     expect(finalHistory.builds).toHaveLength(2)
     expect(finalHistory.builds.every(build => build.status === 'succeeded')).toBe(true)
 

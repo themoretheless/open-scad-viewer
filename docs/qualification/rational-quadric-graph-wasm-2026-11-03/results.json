@@ -1,0 +1,23 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/a14f654d87f589d7a99c6610629b8b0e9aa93881e55abddd251ba01357d76b73.wasm",
+  "sha256": "a14f654d87f589d7a99c6610629b8b0e9aa93881e55abddd251ba01357d76b73",
+  "bytes": 21681414,
+  "sourceCommit": "feef6e2760544e134248f06f3486669b8063bbf6",
+  "status": "passed",
+  "abiCases": 146,
+  "finiteGraphCases": 37,
+  "workersStarted": 130,
+  "workersTerminated": 130,
+  "frozenClockTests": 1,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "scope": "Positive exactly separable rational clocks on single original Bezier quadric graph patches; explicit raw candidate ABI and real Chromium Workers.",
+  "remaining": [
+    "Multi-span target charts",
+    "Coupled nonseparable target weights",
+    "General freeform branch enumeration",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

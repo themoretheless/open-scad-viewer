@@ -11,11 +11,17 @@ pub fn certify_path_guide_values(
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ValuesReport> {
-    path_guide_values_at(path,guide,twist,traversal,traversal,traversal,true,max_cells)
+    let traversal=PathGuideTraversal{
+        path:traversal,guide:traversal,law:traversal,same_parameter:true,
+    };
+    path_guide_values_at(path,guide,twist,traversal,max_cells)
 }
 fn path_guide_values_at(
-    path:&Curve,guide:&Curve,twist:&Curve,traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    path:&Curve,guide:&Curve,twist:&Curve,traversals:PathGuideTraversal,max_cells:usize,
 )->Result<ValuesReport>{
+    let PathGuideTraversal{
+        path:traversal,guide:guide_traversal,law:law_traversal,same_parameter,
+    }=traversals;
     let frame_values=|tangent,position,budget|->Result<ValuesReport>{
         if same_parameter && traversal==guide_traversal && traversal[0]!=traversal[1] {
             if let Some(paired)=super::paired_path_values::same_parameter_offset_values(path,guide,traversal,budget)? {
@@ -120,54 +126,111 @@ pub(super) fn prepared_offset_frame_values(
 /// Original guided control image with explicit initial-coordinate premise.
 /// No contact fitting, cap, closed correction or retained interpolation proof.
 pub fn certify_path_guide_control_value(
-    path: &Curve,
+    laws: super::ProfileLaws<'_>,
     guide: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
     q: [[f64; 2]; 3],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ControlValueReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame = certify_path_guide_values(path, guide, twist, traversal, max_cells)?;
     super::trajectory::control_value_from_frame(path, scale, affine, q, traversal, max_cells, frame)
 }
 
 /// All original profile controls share the same frame and source-law values.
 pub(crate) fn certify_path_guide_relative_values(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    laws: ContactLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    traversal: PathGuideTraversal,
+    max_cells: usize,
 )->Result<ControlValuesReport>{
-    let frame=path_guide_values_at(path,guide,twist,path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
+    let ContactLaws { path, guide, scale, twist, affine } = laws;
+    let law_traversal = traversal.law;
+    let frame=path_guide_values_at(path,guide,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
+/// Path, guide, scale and twist laws of a guided contact sweep, with optional affine laws.
+#[derive(Clone, Copy)]
+pub struct ContactLaws<'a> {
+    pub path: &'a Curve,
+    pub guide: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// Traversals of path, guide and laws; `same_parameter` when path and guide share one parameter.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct PathGuideTraversal {
+    pub path: [f64; 2],
+    pub guide: [f64; 2],
+    pub law: [f64; 2],
+    pub same_parameter: bool,
+}
+/// Contact anchor and the traversals of path, guide and laws; `same_parameter` when path and
+/// guide share one parameter.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ContactTraversal {
+    pub anchor: [f64; 2],
+    pub path: [f64; 2],
+    pub guide: [f64; 2],
+    pub law: [f64; 2],
+    pub same_parameter: bool,
+}
 /// Relative contact image with separate original inverse-length restrictions.
 /// Anchor ownership and contact identity remain separate premises. Only values
 /// are enclosed; no inverse derivatives or smoothness is inferred.
 pub(crate) fn certify_contact_relative_values(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],anchor:[f64;2],path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    laws: ContactLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    traversal: ContactTraversal,
+    max_cells: usize,
 )->Result<ControlValuesReport>{
+    let ContactLaws { path, guide, scale, twist, affine } = laws;
+    let ContactTraversal { path: path_traversal, law: law_traversal, .. } = traversal;
     twist.validate()?;
     check(twist.control_points.iter().all(|p|p[0]==0.),"Contact control requires zero twist")?;
-    let (fit,_,offset)=super::contact_fit_value::contact_fit_value_at_prepared(path,guide,scale,affine,anchor,
-        path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
+    let (fit,_,offset)=super::contact_fit_value::contact_fit_value_at_prepared(path, guide, scale, affine, traversal, max_cells)?;
     if fit.status!=Status::Certified{return Ok(ControlValuesReport {status:Status::Unresolved,cells:fit.cells,values:None,reason:Some("contact-fit-value-unresolved")});}
     let mut frame=prepared_offset_frame_values(path,twist,path_traversal,law_traversal,offset.unwrap(),max_cells-fit.cells)?;
     frame.cells+=fit.cells;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     let fit=fit.value.unwrap();
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,Some(I::new(fit[0],fit[1])?))
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        Some(I::new(fit[0],fit[1])?),
+    )
 }
 
 pub fn certify_path_guide_control_values(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
+    laws: super::ProfileLaws<'_>,
+    guide:&Curve,
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
 )->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_path_guide_values(path,guide,twist,traversal,max_cells)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]
@@ -180,7 +243,7 @@ fn contact_relative_values_keep_three_independent_parameters_and_positive_fit(){
     let center=crate::primitives::line([0.;3],[0.1,0.2,0.3]).unwrap();
     let qs=[[[0.5,0.5],[0.3,0.3],[0.2,0.2]]];
     let (u,v,s)=(0.25_f64,0.5_f64,0.75_f64);
-    let report=certify_contact_relative_values(&path,&guide,&scale,&twist,Some((&axes,&center)),&qs,[1.,1.],[u,u],[v,v],[s,s],false,1000).unwrap();
+    let report=certify_contact_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes,&center)) }, &qs, ContactTraversal { anchor: [1.,1.], path: [u,u], guide: [v,v], law: [s,s], same_parameter: false }, 1000).unwrap();
     assert_eq!(report.status,Status::Certified);
     let cross=|a:[f64;3],b:[f64;3]|[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     let norm=|a:[f64;3]|a.iter().map(|x|x*x).sum::<f64>().sqrt();
@@ -191,10 +254,10 @@ fn contact_relative_values_keep_three_independent_parameters_and_positive_fit(){
     let expected:[f64;3]=std::array::from_fn(|k|fit*((1.+s).powi(2)*0.5+0.1*s)*normal[k]+((1.+s)*0.3+0.2*s)*binormal[k]+((1.+s)*0.2+0.3*s)*tangent[k]);
     let actual=report.values.unwrap()[0];
     for k in 0..3{assert!(actual[k][0]<=expected[k]&&expected[k]<=actual[k][1]);assert!(actual[k][1]-actual[k][0]<1e-9);}
-    let short=certify_contact_relative_values(&path,&guide,&scale,&twist,Some((&axes,&center)),&qs,[1.,1.],[u,u],[v,v],[s,s],false,report.cells-1).unwrap();
+    let short=certify_contact_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes,&center)) }, &qs, ContactTraversal { anchor: [1.,1.], path: [u,u], guide: [v,v], law: [s,s], same_parameter: false }, report.cells-1).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
     let negative=crate::sweeps::progressive_sweep::constant_vector_law([-10.,0.,0.]).unwrap();
-    let refused=certify_contact_relative_values(&path,&guide,&scale,&twist,Some((&axes,&negative)),&qs,[1.,1.],[u,u],[v,v],[s,s],false,1000).unwrap();
+    let refused=certify_contact_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes,&negative)) }, &qs, ContactTraversal { anchor: [1.,1.], path: [u,u], guide: [v,v], law: [s,s], same_parameter: false }, 1000).unwrap();
     assert_eq!(refused.status,Status::Unresolved);assert!(refused.values.is_none());
 }
 
@@ -272,11 +335,13 @@ fn guided_control_value_composes_uniform_affine_and_center_with_shared_work() {
     center.knots = vec![59., 59., 61., 61.];
     let q = [[2., 2.], [3., 3.], [4., 4.]];
     let report = certify_path_guide_control_value(
-        &path,
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: Some((&axes, &center)),
+        },
         &guide,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
         q,
         [0.25, 0.5],
         1000,
@@ -297,11 +362,13 @@ fn guided_control_value_composes_uniform_affine_and_center_with_shared_work() {
         }
     }
     let refused = certify_path_guide_control_value(
-        &path,
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: Some((&axes, &center)),
+        },
         &guide,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
         q,
         [0.25, 0.5],
         report.cells - 1,
@@ -467,15 +534,13 @@ fn guided_curved_path_jets_enclose_analytic_tangent_derivatives() {
 
 /// Original guided trajectory jets; local coordinates remain an explicit premise.
 pub fn certify_path_guide_control_trajectory(
-    path: &Curve,
+    laws: super::ProfileLaws<'_>,
     guide: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
     q: [[f64; 2]; 3],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<TrajectoryReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame = certify_path_guide(path, guide, twist, traversal, max_cells)?;
     super::trajectory::control_trajectory_from_frame(
         path, scale, affine, q, traversal, max_cells, frame,
@@ -483,11 +548,22 @@ pub fn certify_path_guide_control_trajectory(
 }
 
 pub fn certify_path_guide_control_trajectories(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
+    laws: super::ProfileLaws<'_>,
+    guide:&Curve,
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
 )->Result<TrajectoriesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_path_guide(path,guide,twist,traversal,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]
@@ -503,11 +579,13 @@ fn guided_control_jets_include_joint_laws_and_tight_linear_remainder() {
     let center = crate::primitives::line([0.; 3], [0.5, 0., 0.]).unwrap();
     let q = [[2., 2.], [3., 3.], [4., 4.]];
     let report = certify_path_guide_control_trajectory(
-        &path,
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: Some((&axes, &center)),
+        },
         &guide,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
         q,
         [0.25, 0.5],
         1000,
@@ -531,11 +609,13 @@ fn guided_control_jets_include_joint_laws_and_tight_linear_remainder() {
     let remainder = report.linear_remainder_upper().unwrap().unwrap();
     assert!(remainder >= 0.03125 && remainder < 0.03125 + 1e-9);
     let refused = certify_path_guide_control_trajectory(
-        &path,
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: Some((&axes, &center)),
+        },
         &guide,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
         q,
         [0.25, 0.5],
         report.cells - 1,
@@ -551,7 +631,7 @@ fn guided_relative_values_separate_path_rail_and_station_intervals(){
     let guide=Curve {degree:2,knots:vec![-3.,-3.,-3.,7.,7.,7.],control_points:vec![vec![1.,0.,0.],vec![1.,0.,0.5],vec![1.,1.,1.]],weights:vec![1.;3],periodic:false};
     let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
     let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-    let r=certify_path_guide_relative_values(&path,&guide,&scale,&twist,None,&qs,[0.2,0.3],[0.4,0.5],[0.6,0.7],false,1000).unwrap();
+    let r=certify_path_guide_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None }, &qs, PathGuideTraversal { path: [0.2,0.3], guide: [0.4,0.5], law: [0.6,0.7], same_parameter: false }, 1000).unwrap();
     assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
     let cross=|a:[f64;3],b:[f64;3]|[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     for u in [0.2_f64,0.25,0.3]{for v in [0.4_f64,0.45,0.5]{for s in [0.6_f64,0.65,0.7]{
@@ -560,7 +640,7 @@ fn guided_relative_values_separate_path_rail_and_station_intervals(){
         for k in 0..3{let expected=(1.+s)*(n[k]*(0.25*s).cos()+b[k]*(0.25*s).sin());
             assert!(bounds[k][0]<=expected&&expected<=bounds[k][1],"{bounds:?} vs {expected}");}
     }}}
-    let short=certify_path_guide_relative_values(&path,&guide,&scale,&twist,None,&qs,[0.2,0.3],[0.4,0.5],[0.6,0.7],false,r.cells-1).unwrap();
+    let short=certify_path_guide_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None }, &qs, PathGuideTraversal { path: [0.2,0.3], guide: [0.4,0.5], law: [0.6,0.7], same_parameter: false }, r.cells-1).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
 }
 
@@ -576,7 +656,10 @@ pub(crate) fn certify_independent_guided_cover(
     let mut pending=vec![[[0.,1.];3]];
     while let Some(cell)=pending.pop(){
         if work==max_cells{return Ok((Status::Unresolved,work));}
-        let report=path_guide_values_at(path,guide,twist,cell[0],cell[1],cell[2],false,max_cells-work)?;
+        let traversal=PathGuideTraversal{
+            path:cell[0],guide:cell[1],law:cell[2],same_parameter:false,
+        };
+        let report=path_guide_values_at(path,guide,twist,traversal,max_cells-work)?;
         work+=report.cells;
         if report.status==Status::Certified{continue;}
         if report.cells==0||work==max_cells{return Ok((Status::Unresolved,work));}

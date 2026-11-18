@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0521",
+  "testedBase": "96b7d35d93112705bffdb33ae5f487baa04f3ba5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 99,
+  "scope": [
+    "Assemble an ordered grid of compatible patches with exact C0 wraps in both axes.",
+    "Sew the V rows and then the U strips with exact control and weight agreements across every join and wrap."
+  ],
+  "logSha256": "3010cdced8f64f42e4bc28edd1004fcc14315b4bb762a4bc5037a325c8a75b61",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a693b66769a3a80bf495ec477a70f2aa05451f179fb219606a7d6b873c360af2",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "cdc0d39769159405bbd01c5d88857fd92ccc0bfb0195dfd55ec2eb7fc2ee4214"
+  }
+}

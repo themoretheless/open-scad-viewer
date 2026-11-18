@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0290",
+  "testedBase": "1a885282adea6273f9c8e1908d76f3a159d6afc3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_mobius_piecewise_contracts",
+    "--test",
+    "exact_mobius_bezier_contracts",
+    "--test",
+    "exact_mobius_spline_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 9,
+  "scope": [
+    "Applies a different positive clock on each span of a piecewise B\u00e9zier curve or tensor patch. A shared cumulative homogeneous scale preserves the complete geometry and literal seam weights.",
+    "Clamped nonperiodic piecewise B\u00e9zier axes with degree-multiplicity interior knots. Absolute seam coordinates and geometric continuity are retained. Parameter derivatives can change."
+  ],
+  "logSha256": "9fe8a133e2d1727eda0623eb99a9ee339979a4439aec95165b7894d3500f3a6c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "0163f4f33ea1f37da339fd3606b35eb4f534b1398bbed56fa3148933b8985824",
+    "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs": "2347b3b874af0201bc7c388fbc38f2840df33985d6ed8450ad4ea28346d1d87b",
+    "crates/nurbs-core/src/editing/exact_projective/mobius.rs": "af236192c0c5a935d38c32d24efbd6b4c332665865ff940bd2476a5ee882afdb",
+    "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs": "388a0695c021daa4855d345ce0f0f700b0df52fc22d30bd66acad7925943d2a4"
+  }
+}

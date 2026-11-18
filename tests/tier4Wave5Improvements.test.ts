@@ -1,24 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { inspectIgesHeaderMetadata } from '../src/services/cadIges'
-import { computeSurfaceGroupAreaSummary } from '../src/services/meshSurfaceGroups'
-import {
-  isOpenScadBuiltinFunction,
-  findClosestOpenScadBuiltinFunction,
-} from '../src/services/openScadBuiltinFunctions'
-import { generateDrawingTitleBlockSvg } from '../src/services/drawingSheets'
+import { inspectIgesHeaderMetadata } from '../src/kernel/cadIges'
+import { computeSurfaceGroupAreaSummary } from '../src/kernel/meshSurfaceGroups'
+import { isOpenScadBuiltinFunction, findClosestOpenScadBuiltinFunction } from '../src/language/openScadBuiltinFunctions'
+import { generateDrawingTitleBlockSvg } from '../src/app/drawingSheets'
 import { describePublicErrorCode, PUBLIC_ERROR_CODES } from '../src/mcp/errorContract'
 import { describePublicErrorCode as describePublicErrorCodeFromPublicError } from '../src/mcp/publicError'
-import {
-  getGpuExecutionTopologyReport,
-  getGpuMemoryArchitectureProfile,
-} from '../src/renderer/types'
-import {
-  createAndUploadBufferByArchitecture,
-  detectGpuMemoryArchitecture,
-} from '../src/services/gpuZeroCopyPipeline'
-import { sameTypedArray, sortEdgeDraws, sortOpaqueDraws } from '../src/renderer/drawSorting'
-import { isSectionClipped, selectionCandidateKey } from '../src/renderer/pickingController'
-import { groupByShadingModel } from '../src/renderer/framePassEncoder'
+import { getGpuExecutionTopologyReport, getGpuMemoryArchitectureProfile } from '../src/render/types'
+import { createAndUploadBufferByArchitecture, detectGpuMemoryArchitecture } from '../src/render/gpuZeroCopyPipeline'
+import { sameTypedArray, sortEdgeDraws, sortOpaqueDraws } from '../src/render/drawSorting'
+import type { GMesh } from '../src/render/types'
+import { isSectionClipped, selectionCandidateKey } from '../src/render/pickingController'
+import { groupByShadingModel } from '../src/render/framePassEncoder'
 import { deepEqual, identityValue, truthy, valueToString } from '../src/parser/astDiscovery'
 import { compatibilityString } from '../src/parser/expressionEvaluator'
 import { sha256, truncateWellFormed } from '../src/mcp/server/contracts'
@@ -35,16 +27,8 @@ describe('Tier IV Wave 5 Improvements', () => {
       const igesLines = [
         padIgesLine('OpenSCAD Viewer Direct B-Rep IGES 5.3 Export', 'S', 1),
         padIgesLine('Analytical Mechanics Solid Model', 'S', 2),
-        padIgesLine(
-          '1H,,1H;,13HTURBINE-ROTOR,17Hturbine_rotor.igs,16Hopen-scad-viewer,',
-          'G',
-          1,
-        ),
-        padIgesLine(
-          '7H2026.10,32,38,6,308,15,13HTURBINE-ROTOR,1.0,2,2HMM,1,0.08,15H20261021.120000;',
-          'G',
-          2,
-        ),
+        padIgesLine('1H,,1H;,13HTURBINE-ROTOR,17Hturbine_rotor.igs,16Hopen-scad-viewer,', 'G', 1),
+        padIgesLine('7H2026.10,32,38,6,308,15,13HTURBINE-ROTOR,1.0,2,2HMM,1,0.08,15H20261021.120000;', 'G', 2),
         // Directory Entry 1: Entity 128 (Rational B-Spline Surface)
         padIgesLine('     128       1       0       0       1       0       0       000000001', 'D', 1),
         padIgesLine('     128       0       0       1       0                        Surface1', 'D', 2),
@@ -111,20 +95,11 @@ describe('Tier IV Wave 5 Improvements', () => {
       // Surface 20: a right triangle in YZ plane (x = 0) with legs 6 and 8, normal = (+1, 0, 0), area = 24 mm²
       const positions = new Float32Array([
         // Surface 10 vertices (0..3)
-        0, 0, 0,
-        10, 0, 0,
-        10, 20, 0,
-        0, 20, 0,
+        0, 0, 0, 10, 0, 0, 10, 20, 0, 0, 20, 0,
         // Surface 20 vertices (4..6)
-        0, 0, 0,
-        0, 6, 0,
-        0, 0, 8,
+        0, 0, 0, 0, 6, 0, 0, 0, 8,
       ])
-      const indices = new Uint32Array([
-        0, 1, 2,
-        0, 2, 3,
-        4, 5, 6,
-      ])
+      const indices = new Uint32Array([0, 1, 2, 0, 2, 3, 4, 5, 6])
       const surfaceIds = new Uint32Array([10, 10, 20])
 
       const summary = computeSurfaceGroupAreaSummary({ positions, indices }, surfaceIds)
@@ -240,7 +215,7 @@ describe('Tier IV Wave 5 Improvements', () => {
       expect(
         detectGpuMemoryArchitecture(
           { vendor: 'NVIDIA', architecture: 'blackwell' },
-          { has: (f) => f === 'mappable-primary-buffers' },
+          { has: f => f === 'mappable-primary-buffers' },
         ),
       ).toBe('uma')
       expect(detectGpuMemoryArchitecture({ vendor: 'NVIDIA', architecture: 'blackwell' }, null)).toBe('duma')
@@ -257,7 +232,9 @@ describe('Tier IV Wave 5 Improvements', () => {
           umaCreatedDesc = desc
           return {
             getMappedRange: () => umaMappedBacking,
-            unmap: () => { umaUnmapped = true },
+            unmap: () => {
+              umaUnmapped = true
+            },
           }
         },
         queue: {
@@ -314,15 +291,15 @@ describe('Tier IV Wave 5 Improvements', () => {
         { vb: vb2, ib: ib1, edgeIB: ib1, bg: bg2, shadingModel: 'pbr', ic: 12, edgeIC: 8 },
         { vb: vb1, ib: ib1, edgeIB: ib1, bg: bg1, shadingModel: 'phong', ic: 12, edgeIC: 8 },
         { vb: vb2, ib: ib1, edgeIB: ib1, bg: bg1, shadingModel: 'phong', ic: 12, edgeIC: 8 },
-      ] as any[]
+      ] as unknown as GMesh[]
       sortOpaqueDraws(draws)
       // 'pbr' < 'phong' lexicographically, and within 'phong' the two vb2/vb1 meshes are grouped deterministically
-      expect(draws[0].shadingModel).toBe('pbr')
-      expect(draws[1].shadingModel).toBe('phong')
-      expect(draws[2].shadingModel).toBe('phong')
+      expect(draws[0]!.shadingModel).toBe('pbr')
+      expect(draws[1]!.shadingModel).toBe('phong')
+      expect(draws[2]!.shadingModel).toBe('phong')
       sortEdgeDraws(draws)
       // After sortEdgeDraws, both vb2 meshes are adjacent
-      expect(draws[0].vb === draws[1].vb || draws[1].vb === draws[2].vb).toBe(true)
+      expect(draws[0]!.vb === draws[1]!.vb || draws[1]!.vb === draws[2]!.vb).toBe(true)
 
       const groups = groupByShadingModel(draws)
       expect(groups).toHaveLength(2)

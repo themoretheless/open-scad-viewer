@@ -1,0 +1,1936 @@
+#[path = "support/nested_graph_body.rs"]
+mod graph;
+#[path = "support/closed_solid_policy.rs"]
+mod policy;
+use brep_core::{closed_solid as solid, mixed_root_model as mixed};
+use nurbs_core::{ss_intersection as ss, trim_domain::Location};
+use std::sync::Arc;
+const COUNT: usize = 128;
+fn family(source: &ss::FiberSources, radius: f64, mirrored: bool) -> Vec<ss::QualifiedFiber> {
+    family_count(source, radius, mirrored, COUNT)
+}
+fn family_count(
+    source: &ss::FiberSources,
+    radius: f64,
+    mirrored: bool,
+    count: usize,
+) -> Vec<ss::QualifiedFiber> {
+    (0..count)
+        .map(|i| {
+            let angle = i as f64 * std::f64::consts::TAU / count as f64;
+            let half = 0.7 * std::f64::consts::TAU / count as f64;
+            let points = [angle - half, angle, angle + half]
+                .map(|t| [0.5 + radius * t.cos(), 0.5 + radius * t.sin()]);
+            let bounds: [[f64; 2]; 2] = std::array::from_fn(|k| {
+                [
+                    points.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min),
+                    points
+                        .iter()
+                        .map(|p| p[k])
+                        .fold(f64::NEG_INFINITY, f64::max),
+                ]
+            });
+            let free = if angle.sin().abs() >= angle.cos().abs() {
+                0
+            } else {
+                1
+            };
+            let axis = if free == 0 {
+                ss::FiberAxis::FirstU
+            } else {
+                ss::FiberAxis::FirstV
+            };
+            let mut failures = Vec::new();
+            for pad in [0.03, 0.06, 0.09, 0.12, 0.16] {
+                let mut domain = std::array::from_fn(|k| {
+                    [
+                        bounds[k % 2][0] - pad * radius,
+                        bounds[k % 2][1] + pad * radius,
+                    ]
+                });
+                domain[free] = bounds[free];
+                domain[2 + free] = [
+                    bounds[free][0] - 0.005 * radius,
+                    bounds[free][1] + 0.005 * radius,
+                ];
+                if mirrored {
+                    domain[2] = [
+                        (1. - domain[2][1]).next_down(),
+                        (1. - domain[2][0]).next_up(),
+                    ];
+                }
+                let r = source.certify_contracted(domain, axis, 100000).unwrap();
+                failures.push((pad, r.reason(), r.root_image()));
+                if let Some(f) = r.into_fiber() {
+                    return f;
+                }
+            }
+            panic!("quartic chart {radius}/{i}: {failures:?}")
+        })
+        .collect()
+}
+fn index(axis: ss::FiberAxis) -> usize {
+    match axis {
+        ss::FiberAxis::FirstU => 0,
+        ss::FiberAxis::FirstV => 1,
+        ss::FiberAxis::SecondU => 2,
+        ss::FiberAxis::SecondV => 3,
+    }
+}
+fn wire(charts: &[ss::QualifiedFiber], radius: f64) -> ss::OriginalSsRootWire {
+    let count = charts.len();
+    let curves: Vec<_> = charts
+        .iter()
+        .cloned()
+        .map(|c| Arc::new(ss::OriginalSsRootCurve::from_native(c)))
+        .collect();
+    let points: Vec<_> = curves
+        .iter()
+        .enumerate()
+        .map(|(i, c)| {
+            let angle = (i as f64 - 0.5) * std::f64::consts::TAU / count as f64;
+            let uv = [0.5 + radius * angle.cos(), 0.5 + radius * angle.sin()];
+            Arc::new(ss::OriginalSsRootPoint::new(c.clone(), uv[index(c.free_axis()) % 2]).unwrap())
+        })
+        .collect();
+    ss::OriginalSsRootWire::new(
+        (0..count)
+            .map(|i| {
+                let bind = |p: Arc<ss::OriginalSsRootPoint>| {
+                    ss::bind_original_ss_port(p, curves[i].clone(), [0; 4], Default::default())
+                        .unwrap()
+                };
+                ss::OriginalSsRootEdge::new(
+                    bind(points[i].clone()),
+                    bind(points[(i + 1) % count].clone()),
+                )
+                .unwrap()
+            })
+            .collect(),
+    )
+    .unwrap()
+}
+#[test]
+fn nested_original_components_build_three_distinct_retained_pieces() {
+    run(false, false);
+}
+#[test]
+fn nested_components_assign_original_holes_to_exactly_one_piece() {
+    run(true, false);
+}
+#[test]
+fn paired_sewing_respects_a_reversed_original_uv_clock() {
+    run(false, true);
+}
+fn operands(
+    with_holes: bool,
+    mirrored: bool,
+) -> (
+    solid::QualifiedClosedSolid,
+    usize,
+    solid::QualifiedClosedSolid,
+) {
+    let model = if with_holes {
+        let square = |x: f64, y: f64, h: f64| {
+            vec![
+                [x - h, y - h],
+                [x - h, y + h],
+                [x + h, y + h],
+                [x + h, y - h],
+            ]
+        };
+        brep_core::extrude_polygon_with_holes(
+            &[[0., 0.], [1., 0.], [1., 1.], [0., 1.]],
+            &[
+                square(0.5, 0.5, 0.04),
+                square(0.5, 0.725, 0.01),
+                square(0.05, 0.05, 0.02),
+            ],
+            -10.,
+            0.,
+        )
+        .unwrap()
+    } else {
+        brep_core::cuboid([0., 0., -10.], [1., 1., 0.]).unwrap()
+    };
+    let aface = model
+        .faces
+        .iter()
+        .position(|f| {
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 0.)
+        })
+        .unwrap();
+    let a = solid::qualify(model, policy::policy())
+        .unwrap()
+        .into_solid()
+        .unwrap();
+    assert_eq!(
+        a.model().faces[aface].surface.control_points,
+        vec![
+            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+            vec![vec![1., 0., 0.], vec![1., 1., 0.]]
+        ]
+    );
+    let mut p = policy::policy();
+    p.geometry.boundary.contacts.cells_per_pair = 1024;
+    p.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let mut model = graph::body();
+    if mirrored {
+        model.faces[1].surface.control_points.reverse();
+        model.faces[1].surface.weights.reverse();
+        let loops: Vec<_> = std::iter::once(model.faces[1].outer)
+            .chain(model.faces[1].holes.iter().copied())
+            .collect();
+        for l in loops {
+            model.loops[l].coedges.reverse();
+            for c in &mut model.loops[l].coedges {
+                c.reversed = !c.reversed;
+                for p in &mut c.pcurve.control_points {
+                    p[0] = 1. - p[0];
+                }
+                c.pcurve.control_points.reverse();
+                c.pcurve.weights.reverse();
+            }
+        }
+        for use_ in model.shells.iter_mut().flat_map(|s| &mut s.faces) {
+            if use_.face == 1 {
+                use_.reversed = !use_.reversed;
+            }
+        }
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+    }
+    let admitted = solid::qualify(model, p).unwrap();
+    assert!(
+        admitted.solid().is_some(),
+        "Quartic original body must independently qualify"
+    );
+    let b = admitted.into_solid().unwrap();
+    (a, aface, b)
+}
+fn automatic_census_limits() -> mixed::ClosedSsCensusLimits {
+    mixed::ClosedSsCensusLimits {
+        discovery: ss::ClosedSSBuildLimits {
+            max_charts: 192,
+            max_repairs: 128,
+            seed_steps: 32,
+            proposal_rectangles: 250000,
+            coverage: ss::CoverageLimits { max_cells: 65536, max_rectangles: 100000, max_depth: 32 },
+            components: ss::MixedComponentDiscoveryLimits { max_bridges: 191, ..Default::default() },
+            ..Default::default()
+        },
+        cycle: ss::ClosedFiberCycleLimits { max_steps: 256, max_candidates: 8192, max_start_attempts: 64, ..Default::default() },
+        coverage: ss::CoverageLimits { max_cells: 65536, max_rectangles: 1000000, max_depth: 48 },
+        ..Default::default()
+    }
+}
+
+#[test]
+fn automatic_closed_branches_build_annular_intersection() {
+    let (a, aface, _) = operands(false, false);
+    let mut widened = a.model().clone();
+    let surface = &mut widened.faces[aface].surface;
+    let points = surface.control_points.clone();
+    assert_eq!([surface.degree_u, surface.degree_v], [1, 1]);
+    surface.knots_u = vec![-0.125, -0.125, 1.125, 1.125];
+    surface.knots_v = surface.knots_u.clone();
+    for (i, u) in [-0.125, 1.125].into_iter().enumerate() {
+        for (j, v) in [-0.125, 1.125].into_iter().enumerate() {
+            surface.control_points[i][j] = (0..3).map(|k| {
+                points[0][0][k] + u * (points[1][0][k] - points[0][0][k])
+                    + v * (points[0][1][k] - points[0][0][k])
+            }).collect();
+        }
+    }
+    // The larger affine carrier represents the same finite face in the
+    // original authored UV loop. Its extra UV domain is outside the cut.
+    widened.rebuild_topology_ids();
+    let a = solid::qualify(widened, policy::policy()).unwrap().into_solid().unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    assert!(mixed::QualifiedInteriorSsCensus::discover_closed_branches(
+        [(&a, usize::MAX), (&b, 1)], Default::default(),
+    ).is_err());
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    let (census, result, [lo, hi]) =
+        mixed::QualifiedInteriorSsCensus::assemble_closed_ss_boolean_between(
+            [&a, &b], solid::BooleanMaterialOp::Intersection, &directions, 1e-9,
+            mixed::ClosedSsBooleanLimits {
+                census: automatic_census_limits(),
+                max_pair_attempts: 4,
+                volume: mixed::RootBoundaryVolumeLimits {
+                    absolute_error: 5e-4, cells: 16384, ..Default::default()
+                },
+                ..Default::default()
+            },
+        ).unwrap();
+    let source = census.coverage().fibers()[0].source();
+    assert_eq!(source.first(), &a.model().faces[aface].surface);
+    assert_eq!(source.second(), &b.model().faces[1].surface);
+    assert!(!census.coverage().covers_entire_surfaces());
+    assert_eq!(census.coverage().domain(), [[0., 1.]; 4]);
+    assert_eq!(census.components().len(), 2);
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi);
+
+    let (difference, [lo, hi]) = mixed::QualifiedInteriorSsCensus::assemble_multi_face_boolean(
+        [&a, &b],
+        &[census],
+        solid::BooleanMaterialOp::Difference,
+        &directions,
+        1e-9,
+        mixed::ClosedSsBooleanLimits {
+            volume: mixed::RootBoundaryVolumeLimits {
+                absolute_error: 2e-3, cells: 16384, ..Default::default()
+            },
+            ..Default::default()
+        },
+    ).unwrap();
+    let topology = difference.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert!(topology.bodies[0].inner_shells.is_empty());
+    assert!(topology.boundary_edges().is_empty());
+    assert!(lo <= 10. - expected && 10. - expected <= hi);
+}
+
+#[test]
+fn rational_face_census_builds_closed_annular_intersection() {
+    check_rational_face_census(false);
+}
+
+#[test]
+fn rotated_multispan_rational_face_census_builds_closed_annular_intersection() {
+    check_rational_face_census(true);
+}
+
+fn check_rational_face_census(rotated_multispan: bool) {
+    let (stock, face, _) = operands(false, false);
+    let mut model = stock.model().clone();
+    let plane = &mut model.faces[face].surface;
+    plane.degree_u = 2;
+    plane.knots_u = vec![0., 0., 0., 1., 1., 1.];
+    plane.control_points = [0., 0.25, 1.]
+        .map(|x| vec![vec![x, 0., 0.], vec![x, 1., 0.]])
+        .to_vec();
+    plane.weights = vec![vec![1.; 2], vec![2.; 2], vec![3.; 2]];
+    if rotated_multispan {
+        plane.knots_u = vec![0., 0., 0., 0.5, 1., 1., 1.];
+        plane.control_points = [0., 0.125, 0.6875, 1.]
+            .map(|x| vec![vec![x, 0., 0.], vec![x, 1., 0.]])
+            .to_vec();
+        plane.weights = [0.5, 1., 2., 2.5].map(|w| vec![w; 2]).to_vec();
+    }
+    model.rebuild_topology_ids();
+    let mut cutter = graph::above_body();
+    let mut directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    if rotated_multispan {
+        let rotation = [
+            [0., 0., -1., 0.],
+            [0., 1., 0., 0.],
+            [1., 0., 0., 0.],
+            [0., 0., 0., 1.],
+        ];
+        model = brep_core::transform::affine(&model, rotation).unwrap();
+        cutter = brep_core::transform::affine(&cutter, rotation).unwrap();
+        directions = directions.map(|[x, y, z]| [-z, y, x]);
+    }
+    let mut policy = policy::policy();
+    policy.geometry.boundary.contacts.cells_per_pair = 1024;
+    policy.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let a = solid::qualify(model, policy).unwrap().into_solid().expect("rational box admission");
+    let b = solid::qualify(cutter, policy).unwrap().into_solid().unwrap();
+    let (census, result, [lo, hi]) =
+        mixed::QualifiedInteriorSsCensus::assemble_closed_ss_boolean_between(
+            [&a, &b],
+            solid::BooleanMaterialOp::Intersection,
+            &directions,
+            1e-9,
+            mixed::ClosedSsBooleanLimits {
+                census: automatic_census_limits(),
+                volume: mixed::RootBoundaryVolumeLimits {
+                    axis: if rotated_multispan { 0 } else { 2 },
+                    absolute_error: 5e-4, cells: 16384, ..Default::default()
+                },
+                ..Default::default()
+            },
+        ).unwrap();
+    assert_eq!(census.face_indices(), [face, 1]);
+    assert_eq!(census.components().len(), 2);
+    let source = census.coverage().fibers()[0].source();
+    assert_eq!(source.first(), &a.model().faces[face].surface);
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+#[test]
+fn two_ss_face_pairs_build_two_intersection_bodies() {
+    let (a, aface, _) = operands(false, false);
+    let graph = graph::above_body();
+    let shift = [
+        [1., 0., 0., 4.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ];
+    let shifted_a = brep_core::transform::affine(a.model(), shift).unwrap();
+    let shifted_b = brep_core::transform::affine(&graph, shift).unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let combine = |original, shifted| {
+        let model = brep_core::operations::boolean(original, shifted, "union").unwrap();
+        let solid = solid::qualify(model, limits).unwrap().into_solid().unwrap();
+        assert_eq!(solid.model().bodies.len(), 2);
+        solid
+    };
+    let [a_faces, b_faces] = [
+        [&a.model().faces[aface].surface, &shifted_a.faces[aface].surface],
+        [&graph.faces[1].surface, &shifted_b.faces[1].surface],
+    ];
+    let first = combine(a.model(), &shifted_a);
+    let second = combine(&graph, &shifted_b);
+    let find_face = |solid: &solid::QualifiedClosedSolid, surface| {
+        solid.model().faces.iter().position(|face| &face.surface == surface).unwrap()
+    };
+    let censuses = std::array::from_fn::<_, 2, _>(|pair| census_for_faces(
+        &first, find_face(&first, a_faces[pair]),
+        &second, find_face(&second, b_faces[pair]),
+        false, COUNT, false,
+    ));
+    let (result, [lo, hi]) = mixed::QualifiedInteriorSsCensus::assemble_multi_face_boolean(
+        [&first, &second],
+        &censuses,
+        solid::BooleanMaterialOp::Intersection,
+        &[[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]],
+        1e-9,
+        mixed::ClosedSsBooleanLimits {
+            volume: mixed::RootBoundaryVolumeLimits {
+                absolute_error: 2e-3, cells: 16384, ..Default::default()
+            },
+            ..Default::default()
+        },
+    ).unwrap();
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 2);
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed && shell.faces.len() == 2));
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 12. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+#[test]
+fn automatic_ss_network_shares_one_original_face() {
+    let stock = brep_core::cuboid([0., 0., -10.], [8., 1., 0.]).unwrap();
+    let graph = graph::above_body();
+    let shifted = brep_core::transform::affine(&graph, [
+        [1., 0., 0., 4.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ]).unwrap();
+    let opposing = brep_core::operations::boolean(&graph, &shifted, "union").unwrap();
+    let mut policy = policy::policy();
+    policy.geometry.boundary.contacts.cells_per_pair = 1024;
+    policy.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let a = solid::qualify(stock, policy).unwrap().into_solid().unwrap();
+    let b = solid::qualify(opposing, policy).unwrap().into_solid().unwrap();
+    let (censuses, result, [lo, hi]) =
+        mixed::QualifiedInteriorSsCensus::assemble_closed_ss_network_boolean_between(
+            [&a, &b],
+            solid::BooleanMaterialOp::Intersection,
+            &[[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]],
+            1e-9,
+            mixed::ClosedSsBooleanLimits {
+                census: automatic_census_limits(),
+                cells_per_support: 1024,
+                volume: mixed::RootBoundaryVolumeLimits {
+                    absolute_error: 2e-3, cells: 16384, ..Default::default()
+                },
+                ..Default::default()
+            },
+        ).unwrap();
+    assert_eq!(censuses.len(), 2);
+    let [first, second] = [censuses[0].face_indices(), censuses[1].face_indices()];
+    assert_eq!(first[0], second[0]);
+    assert_ne!(first[1], second[1]);
+    assert!(censuses.iter().all(|census| census.components().len() == 2));
+
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 2);
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed && shell.faces.len() == 2));
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 12. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+#[test]
+fn intersection_keeps_annulus_between_two_closed_contours() {
+    let (a, aface, _) = operands(false, false);
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_for(&a, aface, &b, false);
+    let cut = (census.as_ref(), 0, Default::default());
+    let (multi, regions) =
+        mixed::QualifiedInteriorSsCensus::build_multi_face_arrangement(&a, &[cut]).unwrap();
+    let single = census.build_face_arrangement(0, Default::default()).unwrap();
+    assert_eq!(regions[0], single.region_faces());
+    assert_eq!(multi.topology().faces.len(), single.model().topology().faces.len());
+    assert!(mixed::QualifiedInteriorSsCensus::build_multi_face_arrangement(&a, &[cut, cut]).is_err());
+    assert!(mixed::QualifiedInteriorSsCensus::build_multi_face_arrangement(&b, &[cut]).is_err());
+    let union = census.select_automatic_paired_boolean_patches(
+        solid::BooleanMaterialOp::Union,
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(),
+        [Default::default(); 2],
+        4096,
+        64,
+    ).unwrap();
+    for (side, input) in [&a, &b].into_iter().enumerate() {
+        let arrangement = union.arrangements()[side];
+        let faces = union.uncut_faces()[side];
+        assert_eq!(faces.len(), input.model().faces.len() - 1);
+        assert_eq!(union.cut_regions()[side].len(), 2);
+        for face in faces {
+            assert!(!arrangement.region_faces().contains(&face.face));
+            let source = input.model().shells.iter().flat_map(|shell| &shell.faces)
+                .find(|source| source.face == face.face).unwrap();
+            assert_eq!(face.reversed, source.reversed);
+        }
+    }
+    let (sewn_union, [union_lo, union_hi]) = census.assemble_paired_union(
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        1e-9,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 2e-3, cells: 4096, ..Default::default() },
+        solid::VolumeLimits {
+            axis: 2, origin: 0., absolute_error: 2e-3, cells: 4096, spans: 16384,
+            domain_cells: 100000, algebra: Default::default(),
+        },
+        4096,
+        64,
+    ).unwrap();
+    // Both original boxes have unit footprint and thickness ten.
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(union_lo <= 20. - overlap && 20. - overlap <= union_hi, "{union_lo}..{union_hi}");
+    assert!(union_hi - union_lo <= 2e-3);
+    let topology = sewn_union.topology();
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed));
+    let mut shell_sizes: Vec<_> = topology.shells.iter().map(|shell| shell.faces.len()).collect();
+    shell_sizes.sort_unstable();
+    assert_eq!(shell_sizes, [2, a.model().faces.len() + b.model().faces.len()]);
+    assert!(topology.boundary_edges().is_empty());
+    assert!(topology.edges.iter().any(|edge| matches!(edge.curve, mixed::MixedEdge::Rational(_))));
+    assert!(topology.edges.iter().any(|edge| matches!(edge.curve, mixed::MixedEdge::Root(_))));
+    let inner_shell = topology.shells.iter().position(|shell| shell.faces.len() == 2).unwrap();
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    assert!(union.shell_is_inside(
+        inner_shell, 1 - inner_shell, 1e-9, &directions, Default::default(),
+    ).unwrap());
+    assert!(!union.shell_is_inside(
+        1 - inner_shell, inner_shell, 1e-9, &directions, Default::default(),
+    ).unwrap());
+    for (shell, point, expected) in [
+        (1 - inner_shell, [0.5, 0.5, 0.02], true),
+        (inner_shell, [0.5, 0.5, 0.02], true),
+        (1 - inner_shell, [0.5, 0.5, -1.], true),
+        (inner_shell, [0.5, 0.5, -1.], false),
+        (1 - inner_shell, [1.5, 0.5, 0.02], false),
+    ] {
+        let report = union.classify_shell_point(
+            shell, 1e-9, point, &directions, Default::default(),
+        ).unwrap();
+        assert_eq!(report.parity, Some(expected), "{shell} {point:?}: {report:?}");
+    }
+    let flux = union.paired_shell_signed_volume(
+        inner_shell,
+        1e-9,
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 4096, ..Default::default() },
+    ).unwrap();
+    let [lo, hi] = flux.signed_bounds.unwrap();
+    let r2 = 0.15625_f64.powi(2);
+    let outer_r2 = 0.3125_f64.powi(2);
+    let signed_cavity = -6. * std::f64::consts::PI * r2.powi(2) * (3. * outer_r2 - r2);
+    assert!(flux.accuracy_proven && hi < 0.);
+    assert!(lo <= signed_cavity && signed_cavity <= hi, "{lo}..{hi}");
+    let exterior = union.shell_signed_volume(
+        1 - inner_shell,
+        1e-9,
+        1e-9,
+        mixed::RootBoundaryVolumeLimits {
+            absolute_error: 2e-3,
+            cells: 32768,
+            arc_subdivisions: 64,
+            ..Default::default()
+        },
+    ).unwrap();
+    let [lo, hi] = exterior.signed_bounds.unwrap();
+    let expected_exterior = 20. - overlap - signed_cavity;
+    assert!(exterior.accuracy_proven && lo > 0., "{exterior:?}");
+    assert!(lo <= expected_exterior && expected_exterior <= hi, "{lo}..{hi}");
+    let assemble_material = |operation| census.assemble_automatic_paired_boolean(
+        operation,
+        &directions,
+        1e-9,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits {
+            absolute_error: 8e-3,
+            cells: 32768,
+            arc_subdivisions: 64,
+            ..Default::default()
+        },
+        4096,
+        64,
+    );
+    let (body, [body_lo, body_hi]) = assemble_material(solid::BooleanMaterialOp::Union).unwrap();
+    let bodies = &body.topology().bodies;
+    assert_eq!(bodies.len(), 1);
+    assert_eq!(bodies[0].outer_shell, 1 - inner_shell);
+    assert_eq!(bodies[0].inner_shells, [inner_shell]);
+    assert!(body_lo <= 20. - overlap && 20. - overlap <= body_hi);
+    assert!(body_hi - body_lo <= 8e-3);
+    assert!(body_lo <= union_hi && union_lo <= body_hi);
+    let (difference, [difference_lo, difference_hi]) =
+        assemble_material(solid::BooleanMaterialOp::Difference).unwrap();
+    assert_eq!(difference.topology().bodies.len(), 1);
+    assert!(difference.topology().bodies[0].inner_shells.is_empty());
+    assert!(difference.topology().boundary_edges().is_empty());
+    assert!(difference_lo <= 10. - overlap && 10. - overlap <= difference_hi);
+    assert!(difference_hi - difference_lo <= 8e-3);
+    let assemble = |cells_per_support| {
+        census.assemble_automatic_paired_boolean(
+            solid::BooleanMaterialOp::Intersection,
+            &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+            1e-9,
+            Default::default(),
+            [Default::default(); 2],
+            mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 4096,
+                ..Default::default()
+            },
+            4096,
+            cells_per_support,
+        )
+    };
+    let err = assemble(1).err().expect("One probe cannot cover three regions");
+    assert!(err.to_string().contains("Boolean region witness search found"));
+    let (result, [lo, hi]) = assemble(64).unwrap();
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.shells.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}");
+}
+
+#[test]
+fn multi_face_xor_retains_two_closed_bodies_at_common_ss_rims() {
+    let (a, aface, _) = operands(false, false);
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_with_anchors(&a, aface, &b, false, COUNT, true);
+    let (xor, [xor_lo, xor_hi]) = mixed::QualifiedInteriorSsCensus::assemble_multi_face_boolean(
+        [&a, &b],
+        &[census],
+        solid::BooleanMaterialOp::Xor,
+        &[[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]],
+        1e-9,
+        mixed::ClosedSsBooleanLimits {
+            volume: mixed::RootBoundaryVolumeLimits {
+                absolute_error: 8e-3,
+                cells: 32768,
+                arc_subdivisions: 64,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    ).unwrap();
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    let xor = xor.topology();
+    assert_eq!(xor.bodies.len(), 2);
+    assert_eq!(xor.shells.len(), 2);
+    assert!(xor.boundary_edges().is_empty());
+    let root_edges = |shell: usize| {
+        xor.shells[shell].faces.iter()
+            .flat_map(|use_| {
+                let face = &xor.faces[use_.face];
+                std::iter::once(face.outer).chain(face.holes.iter().copied())
+            })
+            .flat_map(|wire| &xor.loops[wire].coedges)
+            .filter_map(|coedge| match &xor.edges[coedge.edge].curve {
+                mixed::MixedEdge::Root(edge) => Some((coedge.edge, edge)),
+                _ => None,
+            })
+            .collect::<std::collections::BTreeMap<_, _>>()
+    };
+    let first = root_edges(xor.bodies[0].outer_shell);
+    let second = root_edges(xor.bodies[1].outer_shell);
+    assert!(!first.is_empty());
+    assert_eq!(first.len(), second.len());
+    assert!(first.keys().all(|id| !second.contains_key(id)));
+    assert!(first.values().all(|edge| second.values().any(|other| {
+        edge.start().point().same_selector(other.start().point())
+            && edge.end().point().same_selector(other.end().point())
+    })));
+    assert!(xor_lo <= 20. - 2. * overlap && 20. - 2. * overlap <= xor_hi);
+    assert!(xor_hi - xor_lo <= 8e-3);
+}
+
+#[test]
+fn union_flux_preserves_a_rational_hole_inside_a_closed_ss_rim() {
+    let hole = vec![
+        [0.46875, 0.46875], [0.46875, 0.53125],
+        [0.53125, 0.53125], [0.53125, 0.46875],
+    ];
+    let model = brep_core::extrude_polygon_with_holes(
+        &[[0., 0.], [1., 0.], [1., 1.], [0., 1.]], &[hole], -10., 0.,
+    ).unwrap();
+    let aface = model.faces.iter().position(|face| {
+        face.surface.control_points.iter().flatten().all(|point| point[2] == 0.)
+    }).unwrap();
+    let a = solid::qualify(model, policy::policy()).unwrap().into_solid().unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_for(&a, aface, &b, false);
+    let union = census.select_automatic_paired_boolean_patches(
+        solid::BooleanMaterialOp::Union,
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(), [Default::default(); 2], 4096, 64,
+    ).unwrap();
+    let model = union.sew_closed_shells(1e-9).unwrap();
+    let topology = model.topology();
+    assert_eq!(topology.shells.len(), 1);
+    let is_root = |loop_id: usize| {
+        let edge = topology.loops[loop_id].coedges[0].edge;
+        matches!(topology.edges[edge].curve, mixed::MixedEdge::Root(_))
+    };
+    assert!(topology.faces.iter().any(|face| {
+        is_root(face.outer) && face.holes.iter().any(|&hole| !is_root(hole))
+    }));
+    let flux = union.shell_signed_volume(
+        0, 1e-9, 1e-9,
+        mixed::RootBoundaryVolumeLimits {
+            origin: 0.015625, absolute_error: 5e-3, cells: 65536, spans: 65536,
+            arc_subdivisions: 64, ..Default::default()
+        },
+    ).unwrap();
+    let [lo, hi] = flux.signed_bounds.unwrap();
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    let expected = 20. - overlap - 10. * 0.0625_f64.powi(2);
+    assert!(flux.accuracy_proven && lo > 0., "{flux:?}");
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+fn run(with_holes: bool, mirrored: bool) {
+    let (a, aface, b) = operands(with_holes, mirrored);
+    let census = census_for(&a, aface, &b, mirrored);
+    assert_eq!(census.components().len(), 2);
+    assert!(census.separation_queries() > 0);
+    census.reverify().unwrap();
+    for (signature, genus) in [([true, true], 0), ([true, false], 1)] {
+        let sewn =
+            census.sew_paired_regions([&signature, &signature], 1e-9, [Default::default(); 2]);
+        if with_holes {
+            assert!(
+                sewn.is_err(),
+                "Original rational holes cannot be dropped during root-only sewing"
+            );
+        } else {
+            let sewn = Arc::new(sewn.unwrap());
+            assert!(sewn.boundary_embedded());
+            assert!(!sewn.material_admitted());
+            assert_eq!(sewn.genus(), genus);
+            let t = sewn.model().topology();
+            assert_eq!(t.faces.len(), 2);
+            assert_eq!(t.shells[0].faces[1].reversed, !mirrored);
+            assert_eq!(t.shells.len(), 1);
+            assert!(t.shells[0].closed);
+            assert_eq!(t.edges.len(), COUNT * (genus + 1));
+            assert_eq!(t.vertices.len(), t.edges.len());
+            for (edge, _) in t.edges.iter().enumerate() {
+                let uses: Vec<_> = t.shells[0]
+                    .faces
+                    .iter()
+                    .flat_map(|u| {
+                        let f = &t.faces[u.face];
+                        std::iter::once(f.outer)
+                            .chain(f.holes.iter().copied())
+                            .flat_map(|l| t.loops[l].coedges.iter())
+                            .filter(move |c| c.edge == edge)
+                            .map(move |c| c.reversed ^ u.reversed)
+                    })
+                    .collect();
+                assert_eq!(uses.len(), 2);
+                assert_ne!(uses[0], uses[1]);
+            }
+            let limits = mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 4096,
+                ..Default::default()
+            };
+            let admission = sewn.admit_material(limits).unwrap();
+            eprintln!(
+                "paired volume genus={genus} mirror={mirrored}: {:?}",
+                admission.report()
+            );
+            assert!(
+                admission.report().accuracy_proven,
+                "{:?}",
+                admission.report()
+            );
+            let solid = Arc::new(
+                admission
+                    .into_solid()
+                    .expect("Complete signed volume must admit bounded material"),
+            );
+            let a = 0.3125_f64.powi(2);
+            let b = 0.15625_f64.powi(2);
+            let expected = if genus == 1 {
+                6. * std::f64::consts::PI * (a - b).powi(3)
+            } else {
+                6. * std::f64::consts::PI * b * b * (3. * a - b)
+            };
+            let volume = solid.volume();
+            assert!(volume[0] > 0. && volume[0] <= expected && expected <= volume[1]);
+            assert!(solid.material_admitted());
+            assert_eq!(solid.genus(), genus);
+            assert_eq!(solid.outward_reversed(), genus == 0);
+            for (point, expected) in if genus == 0 {
+                vec![
+                    ([0.5, 0.5, 0.03], Some(true)),
+                    ([0.5, 0.5, -0.02], Some(false)),
+                    ([0.5, 0.5, 0.], None),
+                ]
+            } else {
+                vec![
+                    ([0.725, 0.5, -0.02], Some(true)),
+                    (
+                        [0.5 + 0.1875 * 0.9999, 0.5 + 0.25 * 0.9999, -0.00001],
+                        Some(true),
+                    ),
+                    ([0.5, 0.5, 0.], Some(false)),
+                    ([0.725, 0.5, 0.], None),
+                    ([0.8125, 0.5, 0.], None),
+                ]
+            } {
+                let query = solid
+                    .classify_point(
+                        point,
+                        &[[0., 0., 1.], [0.137, 0.283, 1.]],
+                        Default::default(),
+                    )
+                    .unwrap();
+                assert_eq!(
+                    query.parity, expected,
+                    "genus={genus} mirror={mirrored} point={point:?}: {query:?}"
+                );
+                assert!(query.cells <= 100000 && query.domain_queries <= 8192);
+                assert_eq!(
+                    query.cells,
+                    query.attempts.iter().map(|a| a.cells).sum::<usize>()
+                );
+            }
+            let inside_bounds = if genus == 0 {
+                [[0.49, 0.51], [0.49, 0.51], [0.02, 0.025]]
+            } else {
+                [[0.72, 0.73], [0.495, 0.505], [-0.025, -0.015]]
+            };
+            let directions = [[0., 0., 1.], [0.137, 0.283, 1.]];
+            let inside_box = Arc::new(
+                solid
+                    .qualify_material_box(inside_bounds, &directions, Default::default())
+                    .unwrap(),
+            );
+            eprintln!(
+                "root material inside genus={genus} mirror={mirrored}: {:?}",
+                inside_box.separation_work()
+            );
+            assert!(inside_box.inside());
+            assert!(Arc::ptr_eq(inside_box.solid(), &solid));
+            assert_eq!(inside_box.bounds(), inside_bounds);
+            assert!(inside_box.separation_work().separation_cells <= 32768);
+            assert!(inside_box.separation_work().domain_queries <= 4096);
+            let mut source_patch = rational_source_patch(inside_bounds);
+            let rectangle = [[2., 5.], [-3., 1.]];
+            let source_material = inside_box
+                .qualify_source(&source_patch, rectangle, 2)
+                .unwrap();
+            assert!(source_material.inside());
+            assert_eq!(source_material.source_spans(), 2);
+            assert_eq!(source_material.rectangle(), rectangle);
+            assert_eq!(source_material.surface(), &source_patch);
+            assert!(Arc::ptr_eq(source_material.material(), &inside_box));
+            assert!(inside_box
+                .qualify_source(&source_patch, rectangle, 1)
+                .is_err());
+            assert!(inside_box
+                .qualify_source(&source_patch, [[1., 5.], [-3., 1.]], 2)
+                .is_err());
+            let mut escaped = source_patch.clone();
+            escaped.control_points[0][0][2] = 10.;
+            assert!(inside_box.qualify_source(&escaped, rectangle, 2).is_err());
+            source_patch.weights[0][0] = 4.;
+            assert_eq!(
+                source_material.surface().weights[0][0],
+                1.,
+                "Source ownership must be immutable"
+            );
+            if genus == 0 && !mirrored {
+                let automatic = solid
+                    .qualify_surface_material_box(
+                        source_material.surface(),
+                        rectangle,
+                        &directions,
+                        mixed::RootSurfaceMaterialLimits {
+                            source_spans: 2,
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert!(automatic.inside());
+                assert_eq!(
+                    automatic.image_enclosure(),
+                    source_material.image_enclosure()
+                );
+            }
+            if genus == 1 {
+                let hole_box = solid
+                    .qualify_material_box(
+                        [[0.49, 0.51], [0.49, 0.51], [-0.002, 0.002]],
+                        &directions,
+                        Default::default(),
+                    )
+                    .unwrap();
+                eprintln!(
+                    "root material hole mirror={mirrored}: {:?}",
+                    hole_box.separation_work()
+                );
+                assert!(
+                    !hole_box.inside(),
+                    "The entire box through the untrimmed plane is in the hole"
+                );
+            }
+            assert!(solid
+                .qualify_material_box(
+                    inside_bounds,
+                    &directions,
+                    mixed::RootMaterialBoxLimits {
+                        separation_cells: 1,
+                        ..Default::default()
+                    }
+                )
+                .is_err());
+            let contact_bounds = if genus == 0 {
+                [[0.49, 0.51], [0.49, 0.51], [-0.001, 0.001]]
+            } else {
+                [[0.72, 0.73], [0.495, 0.505], [-0.001, 0.001]]
+            };
+            assert!(
+                solid
+                    .qualify_material_box(
+                        contact_bounds,
+                        &directions,
+                        mixed::RootMaterialBoxLimits {
+                            separation_cells: 256,
+                            domain_queries: 128,
+                            ..Default::default()
+                        }
+                    )
+                    .is_err(),
+                "A box crossing actual material boundary must not qualify"
+            );
+            let host = Arc::new(
+                solid::qualify(
+                    brep_core::cuboid([-1.; 3], [2.; 3]).unwrap(),
+                    policy::policy(),
+                )
+                .unwrap()
+                .into_solid()
+                .unwrap(),
+            );
+            let cavity = solid
+                .qualify_cavity_in(host.clone(), &directions, Default::default())
+                .unwrap();
+            assert!(cavity.material_admitted());
+            let lineage = cavity.lineage();
+            for (map, source) in lineage.into_iter().zip(cavity.lineage_sources()) {
+                assert!(map.source_matches(source));
+                assert!(map.target_matches(cavity.model()));
+            }
+            assert_eq!(lineage[0].body(0), Some(0));
+            assert_eq!(lineage[1].body(0), Some(0));
+            assert_eq!(lineage[0].shell_orientation_reversed(0), Some(false));
+            assert_eq!(lineage[1].shell_orientation_reversed(0), Some(true));
+            let prefix = mixed::MixedBrep::from_closed_solid(&host).unwrap();
+            let copied = prefix.concatenate(cavity.model()).unwrap();
+            let chain = lineage[1].then(copied.sources()[1]).unwrap();
+            assert!(chain.source_matches(solid.model()));
+            assert!(chain.target_matches(copied.model()));
+            assert_eq!(chain.body(0), Some(1));
+            assert_eq!(chain.shell_orientation_reversed(0), Some(true));
+            assert_eq!(
+                chain.edge(0),
+                Some(prefix.topology().edges.len() + lineage[1].edge(0).unwrap())
+            );
+
+            assert!(Arc::ptr_eq(cavity.outer(), &host));
+            assert!(Arc::ptr_eq(cavity.inner(), &solid));
+            let result = cavity.model().topology();
+            assert_eq!(result.bodies.len(), 1);
+            assert_eq!(result.bodies[0].inner_shells.len(), 1);
+            assert_eq!(
+                result.faces.len(),
+                host.model().faces.len() + solid.model().topology().faces.len()
+            );
+            let cavity_shell = result.bodies[0].inner_shells[0];
+            for (new, old) in result.shells[cavity_shell]
+                .faces
+                .iter()
+                .zip(&solid.model().topology().shells[0].faces)
+            {
+                assert_eq!(new.face, old.face + host.model().faces.len());
+                assert_eq!(new.reversed, !old.reversed);
+            }
+            let cavity_volume = cavity.volume();
+            let reference = 27. - expected;
+            assert!(
+                cavity_volume[0] > 0.
+                    && cavity_volume[0] <= reference
+                    && reference <= cavity_volume[1]
+            );
+            eprintln!(
+                "cavity genus={genus} mirror={mirrored}: volume={cavity_volume:?}, cover={:?}",
+                cavity.coverage_work()
+            );
+            assert_eq!(cavity.coverage_work().accepted, [2, 6]);
+            let void_point = if genus == 0 {
+                [0.5, 0.5, 0.03]
+            } else {
+                [0.725, 0.5, -0.02]
+            };
+            assert_eq!(
+                cavity
+                    .classify_point(void_point, &directions, Default::default())
+                    .unwrap(),
+                Some(false)
+            );
+            assert_eq!(
+                cavity
+                    .classify_point([0.5, 0.5, -0.5], &directions, Default::default())
+                    .unwrap(),
+                Some(true)
+            );
+            assert_eq!(
+                cavity
+                    .classify_point([3.; 3], &directions, Default::default())
+                    .unwrap(),
+                Some(false)
+            );
+            assert_eq!(
+                cavity
+                    .classify_point([-1., 0.5, 0.5], &directions, Default::default())
+                    .unwrap(),
+                None
+            );
+            assert!(solid
+                .qualify_cavity_in(
+                    host.clone(),
+                    &directions,
+                    mixed::RootCavityLimits {
+                        coverage_cells: 1,
+                        ..Default::default()
+                    }
+                )
+                .is_err());
+            let inner_boundary_point = if genus == 0 {
+                [0.5, 0.5, 0.]
+            } else {
+                [0.725, 0.5, 0.]
+            };
+            assert_eq!(
+                cavity
+                    .classify_point(inner_boundary_point, &directions, Default::default())
+                    .unwrap(),
+                None
+            );
+            if genus == 1 {
+                assert_eq!(
+                    cavity
+                        .classify_point([0.5, 0.5, 0.], &directions, Default::default())
+                        .unwrap(),
+                    Some(true)
+                );
+            }
+            for (i, old) in solid.model().topology().edges.iter().enumerate() {
+                let (mixed::MixedEdge::Root(a), mixed::MixedEdge::Root(b)) = (
+                    &result.edges[host.model().edges.len() + i].curve,
+                    &old.curve,
+                ) else {
+                    panic!("Root edge was fitted or replaced")
+                };
+                assert!(a.curve().same_definition(b.curve()).unwrap());
+                assert!(a.start().point().same_selector(b.start().point()));
+            }
+            if genus == 0 && !mirrored {
+                assert!(solid
+                    .qualify_cavity_in(
+                        cavity.outer().clone(),
+                        &directions,
+                        mixed::RootCavityLimits {
+                            absolute_error: 1e-6,
+                            ..Default::default()
+                        }
+                    )
+                    .is_err());
+                let far = Arc::new(
+                    solid::qualify(
+                        brep_core::cuboid([2.; 3], [4.; 3]).unwrap(),
+                        policy::policy(),
+                    )
+                    .unwrap()
+                    .into_solid()
+                    .unwrap(),
+                );
+                let denied = solid
+                    .qualify_cavity_in(
+                        far,
+                        &directions,
+                        mixed::RootCavityLimits {
+                            coverage_cells: 128,
+                            ..Default::default()
+                        },
+                    )
+                    .err()
+                    .expect("A disjoint host cannot contain the cavity");
+                assert!(
+                    denied.message.contains("outside cavity host material"),
+                    "{denied:?}"
+                );
+            }
+            let no_bands = solid
+                .classify_point(
+                    [0.5, 0.5, 0.03],
+                    &[[0., 0., 1.]],
+                    mixed::RootSolidPointLimits {
+                        band_queries: 0,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            assert!(no_bands.parity.is_none() && no_bands.attempts.is_empty());
+            let limited = solid
+                .classify_point(
+                    [0.5, 0.5, -0.02],
+                    &[[0., 0., 1.]],
+                    mixed::RootSolidPointLimits {
+                        ray_cells: 1,
+                        domain_queries: 1,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            assert!(limited.parity.is_none());
+            assert!(limited.cells <= 1 && limited.domain_queries <= 1);
+            assert!(solid
+                .classify_point([0.; 3], &[], Default::default())
+                .is_err());
+
+            assert_eq!(
+                solid.model().topology().shells[0].faces[0].reversed,
+                genus == 0
+            );
+            let denied = sewn
+                .admit_material(mixed::RootBoundaryVolumeLimits {
+                    band_queries: 0,
+                    ..limits
+                })
+                .unwrap();
+            assert!(denied.solid().is_none());
+            assert!(denied.report().signed_bounds.is_none());
+            if genus == 1 {
+                let low = |cells| {
+                    sewn.admit_material(mixed::RootBoundaryVolumeLimits {
+                        cells,
+                        arc_subdivisions: 1,
+                        winding_queries: 0,
+                        ..limits
+                    })
+                    .unwrap()
+                };
+                let before = low(2);
+                let partial = low(3);
+                assert!(before.solid().is_none() && partial.solid().is_none());
+                assert_eq!(
+                    before.report().signed_bounds,
+                    partial.report().signed_bounds,
+                    "Failed sibling must preserve the complete parent sum"
+                );
+                let b = partial.report().signed_bounds.unwrap();
+                assert!(b[0] <= expected && expected <= b[1]);
+                assert_eq!(partial.report().cells, 3);
+                assert!(!partial.report().accuracy_proven);
+                cavity.reverify().unwrap();
+                if !mirrored {
+                    let default = sewn.volume_bounds(Default::default()).unwrap();
+                    eprintln!("paired default volume: {default:?}");
+                    assert!(
+                        default.accuracy_proven,
+                        "Default volume policy must qualify this case: {default:?}"
+                    );
+                    let b = default.signed_bounds.unwrap();
+                    assert!(b[0] <= expected && expected <= b[1]);
+                }
+            }
+        }
+    }
+    assert!(census
+        .sew_paired_regions(
+            [&[false, false], &[false, false]],
+            1e-9,
+            [Default::default(); 2]
+        )
+        .is_err());
+    assert!(census
+        .sew_paired_regions(
+            [&[true, true], &[true, false]],
+            1e-9,
+            [Default::default(); 2]
+        )
+        .is_err());
+    assert!(census
+        .sew_paired_regions([&[true, true], &[true, true]], 0., [Default::default(); 2])
+        .is_err());
+    for support in 0..2 {
+        let arrangement = Arc::new(
+            census
+                .build_face_arrangement(support, Default::default())
+                .unwrap(),
+        );
+        assert_eq!(arrangement.parents(), &[None, Some(0)]);
+        assert_eq!(arrangement.region_faces().len(), 3);
+        assert!(arrangement.face_for_signature(&[false, true]).is_err());
+        let topology = arrangement.model().topology();
+        assert_eq!(
+            topology.faces[arrangement.region_faces()[0]].holes.len(),
+            if with_holes && support == 0 { 2 } else { 1 }
+        );
+        assert_eq!(
+            topology.faces[arrangement.region_faces()[1]].holes.len(),
+            if with_holes && support == 0 { 2 } else { 1 }
+        );
+        assert_eq!(
+            topology.faces[arrangement.region_faces()[2]].holes.len(),
+            if with_holes && support == 0 { 1 } else { 0 }
+        );
+        if with_holes && support == 0 {
+            for &hole in &a.model().faces[aface].holes {
+                let p = &a.model().loops[hole].coedges[0].pcurve.control_points[0];
+                let radius2 = (p[0] - 0.5).powi(2) + (p[1] - 0.5).powi(2);
+                let expected = if radius2 < 0.15625_f64.powi(2) {
+                    2
+                } else if radius2 < 0.3125_f64.powi(2) {
+                    1
+                } else {
+                    0
+                };
+                assert!(topology.faces[arrangement.region_faces()[expected]]
+                    .holes
+                    .contains(&hole));
+                assert_eq!(
+                    arrangement
+                        .region_faces()
+                        .iter()
+                        .filter(|&&face| topology.faces[face].holes.contains(&hole))
+                        .count(),
+                    1
+                );
+            }
+            for point in [[0.5, 0.5], [0.5, 0.725], [0.05, 0.05]] {
+                let rectangle = point.map(|x| [x - 0.001, x + 0.001]);
+                let region = census
+                    .classify_rectangle(0, rectangle, Default::default())
+                    .unwrap();
+                assert_eq!(region.location(), Location::Outside);
+                assert!(region.signature().is_none());
+                assert!(arrangement
+                    .qualify_boolean_rectangle(
+                        solid::BooleanMaterialOp::Union,
+                        rectangle,
+                        &[[1., 0.317, 0.173]],
+                        Default::default()
+                    )
+                    .is_err());
+            }
+        }
+        for (rectangle, signature) in [
+            ([[0.49, 0.51], [0.59, 0.61]], [true, true]),
+            ([[0.71, 0.73], [0.49, 0.51]], [true, false]),
+            ([[0.94, 0.96], [0.04, 0.06]], [false, false]),
+        ] {
+            let region = census
+                .classify_rectangle(support, rectangle, Default::default())
+                .unwrap();
+            assert_eq!(region.location(), Location::Inside);
+            assert_eq!(region.signature(), Some(signature.as_slice()));
+            arrangement.face_for_signature(&signature).unwrap();
+        }
+        if with_holes && support == 1 {
+            let void = arrangement
+                .qualify_boolean_rectangle(
+                    solid::BooleanMaterialOp::Difference,
+                    [[0.499, 0.501], [0.724, 0.726]],
+                    &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                    Default::default(),
+                )
+                .unwrap();
+            assert_eq!(
+                void.face(),
+                arrangement.face_for_signature(&[true, false]).unwrap()
+            );
+            assert!(!void.material().boolean_material().retain());
+            assert!(!void.material().boolean_material().reverse_material_normal());
+        }
+        for (rectangle, signature, first_keep, second_keep) in [
+            ([[0.499, 0.501], [0.599, 0.601]], [true, true], false, false),
+            ([[0.724, 0.726], [0.499, 0.501]], [true, false], true, true),
+            (
+                [[0.949, 0.951], [0.049, 0.051]],
+                [false, false],
+                false,
+                false,
+            ),
+        ] {
+            let proof = arrangement
+                .qualify_boolean_rectangle(
+                    solid::BooleanMaterialOp::Difference,
+                    rectangle,
+                    &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                    Default::default(),
+                )
+                .unwrap();
+            assert_eq!(
+                proof.face(),
+                arrangement.face_for_signature(&signature).unwrap()
+            );
+            assert_eq!(
+                proof.material().boolean_material().retain(),
+                if support == 0 {
+                    first_keep
+                } else {
+                    second_keep
+                }
+            );
+            assert_eq!(
+                proof
+                    .material()
+                    .boolean_material()
+                    .reverse_material_normal(),
+                support == 1 && second_keep
+            );
+        }
+    }
+}
+
+#[test]
+fn nested_hole_operands_prove_material_boxes_without_census_shortcuts() {
+    let (a, aface, b) = operands(true, false);
+    let void = solid::qualify_boolean_face_box(
+        solid::BooleanFace {
+            solids: [&a, &b],
+            operation: solid::BooleanMaterialOp::Difference,
+            side: solid::BooleanSourceSide::Second,
+            face: 1,
+        },
+        [[0.499, 0.501], [0.724, 0.726]],
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(),
+    )
+    .unwrap();
+    assert!(!void.retain());
+    for (side, face) in [
+        (solid::BooleanSourceSide::First, aface),
+        (solid::BooleanSourceSide::Second, 1),
+    ] {
+        for rectangle in [
+            [[0.499, 0.501], [0.599, 0.601]],
+            [[0.724, 0.726], [0.499, 0.501]],
+            [[0.949, 0.951], [0.049, 0.051]],
+        ] {
+            let result = solid::qualify_boolean_face_box(
+                solid::BooleanFace {
+                    solids: [&a, &b],
+                    operation: solid::BooleanMaterialOp::Difference,
+                    side,
+                    face,
+                },
+                rectangle,
+                &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                Default::default(),
+            );
+            if let Err(error) = result {
+                let (source, other) = match side {
+                    solid::BooleanSourceSide::First => (&a, &b),
+                    solid::BooleanSourceSide::Second => (&b, &a),
+                };
+                let point = source.model().faces[face]
+                    .surface
+                    .evaluate(
+                        (rectangle[0][0] + rectangle[0][1]) * 0.5,
+                        (rectangle[1][0] + rectangle[1][1]) * 0.5,
+                    )
+                    .unwrap()
+                    .point;
+                let parity = other
+                    .classify_point(
+                        [point[0], point[1], point[2]],
+                        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                        100000,
+                        1000000,
+                    )
+                    .unwrap();
+                panic!("side={side:?} rectangle={rectangle:?} error={error:?} parity={parity:?}");
+            }
+        }
+    }
+}
+
+#[test]
+fn near_root_box_requires_complete_original_winding() {
+    let a = brep_core::cuboid([0., 0., -10.], [1., 1., 0.]).unwrap();
+    let b = graph::body();
+    let aface = a
+        .faces
+        .iter()
+        .position(|f| {
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 0.)
+        })
+        .unwrap();
+    let source = ss::FiberSources::new(&a.faces[aface].surface, &b.faces[1].surface).unwrap();
+    let charts = family(&source, 0.3125, false);
+    let wire = wire(&charts, 0.3125);
+    let p: [f64; 2] = [0.5 + 0.1875 * 0.9999, 0.5 + 0.25 * 0.9999];
+    let proof = wire
+        .winding_box(
+            0,
+            p.map(|x| [x.next_down(), x.next_up()]),
+            ss::OriginalSsWindingLimits {
+                max_segments: 4096,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(proof.winding(), 1);
+    let contact = wire
+        .winding_box(0, [[0.8, 0.825], [0.48, 0.52]], Default::default())
+        .unwrap_err();
+    assert!(contact.message.contains("boundary selector"), "{contact:?}");
+}
+
+fn rational_source_patch(bounds: [[f64; 2]; 3]) -> nurbs_core::surface::Surface {
+    let center = bounds.map(|d| d[0] * 0.5 + d[1] * 0.5);
+    let widths = bounds.map(|d| (d[1] - d[0]) * 0.1);
+    nurbs_core::surface::Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![2., 2., 3., 5., 5.],
+        knots_v: vec![-3., -3., 1., 1.],
+        control_points: (0..3)
+            .map(|i| {
+                (0..2)
+                    .map(|j| {
+                        vec![
+                            center[0] + (i as f64 - 1.) * widths[0],
+                            center[1] + (j as f64 - 0.5) * widths[1],
+                            center[2] + if i == 1 { widths[2] } else { -widths[2] },
+                        ]
+                    })
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1., 2.], vec![1.5, 1.], vec![2., 1.25]],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+
+fn census_for(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    mirrored: bool,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    census_for_count(a, aface, b, mirrored, COUNT)
+}
+fn census_for_count(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    mirrored: bool,
+    count: usize,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    census_with_anchors(a, aface, b, mirrored, count, false)
+}
+
+fn census_with_anchors(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    mirrored: bool,
+    count: usize,
+    automatic: bool,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    census_for_faces(a, aface, b, 1, mirrored, count, automatic)
+}
+
+fn census_for_faces(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    bface: usize,
+    mirrored: bool,
+    count: usize,
+    automatic: bool,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    let source =
+        ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[bface].surface)
+            .unwrap();
+    let mut charts = family_count(&source, 0.3125, mirrored, count);
+    charts.extend(family_count(&source, 0.15625, mirrored, count));
+    let wires = [
+        wire(&charts[..count], 0.3125),
+        wire(&charts[count..], 0.15625),
+    ];
+    let loops: Vec<_> = wires
+        .iter()
+        .map(|wire| {
+            Arc::new(
+                mixed::qualify_paired_interior_loop(
+                    &a,
+                    aface,
+                    &b,
+                    bface,
+                    wire,
+                    [[0.5; 2]; 2],
+                    Default::default(),
+                )
+                .unwrap(),
+            )
+        })
+        .collect();
+    let quotient: Vec<_> = charts
+        .iter()
+        .map(|c| {
+            let r = source
+                .certify_quotient(
+                    c.domain(),
+                    c.free_axis(),
+                    ss::FiberLimits {
+                        preconditioner: c.report().operator.as_ref().map(|o| o.preconditioner()),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            let diagnostic = r.report().clone();
+            r.into_fiber()
+                .unwrap_or_else(|| panic!("quartic census graph: {diagnostic:?}"))
+        })
+        .collect();
+    let r = ss::cover_quotient_fiber_surfaces(
+        &quotient,
+        ss::CoverageLimits {
+            max_cells: 65536,
+            max_rectangles: 1000000,
+            max_depth: 48,
+        },
+    )
+    .unwrap();
+    let diagnostic = r.report().clone();
+    let coverage = r
+        .into_coverage()
+        .unwrap_or_else(|| panic!("quartic census: {diagnostic:?}"));
+    eprintln!(
+        "nested census: charts={}, cells={}, rectangles={}",
+        quotient.len(),
+        coverage.report().cells,
+        coverage.report().rectangles
+    );
+    if automatic {
+        return Arc::new(mixed::QualifiedInteriorSsCensus::qualify_with_automatic_anchors(
+            loops, coverage, Default::default(), 4096,
+        ).unwrap());
+    }
+    let anchors: Vec<_> = quotient
+        .iter()
+        .enumerate()
+        .map(|(i, c)| {
+            let d = c.domain()[index(c.free_axis())];
+            mixed::InteriorCensusAnchor {
+                component: i / count,
+                edge: i % count,
+                parameter: (d[0] + d[1]) * 0.5,
+                phase: [0; 4],
+            }
+        })
+        .collect();
+    let census = Arc::new(
+        mixed::qualify_interior_ss_census(loops, coverage, &anchors, Default::default()).unwrap(),
+    );
+    census
+}
+fn placed_inner(scale: f64, shift: [f64; 3]) -> Arc<mixed::QualifiedPairedRootSolid> {
+    let (a, aface, b) = operands(false, false);
+    let place = |original: &solid::QualifiedClosedSolid| {
+        let mut m = original.model().clone();
+        for v in &mut m.vertices {
+            for k in 0..3 {
+                v.point[k] = v.point[k] * scale + shift[k];
+            }
+        }
+        for e in &mut m.edges {
+            for p in &mut e.curve.control_points {
+                for k in 0..3 {
+                    p[k] = p[k] * scale + shift[k];
+                }
+            }
+        }
+        for f in &mut m.faces {
+            for row in &mut f.surface.control_points {
+                for p in row {
+                    for k in 0..3 {
+                        p[k] = p[k] * scale + shift[k];
+                    }
+                }
+            }
+        }
+        m.rebuild_topology_ids();
+        let mut p = policy::policy();
+        p.geometry.boundary.contacts.cells_per_pair = 1024;
+        p.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+        let admission = solid::qualify(m, p).unwrap();
+        assert!(
+            admission.solid().is_some(),
+            "Placed original body scale={scale} shift={shift:?}: boundary={} orientations={} nesting={}",
+            admission.geometry().boundary.proven, admission.geometry().orientations.len(), admission.geometry().nesting.is_some()
+        );
+        admission.into_solid().unwrap()
+    };
+    let a = place(&a);
+    let b = place(&b);
+    let census = census_for_count(&a, aface, &b, false, COUNT);
+    let signature = [true, true];
+    let boundary = Arc::new(
+        census
+            .sew_paired_regions([&signature, &signature], 1e-9, [Default::default(); 2])
+            .unwrap(),
+    );
+    Arc::new(
+        boundary
+            .admit_material(mixed::RootBoundaryVolumeLimits {
+                absolute_error: if scale < 1. { 1e-5 } else { 5e-4 },
+                cells: 16384,
+                ..Default::default()
+            })
+            .unwrap()
+            .into_solid()
+            .expect("Placed root material needs fresh independent volume"),
+    )
+}
+#[test]
+fn complete_root_relations_build_a_material_shell_forest() {
+    let large = placed_inner(1., [0.; 3]);
+    let small = placed_inner(0.25, [0.375, 0.375, 0.02]);
+    let far = placed_inner(1., [1., 0., 0.]);
+    let directions = [[0., 0., 1.], [0.137, 0.283, 1.]];
+    eprintln!("three root sources independently admitted");
+    let contact = large
+        .qualify_material_box([[-1., 2.]; 3], &directions, Default::default())
+        .err()
+        .expect("A box containing retained boundary cannot have uniform material");
+    assert!(
+        contact.message.contains("retained boundary patch"),
+        "{contact:?}"
+    );
+
+    let nested = Arc::new(
+        large
+            .qualify_relation(small.clone(), &directions, Default::default())
+            .unwrap(),
+    );
+    assert_eq!(nested.kind(), mixed::RootRelationKind::SecondInsideFirst);
+    eprintln!("nested root relation work={:?}", nested.work());
+    let distant = Arc::new(
+        large
+            .qualify_relation(far.clone(), &directions, Default::default())
+            .unwrap(),
+    );
+    assert_eq!(distant.kind(), mixed::RootRelationKind::Disjoint);
+    let small_far = Arc::new(
+        small
+            .qualify_relation(far.clone(), &directions, Default::default())
+            .unwrap(),
+    );
+    assert_eq!(small_far.kind(), mixed::RootRelationKind::Disjoint);
+    eprintln!("both disjoint root relations complete");
+    let boolean_replay =
+        check_strict_root_booleans(&large, &small, &far, &nested, &distant, &directions);
+    let roots = vec![large.clone(), small.clone(), far.clone()];
+    let relations = vec![nested.clone(), distant.clone(), small_far.clone()];
+    let forest =
+        mixed::QualifiedRootShellForest::qualify(roots.clone(), relations.clone(), 0.002).unwrap();
+    assert!(forest.material_admitted());
+    let reordered = mixed::QualifiedRootShellForest::qualify(
+        vec![small.clone(), far.clone(), large.clone()],
+        relations.clone(),
+        0.002,
+    )
+    .unwrap();
+    assert_eq!(reordered.parents(), &[Some(2), None, None]);
+    assert_eq!(reordered.depths(), &[1, 0, 0]);
+    assert_eq!(reordered.lineage()[0].body(0), Some(1));
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        vec![large.clone(), small.clone()],
+        vec![distant.clone()],
+        0.002
+    )
+    .is_err());
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        vec![large.clone(), large.clone()],
+        vec![distant.clone()],
+        0.002
+    )
+    .is_err());
+    assert!(large
+        .qualify_relation(
+            far.clone(),
+            &directions,
+            mixed::RootRelationLimits {
+                coverage_cells: 1,
+                ..Default::default()
+            }
+        )
+        .is_err());
+    let twin = Arc::new(
+        large
+            .boundary()
+            .admit_material(mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 16384,
+                ..Default::default()
+            })
+            .unwrap()
+            .into_solid()
+            .unwrap(),
+    );
+    assert!(!Arc::ptr_eq(&large, &twin));
+    let mut contact_limits = mixed::RootRelationLimits::default();
+    contact_limits.material.material.separation_cells = 64;
+    contact_limits.material.material.domain_queries = 64;
+    assert!(large
+        .qualify_relation(twin, &directions, contact_limits)
+        .is_err());
+
+    assert_eq!(forest.parents(), &[None, Some(0), None]);
+    assert_eq!(forest.depths(), &[0, 1, 0]);
+    assert_eq!(forest.model().topology().bodies.len(), 2);
+    assert_eq!(forest.model().topology().bodies[0].inner_shells.len(), 1);
+    assert!(forest.model().topology().bodies[1].inner_shells.is_empty());
+    let a = 0.3125_f64.powi(2);
+    let b = 0.15625_f64.powi(2);
+    let one = 6. * std::f64::consts::PI * b * b * (3. * a - b);
+    let expected = one * (2. - 0.25_f64.powi(3));
+    let v = forest.volume();
+    assert!(v[0] <= expected && expected <= v[1]);
+    for (i, (map, root)) in forest.lineage().iter().zip(&roots).enumerate() {
+        assert!(map.source_matches(root.model()));
+        assert!(map.target_matches(forest.model()));
+        assert_eq!(map.shell_orientation_reversed(0), Some(i == 1));
+        assert_eq!(map.body(0), Some(if i == 2 { 1 } else { 0 }));
+    }
+    assert_eq!(
+        forest
+            .classify_point([0.5, 0.5, 0.005], &directions, Default::default())
+            .unwrap(),
+        Some(true)
+    );
+    assert_eq!(
+        forest
+            .classify_point([0.5, 0.5, 0.025], &directions, Default::default())
+            .unwrap(),
+        Some(false)
+    );
+    assert_eq!(
+        forest
+            .classify_point([1.5, 0.5, 0.03], &directions, Default::default())
+            .unwrap(),
+        Some(true)
+    );
+    assert_eq!(
+        forest
+            .classify_point([3.; 3], &directions, Default::default())
+            .unwrap(),
+        Some(false)
+    );
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        roots.clone(),
+        vec![nested.clone(), distant],
+        0.002
+    )
+    .is_err());
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        roots.clone(),
+        vec![nested.clone(), nested, small_far],
+        0.002
+    )
+    .is_err());
+    assert!(mixed::QualifiedRootShellForest::qualify(roots, relations, 1e-8).is_err());
+    assert!(large
+        .qualify_relation(large.clone(), &directions, Default::default())
+        .is_err());
+    eprintln!(
+        "root forest volume={v:?} parents={:?} depths={:?}",
+        forest.parents(),
+        forest.depths()
+    );
+    forest.reverify().unwrap();
+    boolean_replay.reverify().unwrap();
+}
+
+fn check_strict_root_booleans(
+    large: &Arc<mixed::QualifiedPairedRootSolid>,
+    small: &Arc<mixed::QualifiedPairedRootSolid>,
+    far: &Arc<mixed::QualifiedPairedRootSolid>,
+    nested: &Arc<mixed::QualifiedRootRelation>,
+    distant: &Arc<mixed::QualifiedRootRelation>,
+    directions: &[[f64; 3]],
+) -> mixed::QualifiedRootBoolean {
+    use solid::BooleanMaterialOp::*;
+    let a = 0.3125_f64.powi(2);
+    let b = 0.15625_f64.powi(2);
+    let one = 6. * std::f64::consts::PI * b * b * (3. * a - b);
+    let tiny = one * 0.25_f64.powi(3);
+    for (op, nested_keep, disjoint_keep, swapped_keep) in [
+        (Union, [true, false], [true, true], [false, true]),
+        (Intersection, [false, true], [false, false], [true, false]),
+        (Difference, [true, true], [true, false], [false, false]),
+        (Xor, [true, true], [true, true], [true, true]),
+    ] {
+        let outputs = [
+            mixed::QualifiedRootBoolean::qualify(nested.clone(), op, 0.002).unwrap(),
+            mixed::QualifiedRootBoolean::qualify(distant.clone(), op, 0.002).unwrap(),
+            mixed::QualifiedRootBoolean::qualify_swapped(nested.clone(), op, 0.002).unwrap(),
+        ];
+        let expected = match op {
+            Union => [one, 2. * one, one],
+            Intersection => [tiny, 0., tiny],
+            Difference => [one - tiny, one, 0.],
+            Xor => [one - tiny, 2. * one, one - tiny],
+        };
+        for (i, (out, keep)) in outputs
+            .iter()
+            .zip([nested_keep, disjoint_keep, swapped_keep])
+            .enumerate()
+        {
+            assert!(out.material_admitted());
+            assert_eq!(out.operation(), op);
+            assert_eq!(out.lineage().map(|m| m.is_some()), keep);
+            assert_eq!(out.is_empty(), keep == [false, false]);
+            let v = out.volume();
+            assert!(
+                v[0] <= expected[i] && expected[i] <= v[1],
+                "op={op:?} case={i} volume={v:?}"
+            );
+            if out.is_empty() {
+                assert!(out.model().is_none());
+                assert_eq!(v, [0.; 2]);
+            }
+            for (map, source) in out.lineage().into_iter().zip(out.operands()) {
+                if let Some(map) = map {
+                    assert!(map.source_matches(source.model()));
+                    assert!(map.target_matches(out.model().unwrap()));
+                }
+            }
+        }
+    }
+    let union = mixed::QualifiedRootBoolean::qualify(nested.clone(), Union, 0.002).unwrap();
+    assert!(std::ptr::eq(union.model().unwrap(), large.model()));
+    assert_eq!(
+        union
+            .classify_point([0.5, 0.5, 0.02], directions, Default::default())
+            .unwrap(),
+        Some(true),
+        "Discarded small boundary is interior material"
+    );
+    let intersection =
+        mixed::QualifiedRootBoolean::qualify(nested.clone(), Intersection, 0.002).unwrap();
+    assert!(std::ptr::eq(intersection.model().unwrap(), small.model()));
+    assert_eq!(
+        intersection
+            .classify_point([0.5, 0.5, 0.02], directions, Default::default())
+            .unwrap(),
+        None
+    );
+    let difference =
+        mixed::QualifiedRootBoolean::qualify(distant.clone(), Difference, 0.002).unwrap();
+    assert_eq!(
+        difference
+            .classify_point([1.5, 0.5, 0.], directions, Default::default())
+            .unwrap(),
+        Some(false),
+        "Discarded far boundary is exterior material"
+    );
+    let empty = mixed::QualifiedRootBoolean::qualify(distant.clone(), Intersection, 0.002).unwrap();
+    assert_eq!(
+        empty
+            .classify_point([0.5, 0.5, 0.], &[], Default::default())
+            .unwrap(),
+        Some(false)
+    );
+    assert!(empty
+        .classify_point([f64::NAN, 0., 0.], &[], Default::default())
+        .is_err());
+    let reverse_empty =
+        mixed::QualifiedRootBoolean::qualify_swapped(nested.clone(), Difference, 0.002).unwrap();
+    assert!(reverse_empty.is_empty());
+    assert!(Arc::ptr_eq(reverse_empty.operands()[0], small));
+    assert!(Arc::ptr_eq(reverse_empty.operands()[1], large));
+    assert!(Arc::ptr_eq(difference.operands()[1], far));
+    assert!(mixed::QualifiedRootBoolean::qualify(nested.clone(), Union, 1e-8).is_err());
+    assert!(mixed::QualifiedRootBoolean::qualify(nested.clone(), Union, f64::NAN).is_err());
+    eprintln!("all four root Boolean operations and reversed operands qualified");
+    mixed::QualifiedRootBoolean::qualify(nested.clone(), Difference, 0.002).unwrap()
+}

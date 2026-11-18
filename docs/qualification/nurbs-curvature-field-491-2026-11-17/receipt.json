@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0491",
+  "testedBase": "755fba050d70713b23d36f305d50c568fb6fcae5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 36,
+  "scope": [
+    "Partition the original NURBS curve at several absolute parameters under one exact work budget.",
+    "Apply exact seam restrictions in increasing order. Preserve each source interval and return the failing cut index without publishing a partial partition."
+  ],
+  "logSha256": "ecbf07a78aa875e20e656d0e4dac909983dbd114427297a7312166bd039120dd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "693d56e56f0614e300e9f9a98738c2836f1ff742a8c386152dd9ec78f6bf7e85",
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "8558136ae29684e7b5b194098dd8f202da96cf5dbc42277cf0d41b0cd25a3ce5",
+    "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs": "27bc257a94c7d385f153f94414a178e626d598b7bb7675d41ddcd5a0752dbc95"
+  }
+}

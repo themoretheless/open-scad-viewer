@@ -13,3 +13,8 @@ sha2 = "0.11"
 
 [dev-dependencies]
 value-codec = { workspace = true }
+# Kernel diagnostic examples moved here from brep-core so the kernel test build does not
+# compile the STEP crate.
+cad-predicates = { workspace = true }
+num-rational = "0.4.2"
+num-traits = "0.2.19"

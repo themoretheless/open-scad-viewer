@@ -7,7 +7,7 @@ import {
   resolveOpenScadSweepFragments,
   type OpenScadStableModuleWarning,
   type OpenScadStableModuleSemanticsContext,
-} from '../src/services/openScadStableModuleSemantics'
+} from '../src/language/semantic/openScadStableModuleSemantics'
 
 function harness() {
   const warnings: OpenScadStableModuleWarning[] = []
@@ -39,26 +39,34 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
 
   it('accepts all four OpenSCAD CSS hex widths without accepting near misses', () => {
     expect(resolveOpenScadColor('#abc')).toEqual({
-      rgba: [0xaa / 255, 0xbb / 255, 0xcc / 255, 1], valid: true, source: 'hex',
+      rgba: [0xaa / 255, 0xbb / 255, 0xcc / 255, 1],
+      valid: true,
+      source: 'hex',
     })
     expect(resolveOpenScadColor('#AbCd')).toEqual({
-      rgba: [0xaa / 255, 0xbb / 255, 0xcc / 255, 0xdd / 255], valid: true, source: 'hex',
+      rgba: [0xaa / 255, 0xbb / 255, 0xcc / 255, 0xdd / 255],
+      valid: true,
+      source: 'hex',
     })
     expect(resolveOpenScadColor('#102030')).toEqual({
-      rgba: [0x10 / 255, 0x20 / 255, 0x30 / 255, 1], valid: true, source: 'hex',
+      rgba: [0x10 / 255, 0x20 / 255, 0x30 / 255, 1],
+      valid: true,
+      source: 'hex',
     })
     expect(resolveOpenScadColor('#10203040')).toEqual({
-      rgba: [0x10 / 255, 0x20 / 255, 0x30 / 255, 0x40 / 255], valid: true, source: 'hex',
+      rgba: [0x10 / 255, 0x20 / 255, 0x30 / 255, 0x40 / 255],
+      valid: true,
+      source: 'hex',
     })
 
     const { context, warnings } = harness()
     expect(resolveOpenScadColor('#12345', undefined, context)).toEqual({
-      rgba: [-1, -1, -1, -1], valid: false, source: 'invalid',
+      rgba: [-1, -1, -1, -1],
+      valid: false,
+      source: 'invalid',
     })
     expect(resolveOpenScadColor(' red ', undefined, context).valid).toBe(false)
-    expect(warnings.map(warning => warning.code)).toEqual([
-      'OPENSCAD_COLOR_UNKNOWN', 'OPENSCAD_COLOR_UNKNOWN',
-    ])
+    expect(warnings.map(warning => warning.code)).toEqual(['OPENSCAD_COLOR_UNKNOWN', 'OPENSCAD_COLOR_UNKNOWN'])
   })
 
   it('preserves OpenSCAD vector defaults, numeric conversion, alpha precedence, and range warnings', () => {
@@ -66,10 +74,8 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
     expect(resolveOpenScadColor([0.1]).rgba).toEqual([0.1, 1, 1, 1])
     expect(resolveOpenScadColor([0.1, 0.2]).rgba).toEqual([0.1, 0.2, 1, 1])
     expect(resolveOpenScadColor([undefined, 'x', true, 0.4, 0.9]).rgba).toEqual([0, 0, 0, 0.4])
-    expect(resolveOpenScadColor([0.1, 0.2, 0.3, 0.4], undefined).rgba)
-      .toEqual([0.1, 0.2, 0.3, 0.4])
-    expect(resolveOpenScadColor([0.1, 0.2, 0.3, 0.4], 0.7).rgba)
-      .toEqual([0.1, 0.2, 0.3, 0.7])
+    expect(resolveOpenScadColor([0.1, 0.2, 0.3, 0.4], undefined).rgba).toEqual([0.1, 0.2, 0.3, 0.4])
+    expect(resolveOpenScadColor([0.1, 0.2, 0.3, 0.4], 0.7).rgba).toEqual([0.1, 0.2, 0.3, 0.7])
     expect(resolveOpenScadColor('red', '0.5').rgba).toEqual([1, 0, 0, 1])
     expect(resolveOpenScadColor('transparent', 0.5).rgba).toEqual([0, 0, 0, 0.5])
 
@@ -84,8 +90,7 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
     ])
 
     const override = harness()
-    expect(resolveOpenScadColor([0.1, 0.2, 0.3, 2], 0.5, override.context).rgba)
-      .toEqual([0.1, 0.2, 0.3, 0.5])
+    expect(resolveOpenScadColor([0.1, 0.2, 0.3, 2], 0.5, override.context).rgba).toEqual([0.1, 0.2, 0.3, 0.5])
     expect(override.warnings.map(warning => warning.code)).toEqual(['OPENSCAD_COLOR_ALPHA_RANGE'])
     const alphaOnly = harness()
     expect(resolveOpenScadColor('red', 2, alphaOnly.context).rgba).toEqual([1, 0, 0, 2])
@@ -130,7 +135,9 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
       effectiveFs: 0.01,
     })
     expect(warnings.map(warning => warning.code)).toEqual([
-      'OPENSCAD_FN_NEGATIVE', 'OPENSCAD_FA_TOO_SMALL', 'OPENSCAD_FS_TOO_SMALL',
+      'OPENSCAD_FN_NEGATIVE',
+      'OPENSCAD_FA_TOO_SMALL',
+      'OPENSCAD_FS_TOO_SMALL',
       'OPENSCAD_FRAGMENTS_CLAMPED',
     ])
 
@@ -142,15 +149,21 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
       maximum: 48,
       reduced: true,
     })
-    expect(preview.warnings).toContainEqual(expect.objectContaining({
-      code: 'OPENSCAD_FRAGMENTS_CLAMPED', limit: 48,
-    }))
+    expect(preview.warnings).toContainEqual(
+      expect.objectContaining({
+        code: 'OPENSCAD_FRAGMENTS_CLAMPED',
+        limit: 48,
+      }),
+    )
 
     const undefinedSpecials = harness()
-    expect(resolveOpenScadFragments({ radius: 10, fa: undefined, fs: undefined }, undefinedSpecials.context))
-      .toMatchObject({ effectiveFa: 0.01, effectiveFs: 0.01 })
+    expect(
+      resolveOpenScadFragments({ radius: 10, fa: undefined, fs: undefined }, undefinedSpecials.context),
+    ).toMatchObject({ effectiveFa: 0.01, effectiveFs: 0.01 })
     expect(undefinedSpecials.warnings.map(warning => warning.code)).toEqual([
-      'OPENSCAD_FA_TOO_SMALL', 'OPENSCAD_FS_TOO_SMALL', 'OPENSCAD_FRAGMENTS_CLAMPED',
+      'OPENSCAD_FA_TOO_SMALL',
+      'OPENSCAD_FS_TOO_SMALL',
+      'OPENSCAD_FRAGMENTS_CLAMPED',
     ])
   })
 
@@ -167,30 +180,54 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
 
   it('resolves offset radius/delta precedence and exact join modes', () => {
     expect(resolveOpenScadOffset({})).toEqual({
-      mode: 'radius', distance: 1, joinType: 'Round', chamfer: false,
+      mode: 'radius',
+      distance: 1,
+      joinType: 'Round',
+      chamfer: false,
     })
     expect(resolveOpenScadOffset({ r: 2, chamfer: true })).toEqual({
-      mode: 'radius', distance: 2, joinType: 'Round', chamfer: false,
+      mode: 'radius',
+      distance: 2,
+      joinType: 'Round',
+      chamfer: false,
     })
     expect(resolveOpenScadOffset({ delta: 2 })).toEqual({
-      mode: 'delta', distance: 2, joinType: 'Miter', chamfer: false,
+      mode: 'delta',
+      distance: 2,
+      joinType: 'Miter',
+      chamfer: false,
     })
     expect(resolveOpenScadOffset({ delta: 2, chamfer: true })).toEqual({
-      mode: 'delta', distance: 2, joinType: 'Square', chamfer: true,
+      mode: 'delta',
+      distance: 2,
+      joinType: 'Square',
+      chamfer: true,
     })
     expect(resolveOpenScadOffset({ r: undefined, delta: 2, chamfer: true })).toEqual({
-      mode: 'delta', distance: 2, joinType: 'Square', chamfer: true,
+      mode: 'delta',
+      distance: 2,
+      joinType: 'Square',
+      chamfer: true,
     })
 
     const { context, warnings } = harness()
     expect(resolveOpenScadOffset({ r: 0, delta: 2 }, context)).toEqual({
-      mode: 'radius', distance: 0, joinType: 'Round', chamfer: false,
+      mode: 'radius',
+      distance: 0,
+      joinType: 'Round',
+      chamfer: false,
     })
     expect(resolveOpenScadOffset({ r: 'not numeric', delta: 2 }, context)).toEqual({
-      mode: 'delta', distance: 2, joinType: 'Miter', chamfer: false,
+      mode: 'delta',
+      distance: 2,
+      joinType: 'Miter',
+      chamfer: false,
     })
     expect(resolveOpenScadOffset({ r: undefined, delta: 'not numeric' }, context)).toEqual({
-      mode: 'radius', distance: 1, joinType: 'Round', chamfer: false,
+      mode: 'radius',
+      distance: 1,
+      joinType: 'Round',
+      chamfer: false,
     })
     expect(warnings).toEqual([])
   })
@@ -203,17 +240,35 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
       expect(result.chamfer).toBe(false)
     }
     expect(resolveOpenScadOffset({ delta: Infinity, chamfer: 1 })).toEqual({
-      mode: 'delta', distance: Infinity, joinType: 'Miter', chamfer: false,
+      mode: 'delta',
+      distance: Infinity,
+      joinType: 'Miter',
+      chamfer: false,
     })
   })
 })
 
-it('matches native fragment rules and warning order with the frozen oracle',async()=>{
- const {referenceOpenScadFragments,referenceOpenScadSweepFragments}=await import('../benchmarks/rush/openScadFragments-reference')
- for(const radius of [0,1e-7,1,10,Infinity,NaN])for(const fn of [-1,0,2,10.9,1000,Infinity,NaN])for(const [fa,fs] of [[12,2],[0,-1],[NaN,NaN],[Infinity,Infinity]]){
-  const input={radius,fn,fa,fs},warnings:unknown[]=[],expectedWarnings:unknown[]=[]
-  expect(resolveOpenScadFragments(input,{warn:w=>warnings.push(w)})).toEqual(referenceOpenScadFragments(input,{warn:w=>expectedWarnings.push(w)}))
-  expect(warnings).toEqual(expectedWarnings)
-  for(const sweepDegrees of [0,1,-45,90,360,720,Infinity,NaN])expect(resolveOpenScadSweepFragments({...input,sweepDegrees})).toEqual(referenceOpenScadSweepFragments({...input,sweepDegrees}))
- }
+it('matches native fragment rules and warning order with the frozen oracle', async () => {
+  const { referenceOpenScadFragments, referenceOpenScadSweepFragments } =
+    await import('../benchmarks/rush/openScadFragments-reference')
+  for (const radius of [0, 1e-7, 1, 10, Infinity, NaN])
+    for (const fn of [-1, 0, 2, 10.9, 1000, Infinity, NaN])
+      for (const [fa, fs] of [
+        [12, 2],
+        [0, -1],
+        [NaN, NaN],
+        [Infinity, Infinity],
+      ]) {
+        const input = { radius, fn, fa, fs },
+          warnings: unknown[] = [],
+          expectedWarnings: unknown[] = []
+        expect(resolveOpenScadFragments(input, { warn: w => warnings.push(w) })).toEqual(
+          referenceOpenScadFragments(input, { warn: w => expectedWarnings.push(w) }),
+        )
+        expect(warnings).toEqual(expectedWarnings)
+        for (const sweepDegrees of [0, 1, -45, 90, 360, 720, Infinity, NaN])
+          expect(resolveOpenScadSweepFragments({ ...input, sweepDegrees })).toEqual(
+            referenceOpenScadSweepFragments({ ...input, sweepDegrees }),
+          )
+      }
 })

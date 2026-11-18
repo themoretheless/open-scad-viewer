@@ -26,15 +26,9 @@ fn coefficient_plane_roots_keep_original_domains_and_refusals() {
         assert!(root.uv[a][0] <= expected && root.uv[a][1] >= expected);
     }
     assert!(root.parameter[0] <= 0.5 && root.parameter[1] >= 0.5);
-    let miss = intersections_coefficients(
-        &net,
-        [[0., 1.]; 2],
-        [2., 0.5, -1.],
-        [0., 0., 2.],
-        1e-6,
-        100,
-    )
-    .unwrap();
+    let miss =
+        intersections_coefficients(&net, [[0., 1.]; 2], [2., 0.5, -1.], [0., 0., 2.], 1e-6, 100)
+            .unwrap();
     assert!(miss.complete && miss.roots.is_empty());
     let coincident =
         intersections_coefficients(&net, [[0., 1.]; 2], [0., 0.5, 0.], [1., 0., 0.], 1e-6, 100)
@@ -256,4 +250,13 @@ fn outer_boundary_roots_cannot_be_counted_as_isolated_interior_crossings() {
     let r = intersections(&plane(), [0., 0.63, 0.], [0., 0., 1.], 1e-7, 100).unwrap();
     assert!(!r.complete);
     assert!(r.roots.is_empty());
+}
+
+#[test]
+fn exact_half_split_survives_loss_of_asymmetric_endpoint_precision() {
+    let lo = 1.;
+    let hi = 1. + 4. * f64::EPSILON;
+    assert_eq!(exact_split(lo, hi), None);
+    assert_eq!(exact_split_at(lo, hi, 0.5), Some(1. + 2. * f64::EPSILON));
+    assert_eq!(exact_split_at(1., 1_f64.next_up(), 0.5), None);
 }

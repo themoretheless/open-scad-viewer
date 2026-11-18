@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0418",
+  "testedBase": "8d1cd9b10bc0cc0e4ba05e04e5ade9364369049c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 160,
+  "scope": [
+    "Find the exact nearest point on a section contour and retain its source face.",
+    "Exact clamped segment projection yields rational nearest witnesses and squared world-space distance, including off-plane queries and inner hole contours."
+  ],
+  "logSha256": "2a24b2331f1a2a8bf436467b05ccf7df76b4a4829a49fdb67349b2c3b5ee1dcd",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "b2bc834234d111fc67f1c482d7b9798f0e98854e99178169a3967f9b753f0940",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/mod.rs": "df53bb317079ae08b4d08f95000c3165c001c353303fd908881bb10a88d5fc11",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "0ca14af814e7dd4165608bbe9f530605fffd9445f6059eabff2af90f1fe72b5d",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs": "b4cecc15f56ea9e64d5bf3999e85cd59da60a406e7726b7bbf6fa58db5fd74e7"
+  }
+}

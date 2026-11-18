@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0609",
+  "testedBase": "3efb971e670ed185b7d570ce9454fe3ce033b4b3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 196,
+  "scope": [
+    "Enclose the symmetric unit-density inertia tensor from certified trimmed surface cells.",
+    "Check analytic diagonal and off-diagonal entries of a seam-spanning patch with a hole, symmetry, and conservative budget behavior."
+  ],
+  "logSha256": "04ef27f0d97aecdec95dcefea158eec29947d780d2b3f358e377e5c952b4a99f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "24ac3293beec791dbc799dfe0b6edf8de1c946833337a7f4eec662155dc6dc8c",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "3dbef58bb69cc3a333fcf65fc8b0b8a74a2b412d4da5ca3c101c297dcf8fb2f6"
+  }
+}

@@ -46,7 +46,8 @@ fn cover(projection:[[f64;3];3],scale:[f64;3],metric:[[f64;3];3],
     query:&mut impl FnMut(Box3,&mut IdealVolumeReport)->Result<Enclosed>,
     out:&mut IdealVolumeReport,max:usize)->Result<bool> {
     let root=[[0.,1.];3];
-    if !refinement::promising(&[root],projection,scale,metric,principal_positive,query,out,max)? {return Ok(false);}
+    let chart=refinement::MetricChart{projection,scale,metric,predicate:principal_positive};
+    if !refinement::promising(&[root],chart,query,out,max)? {return Ok(false);}
     let mut pending=vec![root];let mut visits=0;
     while let Some(b)=pending.pop() {
         if visits==1024 || out.cells==max {return Ok(false);}
@@ -58,7 +59,7 @@ fn cover(projection:[[f64;3];3],scale:[f64;3],metric:[[f64;3];3],
         let choice=match e {
             Enclosed::Unavailable(Some(axis)) if split_axis(b,axis).is_some()=>
                 refinement::Choice::Split{axis,complete:[false;2]},
-            _=>refinement::axis(b,projection,scale,metric,principal_positive,query,out,max)?,
+            _=>refinement::axis(b,chart,query,out,max)?,
         };
         let (axis,complete)=match choice {
             refinement::Choice::Covered=>continue,

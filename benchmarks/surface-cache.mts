@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { SurfaceGroupContentCache } from '../src/services/surfaceGroupContentCache'
+import { SurfaceGroupContentCache } from '../src/app/surfaceGroupContentCache'
 
 const variant = process.argv[2]
 if (variant === 'unbounded' || variant === 'bounded') {

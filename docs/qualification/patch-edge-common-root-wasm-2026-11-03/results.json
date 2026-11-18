@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "sourceCommit": "12cca8bad4510f4e053e9a87964647b610973566",
+  "artifact": {
+    "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/88e8f3c66c98cf2da4030fd66627e897e2a6b7ccdaa8444290d11a8954925ed8.wasm",
+    "sha256": "88e8f3c66c98cf2da4030fd66627e897e2a6b7ccdaa8444290d11a8954925ed8",
+    "bytes": 21608561
+  },
+  "independentCopy": true,
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 68,
+  "workers": {
+    "started": 58,
+    "terminated": 58
+  },
+  "commonRootFamilyCases": 10,
+  "vueTsc": "passed",
+  "installedPackageUpdated": false,
+  "temporaryWorktreeRemoved": true,
+  "installedGeometryWasmSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "verified": [
+    "four polynomial-common-root edges and two corners",
+    "nonproportional irrational common root and original plane multiplicity",
+    "original skew-patch expressions",
+    "nearby distinct edge root refuses false contact",
+    "exactWork equals sum of scalarProofs.workUsed including auxiliary predicates",
+    "auxiliary proof exhaustion after successful scalar isolation: 5502 work, 5512 total limit, unresolved",
+    "input preservation and owned Worker termination"
+  ],
+  "remaining": [
+    "general algebraic coordinate sign proof near patch edges",
+    "general curved/freeform target supports",
+    "complete surface/surface branches",
+    "periodic/poles",
+    "trim/Body admission",
+    "installed-package provider/editor qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "4998a14828ab274a74f8e8e73e43f9f0c965b6bc84d4106e4170f0d8ac9857ff",
+    "tools/browser-qualification/common-root-patch-fixtures.ts": "0b7475ac45d0812a12d3f5c9b79c02cf323397ede89aad9246f166f19963b2a9",
+    "tools/browser-qualification/surface-self-intersection.ts": "dea1fcfd476c8158976e9c7e01755e6c116181dfafe200929347d1bab6a823da",
+    "tools/browser-qualification/surface-self-intersection.mjs": "084fb7846393e425cc4bef1c171cf4ab43ed873fa72b497faa5f85d8c3b4fbf1",
+    "src/services/originalPatchContactsProtocol.ts": "a2c2b0fbc7ea5da0fc828f5235b6cadcc0b19a00ad77787e79da7a895eb7a241"
+  }
+}

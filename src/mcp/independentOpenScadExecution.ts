@@ -1,23 +1,20 @@
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
-import {
-  OPENSCAD_2021_01_CONTRACT,
-  OPENSCAD_2021_01_INDEPENDENT_ENGINE,
-} from '../core/openScad2021Contract'
-import {
-  OpenScadProject,
-  type OpenScadProjectFileInput,
-} from '../services/openScadProject'
-import { parseOpenScadProject } from '../services/openscadParser'
+import { OPENSCAD_2021_01_CONTRACT, OPENSCAD_2021_01_INDEPENDENT_ENGINE } from '../core/openScad2021Contract'
+import { OpenScadProject, type OpenScadProjectFileInput } from '../language/openScadProject'
+import { parseOpenScadProject } from '../language/openscadParser'
 
-export type IndependentOpenScadProjectFile = Readonly<{
-  path: string
-  text: string
-  data_base64?: never
-} | {
-  path: string
-  text?: never
-  data_base64: string
-}>
+export type IndependentOpenScadProjectFile = Readonly<
+  | {
+      path: string
+      text: string
+      data_base64?: undefined
+    }
+  | {
+      path: string
+      text?: undefined
+      data_base64: string
+    }
+>
 
 export interface IndependentOpenScadRunInput {
   readonly source: string
@@ -58,9 +55,7 @@ function projectFile(file: IndependentOpenScadProjectFile): OpenScadProjectFileI
 }
 
 /** Execute only the repository-owned stable frontend and geometry evaluator. */
-export async function executeIndependentOpenScad(
-  input: IndependentOpenScadRunInput,
-): Promise<IndependentOpenScadRun> {
+export async function executeIndependentOpenScad(input: IndependentOpenScadRunInput): Promise<IndependentOpenScadRun> {
   throwIfAborted(input.signal)
   const startedAt = performance.now()
   const parseOptions = {
@@ -68,13 +63,13 @@ export async function executeIndependentOpenScad(
     animationTime: input.time,
     shouldAbort: () => input.signal?.aborted ?? false,
   } as const
-  const result = await parseOpenScadProject(new OpenScadProject({
-    entrypoint: 'main.scad',
-    files: [
-      { kind: 'source', path: 'main.scad', source: input.source },
-      ...input.files.map(projectFile),
-    ],
-  }), parseOptions)
+  const result = await parseOpenScadProject(
+    new OpenScadProject({
+      entrypoint: 'main.scad',
+      files: [{ kind: 'source', path: 'main.scad', source: input.source }, ...input.files.map(projectFile)],
+    }),
+    parseOptions,
+  )
   throwIfAborted(input.signal)
   return {
     result,
@@ -85,14 +80,8 @@ export async function executeIndependentOpenScad(
 export function independentOpenScadMetrics(result: GeometryEvaluationResult) {
   return {
     mesh_count: result.meshes.length,
-    vertex_count: result.meshes.reduce(
-      (total, mesh) => total + Math.floor(mesh.vertices.length / 6),
-      0,
-    ),
-    triangle_count: result.meshes.reduce(
-      (total, mesh) => total + Math.floor(mesh.indices.length / 3),
-      0,
-    ),
+    vertex_count: result.meshes.reduce((total, mesh) => total + Math.floor(mesh.vertices.length / 6), 0),
+    triangle_count: result.meshes.reduce((total, mesh) => total + Math.floor(mesh.indices.length / 3), 0),
     volume: result.volume,
     surface_area: result.surfaceArea,
   }

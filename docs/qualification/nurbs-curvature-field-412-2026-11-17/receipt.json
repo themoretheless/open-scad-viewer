@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0412",
+  "testedBase": "2ea6be536ed3c3bc57881bc977109945cef9d3c3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 148,
+  "scope": [
+    "Pair exact proper face crossings into retained transverse section segments, including holes.",
+    "Exact ordered line crossings are paired by retained face parity. Holes yield separate segments. Coplanar and endpoint events refuse the strict transverse API."
+  ],
+  "logSha256": "c0cfee83e106e40c8c6aa4ae4c664c8a1cc52b6c091b7813f7d7b8248312f99d",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "308697a50e4534a8df1d9c4c90624b7f651a5356afe20e576594335fd3c56da6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/mod.rs": "df53bb317079ae08b4d08f95000c3165c001c353303fd908881bb10a88d5fc11",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "1a92c1e657370c8f4f0c8e8e56652aa9dc8381f342b9b8ab56b1f1793ea62b80"
+  }
+}

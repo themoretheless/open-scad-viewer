@@ -221,16 +221,6 @@ fn handle(v: Value) -> Result<Value> {
         "brep_sweep_retained_correspondence_audit" => {
             cad_sweep_smoothness::diagnose_correspondence(v)
         }
-        "brep_sweep_retained_charts_audit" => cad_sweep_smoothness::diagnose_charts(v),
-        "brep_miter_owned_construct" => cad_miter_owned::construct(v),
-        "brep_miter_owned_reconstruct" => cad_miter_owned::reconstruct(v),
-        "brep_miter_owned_place" => cad_miter_owned::place(v),
-        "brep_miter_affine_boundary" => cad_miter_layout::affine_boundary(v),
-        "brep_miter_reconstruct_stations" => cad_miter_layout::reconstruct(v),
-        "brep_miter_body_plan" => cad_miter_layout::plan(v),
-        "brep_miter_section_partition" => cad_miter_layout::partition(v),
-        "brep_miter_sharp_stations" => cad_miter_layout::sharp(v),
-        "brep_miter_wall_preview" => cad_miter_layout::preview(v),
         "brep_miter_profile_smoothness_audit" => cad_sweep_smoothness::diagnose(v, true),
         "brep_miter_station_smoothness_audit" => cad_sweep_smoothness::diagnose(v, false),
         "brep_sweep_volume_audit" => cad_face_contacts::diagnose_sweep_volume(v),

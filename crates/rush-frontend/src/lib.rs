@@ -1,13 +1,4 @@
 //! Bounded Rush frontend. No host evaluation or geometry execution.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 mod lower;
 mod ordered_map;
 mod parser;

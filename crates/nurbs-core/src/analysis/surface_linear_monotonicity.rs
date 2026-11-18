@@ -6,6 +6,7 @@ use crate::{
 mod bernstein_minors;
 mod bernstein_symmetric;
 mod polynomial_projection;
+mod rational_product;
 
 #[derive(Clone, Debug)]
 pub struct ProfileParameterization {
@@ -148,9 +149,9 @@ fn inspect_metric_impl(s:&Surface,projection:[[i8;3];2],row_weights:[f64;2],rate
     let working = projected_surface.as_ref().unwrap_or(s);
     let station_split = exact_station_split(working).map(|(r,p)|(r,p,1))
         .or_else(|| {
-            let transposed=crate::surface_edit::transpose(working).ok()?;
+            let transposed=crate::core::surface_transpose::transpose(working).ok()?;
             let (r,p)=exact_station_split(&transposed)?;
-            Some((crate::surface_edit::transpose(&r).ok()?,crate::surface_edit::transpose(&p).ok()?,0))
+            Some((crate::core::surface_transpose::transpose(&r).ok()?,crate::core::surface_transpose::transpose(&p).ok()?,0))
         });
     let mut working_span=jets::FirstStableSpanCache::new(working);
     let mut split_spans=station_split.as_ref().map(|(relative,position,_)|
@@ -651,6 +652,11 @@ pub fn inspect_candidate_with_hint(
 mod retained_route_tests;
 
 pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
+    s.validate()?;
+    check(max_cells<=100000 && s.control_points[0][0].len()==3,"Invalid monotonicity candidate or cell budget")?;
+    if max_cells>0 {
+        if let Some(report)=rational_product::inspect(s) {return Ok(report);}
+    }
     // Preserve every already successful original proposal and its work/report.
     // A finer integer dual map is only a proposal after the original cover
     // failed; acceptance still proves the same full-domain outward inequality.

@@ -1,22 +1,23 @@
-import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import {
   applyParameterPreset,
   captureParameterPreset,
   parameterTemplateHash,
   type ParameterPreset,
-} from '../services/parameterPresets'
-import { type CustomizerParameter, type CustomizerValue, encodeCustomizerValue } from '../services/scadCustomizer'
-import { applySourceSplice } from '../services/sourceSplice'
+} from '../app/parameterPresets'
+import { type CustomizerParameter, type CustomizerValue, encodeCustomizerValue } from '../language/scadCustomizer'
+import { applySourceSplice } from '../kernel/sourceSplice'
+import type { EditorAdapter } from '../editor/EditorAdapter'
 import {
   MAX_WORKSPACE_SOURCE_LENGTH,
   updateWorkspaceDocument,
   type WorkspaceDocumentSnapshot,
-} from '../services/workspaceDocument'
+} from '../app/workspaceDocument'
 import type { Language } from '../i18n/appStrings'
 
 export interface UseParameterPresetsOptions {
   code: Ref<string>
-  editorRef: Ref<HTMLTextAreaElement | null>
+  editor: EditorAdapter
   workspaceDocument: Ref<WorkspaceDocumentSnapshot>
   lang: Ref<Language>
   customizerParameters: ComputedRef<readonly CustomizerParameter[]>
@@ -40,12 +41,13 @@ export interface UseParameterPresetsReturn {
   undoParameterPreset: () => void
   removeParameterPreset: () => void
   updateCustomizer: (name: string, value: CustomizerValue) => void
+  updateCustomizerBatch: (changes: Record<string, CustomizerValue>) => void
 }
 
 export function useParameterPresets(options: UseParameterPresetsOptions): UseParameterPresetsReturn {
   const {
     code,
-    editorRef,
+    editor,
     workspaceDocument,
     lang,
     customizerParameters,
@@ -114,10 +116,9 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
 
   function replacePresetSource(source: string) {
     if (source.length > MAX_WORKSPACE_SOURCE_LENGTH) throw new Error('source limit')
-    const editor = editorRef.value
-    if (editor) {
-      editor.setRangeText(source, 0, editor.value.length, 'preserve')
-      code.value = editor.value
+    if (editor.mounted) {
+      editor.setText(source, 'preserve')
+      code.value = editor.getText()
     } else code.value = source
   }
 
@@ -164,11 +165,37 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
       expected: code.value.slice(parameter.valueStart, parameter.valueEnd),
       origin: 'customizer',
     })
-    const editor = editorRef.value
-    if (editor) {
-      editor.setRangeText(encoded, parameter.valueStart, parameter.valueEnd, 'select')
-      code.value = editor.value
+    if (editor.mounted) {
+      editor.replaceRange(encoded, parameter.valueStart, parameter.valueEnd, 'select')
+      code.value = editor.getText()
     } else code.value = applied.source
+  }
+
+  function updateCustomizerBatch(changes: Record<string, CustomizerValue>) {
+    const entries = Object.entries(changes)
+      .map(([name, value]) => {
+        const parameter = customizerParameters.value.find(candidate => candidate.name === name)
+        return parameter ? { parameter, encoded: encodeCustomizerValue(value) } : null
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .sort((a, b) => b.parameter.valueStart - a.parameter.valueStart)
+    if (entries.length === 0) return
+    let nextSource = code.value
+    for (const { parameter, encoded } of entries) {
+      nextSource = applySourceSplice(nextSource, {
+        from: parameter.valueStart,
+        to: parameter.valueEnd,
+        insert: encoded,
+        expected: nextSource.slice(parameter.valueStart, parameter.valueEnd),
+        origin: 'customizer',
+      }).source
+    }
+    if (editor.mounted) {
+      editor.setText(nextSource, 'end')
+      code.value = editor.getText()
+    } else {
+      code.value = nextSource
+    }
   }
 
   return {
@@ -187,5 +214,6 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
     undoParameterPreset,
     removeParameterPreset,
     updateCustomizer,
+    updateCustomizerBatch,
   }
 }

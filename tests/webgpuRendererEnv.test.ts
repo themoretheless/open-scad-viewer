@@ -1,11 +1,7 @@
-import type {PipelineFactory} from '../src/services/pipelineFactory'
+import type { PipelineFactory } from '../src/render/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
-import {
-  DEFAULT_ENV,
-  ENV_PRESETS,
-  getEnvPreset,
-} from '../src/services/rendererContracts'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
+import { DEFAULT_ENV, ENV_PRESETS, getEnvPreset } from '../src/render/rendererContracts'
 
 /**
  * Renderer-level checks for the PBR environment-map (IBL) path: pipeline
@@ -30,7 +26,9 @@ function fakeDevice(record: {
     queue: {
       writeBuffer: () => undefined,
       writeTexture: () => undefined,
-      copyExternalImageToTexture: (source: unknown) => { record.externalCopies.push(source) },
+      copyExternalImageToTexture: (source: unknown) => {
+        record.externalCopies.push(source)
+      },
       submit: () => undefined,
     },
     createTexture: (descriptor: { size: number[] | { width: number; height: number } }) => {
@@ -38,7 +36,11 @@ function fakeDevice(record: {
       record.textures.push({ size })
       return fakeTexture(`tex${record.textures.length}`)
     },
-    createSampler: () => { const sampler = {}; record.samplers.push(sampler); return sampler },
+    createSampler: () => {
+      const sampler = {}
+      record.samplers.push(sampler)
+      return sampler
+    },
     createBuffer: () => ({}),
     createBindGroupLayout: () => ({}),
     createPipelineLayout: () => ({}),
@@ -51,7 +53,12 @@ function fakeDevice(record: {
       record.pipelines.push(descriptor)
       return { pipe: descriptor }
     },
-    createCommandEncoder: () => ({ beginRenderPass: () => { throw new Error('unused') }, finish: () => ({}) }),
+    createCommandEncoder: () => ({
+      beginRenderPass: () => {
+        throw new Error('unused')
+      },
+      finish: () => ({}),
+    }),
   }
 }
 
@@ -88,7 +95,7 @@ describe('WebGPURenderer environment-map binding', () => {
     const internalLayouts = renderer as unknown as {
       pipelines: PipelineFactory
     }
-    internalLayouts.pipelines.getRenderPipeline(internal.dev as GPUDevice,'meshPbr')
+    internalLayouts.pipelines.getRenderPipeline(internal.dev as GPUDevice, 'meshPbr')
     expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.envObjectLayout)).toBe(true)
     expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.objectLayout)).toBe(true)
   })
@@ -98,8 +105,12 @@ describe('WebGPURenderer environment-map binding', () => {
     const bindGroups: Array<[number, unknown]> = []
     const pipelines: unknown[] = []
     const pass = {
-      setPipeline: (pipeline: unknown) => { pipelines.push(pipeline) },
-      setBindGroup: (index: number, group: unknown) => { bindGroups.push([index, group]) },
+      setPipeline: (pipeline: unknown) => {
+        pipelines.push(pipeline)
+      },
+      setBindGroup: (index: number, group: unknown) => {
+        bindGroups.push([index, group])
+      },
       setVertexBuffer: () => undefined,
       setIndexBuffer: () => undefined,
       draw: () => undefined,
@@ -137,20 +148,22 @@ describe('WebGPURenderer environment-map binding', () => {
     factory.instanceLayout = 'instanceLayout'
     factory.sceneLayout = 'sceneLayout'
     factory.vertexLayouts = { mesh: [], edge: [], line: [], grid: [] }
-    internal.meshes = [{
-      morph: undefined,
-      morphSlot: {},
-      vb: {},
-      ib: {},
-      ic: 3,
-      bg: 'objBG',
-      edgeIB: null,
-      edgeIC: 0,
-      alpha: 1,
-      visible: true,
-      shadingModel: 'pbr',
-      worldBounds: { center: [0, 0, 0], radius: 1e6, min: [-1, -1, -1], max: [1, 1, 1] },
-    }]
+    internal.meshes = [
+      {
+        morph: undefined,
+        morphSlot: {},
+        vb: {},
+        ib: {},
+        ic: 3,
+        bg: 'objBG',
+        edgeIB: null,
+        edgeIC: 0,
+        alpha: 1,
+        visible: true,
+        shadingModel: 'pbr',
+        worldBounds: { center: [0, 0, 0], radius: 1e6, min: [-1, -1, -1], max: [1, 1, 1] },
+      },
+    ]
     internal.render()
 
     const pbrPipeline = record.pipelines.find(pipeline => pipeline.layout === 'envLayout')
@@ -166,8 +179,14 @@ describe('WebGPURenderer environment-map binding', () => {
     const record = { samplers: [], textures: [], bindGroups: [], pipelines: [], externalCopies: [] }
     const dev = fakeDevice(record)
     const bitmap = { width: 512, height: 256, close: vi.fn() }
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => ({}) })))
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => bitmap))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, blob: async () => ({}) })),
+    )
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => bitmap),
+    )
 
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as Record<string, unknown>

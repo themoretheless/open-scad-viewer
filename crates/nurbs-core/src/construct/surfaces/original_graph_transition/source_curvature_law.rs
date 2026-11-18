@@ -6,6 +6,14 @@ pub struct SourceContactCurvatureLaw {
     source: Surface,
     width: Curve,
 }
+/// Inverse-radius, radial-distance and normal-chord tolerances of one source
+/// curvature law inspection.
+#[derive(Clone, Copy)]
+struct LawTolerances {
+    inverse_mm: f64,
+    radial_distance_mm: f64,
+    normal_chord: f64,
+}
 impl SourceContactCurvatureLaw {
     /// Reference inverse radius |h|/(w*sqrt(1+h^2+(q'-h'w)^2)).
     /// No output surface coefficient or transverse profile is read here.
@@ -99,8 +107,12 @@ impl Patch {
         domain: [[f64; 2]; 2],
         b: &mut Budget,
     ) -> Result<SourceCurvatureLawReport> {
-        self.inspect_source_law_domain(law, tolerance_inverse_mm,
-            radial_distance_tolerance_mm, normal_chord_tolerance, domain, false, b)
+        let tolerances = LawTolerances {
+            inverse_mm: tolerance_inverse_mm,
+            radial_distance_mm: radial_distance_tolerance_mm,
+            normal_chord: normal_chord_tolerance,
+        };
+        self.inspect_source_law_domain(law, tolerances, domain, false, b)
     }
     /// The two complete source-contact seams. G2 to a ruled source forces
     /// zero transverse normal curvature here; a positive constant inverse
@@ -113,24 +125,31 @@ impl Patch {
         normal_chord_tolerance: f64,
         b: &mut Budget,
     ) -> Result<[SourceCurvatureLawReport; 2]> {
+        let tolerances = LawTolerances {
+            inverse_mm: tolerance_inverse_mm,
+            radial_distance_mm: radial_distance_tolerance_mm,
+            normal_chord: normal_chord_tolerance,
+        };
         let mut reports = Vec::with_capacity(2);
         for v in [0., 1.] {
-            reports.push(self.inspect_source_law_domain(law, tolerance_inverse_mm,
-                radial_distance_tolerance_mm, normal_chord_tolerance,
-                [[0., 1.], [v, v]], true, b)?);
+            let seam = [[0., 1.], [v, v]];
+            reports.push(self.inspect_source_law_domain(law, tolerances, seam, true, b)?);
         }
         Ok(reports.try_into().ok().unwrap())
     }
     fn inspect_source_law_domain(
         &self,
         law: &SourceContactCurvatureLaw,
-        tolerance_inverse_mm: f64,
-        radial_distance_tolerance_mm: f64,
-        normal_chord_tolerance: f64,
+        tolerances: LawTolerances,
         domain: [[f64; 2]; 2],
         seam: bool,
         b: &mut Budget,
     ) -> Result<SourceCurvatureLawReport> {
+        let LawTolerances {
+            inverse_mm: tolerance_inverse_mm,
+            radial_distance_mm: radial_distance_tolerance_mm,
+            normal_chord: normal_chord_tolerance,
+        } = tolerances;
         check(
             law.matches(self),
             "Contact-curvature reference belongs to different source inputs",

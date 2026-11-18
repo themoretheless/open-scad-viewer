@@ -5,7 +5,7 @@ import {
   MARCHING_TETRAHEDRA_WGSL,
   referenceMarchingTetrahedra,
   type MarchingGrid,
-} from '../src/services/gpuMarchingCubes'
+} from '../src/render/gpuMarchingCubes'
 
 describe('gpuMarchingCubes', () => {
   it('has 6 valid tetrahedra covering every cube corner', () => {

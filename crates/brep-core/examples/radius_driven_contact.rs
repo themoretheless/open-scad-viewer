@@ -27,15 +27,28 @@ fn main() {
                 c.positions.upper, c.positions.sides.iter().map(|p| p.interval.as_ref()).collect::<Vec<_>>()); }
         }
         if let (Some(skin), Some(contacts)) = (&built.fillet.surface, &built.contacts) {
-            let proof = fillet_radius::inspect(supports, skin, [&contacts[0], &contacts[1]],
-                &RadiusLaw::Constant(request.radius_mm), sides, 1e-7, 100000, 1000000).unwrap();
+            let proof = fillet_radius::inspect(
+                supports,
+                skin,
+                [&contacts[0], &contacts[1]],
+                fillet_radius::RadiusCheck {
+                    law: &RadiusLaw::Constant(request.radius_mm),
+                    sides,
+                    tolerance_mm: 1e-7,
+                    max_cells: 100000,
+                    max_exact: 1000000,
+                },
+            ).unwrap();
             radius_qualified |= proof.decision == fillet_radius::Decision::WithinTolerance;
             println!("radius={:?} reason={} bound={:?}", proof.decision, proof.reason, proof.maximum_center_gap_mm);
             for side in 0..2 {
                 let c = &contacts[side];
-                let seam = nurbs_core::surface_g2_pcurves::inspect(&c.curve,
-                    [&c.support_pcurve, &c.fillet_pcurve], [supports[side], skin],
-                    [false;2], 1e-7, 1e-5, 1e-4, 100000, 1000000).unwrap();
+                let seam = nurbs_core::surface_g2_pcurves::inspect(
+                    nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c.curve, pcurves: [&c.support_pcurve, &c.fillet_pcurve], surfaces: [supports[side], skin], reversed: [false;2] },
+                    nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
+                    100000,
+                    1000000,
+                ).unwrap();
                 println!("g2_side={side} decision={:?} cells={} positions={}",
                     seam.geometric.decision, seam.geometric.cells, seam.positions.proven);
             }

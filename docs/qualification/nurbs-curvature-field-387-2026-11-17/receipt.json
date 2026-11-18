@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0387",
+  "testedBase": "66fe980fc657c758116d4182d8404a277dbbdd08",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 99,
+  "scope": [
+    "Infer all rim planes and close the selected shell with exact supports and retained topology.",
+    "Exact common-denominator scaling stores representable plane equations without changing them. Original rim addresses feed cap construction under shared work and verification budgets."
+  ],
+  "logSha256": "9702dc9fa9832abfd0fa12652f57b9e3b50015cdb0cd430530cbc8415d042449",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "8a29af43dc766a337300663c7f62800c329f781f325b38fa64abd74fd2ca1a06",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "82434c0c3746bdc5b71f053b53301378607149509b7a131828b80e1cc73980dd",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "f34d7081facd985009c55e4617bf9260480f6b42f3e3165c677b454399a6cb13",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "7fb868e39fe91d40a56a202668f76ab598070a4153cd5203506286206788abc3",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "db93999227133f613192eee945c3e1e934b5377f574b08f4234e08faa63f96e9"
+  }
+}

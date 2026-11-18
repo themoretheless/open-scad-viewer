@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "baseCommit": "08188145abf2d310f4cca036b7cbbd09e84c8b7b",
+  "nativeTests": 40,
+  "bridgeTests": 16,
+  "coefficientCensusTests": 2,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "e0b49d0724875bed84b191fbcd4631eeaa243ebf68a8b64c04ce39d1533ee354",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_affine.rs": "73a3b01b957449c32a89723ce0b8ff8078b61a16c49671043cb4f2ffced6b300",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_affine/bspline.rs": "461df24446c1dc9d9f52b0fe679d0cb153fb418641bafef727ea62222062388e",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "e593827527b8e230cabfd8ecbcf8dbf5242055f2cccba08da11fd3961fb3be80",
+    "crates/nurbs-core/tests/original_quadric_graph_multispan_homogeneous.rs": "710c26605b2d931075293434befa97997fbd0c95ab9b4f820e882da11301f98f",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "b9073280326358fbf49a385f094c052680c86a505e10c5ffa804d14cc7473d3c"
+  },
+  "scope": "Original clamped multi-span positive-weight rational B-spline graph targets with a proved global homogeneous affine projection. Each original cell is restricted in exact rational homogeneous coordinates and certified against its global normalized span frame. Full original tensor quadric membership and unique-sheet checks remain mandatory.",
+  "chartRestrictionSchedulePerCandidate": 4000000,
+  "chartRestrictionScheduleScope": "Separate fixed arithmetic schedule; not included in predicate maxExactWork. Exhaustion refuses the chart. Zero-limit refusal tested privately; zero predicate budget also remains zero in the native report.",
+  "qualification": "All 64 degree pairs 1 through 8, nonuniform span lengths, exact drift refusal and bounded refusal. Actual degree-(2,2) nonplanar coupled multi-span target with internal-knot contact, rotations, gauges, algebraic outer edge, wrong membership and zero predicate budget.",
+  "sourceRewritten": false,
+  "censusSeconds": 24.74,
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for multi-span homogeneous-affine targets",
+    "General coupled multispan maps without homogeneous affine projection",
+    "General noncanceled nonplanar coupled weights",
+    "General UV precision qualification",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

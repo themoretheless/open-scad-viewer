@@ -1,4 +1,6 @@
-use nurbs_core::{loft_alignment, natural_loft, primitives, surface::Surface};
+#[cfg(feature = "codec")]
+use nurbs_core::loft_alignment;
+use nurbs_core::{natural_loft, primitives, surface::Surface};
 #[test]
 fn natural_loft_retains_all_86_sections_at_256_control_boundary() {
     let sections = (0..86)
@@ -28,6 +30,7 @@ fn natural_loft_retains_all_86_sections_at_256_control_boundary() {
     assert!(invalid.validate().is_err());
     let _: Surface = surface;
 }
+#[cfg(feature = "codec")]
 #[test]
 fn twelve_sections_and_ten_guides_cross_previous_limits_without_refitting() {
     let sections = (0..12)

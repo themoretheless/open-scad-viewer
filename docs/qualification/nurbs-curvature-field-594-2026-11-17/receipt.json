@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0594",
+  "testedBase": "f3aa6e75f640f19c9bb381042d99eaa52da6a499",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 189,
+  "scope": [
+    "Expose equal-length divisions with ordered station brackets and world boxes through the binary ABI.",
+    "Verify ordered equal-length station boxes, closure, shared budget accounting and build refusals through the binary ABI."
+  ],
+  "logSha256": "a3189ad94773904aee434662f27582339b5b196066f09001e18f82d8742eb7bc",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "ef780d000a4b6b13c6442c6c1cd7a1c6a8315f258db38aa0697acbd916694951",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "0b3988082d57159cf5925bd124e7a2cc6b5ffc74fb5c3e742fc05a1fff252301",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "bb7c97a61c3a16a38cc3feb6d81f471dacf4c64bf1405c86b007a0da24df10c0",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "19883b715782e534f871f9767e9fbf0faf23b816d0c31973b60a48d3adf4d518"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

@@ -1,7 +1,7 @@
 import {readFileSync, statSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createBrepDiagnosticSupervisor} from '../src/mcp/brepDiagnosticSupervisor.ts'
-import {BREP_DIAGNOSTIC_LIMITS} from '../src/services/brepDiagnosticProtocol.ts'
+import {BREP_DIAGNOSTIC_LIMITS} from '../src/kernel/brepDiagnosticProtocol.ts'
 
 // Internal diagnostic entry point. It does not register or impersonate a provider.
 const [file, rawSegments = '6', ...extra] = process.argv.slice(2)

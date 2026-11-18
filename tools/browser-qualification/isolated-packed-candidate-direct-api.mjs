@@ -60,7 +60,7 @@ try {
     const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
       .map(byte => byte.toString(16).padStart(2, '0')).join('')
     if (digest !== identity.sha256 || bytes.byteLength !== identity.byteLength) throw new Error('Candidate mismatch')
-    const kernel = await import('/src/services/geometry/kernel.ts')
+    const kernel = await import('/src/kernel/geometry/kernel.ts')
     await kernel.warmGeometryKernel()
     const fixtures = await import('/tools/browser-qualification/candidate-direct-api-fixtures.ts')
     const main = fixtures.runCandidateFixtures()

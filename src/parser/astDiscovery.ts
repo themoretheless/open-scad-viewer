@@ -6,18 +6,11 @@ import type {
   ModuleNode,
   Statement,
   Value,
-} from '../services/openscadCompiler'
-import {
-  compactDiagnosticText,
-  evaluationError,
-  isFunctionValue,
-} from '../services/openScadStableExpressionEval'
-import type {
-  OpenScad2021LegacyImportFormat,
-  OpenScadImportForcedAsset,
-} from '../services/openScadImport'
-import type { OpenScadProject } from '../services/openScadProject'
-import { formatOpenScadValue, isOpenScadRange } from '../services/openScadValueSemantics'
+} from '../language/openscadCompiler'
+import { compactDiagnosticText, evaluationError, isFunctionValue } from '../language/openScadStableExpressionEval'
+import type { OpenScad2021LegacyImportFormat, OpenScadImportForcedAsset } from '../exchange/openScadImport'
+import type { OpenScadProject } from '../language/openScadProject'
+import { formatOpenScadValue, isOpenScadRange } from '../language/semantic/openScadValueSemantics'
 import type { EvalContext } from './types'
 
 export function valueToString(value: Value): string {
@@ -38,15 +31,14 @@ export function identityValue(value: Value): string {
 
 /** OpenSCAD boolean conversion: false, undef, zero and empty containers are false. */
 export function truthy(value: Value): boolean {
-  return value !== false
-    && value !== undefined
-    && value !== 0
-    && value !== ''
-    && (!Array.isArray(value) || value.length > 0)
+  return (
+    value !== false && value !== undefined && value !== 0 && value !== '' && (!Array.isArray(value) || value.length > 0)
+  )
 }
 
 export function deepEqual(a: Value, b: Value): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((value, index) => deepEqual(value, b[index]))
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((value, index) => deepEqual(value, b[index]))
   return a === b
 }
 
@@ -76,14 +68,14 @@ export function callExpressionArguments(node: CallNode): ExpressionArgument[] {
 export interface BoundAssertArguments {
   condition: Expr
   conditionText: string
-  message?: Expr
+  message?: Expr | undefined
 }
 
 export function bindAssertArguments(node: CallNode, ctx: EvalContext): BoundAssertArguments {
   const keys = Object.keys(node.args)
-  const unknown = keys.find(key => node.argKinds[key] === 'named'
-    ? key !== 'condition' && key !== 'message'
-    : key !== '_0' && key !== '_1')
+  const unknown = keys.find(key =>
+    node.argKinds[key] === 'named' ? key !== 'condition' && key !== 'message' : key !== '_0' && key !== '_1',
+  )
   if (unknown) evaluationError(ctx, node.p, `assert() does not accept argument ${unknown}`)
 
   const has = (key: string) => Object.prototype.hasOwnProperty.call(node.args, key)
@@ -100,8 +92,11 @@ export function bindAssertArguments(node: CallNode, ctx: EvalContext): BoundAsse
   const span = node.argSpans[conditionKey]
   const rawCondition = span ? ctx.source.slice(span.start, span.end) : 'condition'
 
+  const condition = node.args[conditionKey]
+  if (!condition) evaluationError(ctx, node.p, 'assert() requires a condition')
+
   return {
-    condition: node.args[conditionKey],
+    condition,
     conditionText: compactDiagnosticText(rawCondition),
     message: messageKey ? node.args[messageKey] : undefined,
   }
@@ -127,13 +122,14 @@ export function collectFunctions(nodes: readonly Statement[], functions: Map<str
   }
 }
 
-export const STABLE_COMPATIBILITY_MODULE_FORMAT: Readonly<Partial<Record<string, OpenScad2021LegacyImportFormat>>> = Object.freeze({
-  import_stl: 'stl',
-  import_off: 'off',
-  import_dxf: 'dxf',
-  dxf_linear_extrude: 'dxf',
-  dxf_rotate_extrude: 'dxf',
-})
+export const STABLE_COMPATIBILITY_MODULE_FORMAT: Readonly<Partial<Record<string, OpenScad2021LegacyImportFormat>>> =
+  Object.freeze({
+    import_stl: 'stl',
+    import_off: 'off',
+    import_dxf: 'dxf',
+    dxf_linear_extrude: 'dxf',
+    dxf_rotate_extrude: 'dxf',
+  })
 
 /**
  * Discover which format-pinned 2021 loaders may execute, then prepare that
@@ -255,7 +251,7 @@ export function stableCompatibilityForcedAssets(
   visitStatements(nodes)
 
   const formats = (['stl', 'off', 'dxf'] as const).filter(format => required.has(format))
-  return Object.freeze(formats.flatMap(format => (
-    project.list().map(file => Object.freeze({ path: file.path, format }))
-  )))
+  return Object.freeze(
+    formats.flatMap(format => project.list().map(file => Object.freeze({ path: file.path, format }))),
+  )
 }

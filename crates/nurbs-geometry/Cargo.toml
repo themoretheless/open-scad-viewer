@@ -1,0 +1,22 @@
+[package]
+name = "nurbs-geometry"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+codec = ["dep:value-codec", "nurbs-numerics/codec", "cad-predicates/codec"]
+
+[dependencies]
+math-core = { workspace = true }
+nurbs-numerics = { workspace = true }
+cad-predicates = { workspace = true }
+num-rational = "0.4.2"
+num-bigint = "0.4.8"
+num-traits = "0.2.19"
+value-codec = { workspace = true, optional = true }
+
+[dev-dependencies]
+value-codec = { workspace = true }

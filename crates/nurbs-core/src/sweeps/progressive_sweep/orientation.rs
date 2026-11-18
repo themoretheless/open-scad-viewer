@@ -515,11 +515,11 @@ impl<'a> Sweep<'a> {
         self.level_with_error_budget(count,cells,products)
     }
     pub(super) fn level_with_error_budget(&self, count: usize, max_cells: usize, max_products: usize) -> Result<Level> {
-        self.level_with_error_budget_and_length(count,max_cells,max_products,None,None,None,None,None)
+        self.level_with_error_budget_and_length(count,max_cells,max_products,authored_error::SharedProofs::default())
     }
     pub(super) fn level_with_error_budget_and_length(&self,count:usize,max_cells:usize,max_products:usize,
-        shared_length:Option<&crate::curve_measure::DivisionReport>,shared_guide:Option<&crate::curve_measure::DivisionReport>,
-        shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut authored_error::SharedArcPose>,shared_chord:Option<&authored_error::GlobalChord>)->Result<Level>{
+        shared:authored_error::SharedProofs<'_,'_>)->Result<Level>{
+        let authored_error::SharedProofs{length:shared_length,guide:shared_guide,rmf:shared_rmf,pose:shared_pose,chord:shared_chord}=shared;
         let (coarse, closed, coarse_residual) = self.sections(count)?;
         let (fine, _, fine_residual) = self.sections(4 * (count - 1) + 1)?;
         let mut error = 0_f64;
@@ -539,7 +539,8 @@ impl<'a> Sweep<'a> {
         let patches = patches(&coarse)?;
         let length_residual_upper = coarse_residual.map(|r| r.max(fine_residual.unwrap()));
         let certificate = if let Some([steps,_,_])=self.spatial_rmf_error_limits {
-            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,shared_length,shared_rmf,shared_pose)?)
+            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,
+                authored_error::SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..Default::default()})?)
         }else if self.frame_laws.is_some() {
             Some(authored_error::patch_error_with_path_evidence(self,count,max_cells,max_products,shared_length,shared_chord)?)
         } else if self.contact_source.is_some() {

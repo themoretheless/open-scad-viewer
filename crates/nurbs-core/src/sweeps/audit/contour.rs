@@ -36,7 +36,7 @@ fn exact_segments(c: &Curve) -> Option<Vec<Curve>> {
         }
     }
     Some(
-        crate::certificates::audit::curve_span_domains(c)
+        crate::core::span_domains::curve_span_domains(c)
             .into_iter()
             .map(|(i, _)| Curve {
                 degree: c.degree,

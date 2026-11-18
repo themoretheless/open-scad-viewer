@@ -276,21 +276,29 @@ pub(super) fn schur_step(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Camera poses and point positions of one bundle iterate.
+#[derive(Default)]
+struct Iterate {
+    cameras: Vec<Option<Camera>>,
+    points: Vec<V3>,
+}
+/// Apply `step` to `current` and rescale to the anchor baseline, writing into `next`.
 fn candidate(
-    cameras: &[Option<Camera>],
-    positions: &[V3],
+    current: &Iterate,
     linear: &Linearization,
     layout: &Layout,
     scale_camera: usize,
     step: &Step,
-    next_cameras: &mut Vec<Option<Camera>>,
-    next_points: &mut Vec<V3>,
+    next: &mut Iterate,
     checkpoints: &mut Checkpoints,
 ) -> Option<()> {
-    next_cameras.clear();
-    next_cameras.extend_from_slice(cameras);
-    next_points.clear();
-    next_points.extend_from_slice(positions);
+    let cameras = &current.cameras;
+    let Iterate {
+        cameras: next_cameras,
+        points: next_points,
+    } = next;
+    next_cameras.clone_from(cameras);
+    next_points.clone_from(&current.points);
     for &index in &layout.active_cameras {
         if let Some(column) = layout.columns[index] {
             next_cameras[index] = Some(perturb(
@@ -382,10 +390,11 @@ pub fn optimize(
         filtered_tracks: 0,
         termination: BundleTermination::IterationLimit,
     };
-    let mut current_cameras = cameras.to_vec();
-    let mut current_points = positions.to_vec();
-    let mut trial_cameras: Vec<Option<Camera>> = Vec::new();
-    let mut trial_points: Vec<V3> = Vec::new();
+    let mut current = Iterate {
+        cameras: cameras.to_vec(),
+        points: positions.to_vec(),
+    };
+    let mut trial = Iterate::default();
     let mut schur_scratch = SchurScratch::default();
     let mut damping = options.initial_damping;
     for iteration in 0..options.max_iterations {
@@ -397,8 +406,8 @@ pub fn optimize(
             return Err(crate::error("Cancelled"));
         }
         let linear = linearize(
-            &current_cameras,
-            &current_points,
+            &current.cameras,
+            &current.points,
             observations,
             &layout,
             options.huber_delta,
@@ -414,30 +423,27 @@ pub fn optimize(
             let proposed = schur_step(&linear, damping, &mut schur_scratch, &mut checkpoints)
                 .and_then(|step| {
                     candidate(
-                        &current_cameras,
-                        &current_points,
+                        &current,
                         &linear,
                         &layout,
                         scale_camera,
                         &step,
-                        &mut trial_cameras,
-                        &mut trial_points,
+                        &mut trial,
                         &mut checkpoints,
                     )
                 })
                 .is_some();
             if proposed
                 && let Some(next_cost) = cost(
-                    &trial_cameras,
-                    &trial_points,
+                    &trial.cameras,
+                    &trial.points,
                     observations,
                     options.huber_delta,
                     &mut checkpoints,
                 )
                 && next_cost < previous
             {
-                std::mem::swap(&mut current_cameras, &mut trial_cameras);
-                std::mem::swap(&mut current_points, &mut trial_points);
+                std::mem::swap(&mut current, &mut trial);
                 report.final_cost = next_cost;
                 report.accepted_steps += 1;
                 damping = (damping / 3.).max(1e-12);
@@ -466,7 +472,7 @@ pub fn optimize(
     if !checkpoints.check() {
         return Err(crate::error("Cancelled"));
     }
-    cameras.clone_from_slice(&current_cameras);
-    positions.copy_from_slice(&current_points);
+    cameras.clone_from_slice(&current.cameras);
+    positions.copy_from_slice(&current.points);
     Ok(report)
 }

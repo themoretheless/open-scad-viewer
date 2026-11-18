@@ -24,9 +24,20 @@ fn independently_trimmed_skin_faces_keep_saved_contact_center_law() {
     let mut admitted = 0;
     let mut admitted_sides = None;
     for sides in [[1., 1.], [1., -1.], [-1., 1.], [-1., -1.]] {
-        let proof = fillet_radius::inspect_model_skins(model, skins, contacts,
-            &RadiusLaw::Constant(1.), model.edges[contacts[0]].curve.domain(),
-            sides, 1e-7, 100000, 1000000).unwrap();
+        let proof = fillet_radius::inspect_model_skins(
+            model,
+            skins,
+            contacts,
+            model.edges[contacts[0]].curve.domain(),
+            fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Constant(1.),
+                sides,
+                tolerance_mm: 1e-7,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
+        )
+        .unwrap();
         if proof.decision == fillet_radius::Decision::WithinTolerance { admitted += 1; admitted_sides = Some(sides); }
         else { assert_eq!(proof.decision, fillet_radius::Decision::ExceedsTolerance, "{}", proof.reason); }
     }
@@ -34,17 +45,48 @@ fn independently_trimmed_skin_faces_keep_saved_contact_center_law() {
     let sides = admitted_sides.unwrap();
     let restored: brep_core::Model = value_codec::from_str(
         &value_codec::to_string(model).unwrap()).unwrap();
-    assert_eq!(fillet_radius::inspect_model_skins(&restored, skins, contacts,
-        &RadiusLaw::Constant(1.), restored.edges[contacts[0]].curve.domain(),
-        sides, 1e-7, 100000, 1000000).unwrap().decision,
+    assert_eq!(fillet_radius::inspect_model_skins(
+        &restored,
+        skins,
+        contacts,
+        restored.edges[contacts[0]].curve.domain(),
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides,
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    ).unwrap().decision,
         fillet_radius::Decision::WithinTolerance);
-    assert_eq!(fillet_radius::inspect_model_skins(&restored, skins, contacts,
-        &RadiusLaw::Constant(1.), restored.edges[contacts[0]].curve.domain(),
-        sides, 1e-7, 0, 0).unwrap().decision,
+    assert_eq!(fillet_radius::inspect_model_skins(
+        &restored,
+        skins,
+        contacts,
+        restored.edges[contacts[0]].curve.domain(),
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides,
+            tolerance_mm: 1e-7,
+            max_cells: 0,
+            max_exact: 0,
+        },
+    ).unwrap().decision,
         fillet_radius::Decision::Unresolved);
     // Swapping actual skin roles must not accidentally inspect the old face twice.
-    assert!(fillet_radius::inspect_model_skins(model, [skins[1], skins[0]], contacts,
-        &RadiusLaw::Constant(1.), [0., 1.], [1., -1.], 1e-7, 100000, 1000000).is_err());
+    assert!(fillet_radius::inspect_model_skins(
+        model,
+        [skins[1], skins[0]],
+        contacts,
+        [0., 1.],
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [1., -1.],
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    ).is_err());
     assert_eq!(source.faces.len(), 6);
     assert_eq!(model.faces.len(), 7);
 }

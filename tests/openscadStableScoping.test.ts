@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const stableProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 
@@ -21,10 +21,7 @@ describe('OpenSCAD 2021.01 stable scoping', () => {
 
     const directHidden = await parseOpenSCAD(hiddenLaterBinding, stableProfile)
     const semanticHidden = lower(hiddenLaterBinding)
-    expect(directHidden.warnings).toEqual([
-      "Ignoring unknown variable 'b'",
-      'ECHO: undef',
-    ])
+    expect(directHidden.warnings).toEqual(["Ignoring unknown variable 'b'", 'ECHO: undef'])
     expect(semanticHidden.warnings).toEqual(directHidden.warnings)
 
     const directVisible = await parseOpenSCAD(visibleEarlierBinding, stableProfile)
@@ -41,10 +38,7 @@ describe('OpenSCAD 2021.01 stable scoping', () => {
       echo(let(x = 99, $foo = 3) capture());
       let(x = 99, $foo = 3) capture_module();
     `
-    const expected = [
-      'ECHO: [2, 3]',
-      'ECHO: 2, 3',
-    ]
+    const expected = ['ECHO: [2, 3]', 'ECHO: 2, 3']
 
     const direct = await parseOpenSCAD(source, stableProfile)
     const semantic = lower(source)
@@ -71,20 +65,18 @@ describe('OpenSCAD 2021.01 stable scoping', () => {
     expect(direct.warnings).toEqual(['ECHO: 11'])
     expect(semantic.warnings).toEqual(['ECHO: 11'])
 
-    await expect(parseOpenSCAD(
-      'if (true) { function hidden() = 1; echo(hidden()); } echo(hidden()); cube(1);',
-      stableProfile,
-    )).rejects.toThrow(/Unsupported function hidden\(\)/)
-    await expect(parseOpenSCAD(
-      'if (true) { module hidden() cube(1); hidden(); } hidden();',
-      stableProfile,
-    )).rejects.toThrow(/Unsupported geometry operation hidden\(\)/)
-    expect(() => lower(
-      'if (true) { function hidden() = 1; echo(hidden()); } echo(hidden()); cube(1);',
-    )).toThrow(/Unsupported function hidden\(\)/)
-    expect(() => lower(
-      'if (true) { module hidden() cube(1); hidden(); } hidden();',
-    )).toThrow(/Unsupported geometry operation hidden\(\)/)
+    await expect(
+      parseOpenSCAD('if (true) { function hidden() = 1; echo(hidden()); } echo(hidden()); cube(1);', stableProfile),
+    ).rejects.toThrow(/Unsupported function hidden\(\)/)
+    await expect(
+      parseOpenSCAD('if (true) { module hidden() cube(1); hidden(); } hidden();', stableProfile),
+    ).rejects.toThrow(/Unsupported geometry operation hidden\(\)/)
+    expect(() => lower('if (true) { function hidden() = 1; echo(hidden()); } echo(hidden()); cube(1);')).toThrow(
+      /Unsupported function hidden\(\)/,
+    )
+    expect(() => lower('if (true) { module hidden() cube(1); hidden(); } hidden();')).toThrow(
+      /Unsupported geometry operation hidden\(\)/,
+    )
   })
 
   it('sees later lexical assignments, detects cycles, and keeps defaults outside parameter scope', async () => {
@@ -97,11 +89,7 @@ describe('OpenSCAD 2021.01 stable scoping', () => {
       later_module();
       cube(1);
     `
-    const expected = [
-      "Ignoring unknown variable 'y'",
-      'ECHO: 2, undef',
-      'ECHO: 2',
-    ]
+    const expected = ["Ignoring unknown variable 'y'", 'ECHO: 2, undef', 'ECHO: 2']
     const direct = await parseOpenSCAD(source, stableProfile)
     const semantic = lower(source)
     expect(direct.warnings).toEqual(expected)
@@ -110,10 +98,7 @@ describe('OpenSCAD 2021.01 stable scoping', () => {
     const cycle = 'a = f(); function f() = a; echo(a); cube(1);'
     const directCycle = await parseOpenSCAD(cycle, stableProfile)
     const semanticCycle = lower(cycle)
-    expect(directCycle.warnings).toEqual([
-      "Ignoring cyclic variable reference 'a'",
-      'ECHO: undef',
-    ])
+    expect(directCycle.warnings).toEqual(["Ignoring cyclic variable reference 'a'", 'ECHO: undef'])
     expect(semanticCycle.warnings).toEqual(directCycle.warnings)
   })
 
@@ -130,10 +115,7 @@ describe('OpenSCAD 2021.01 stable scoping', () => {
       }
       let($foo = 3) outer() cube(1);
     `
-    const expected = [
-      'ECHO: 1, 1, "outer", 3',
-      'ECHO: [3, 1, 2, "inner"], "outer"',
-    ]
+    const expected = ['ECHO: 1, 1, "outer", 3', 'ECHO: [3, 1, 2, "inner"], "outer"']
 
     const direct = await parseOpenSCAD(source, stableProfile)
     const semantic = lower(source)

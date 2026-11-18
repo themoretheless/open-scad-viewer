@@ -1,0 +1,67 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/82f0c8d8cba5a0bde8780c0e708798e950a64cae9c7e5c26c901ae284d7fd434.wasm",
+  "sha256": "82f0c8d8cba5a0bde8780c0e708798e950a64cae9c7e5c26c901ae284d7fd434",
+  "bytes": 21992789,
+  "sourceCommit": "67bd9b459f252782a67c055596ef6cfb741a5c44",
+  "status": "passed",
+  "abiCases": 443,
+  "graphCases": 320,
+  "workersStarted": 413,
+  "workersTerminated": 413,
+  "newMultispanJointGraphCases": 98,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "nativeSourceHashesMatched": true,
+  "nativeReceipt": "docs/qualification/joint-multispan-jacobian-2026-11-03/results.json",
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "cac92aaeeab79c1e79ca99b05861142a3f146fcf211b6b681e19713c43a53033",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "6e761587f9eab0838482ee7c8e7bffcc441f38753371137cb6f3445ac3bde614",
+    "tools/browser-qualification/surface-self-intersection.mjs": "19e6f62926f633b9e1e7fd09847107734091d71bfa432413145fe0df8a0b2a01",
+    "tools/browser-qualification/surface-self-intersection.ts": "3955ff1e310e50cdb65d673a8068c84791490707f49dfb7901fa5be921e294d5",
+    "tools/browser-qualification/joint-multispan-quadric-graph-fixtures.json": "acd33c2f75f49ea51c6968d45b1d9f24839b46278b6ce9926838159c37daf4be",
+    "src/services/originalQuadricGraphProtocol.ts": "c5d93f4c5efbecc2a3189f7c0fe46711470216d7047330c937ed97b04028eb77"
+  },
+  "observedTimings": {
+    "polynomial": {
+      "abiMs": 658.1838329999991,
+      "workerMs": 555.8000000119209,
+      "membershipWork": 959988,
+      "exactWork": 962123
+    },
+    "rational": {
+      "abiMs": 386.7849580000002,
+      "workerMs": 328.7000000178814,
+      "membershipWork": 385079,
+      "exactWork": 387398
+    },
+    "c0": {
+      "abiMs": 145.98195800000394,
+      "workerMs": 126.80000001192093,
+      "membershipWork": 207903,
+      "exactWork": 210052
+    }
+  },
+  "timingScope": "Single-run observations only, not repeat performance qualification. ABI request versus full Worker call.",
+  "scope": "Actual raw WASM and Chromium module Workers for original general multispan joint maps and genuine C0 parameter seams. Polynomial 3x3 knot cells, rational multispan targets, C0 derivative jump, original internal knots and non-knot contacts, orientations/rotations/gauges, edges/corners/exterior, exact original membership and zero caller budget; folded/discontinuous/boundary-drift refusal.",
+  "predicateBudgetIncreased": false,
+  "maxPredicateWork": 1000000,
+  "priorMultispanChartRefusalsNowExactDifferent": [
+    "graph-multispan-ulp-projection-drift",
+    "graph-multispan-homogeneous-original-ulp-drift",
+    "graph-multispan-boundary-clocks-original-ulp-drift",
+    "graph-triangular-multispan-original-identity-ulp-drift"
+  ],
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "remaining": [
+    "General projected domains, singular and periodic charts",
+    "General freeform all-branch completeness",
+    "Arbitrary UV accuracy contract",
+    "Automatic complete trims",
+    "Valid closed Body and general Boolean",
+    "General offset and blend networks",
+    "General quad, solver, lineage and history",
+    "Installed provider qualification"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "NURBS-0388",
+  "testedBase": "e4238877302942672646f3d9d12f0137ecabf880",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 101,
+  "scope": [
+    "Infer exact rim planes and close the shell with jointly rounded planar supports and certified displacement bounds.",
+    "Inferred planes remain exact. Caps with unrepresentable affine control points use planar binary64 supports within a certified displacement bound, preserving and reverifying original boundary curves."
+  ],
+  "logSha256": "120db99b983b9423aad0fc804e93ddd9cca3cb49e7a32606d5eab6b1f7774809",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "068883edc2ea5ffd69d7cbe588d60dc5a3af930d36e864133e8f4e7eada5d25a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "fcfb75279f56d71c6dcb2f3b98dcf2e79fdb35dc067a466e0b1edbbefcc93fba",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "97d0c4f9fbefecebbc11db3eba242b9e9c1df74fb6323ce39078e619aca34704",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "895dc6a6e94ea518c99db2d8ce302a30fc546fb3a38d82b209869f08c0929dba",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs": "77cb264370c548778e518b0470e05ae8d244fe21796b6a64cd5252316d729a70",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "ca352d481c2f10b053e8da4f888d9dd043e74032446bb2ea0a260af1913f2087"
+  }
+}

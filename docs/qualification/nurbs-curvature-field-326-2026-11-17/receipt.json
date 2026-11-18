@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0326",
+  "testedBase": "4eba361d2e05e04f4de77437cff66d84bea5636d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "bounded_world_plane_mass_contracts",
+    "--test",
+    "certified_planar_moment_contracts",
+    "--test",
+    "exact_world_plane_mass_contracts",
+    "--test",
+    "exact_projected_face_area_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Propagate outward rational planar moment enclosures to world-space signed area, centroid, and centered XYZ moments.",
+    "Closed rational contours; nonzero signed area must be certified for centroidal results. Requested widths refer to projected integration."
+  ],
+  "logSha256": "266197fa697cc41e1f0f66283f40f34ff7e350c631c13258ba79fa311012a465",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "2f112ceac5f49cb2d90da53bc7a8526aabdae8f00a54f1be592f71990298113b",
+    "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs": "4eec798f0632be78b4564d9dd9399092612b848478ce2d5ca34195ef26736936",
+    "crates/nurbs-core/src/analysis/planar_face_area.rs": "3af57cbe8b92e98617f1d8de0a2c64ae026c0bdd834ca015c52982a05b7b7fec",
+    "crates/nurbs-core/src/trim/planar_mass_bounds.rs": "12c6386ea9891bff600d446137f11a5b2c0f2214a43d069c42575e8ef08f3a3b",
+    "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs": "e5d116981ecc410f09c092b9e4cb56a16f5169d328551c886d7495944cd116b2"
+  }
+}

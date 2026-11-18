@@ -1,6 +1,6 @@
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
-import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 const path=circleNurbsCurve([0,0,0],[0,0,1],4)
 const scalar=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})

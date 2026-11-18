@@ -47,18 +47,16 @@ mod extrusion_recording_tests;
 mod polygon_recording_tests;
 
 mod quality;
-mod evaluator_2;
 mod evaluate_program;
 pub use quality::*;
-use evaluator_2::*;
 pub use evaluate_program::*;
 
-mod evaluator_2_impl_1;
-mod evaluator_2_impl_2;
-mod evaluator_2_impl_3;
-mod evaluator_2_impl_4;
+mod evaluator_state;
+mod node_dispatch;
+mod module_binding;
+mod program_entry;
 
-mod eval_node_cases_1;
-mod eval_node_cases_2;
-mod eval_node_cases_3;
-mod eval_node_cases_4;
+mod primitive_nodes;
+mod transform_nodes;
+mod extrusion_and_control_nodes;
+mod legacy_child_node;

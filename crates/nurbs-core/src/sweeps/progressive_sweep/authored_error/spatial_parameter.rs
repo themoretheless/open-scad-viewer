@@ -224,8 +224,7 @@ pub(super) fn section_interpolation(
                 sweep.twist,
                 sweep.affine_laws,
                 &qs,
-                at,
-                at,
+                [at, at],
                 max_cells - out.cells,
             )?
         };
@@ -299,8 +298,7 @@ pub(super) fn section_interpolation(
                 sweep.twist,
                 sweep.affine_laws,
                 &qs,
-                interval,
-                interval,
+                [interval, interval],
                 max_cells - out.cells,
             )?
         };

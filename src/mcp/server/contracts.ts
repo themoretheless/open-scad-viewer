@@ -1,12 +1,6 @@
 import { createHash } from 'node:crypto'
-import {
-  ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
-  GEOMETRY_MANIFEST_ARCHIVE,
-} from '../../core/geometryExecution'
-import {
-  OPENSCAD_2021_01_CONTRACT,
-  OPENSCAD_2021_01_INDEPENDENT_ENGINE,
-} from '../../core/openScad2021Contract'
+import { ACTIVE_GEOMETRY_MANIFEST_VERSIONS, GEOMETRY_MANIFEST_ARCHIVE } from '../../core/geometryExecution'
+import { OPENSCAD_2021_01_CONTRACT, OPENSCAD_2021_01_INDEPENDENT_ENGINE } from '../../core/openScad2021Contract'
 import {
   DIRECT_GEOMETRY_CANCEL_GRACE_MS,
   DIRECT_GEOMETRY_JOB_DEADLINE_MS,
@@ -29,12 +23,8 @@ export const CACHE_FIVE_MINUTES = 5 * 60 * 1_000
 export const CACHE_ONE_DAY = 24 * 60 * 60 * 1_000
 export const OFFICIAL_LANGUAGE_RESOURCE_URI = 'openscad://language/openscad-2021.01' as const
 export const INDEPENDENT_ENGINE_ID = OPENSCAD_2021_01_INDEPENDENT_ENGINE.engineId
-export const CURRENT_MESH_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
-  ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh
-]
-export const CURRENT_BREP_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
-  ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep
-]
+export const CURRENT_MESH_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh]
+export const CURRENT_BREP_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep]
 export const OFFICIAL_LANGUAGE_SUMMARY = Object.freeze({
   id: OPENSCAD_2021_01_CONTRACT.id,
   release: OPENSCAD_2021_01_CONTRACT.languageTarget.release,
@@ -96,7 +86,7 @@ export function truncateWellFormed(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value
   let end = maxLength
   const last = value.charCodeAt(end - 1)
-  if (last >= 0xD800 && last <= 0xDBFF) end--
+  if (last >= 0xd800 && last <= 0xdbff) end--
   return value.slice(0, end)
 }
 
@@ -122,4 +112,8 @@ export function independentArtifactUri(id: string): string {
 
 export function officialArtifactUri(id: string): string {
   return `openscad://official-artifacts/${id}`
+}
+
+export function engineManifestUri(engineId: string): string {
+  return `openscad://engines/${encodeURIComponent(engineId)}`
 }

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0597",
+  "testedBase": "38ed8d62ffd1bb7ecf3433e8fb01b023d257ad91",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 178,
+  "scope": [
+    "Enclose signed projected areas of positive-weight rational trim curves with interval quadrature.",
+    "Verify interval projections on a varying-weight curved edge, known polygon areas, and completeness under cell exhaustion."
+  ],
+  "logSha256": "00c65e213ea5f135dfe97621cdde263721a05a42b46a8049e2f0375f0643dab5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "fd2647efaa9e5bd2183a39b8f6d1fb52ae5e20ca421dfb48c82593696ad36c97",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1b408050c638783920188b4944f5707877dd189e52eec4508258956f6382d0bb"
+  }
+}

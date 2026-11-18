@@ -5,15 +5,17 @@ import {
   searchFunctionReference,
   type ReferenceLanguage,
 } from '../src/data/functionReference'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const languages: ReferenceLanguage[] = ['openscad', 'rush']
-const examples = FUNCTION_REFERENCE.flatMap(entry => languages.flatMap(language => {
-  const variant = entry.variants[language]
-  return variant ? [{ id: entry.id, language, example: variant.example }] : []
-}))
+const examples = FUNCTION_REFERENCE.flatMap(entry =>
+  languages.flatMap(language => {
+    const variant = entry.variants[language]
+    return variant ? [{ id: entry.id, language, example: variant.example }] : []
+  }),
+)
 
 describe('function reference examples', () => {
   it.each(examples)('$language: $id compiles and produces browser geometry', async ({ language, example }) => {
@@ -33,7 +35,8 @@ describe('function reference examples', () => {
 })
 
 describe('function reference discovery', () => {
-  const ids = (query: string, language: ReferenceLanguage = 'openscad') => searchFunctionReference(query, language).map(entry => entry.id)
+  const ids = (query: string, language: ReferenceLanguage = 'openscad') =>
+    searchFunctionReference(query, language).map(entry => entry.id)
 
   it('finds functions by names, both description languages and normalized Cyrillic', () => {
     expect(ids('TRANSLATE')).toContain('translate')
@@ -45,10 +48,15 @@ describe('function reference discovery', () => {
   })
 
   it.each([
-    ['поворот', 'rotate'], ['rotation', 'rotate'],
-    ['перемещение', 'translate'], ['сдвиг', 'translate'], ['translation', 'translate'],
-    ['масштаб', 'scale'], ['scaling', 'scale'],
-    ['отражение', 'mirror'], ['reflection', 'mirror'],
+    ['поворот', 'rotate'],
+    ['rotation', 'rotate'],
+    ['перемещение', 'translate'],
+    ['сдвиг', 'translate'],
+    ['translation', 'translate'],
+    ['масштаб', 'scale'],
+    ['scaling', 'scale'],
+    ['отражение', 'mirror'],
+    ['reflection', 'mirror'],
   ])('finds the transform for the natural-language query %s', (query, expectedId) => {
     for (const language of languages) expect(ids(query, language)).toContain(expectedId)
   })

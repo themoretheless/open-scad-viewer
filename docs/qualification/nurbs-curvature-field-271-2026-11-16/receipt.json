@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0271",
+  "testedBase": "2b5f29265dff543d95e106bfc30a6c38bb719fb2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 14,
+  "scope": [
+    "Automatically inserts transverse midpoints where the continuous bound exceeds the absolute root-axis tolerance. Vertex and precision limits return the complete ordered cover with actual bounds, while exact work refusal is atomic.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "c9e144ce57996245a1052e7d2f9deb46e22d35f271e1ff8d05e7a159c7ec7ff3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "a7f4880a8cb7e3a8f02173b9f3e4a927f24cf46ff50a0b227d62b97a500d6d94",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs": "8c09c3eb2d8cb1d670056575205156f55223593401f939363f39749e41ecc069",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "8c09cfcf844eb333d862e9094c78ca1bfb1689d8288b09c6a7f1f678c0220822",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "60fd1b692b660bcfec2bfa42eddb55733f15a44ed71732f2bddc0a5622d44812"
+  }
+}

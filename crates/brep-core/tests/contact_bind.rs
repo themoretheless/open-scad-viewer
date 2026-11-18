@@ -142,20 +142,10 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
                 .count();
             assert_eq!(incident, 2);
         }
-        let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &bound.restriction.contact.curve,
-            [
+        let proof = nurbs_core::surface_g2_pcurves::inspect(nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &bound.restriction.contact.curve, pcurves: [
                 &bound.restriction.contact.support_pcurve,
                 &bound.restriction.contact.fillet_pcurve,
-            ],
-            [if side == 0 { &a } else { &b }, skin],
-            [false, false],
-            1e-6,
-            1e-5,
-            1e-4,
-            100000,
-            1000000,
-        )
+            ], surfaces: [if side == 0 { &a } else { &b }, skin], reversed: [false, false] }, nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 }, 100000, 1000000)
         .unwrap();
         assert_eq!(
             proof.geometric.decision,
@@ -173,10 +163,12 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
         [&bound0.restriction, &bound1.restriction],
         skin,
         [(&first, f), (&last, l)],
-        1e-6,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: 1e-6,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     for (local, source) in [
@@ -199,9 +191,11 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
             [&a, skin],
             [(&first, f, 0), (&last, l, 0)],
             wrong,
-            1e-8,
-            100000,
-            1000000
+            contact_bind::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -212,9 +206,11 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
             [&a, skin],
             [(&first, f, 0), (&last, l, 0)],
             p0,
-            1e-8,
-            1,
-            1000000
+            contact_bind::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 1,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -267,9 +263,11 @@ fn two_end_roots_on_one_original_edge_keep_all_three_children_and_atomic_failure
         [&a, skin],
         [(&first, f, 0), (&last, l, 0)],
         parameters,
-        1e-8,
-        100000,
-        1000000,
+        contact_bind::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(out.source.edges.len(), source.edges.len() + 2);
@@ -295,9 +293,11 @@ fn two_end_roots_on_one_original_edge_keep_all_three_children_and_atomic_failure
             [&a, skin],
             [(&first, f, 0), (&last, l, 0)],
             invalid,
-            1e-8,
-            100000,
-            1000000
+            contact_bind::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );

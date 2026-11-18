@@ -1,30 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import {
-  SOLID_ENGINEERING_MATERIALS,
-  estimateSolidMassGrams,
-  solidMaterialRgb,
-} from '../src/services/solidMaterial'
-import { inspectMeshManifoldDiagnostics } from '../src/services/meshInspection'
-import { computeGcodeLayerSummary } from '../src/services/gcodePreviewGeometry'
+import { SOLID_ENGINEERING_MATERIALS, estimateSolidMassGrams, solidMaterialRgb } from '../src/kernel/solidMaterial'
+import { inspectMeshManifoldDiagnostics } from '../src/kernel/meshInspection'
+import { computeGcodeLayerSummary } from '../src/fabrication/gcodePreviewGeometry'
 import {
   exportCustomizerPresetsJson,
   importCustomizerPresetsJson,
   applyCustomizerPresetToSource,
-} from '../src/services/scadCustomizer'
-import {
-  DRAWING_SHEET_FORMATS,
-  formatDrawingDimensionWithTolerance,
-} from '../src/services/drawingSheets'
-import { computeAdaptiveGridStepMm } from '../src/components/ModelingGridControls.vue'
-import { computeSteppedOrbitAngles } from '../src/components/ViewCube.vue'
+} from '../src/language/scadCustomizer'
+import { DRAWING_SHEET_FORMATS, formatDrawingDimensionWithTolerance } from '../src/app/drawingSheets'
+import { computeAdaptiveGridStepMm } from '../src/app/modelingGrid'
+import { computeSteppedOrbitAngles } from '../src/render/viewportModel'
 import { formatInterferenceMarkdownReport } from '../src/mcp/rushGraphInterference'
 
-const IDENTITY_TRANSFORM = new Float32Array([
-  1, 0, 0, 0,
-  0, 1, 0, 0,
-  0, 0, 1, 0,
-  0, 0, 0, 1,
-])
+const IDENTITY_TRANSFORM = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
 
 describe('Tier IV Wave 2 Improvements', () => {
   describe('solidMaterial engineering catalog & mass estimator', () => {
@@ -66,18 +54,8 @@ describe('Tier IV Wave 2 Improvements', () => {
   describe('meshInspection manifold diagnostics', () => {
     it('detects a watertight tetrahedron with Euler characteristic V - E + F = 2', () => {
       // 4 vertices, 4 triangles, stride = 6 (x,y,z,nx,ny,nz)
-      const vertices = new Float32Array([
-        0, 0, 0, 0, 0, -1,
-        10, 0, 0, 0, 0, -1,
-        0, 10, 0, 0, 0, -1,
-        0, 0, 10, 0, 0, 1,
-      ])
-      const indices = new Uint32Array([
-        0, 2, 1,
-        0, 1, 3,
-        1, 2, 3,
-        2, 0, 3,
-      ])
+      const vertices = new Float32Array([0, 0, 0, 0, 0, -1, 10, 0, 0, 0, 0, -1, 0, 10, 0, 0, 0, -1, 0, 0, 10, 0, 0, 1])
+      const indices = new Uint32Array([0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3])
       const diag = inspectMeshManifoldDiagnostics({
         vertices,
         indices,
@@ -95,19 +73,10 @@ describe('Tier IV Wave 2 Improvements', () => {
 
     it('detects boundary edges, degenerate triangles, and non-manifold edges', () => {
       const vertices = new Float32Array([
-        0, 0, 0, 0, 0, 1,
-        10, 0, 0, 0, 0, 1,
-        0, 10, 0, 0, 0, 1,
-        0, 0, 10, 0, 0, 1,
-        0, -10, 0, 0, 0, 1,
+        0, 0, 0, 0, 0, 1, 10, 0, 0, 0, 0, 1, 0, 10, 0, 0, 0, 1, 0, 0, 10, 0, 0, 1, 0, -10, 0, 0, 0, 1,
       ])
       // 3 faces sharing edge (0,1) -> non-manifold edge; plus 1 collinear/zero-area triangle (0, 0, 1)
-      const indices = new Uint32Array([
-        0, 1, 2,
-        0, 1, 3,
-        0, 1, 4,
-        0, 0, 1,
-      ])
+      const indices = new Uint32Array([0, 1, 2, 0, 1, 3, 0, 1, 4, 0, 0, 1])
       const diag = inspectMeshManifoldDiagnostics({
         vertices,
         indices,
@@ -259,8 +228,12 @@ describe('Tier IV Wave 2 Improvements', () => {
       })
       expect(md).toContain('# Assembly Interference Report')
       expect(md).toContain('1 colliding, 1 clear, 0 unknown')
-      expect(md).toContain('| `base/rotor` | `base/stator` | **overlap** | 14.2500 | 0.000 (collision) | `manifold_intersection` |')
-      expect(md).toContain('| `base/rotor` | `base/cover` | **no_volume_overlap** | 0.0000 | 1.750 | `disjoint_or_touching_bounds` |')
+      expect(md).toContain(
+        '| `base/rotor` | `base/stator` | **overlap** | 14.2500 | 0.000 (collision) | `manifold_intersection` |',
+      )
+      expect(md).toContain(
+        '| `base/rotor` | `base/cover` | **no_volume_overlap** | 0.0000 | 1.750 | `disjoint_or_touching_bounds` |',
+      )
     })
   })
 })

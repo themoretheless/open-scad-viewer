@@ -3,13 +3,7 @@
  * Imports no production brep-topology, Worker protocol, or lineage modules.
  */
 
-export type Json =
-  | null
-  | boolean
-  | number
-  | string
-  | Json[]
-  | { readonly [key: string]: Json }
+export type Json = null | boolean | number | string | Json[] | { readonly [key: string]: Json }
 
 export type Snapshot = {
   readonly schema: string
@@ -65,13 +59,11 @@ export function applyPatch(
   const parts = patch.path
     .split('/')
     .slice(1)
-    .map((p) => p.replaceAll('~1', '/').replaceAll('~0', '~'))
+    .map(p => p.replaceAll('~1', '/').replaceAll('~0', '~'))
   let parent: Json = root
   for (let i = 0; i < parts.length - 1; i += 1) {
     const key = parts[i]!
-    parent = Array.isArray(parent)
-      ? parent[Number(key)]!
-      : (parent as { [key: string]: Json })[key]!
+    parent = Array.isArray(parent) ? parent[Number(key)]! : (parent as { [key: string]: Json })[key]!
   }
   const last = parts[parts.length - 1]!
   if (patch.op === 'add' || patch.op === 'replace') {

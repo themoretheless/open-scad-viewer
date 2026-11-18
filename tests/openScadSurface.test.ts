@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OpenScadProject } from '../src/services/openScadProject'
+import { OpenScadProject } from '../src/language/openScadProject'
 import {
   OPENSCAD_SURFACE_MAX_TRIANGLES,
   OpenScadSurfaceDataError,
@@ -8,10 +8,12 @@ import {
   parseOpenScadSurfaceDat,
   prepareOpenScadSurfaceAssets,
   triangulateOpenScadSurface,
-} from '../src/services/openScadSurface'
+} from '../src/language/openScadSurface'
 
-const RGBA_PNG_2X2 = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
-const GRAYSCALE16_PNG_2X2 = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACEAAAAAAHTY67AAAAEklEQVR4nGNg+M/IwPD/fwMDABACA3/NNNLvAAAAAElFTkSuQmCC'
+const RGBA_PNG_2X2 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
+const GRAYSCALE16_PNG_2X2 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACEAAAAAAHTY67AAAAEklEQVR4nGNg+M/IwPD/fwMDABACA3/NNNLvAAAAAElFTkSuQmCC'
 
 function bytes(base64: string): Uint8Array {
   return new Uint8Array(Buffer.from(base64, 'base64'))
@@ -27,12 +29,7 @@ function datFile(source: string) {
 
 describe('independent OpenSCAD surface assets', () => {
   it('parses whitespace DAT rows, comments, base depth, and center triangulation', () => {
-    const map = parseOpenScadSurfaceDat(datFile([
-      '# terrain',
-      ' -1\t0  1 ',
-      '',
-      ' 2 3\t4',
-    ].join('\n')))
+    const map = parseOpenScadSurfaceDat(datFile(['# terrain', ' -1\t0  1 ', '', ' 2 3\t4'].join('\n')))
 
     expect(map).toMatchObject({
       rows: 2,
@@ -76,31 +73,14 @@ describe('independent OpenSCAD surface assets', () => {
       ],
     })
     const prepared = await prepareOpenScadSurfaceAssets(project)
-    const normal = loadOpenScadSurfaceHeightMap(
-      project,
-      prepared,
-      'main.scad',
-      'assets/heightmap.png',
-      false,
-    ).map
-    const inverted = loadOpenScadSurfaceHeightMap(
-      project,
-      prepared,
-      'main.scad',
-      'assets/heightmap.png',
-      true,
-    ).map
+    const normal = loadOpenScadSurfaceHeightMap(project, prepared, 'main.scad', 'assets/heightmap.png', false).map
+    const inverted = loadOpenScadSurfaceHeightMap(project, prepared, 'main.scad', 'assets/heightmap.png', true).map
     const scale = 100 / 255
 
     ;[128 * scale, 64 * scale, 0, 255 * scale].forEach((expected, index) => {
       expect(normal.values[index]).toBeCloseTo(expected, 12)
     })
-    ;[
-      (1 - 128) * scale,
-      (1 - 64) * scale,
-      scale,
-      (1 - 255) * scale,
-    ].forEach((expected, index) => {
+    ;[(1 - 128) * scale, (1 - 64) * scale, scale, (1 - 255) * scale].forEach((expected, index) => {
       expect(inverted.values[index]).toBeCloseTo(expected, 12)
     })
     expect(normal.base).toBe(-1)
@@ -134,23 +114,27 @@ describe('independent OpenSCAD surface assets', () => {
       ],
     })
     const invalidPrepared = await prepareOpenScadSurfaceAssets(invalidProject)
-    expect(() => loadOpenScadSurfaceHeightMap(
-      invalidProject,
-      invalidPrepared,
-      'main.scad',
-      'assets/ragged.dat',
-      false,
-    )).toThrow(expect.objectContaining({
-      code: 'E_SURFACE_DAT_INVALID',
-      assetPath: 'assets/ragged.dat',
-    }))
-    expect(() => parseOpenScadSurfaceDat(datFile(
-      `${Array.from({ length: 4_097 }, () => '0').join(' ')}\n${Array.from({ length: 4_097 }, () => '0').join(' ')}`,
-    ))).toThrow(expect.objectContaining({
-      code: 'E_SURFACE_DIMENSION_LIMIT',
-      limit: 4_096,
-      actual: 4_097,
-    }))
+    expect(() =>
+      loadOpenScadSurfaceHeightMap(invalidProject, invalidPrepared, 'main.scad', 'assets/ragged.dat', false),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'E_SURFACE_DAT_INVALID',
+        assetPath: 'assets/ragged.dat',
+      }),
+    )
+    expect(() =>
+      parseOpenScadSurfaceDat(
+        datFile(
+          `${Array.from({ length: 4_097 }, () => '0').join(' ')}\n${Array.from({ length: 4_097 }, () => '0').join(' ')}`,
+        ),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'E_SURFACE_DIMENSION_LIMIT',
+        limit: 4_096,
+        actual: 4_097,
+      }),
+    )
 
     const overLimitMap = {
       rows: 500,

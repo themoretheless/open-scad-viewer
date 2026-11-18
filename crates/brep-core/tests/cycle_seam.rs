@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::{self, Limits, seam},
-};
+use brep_core::{Model, feature_ops::edge_partition::{self, Limits, seam}};
 #[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize};
 #[path = "common/closed_periodic_source.rs"]

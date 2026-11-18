@@ -2,10 +2,13 @@
 //!
 //! Routed by `geometry-bridge`: [`dispatch`] hands back operations this
 //! domain does not own.
+// Adapters turn bad input into typed errors instead of panicking (refactor plan L6).
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 pub(crate) use bridge_codec::{Error, Result, Routed, Value};
 
 mod drawing_pdf;
+mod drawing_views;
 pub mod bundled_font;
 pub mod svg;
 pub mod svg_css;
@@ -16,12 +19,24 @@ pub fn dispatch(v: Value) -> Routed {
     match bridge_codec::op(&v) {
         "svg_color_trace" => Routed::Handled((|| {
             let tree=svg::parse_tree(&bridge_codec::field::<String>(&v,"svg")?,96.,None)?;
-            svg_silhouette::color_contours(&tree,bridge_codec::field(&v,"widthMm")?,bridge_codec::field(&v,"heightMm")?,bridge_codec::field(&v,"resolution")?,bridge_codec::field(&v,"alpha")?,bridge_codec::field(&v,"colors")?,bridge_codec::field(&v,"ignoreWhite")?,bridge_codec::field(&v,"minArea")?)
+            svg_silhouette::color_contours(
+                &tree,
+                bridge_codec::field(&v, "widthMm")?,
+                bridge_codec::field(&v, "heightMm")?,
+                bridge_codec::field(&v, "resolution")?,
+                bridge_codec::field(&v, "alpha")?,
+                svg_silhouette::ColorTraceOptions {
+                    colors: bridge_codec::field(&v, "colors")?,
+                    ignore_white: bridge_codec::field(&v, "ignoreWhite")?,
+                    min_area: bridge_codec::field(&v, "minArea")?,
+                },
+            )
         })()),
         "drawing_pdf"=>Routed::Handled((|| {
             let bytes=drawing_pdf::generate(&bridge_codec::field::<Vec<String>>(&v,"sheets")?)?;
             value_codec::to_value(bytes).map_err(|e|bridge_codec::input(e.to_string()))
         })()),
+        "drawing_views" => Routed::Handled(drawing_views::run(&v)),
         "svg" => Routed::Handled(svg::dispatch(v)),
         _ => Routed::Unhandled(v),
     }

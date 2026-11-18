@@ -1,41 +1,51 @@
-import {describe, expect, it, vi} from 'vitest'
-import {buildBrepSemanticScene} from '../src/services/brepSemanticScene'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
-import {geometrySceneFromMeshes, meshesFromGeometryScene} from '../src/core/scene'
-import {isGeometryEvaluationResultPayload} from '../src/services/geometryWorkerProtocol'
-import {inspectNurbsBrep} from '../src/services/geometry/brep'
-import * as nativeExecutor from '../src/services/brepNativeExecutor'
-import {assertNativeReferenceCurrent, nativeFaceReference} from '../src/core/nativeGeometry'
+import { DisplayLevelService } from '../src/kernel/displayLevelService'
+import { describe, expect, it, vi } from 'vitest'
+import { buildBrepSemanticScene } from '../src/kernel/brepSemanticScene'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import { geometrySceneFromMeshes, meshesFromGeometryScene } from '../src/core/scene'
+import { isGeometryEvaluationResultPayload } from '../src/kernel/geometryWorkerProtocol'
+import { inspectNurbsBrep } from '../src/kernel/geometry/brep'
+import * as nativeExecutor from '../src/kernel/brepNativeExecutor'
+import { assertNativeReferenceCurrent, nativeFaceReference } from '../src/core/nativeGeometry'
 
 const header = '// @language openscad-viewer/brep-1\n'
 const lower = (source: string) => lowerOpenSCADToSemanticProgram(header + source)
-const policy = {quality: 'full' as const, segments: 8}
+const policy = { quality: 'full' as const, segments: 8 }
 
 describe('real B-rep SemanticProgram scene assembly', () => {
   it('displays a partial hollow torus with two holed caps and one shell', async () => {
-    const build = await buildBrepSemanticScene(lower('rotate_extrude(angle=90) translate([3,0,0]) difference(){circle(1);circle(0.5);}'), policy)
+    const build = await buildBrepSemanticScene(
+      lower('rotate_extrude(angle=90) translate([3,0,0]) difference(){circle(1);circle(0.5);}'),
+      policy,
+    )
     const geometry = JSON.parse(build.result.meshes[0].nativeGeometry!.geometryJson).geometry
     expect(geometry.shells).toHaveLength(1)
     expect(geometry.bodies[0].innerShells).toHaveLength(0)
-    expect(geometry.faces.filter((face:{holes:number[]})=>face.holes.length===1)).toHaveLength(2)
+    expect(geometry.faces.filter((face: { holes: number[] }) => face.holes.length === 1)).toHaveLength(2)
     expect(inspectNurbsBrep(geometry).topologyValid).toBe(true)
-    expect(Math.abs(build.result.volume/(1.125*Math.PI**2)-1)).toBeLessThan(0.05)
+    expect(Math.abs(build.result.volume / (1.125 * Math.PI ** 2) - 1)).toBeLessThan(0.05)
   })
   it('retains the cavity shell of a fully revolved annular profile', async () => {
-    const build = await buildBrepSemanticScene(lower('rotate_extrude() translate([3,0,0]) difference(){circle(1);circle(0.5);}'), policy)
+    const build = await buildBrepSemanticScene(
+      lower('rotate_extrude() translate([3,0,0]) difference(){circle(1);circle(0.5);}'),
+      policy,
+    )
     const geometry = JSON.parse(build.result.meshes[0].nativeGeometry!.geometryJson).geometry
     expect(geometry.bodies).toHaveLength(1)
     expect(geometry.bodies[0].innerShells).toHaveLength(1)
     expect(geometry.shells).toHaveLength(2)
     expect(inspectNurbsBrep(geometry).topologyValid).toBe(true)
-    expect(Math.abs(build.result.volume/(4.5*Math.PI**2)-1)).toBeLessThan(0.05)
+    expect(Math.abs(build.result.volume / (4.5 * Math.PI ** 2) - 1)).toBeLessThan(0.05)
   })
   it('revolves a clipped circular profile into a sphere with shared poles', async () => {
-    const build = await buildBrepSemanticScene(lower('rotate_extrude() intersection(){circle(1);translate([0,-2]) square([2,4]);}'), policy)
+    const build = await buildBrepSemanticScene(
+      lower('rotate_extrude() intersection(){circle(1);translate([0,-2]) square([2,4]);}'),
+      policy,
+    )
     const geometry = JSON.parse(build.result.meshes[0].nativeGeometry!.geometryJson).geometry
     expect(inspectNurbsBrep(geometry).topologyValid).toBe(true)
-    expect(geometry.vertices.filter((v: {point:number[]})=>v.point[0]===0 && v.point[1]===0)).toHaveLength(2)
-    expect(Math.abs(build.result.volume/(4*Math.PI/3)-1)).toBeLessThan(0.05)
+    expect(geometry.vertices.filter((v: { point: number[] }) => v.point[0] === 0 && v.point[1] === 0)).toHaveLength(2)
+    expect(Math.abs(build.result.volume / ((4 * Math.PI) / 3) - 1)).toBeLessThan(0.05)
   })
   it('displays a capped curved revolution while retaining native faces', async () => {
     const build = await buildBrepSemanticScene(lower('rotate_extrude(angle=90) translate([3,0,0]) circle(1);'), policy)
@@ -46,7 +56,7 @@ describe('real B-rep SemanticProgram scene assembly', () => {
     expect(inspectNurbsBrep(geometry).topologyValid).toBe(true)
     expect(mesh.faceIdsAuthoritative).toBe(true)
     expect(build.result.volume).toBeGreaterThan(0)
-    expect(Math.abs(build.result.volume / (1.5*Math.PI**2) - 1)).toBeLessThan(0.05)
+    expect(Math.abs(build.result.volume / (1.5 * Math.PI ** 2) - 1)).toBeLessThan(0.05)
   })
   it('retains distinct colored occurrences, authoritative faces and f64 snapshots through scene transport', async () => {
     const input = lower('color("red") translate([1,2,3]) cube([2,3,4]); color("blue") translate([8,0,0]) sphere(2);')
@@ -54,7 +64,10 @@ describe('real B-rep SemanticProgram scene assembly', () => {
     expect(build.result.meshes).toHaveLength(2)
     expect(build.outputs).toHaveLength(2)
     expect(new Set(build.outputs.map(o => o.entityId)).size).toBe(2)
-    expect(build.result.meshes.map(m => m.color)).toEqual([[1,0,0,1], [0,0,1,1]])
+    expect(build.result.meshes.map(m => m.color)).toEqual([
+      [1, 0, 0, 1],
+      [0, 0, 1, 1],
+    ])
     expect(build.result.meshes[0].provenance[0].source?.label).toBe('color()')
     expect(build.result.meshes[0].entityId).toBe(build.outputs[0].entityId)
     expect(isGeometryEvaluationResultPayload(structuredClone(build.result))).toBe(true)
@@ -68,13 +81,13 @@ describe('real B-rep SemanticProgram scene assembly', () => {
       expect(build.outputs[i].topologyFaceIds).not.toHaveLength(0)
     }
     const cube = JSON.parse(restored[0].nativeGeometry!.geometryJson).geometry
-    expect(cube.vertices.some((v: {point: number[]}) => JSON.stringify(v.point) === '[1,2,3]')).toBe(true)
+    expect(cube.vertices.some((v: { point: number[] }) => JSON.stringify(v.point) === '[1,2,3]')).toBe(true)
   })
 
   it('separates source, semantic, requested display, actual display and native geometry identities', async () => {
     const input = lower('sphere(2);')
-    const low = await buildBrepSemanticScene(input, {quality: 'preview', segments: 4})
-    const fine = await buildBrepSemanticScene(input, {quality: 'full', segments: 12})
+    const low = await buildBrepSemanticScene(input, { quality: 'preview', segments: 4 })
+    const fine = await buildBrepSemanticScene(input, { quality: 'full', segments: 12 })
     expect(low.attestation).toEqual(fine.attestation)
     expect(low.displayPolicyHash).not.toBe(fine.displayPolicyHash)
     expect(low.outputs[0].snapshotRevision).toBe(fine.outputs[0].snapshotRevision)
@@ -100,7 +113,7 @@ describe('real B-rep SemanticProgram scene assembly', () => {
     expect(build.result.surfaceArea).toBe(0)
     expect(build.result.warnings).toEqual([])
     expect(build.outputs).toHaveLength(1)
-    expect(build.outputs[0]).toMatchObject({empty: true, snapshotRevision: null, geometryAssetId: null})
+    expect(build.outputs[0]).toMatchObject({ empty: true, snapshotRevision: null, geometryAssetId: null })
     const noOutputs = await buildBrepSemanticScene(lower(''), policy)
     expect(noOutputs.outputs).toEqual([])
   })
@@ -108,37 +121,48 @@ describe('real B-rep SemanticProgram scene assembly', () => {
   it('fails atomically on cancellation, unsupported nodes and invalid display policy', async () => {
     const controller = new AbortController()
     controller.abort()
-    await expect(buildBrepSemanticScene(lower('cube(1);'), policy, {signal: controller.signal})).rejects.toMatchObject({code: 'E_SEMANTIC_ABORTED'})
-    await expect(buildBrepSemanticScene(lower('cube(1);hull(){sphere(1);translate([1,0,0])sphere(1);}'), policy)).rejects.toMatchObject({code: 'E_SEMANTIC_BACKEND_FAILURE'})
-    await expect(buildBrepSemanticScene(lower('cube(1);'), {...policy, segments: 33})).rejects.toThrow('1..32')
+    await expect(
+      buildBrepSemanticScene(lower('cube(1);'), policy, { signal: controller.signal }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_ABORTED' })
+    await expect(
+      buildBrepSemanticScene(lower('cube(1);hull(){sphere(1);translate([1,0,0])sphere(1);}'), policy),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE' })
+    await expect(buildBrepSemanticScene(lower('cube(1);'), { ...policy, segments: 33 })).rejects.toThrow('1..32')
     const recovered = await buildBrepSemanticScene(lower('cube(2);'), policy)
     expect(recovered.result.volume).toBeCloseTo(8)
   })
 
   it('enforces the display triangle budget across all individually valid outputs', async () => {
-    const display = {quality: 'full' as const, segments: 12}
+    const display = { quality: 'full' as const, segments: 12 }
     const single = await buildBrepSemanticScene(lower('sphere(1);'), display)
     const count = Math.floor(20_000 / (single.result.meshes[0].indices.length / 3)) + 1
-    await expect(buildBrepSemanticScene(lower(`for(i=[0:${count - 1}])translate([i*3,0,0])sphere(1);`), display))
-      .rejects.toThrow('20000 display triangles')
+    await expect(
+      buildBrepSemanticScene(lower(`for(i=[0:${count - 1}])translate([i*3,0,0])sphere(1);`), display),
+    ).rejects.toThrow('20000 display triangles')
   }, 20_000)
 
   it('refuses f64 geometry that collapses in the Float32 display representation', async () => {
-    await expect(buildBrepSemanticScene(lower('translate([1e5,0,0])cube(0.001);'), policy))
-      .rejects.toThrow(/Float32/)
+    await expect(buildBrepSemanticScene(lower('translate([1e5,0,0])cube(0.001);'), policy)).rejects.toThrow(/Float32/)
   })
 
   it('refuses newly merged shells even when their individual display triangles stay nondegenerate', async () => {
-    await expect(buildBrepSemanticScene(lower('union(){translate([999990,0,0])cube(1);translate([999991.01,0,0])cube(1);}'), {...policy, segments: 1}))
-      .rejects.toThrow(/merge in Float32/)
+    await expect(
+      buildBrepSemanticScene(lower('union(){translate([999990,0,0])cube(1);translate([999991.01,0,0])cube(1);}'), {
+        ...policy,
+        segments: 1,
+      }),
+    ).rejects.toThrow(/merge in Float32/)
   })
 
   it('binds native selections to semantic occurrence identity across unrelated equal geometry', async () => {
     const first = (await buildBrepSemanticScene(lower('cube(1);'), policy)).result.meshes[0]
-    const second = (await buildBrepSemanticScene(lower('module changed(){cube(1);}changed();'), policy)).result.meshes[0]
+    const second = (await buildBrepSemanticScene(lower('module changed(){cube(1);}changed();'), policy)).result
+      .meshes[0]
     expect(first.entityId).not.toBe(second.entityId)
     expect(first.nativeGeometry!.revision).toBe(second.nativeGeometry!.revision)
-    expect(() => assertNativeReferenceCurrent(second.nativeGeometry!, nativeFaceReference(first.nativeGeometry!, 0))).toThrow(/stale/)
+    expect(() =>
+      assertNativeReferenceCurrent(second.nativeGeometry!, nativeFaceReference(first.nativeGeometry!, 0)),
+    ).toThrow(/stale/)
   })
 
   it('does not publish if cancellation arrives while releasing committed native snapshots', async () => {
@@ -146,14 +170,62 @@ describe('real B-rep SemanticProgram scene assembly', () => {
     const execute = nativeExecutor.executeBrepNativeProgram
     const spy = vi.spyOn(nativeExecutor, 'executeBrepNativeProgram').mockImplementation(async (input, control) => {
       const result = await execute(input, control)
-      return {...result, dispose: async () => {
-        await result.dispose()
-        controller.abort()
-      }}
+      return {
+        ...result,
+        dispose: async () => {
+          await result.dispose()
+          controller.abort()
+        },
+      }
     })
     try {
-      await expect(buildBrepSemanticScene(lower('cube(1);'), policy, {signal: controller.signal}))
-        .rejects.toMatchObject({code: 'E_SEMANTIC_ABORTED'})
-    } finally { spy.mockRestore() }
+      await expect(
+        buildBrepSemanticScene(lower('cube(1);'), policy, { signal: controller.signal }),
+      ).rejects.toMatchObject({ code: 'E_SEMANTIC_ABORTED' })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+
+describe('certified display levels on B-rep scene bodies', () => {
+  it('publishes no levels; the level service derives ordered levels from the snapshot and they still pass transport', async () => {
+    const build = await buildBrepSemanticScene(lower('cylinder(h=4, r=2);'), policy)
+    const [mesh] = build.result.meshes
+    expect(mesh.lods).toBeUndefined()
+    expect(mesh.nativeGeometry?.kind).toBe('brep')
+    const service = new DisplayLevelService()
+    const summary = service.summary(mesh.geometryAssetId!, mesh.nativeGeometry!.geometryJson)
+    expect(summary?.length).toBe(3)
+    const lods = summary!.map((entry, i) => {
+      const level = service.level(mesh.geometryAssetId!, mesh.nativeGeometry!.geometryJson, i)
+      expect(level.indices.length).toBe(entry.triangleCount * 3)
+      expect(level.faceIds.length).toBe(entry.triangleCount)
+      expect(level.vertices.length).toBe(entry.vertexCount * 6)
+      if (i) expect(entry.errorUpper).toBeLessThan(summary![i - 1].errorUpper)
+      if (i) expect(entry.triangleCount).toBeGreaterThan(summary![i - 1].triangleCount)
+      return {
+        vertices: level.vertices,
+        indices: level.indices,
+        edgeIndices: level.edgeIndices,
+        faceIds: level.faceIds,
+        bvh: level.bvh,
+        triangleCount: entry.triangleCount,
+        errorUpper: entry.errorUpper,
+        provenance: [{ ...mesh.provenance[0], triangleEnd: entry.triangleCount }],
+      }
+    })
+    const withLevels = { ...build.result, meshes: [{ ...mesh, lods }] }
+    expect(isGeometryEvaluationResultPayload(withLevels)).toBe(true)
+    const [restored] = meshesFromGeometryScene(geometrySceneFromMeshes(withLevels.meshes))
+    expect(restored.lods).toBe(lods)
+  })
+
+  it('has no levels for planar bodies, which one level shows exactly', async () => {
+    const build = await buildBrepSemanticScene(lower('cube([2,3,4]);'), policy)
+    const [mesh] = build.result.meshes
+    expect(mesh.lods).toBeUndefined()
+    expect(new DisplayLevelService().summary(mesh.geometryAssetId!, mesh.nativeGeometry!.geometryJson)).toBeNull()
+    expect(isGeometryEvaluationResultPayload(build.result)).toBe(true)
   })
 })

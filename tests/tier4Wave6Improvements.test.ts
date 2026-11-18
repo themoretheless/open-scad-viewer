@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateIso286HoleBasisFit } from '../src/services/drawingSheets'
-import { computeMeshTriangleQualitySummary } from '../src/services/meshInspection'
-import { auditGcodePrintability } from '../src/services/gcodePreviewGeometry'
-import { evaluateMechanismMobility3d } from '../src/services/cadJoints'
+import { evaluateIso286HoleBasisFit } from '../src/app/drawingSheets'
+import { computeMeshTriangleQualitySummary } from '../src/kernel/meshInspection'
+import { auditGcodePrintability } from '../src/fabrication/gcodePreviewGeometry'
+import { evaluateMechanismMobility3d } from '../src/kernel/cadJoints'
 
 describe('Tier IV Wave 6 Improvements', () => {
   describe('drawingSheets evaluateIso286HoleBasisFit', () => {
@@ -65,11 +65,7 @@ describe('Tier IV Wave 6 Improvements', () => {
     it('normalizes an equilateral triangle to aspect ratio 1.0 and computes exact area', () => {
       const side = 10
       const height = (side * Math.sqrt(3)) / 2
-      const vertices = new Float32Array([
-        0, 0, 0,
-        side, 0, 0,
-        side / 2, height, 0,
-      ])
+      const vertices = new Float32Array([0, 0, 0, side, 0, 0, side / 2, height, 0])
       const indices = new Uint32Array([0, 1, 2])
 
       const quality = computeMeshTriangleQualitySummary({ vertices, indices })
@@ -89,22 +85,8 @@ describe('Tier IV Wave 6 Improvements', () => {
       // Triangle 1: Right triangle base 20, height 1 (hypotenuse = sqrt(401), area = 10)
       // Triangle 2: Collinear degenerate triangle (0,0,0) -> (5,0,0) -> (10,0,0)
       const hEq = Math.sqrt(3)
-      const vertices = [
-        0, 0, 0,
-        2, 0, 0,
-        1, hEq, 0,
-        0, 0, 0,
-        20, 0, 0,
-        0, 1, 0,
-        0, 0, 0,
-        5, 0, 0,
-        10, 0, 0,
-      ]
-      const indices = [
-        0, 1, 2,
-        3, 4, 5,
-        6, 7, 8,
-      ]
+      const vertices = [0, 0, 0, 2, 0, 0, 1, hEq, 0, 0, 0, 0, 20, 0, 0, 0, 1, 0, 0, 0, 0, 5, 0, 0, 10, 0, 0]
+      const indices = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 
       const summary = computeMeshTriangleQualitySummary({ vertices, indices })
       expect(summary.triangleCount).toBe(3)

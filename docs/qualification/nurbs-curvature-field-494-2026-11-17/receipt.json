@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0494",
+  "testedBase": "c8f5b72047f28358a4e2d6fc7f2555ca6aa2f522",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 42,
+  "scope": [
+    "Elevate clamped NURBS curves with exact homogeneous B\u00e9zier arithmetic and full definition proof.",
+    "Extract B\u00e9zier spans in exact homogeneous arithmetic, elevate each, and store the joined net with one rational gauge. Verify identity on the actual output bits."
+  ],
+  "logSha256": "bfec676836a30d8ef46cc3db01f65ba4c39e27b84df108ac1410bf35173c197f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "9ecbf710ececb560facdbcc21cabe3872fa3b388edd1faeb2f0ed096ec33dda6",
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "9231b253491d39f55cdd169cf42c6513bb45668672991af542241c7670d4c0e7",
+    "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs": "e372bd626340dc2a60d1e9a970a726f1fe4000db559790812106838e9639c7b3"
+  }
+}

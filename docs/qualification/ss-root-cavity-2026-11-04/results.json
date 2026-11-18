@@ -1,0 +1,68 @@
+{
+  "tested_base": "440099e80f1ce4d1df0436d3b35dd1b244c76198",
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "c6e40c300e4f40c7fe436d1480525a639e1a5b2977d4a9011f37494903cc235b",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "3cae4344555c883e5fe593e213c2924a739de78ef5d2050bc2f7803fd912e1b0",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "562f0bf6c8af827d28d0c6e0af8a343a6e0d3870458edcfc65b9e14324e13930",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "f365947635e5ce3273870f71d9f1612125255a9099aeb5bbd1f684aa6be80025",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "7b60958a771287ecc963993841b10915874db9b96f2fc56c5e0c936baccddd37",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume.rs": "d668072c2b25dc86d890fa3b2d9801cf526f246a0575032c364b2660cda4c886",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "91d767cb9125e9dda58d1469bedb8e6bea8146fa7cf618e7358efbac54b6a626",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity.rs": "652151b47a14031e4756184ef7c956c012c6c1828ca91b0023e1aa6eed7f1c11",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity/coverage.rs": "5c144d5d4bf6ee4bb0d96effb075ef80561f923fc81aab91516d8b02d78e24ca",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity/topology.rs": "b1b1f0bab175955d8f98e2c34e782629f32f1c3e5183e40fa59f5fb369fe83ad",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/source_box.rs": "22f2171b2346f0c9cddd9f397ad8e3e714267198cb62c938861e3802f41e2cea"
+  },
+  "tests_passed": 20,
+  "suites": {
+    "mixed_cut_regions": 3,
+    "mixed_root_cut": 3,
+    "nested_census_arrangement": 5,
+    "root_model": 2,
+    "ray_parity": 7
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0
+  },
+  "scope": "Source-bound whole-image material proofs and a single original-host/paired-root-inner BRep cavity with complete directed covers and independent volume",
+  "positive_cases": [
+    "genus-zero root cavity",
+    "genus-one annular root cavity",
+    "original U reflection for both"
+  ],
+  "coverage_cells_per_direction": [
+    2,
+    6
+  ],
+  "default_result_absolute_error": 0.001,
+  "measured_volume_bounds": {
+    "inner_cavity": [
+      26.996715021744155,
+      26.99721477861792
+    ],
+    "annular_cavity": [
+      26.99234129436827,
+      26.992840837788645
+    ]
+  },
+  "negative_cases": [
+    "escaping source image and original UV domain",
+    "source span work exhausted",
+    "caller source mutation cannot change owned source",
+    "coverage work exhausted",
+    "requested result volume accuracy unproved",
+    "disjoint host geometrically contradicted",
+    "material and void boundary point queries stay unresolved"
+  ],
+  "remaining": [
+    "general mixed shell forest and multiple nested cavities",
+    "arbitrary SS singular/coincident branches and periodic/pole arrangements",
+    "full finite-face trim and cross-source rim stitching",
+    "all-face-pair intersecting Boolean and healing",
+    "full lineage and construction history",
+    "actual bridge/WASM delivery",
+    "broader quad/offset/fillet/G2 parity requires its own full audit"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

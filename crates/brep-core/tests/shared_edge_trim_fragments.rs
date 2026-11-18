@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::{self, Limits},
-};
+use brep_core::{Model, feature_ops::edge_partition::{self, Limits}};
 use brep_topology::CoedgeTrim;
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};

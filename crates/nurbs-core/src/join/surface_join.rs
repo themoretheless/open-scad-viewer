@@ -1,57 +1,13 @@
 //! Boundary-position bounds under an explicit affine parameter correspondence.
-use crate::distance_bounds::{Interval as I, box_distance};
-use crate::{Result, check, surface::Surface, surface_distance::rectangle_bounds};
-#[derive(Clone, Copy, Debug)]
-pub enum Boundary {
-    UMin,
-    UMax,
-    VMin,
-    VMax,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Decision {
-    WithinTolerance,
-    CorrespondenceExceedsTolerance,
-    Unresolved,
-}
+use crate::distance_bounds::box_distance;
+use crate::{Result, check, surface::Surface};
+pub use crate::analysis::surface_boundary::{Boundary, Decision};
+pub(crate) use crate::analysis::surface_boundary::boundary_box;
 #[derive(Clone, Debug)]
 pub struct Report {
     pub bounds: [f64; 2],
     pub decision: Decision,
     pub cells: usize,
-}
-fn domain(s: &Surface) -> [[f64; 2]; 2] {
-    [
-        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
-        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
-    ]
-}
-pub(crate) fn boundary_box(s: &Surface, edge: Boundary, t: [f64; 2], reverse: bool) -> Result<Vec<I>> {
-    let d = domain(s);
-    let (fixed, max) = match edge {
-        Boundary::UMin => (0, false),
-        Boundary::UMax => (0, true),
-        Boundary::VMin => (1, false),
-        Boundary::VMax => (1, true),
-    };
-    let free = 1 - fixed;
-    let t = I::new(t[0], t[1])?;
-    let t = if reverse {
-        I::point(1.).sub(t)?.intersect(0., 1.)?
-    } else {
-        t
-    };
-    let x = I::point(d[free][0])
-        .add(I::point(d[free][1]).sub(I::point(d[free][0]))?.mul(t)?)?
-        .intersect(d[free][0], d[free][1])?;
-    let mut rectangle = d;
-    rectangle[free] = [x.lo, x.hi];
-    let endpoint = d[fixed][usize::from(max)];
-    rectangle[fixed] = [endpoint, endpoint];
-    rectangle_bounds(s, rectangle)?
-        .into_iter()
-        .map(|b| I::new(b[0], b[1]))
-        .collect()
 }
 /// Sufficient identity of the represented, clamped boundary curves under the
 /// same normalized parameter. No rounded knot normalization or sampled equality.

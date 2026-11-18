@@ -153,3 +153,194 @@ fn unclamped_support_and_three_coordinates_are_retained() {
     assert_eq!(c.knots, vec![-1., 0., 0.5, 1., 2.]);
     assert_eq!(c.control_points[1], vec![1., 3., 1.]);
 }
+
+#[test]
+fn exact_split_preserves_the_absolute_clock_and_rational_seam() {
+    use nurbs_core::editing::{exact_curve_merge::merge, exact_knot_insertion::split};
+    let mut source = line(3., vec![1., 2.]);
+    source.knots = vec![-2., -2., 6., 6.];
+    let report = split(&source, 2., 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let [left, right] = report.pieces.unwrap();
+    assert_eq!(left.domain(), [-2., 2.]);
+    assert_eq!(right.domain(), [2., 6.]);
+    assert_eq!(left.control_points[1], vec![2., 0.]);
+    assert_eq!(left.weights[1], right.weights[0]);
+    assert_eq!(
+        merge(&left, &right).unwrap().curve.unwrap(),
+        insert(&source, 2., 1, 1_000_000).unwrap().curve
+    );
+    assert!(
+        split(&source, 2., report.work_used)
+            .unwrap()
+            .pieces
+            .is_some()
+    );
+    assert!(
+        split(&source, 2., report.work_used - 1)
+            .unwrap()
+            .pieces
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_split_reuses_a_saturated_knot_and_refuses_unstoreable_seams() {
+    use nurbs_core::editing::{exact_curve_merge::merge, exact_knot_insertion::split};
+    let source = quadratic();
+    let refined = insert(&source, 2., 2, 1_000_000).unwrap().curve;
+    let [left, right] = split(&refined, 2., 1_000_000).unwrap().pieces.unwrap();
+    assert_eq!(merge(&left, &right).unwrap().curve.unwrap(), refined);
+    let report = split(&line(2., vec![1., 2.]), 0.5, 1_000_000).unwrap();
+    assert!(report.pieces.is_none());
+    assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
+    assert!(split(&source, -2., 1_000_000).is_err());
+}
+
+#[test]
+fn exact_restriction_matches_original_geometry_with_both_absolute_cuts() {
+    use nurbs_core::editing::exact_knot_insertion::restrict;
+    let source = quadratic();
+    let report = restrict(&source, [0., 4.], 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), [0., 4.]);
+    assert_eq!(curve.knots, [0., 0., 0., 4., 4., 4.]);
+    assert_eq!(
+        curve.control_points,
+        [vec![0.5, 0.375], vec![1., 0.625], vec![1.5, 0.375]]
+    );
+    for parameter in [0., 1., 2., 3., 4.] {
+        assert_eq!(
+            curve.evaluate(parameter).unwrap().point,
+            source.evaluate(parameter).unwrap().point
+        );
+    }
+    assert_eq!(
+        restrict(&source, [0., 4.], report.work_used).unwrap().curve,
+        Some(curve)
+    );
+    assert!(
+        restrict(&source, [0., 4.], report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_restriction_returns_full_domain_and_rejects_a_late_unstoreable_cut_atomically() {
+    use nurbs_core::editing::exact_knot_insertion::{restrict, split};
+    let source = line(3., vec![1., 2.]);
+    assert_eq!(
+        restrict(&source, [0., 1.], 1).unwrap().curve,
+        Some(source.clone())
+    );
+    assert!(split(&source, 0.5, 1_000_000).unwrap().pieces.is_some());
+    let refused = restrict(&source, [0.5, 0.75], 1_000_000).unwrap();
+    assert_eq!(refused.refusal, Some(Refusal::NotRepresentable));
+    assert!(refused.curve.is_none());
+    assert!(restrict(&source, [0.5, 0.5], 1_000_000).is_err());
+}
+
+#[test]
+fn exact_partition_shares_weighted_seams_and_preserves_absolute_domains() {
+    use nurbs_core::editing::{exact_curve_merge::merge_chain, exact_knot_insertion::partition};
+    let source = quadratic();
+    let report = partition(&source, &[0., 2., 4.], 1_000_000).unwrap();
+    let pieces = report.pieces.unwrap();
+    assert_eq!(
+        pieces.iter().map(Curve::domain).collect::<Vec<_>>(),
+        [[-2., 0.], [0., 2.], [2., 4.], [4., 6.]]
+    );
+    for pair in pieces.windows(2) {
+        assert_eq!(
+            pair[0].control_points.last(),
+            pair[1].control_points.first()
+        );
+        assert_eq!(pair[0].weights.last(), pair[1].weights.first());
+    }
+    let merged = merge_chain(&pieces).unwrap().curve.unwrap();
+    for parameter in [-2., -1., 0., 1., 2., 3., 4., 5., 6.] {
+        assert_eq!(
+            merged.evaluate(parameter).unwrap().point,
+            source.evaluate(parameter).unwrap().point
+        );
+    }
+    assert_eq!(
+        partition(&source, &[0., 2., 4.], report.work_used)
+            .unwrap()
+            .pieces,
+        Some(pieces)
+    );
+    assert!(
+        partition(&source, &[0., 2., 4.], report.work_used - 1)
+            .unwrap()
+            .pieces
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_partition_reports_late_refusal_and_rejects_invalid_cut_order() {
+    use nurbs_core::editing::exact_knot_insertion::partition;
+    let source = line(3., vec![1., 2.]);
+    let report = partition(&source, &[0.5, 0.75], 1_000_000).unwrap();
+    assert_eq!(report.refused_cut, Some(1));
+    assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
+    assert!(report.pieces.is_none());
+    for cuts in [[0.5, 0.5], [0.75, 0.5], [0.5, 1.0], [0.5, f64::NAN]] {
+        assert!(partition(&source, &cuts, 1_000_000).is_err());
+    }
+    assert_eq!(
+        partition(&source, &[], 1).unwrap().pieces,
+        Some(vec![source])
+    );
+}
+
+#[test]
+fn exact_elevation_preserves_weighted_bezier_and_absolute_domain() {
+    use nurbs_core::editing::exact_knot_insertion::elevate_exact;
+    let mut source = line(3., vec![1., 2.]);
+    source.knots = vec![-2., -2., 6., 6.];
+    let report = elevate_exact(&source, 2, 1_000_000).unwrap();
+    let elevated = report.curve.unwrap();
+    assert_eq!(elevated.domain(), [-2., 6.]);
+    assert_eq!(
+        elevated.control_points,
+        [vec![0., 0.], vec![2., 0.], vec![3., 0.]]
+    );
+    assert_eq!(elevated.weights, [0.5, 0.75, 1.]);
+    assert_eq!(
+        elevate_exact(&source, 2, report.work_used).unwrap().curve,
+        Some(elevated)
+    );
+    assert!(
+        elevate_exact(&source, 2, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_elevation_refines_multiple_spans_and_refuses_unstoreable_poles() {
+    use nurbs_core::editing::exact_knot_insertion::elevate_exact;
+    let source = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 2., 2., 2.],
+        control_points: [0., 3., 6., 9.].map(|x| vec![x, 0.]).to_vec(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = elevate_exact(&source, 3, 1_000_000).unwrap();
+    let elevated = report.curve.unwrap();
+    assert_eq!(elevated.knots, [0., 0., 0., 0., 1., 1., 1., 2., 2., 2., 2.]);
+    assert_eq!(
+        elevated.control_points,
+        [0., 2., 3.5, 4.5, 5.5, 7., 9.].map(|x| vec![x, 0.])
+    );
+    let refused = elevate_exact(&line(2., vec![1., 2.]), 2, 1_000_000).unwrap();
+    assert_eq!(refused.refusal, Some(Refusal::NotRepresentable));
+    assert!(refused.curve.is_none());
+}

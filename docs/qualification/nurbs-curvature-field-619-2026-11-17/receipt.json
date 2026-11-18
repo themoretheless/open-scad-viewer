@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0619",
+  "testedBase": "111030715877d0c659e34699fbe754b6a89c066f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 210,
+  "scope": [
+    "Enclose the ordered eigenvalues of the complete patch-set central inertia tensor.",
+    "Bracket analytic principal moments with off-diagonal coupling and withhold spectral bounds when complete central inertia is unavailable."
+  ],
+  "logSha256": "602756e7b1ead1c9cf87945174bfde67645e8e9a7700b464ba7c2f1b6486fe74",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "e16803b64eed2b3447a7f519664311d3d4b7d84b0c7ab970b54bb6a8eee08112",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "23bb7cb27231a3adf9817a9282bd470bd150eaa3d2db03184718e9a3c71f1249"
+  }
+}

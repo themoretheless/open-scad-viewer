@@ -195,14 +195,7 @@ function intervalSign(value: Interval): FilterSign {
   return 'indeterminate'
 }
 
-export function orient2dFilter(
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  cx: number,
-  cy: number,
-): FilterSign {
+export function orient2dFilter(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): FilterSign {
   const Ax = outwardInterval(ax)
   const Ay = outwardInterval(ay)
   const Bx = outwardInterval(bx)
@@ -230,17 +223,12 @@ export function orient3dFilter(
     subInterval(mulInterval(ac[2], ad[0]), mulInterval(ac[0], ad[2])),
     subInterval(mulInterval(ac[0], ad[1]), mulInterval(ac[1], ad[0])),
   ]
-  return intervalSign(addInterval(
-    addInterval(mulInterval(ab[0], cross[0]), mulInterval(ab[1], cross[1])),
-    mulInterval(ab[2], cross[2]),
-  ))
+  return intervalSign(
+    addInterval(addInterval(mulInterval(ab[0], cross[0]), mulInterval(ab[1], cross[1])), mulInterval(ab[2], cross[2])),
+  )
 }
 
-export function compareSquaredDistanceFilter(
-  p: readonly number[],
-  q: readonly number[],
-  radius: number,
-): FilterSign {
+export function compareSquaredDistanceFilter(p: readonly number[], q: readonly number[], radius: number): FilterSign {
   checkDistanceDimension(p, q)
   if (radius < 0) throw new Error('radius must be nonnegative')
   const bound = outwardInterval(radius)
@@ -254,11 +242,7 @@ export function compareSquaredDistanceFilter(
 
 export type ModelClass = 'Coincident' | 'Separate' | 'Indeterminate'
 
-export function classifyResidual(
-  residual: number,
-  onTol: number,
-  clearTol: number,
-): ModelClass {
+export function classifyResidual(residual: number, onTol: number, clearTol: number): ModelClass {
   if (!Number.isFinite(onTol) || !Number.isFinite(clearTol) || !(onTol > 0) || !(clearTol > onTol)) {
     throw new Error('invalid tolerance profile')
   }

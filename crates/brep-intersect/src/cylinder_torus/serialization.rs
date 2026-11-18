@@ -15,6 +15,17 @@ impl value_codec::Serialize for CylinderTorusComponent {
             } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
                 "normal":normal,"cylinderUv":cylinder_uv,"torusUv":torus_uv,
                 "maxSampleResidual":max_sample_residual}),
+            Self::Traced {
+                pieces,
+                distance_bound,
+                spans,
+                complete,
+                cylinder_uv,
+                torus_uv,
+                lift_deviation,
+            } => value_codec::json!({"kind":"traced","pieces":pieces,
+                "distanceBound":distance_bound,"spans":spans,"complete":complete,
+                "cylinderUv":cylinder_uv,"torusUv":torus_uv,"liftDeviation":lift_deviation}),
         }
     }
 }

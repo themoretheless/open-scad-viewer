@@ -111,7 +111,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
         0 => geometry(dispatch(value)),
         1 | 2 | 3 | 4 | 5 | 10 | 11 => language_abi(op, value),
         6 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let surface: Surface =
                     value_codec::from_value(value).map_err(|e| input(e.to_string()))?;
                 let sampler = SurfaceSampler::new(&surface)?;
@@ -124,12 +124,12 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
                         s[id] = Some(sampler);
                     }
                     encode(id)
-                })?
-            };
+                })
+            })();
             geometry(result)
         }
         7 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let id = field::<usize>(&value, "id")?;
                 let u = field(&value, "u")?;
                 let v = field(&value, "v")?;
@@ -140,28 +140,28 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
                         .and_then(Option::as_ref)
                         .ok_or_else(|| input("Surface evaluator is disposed"))?;
                     encode(sampler.evaluate(u, v)?)
-                })?
-            };
+                })
+            })();
             geometry(result)
         }
         8 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let id = field::<usize>(&value, "id")?;
                 SAMPLERS.with(|s| {
                     if let Some(s) = s.borrow_mut().get_mut(id) {
                         *s = None
                     }
                 });
-                Value::Null
-            };
+                Ok(Value::Null)
+            })();
             geometry(result)
         }
         9 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let id = field::<u32>(&value, "id")?;
                 let mesh = mesh::export_buffers(id)?;
-                encode(Box::into_raw(Box::new(mesh)) as usize)?
-            };
+                encode(Box::into_raw(Box::new(mesh)) as usize)
+            })();
             geometry(result)
         }
         _ => geometry(Err(input("Unknown ABI operation"))),
@@ -566,6 +566,42 @@ pub fn abi_solid_analysis_cancel(job: u32) {
     mesh_analysis::cancel_solid_analysis(job);
 }
 
+/// Unified long-job protocol (start/step/cancel). Start a cooperative n-ary
+/// mesh Boolean over `ids_len` retained solid handles; `op` is 0 union,
+/// 1 difference, 2 intersection. Returns a job handle; no Boolean work runs yet.
+/// # Safety
+/// `ids_ptr..ids_ptr + 4 * ids_len` must be a live caller-owned allocation.
+pub unsafe fn abi_job_boolean_start(ids_ptr: usize, ids_len: usize, op: u32) -> u64 {
+    if ids_len == 0 || ids_len > 20_000 {
+        return packed(geometry(Err(input("Invalid Boolean operand count"))));
+    }
+    let op = match op {
+        0 => mesh::BooleanJobOp::Union,
+        1 => mesh::BooleanJobOp::Difference,
+        2 => mesh::BooleanJobOp::Intersection,
+        _ => return packed(geometry(Err(input("Invalid Boolean operation")))),
+    };
+    let ids = unsafe { read_u32(ids_ptr, ids_len) };
+    packed(geometry(crate::kernel_jobs::start_boolean(&ids, op).and_then(encode)))
+}
+
+/// Start cooperative render preparation of a retained solid. Completion
+/// returns an array-result handle laid out like `abi_render_mesh`.
+pub fn abi_job_render_start(id: u32, crease_cosine: f64) -> u64 {
+    packed(geometry(crate::kernel_jobs::start_render(id, crease_cosine).and_then(encode)))
+}
+
+/// Advance a job by at most `budget` cooperative units; returns progress or
+/// the completed result (which consumes the job).
+pub fn abi_job_step(job: u32, budget: u32) -> u64 {
+    packed(geometry(crate::kernel_jobs::step(job, budget)))
+}
+
+/// Cancel a job and free all of its state. Idempotent.
+pub fn abi_job_cancel(job: u32) {
+    crate::kernel_jobs::cancel(job)
+}
+
 /// Read one pointer/length/diagnostic slot of a stored analysis result.
 /// # Safety
 /// The handle must reference a live array result (BVH, edges, placement, or export).
@@ -581,12 +617,16 @@ pub unsafe fn abi_array_free(handle: usize) {
 }
 
 mod manifold;
-pub use manifold::{abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean};
+pub use manifold::{abi_manifold_abi_version,abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean,abi_manifold_diagnostics,DIAGNOSTICS_DEFAULT_WORK,MANIFOLD_ABI_VERSION,MANIFOLD_REPORT_SCHEMA,ManifoldReportSchema};
 
 
 #[cfg(test)]
 #[path = "tests/abi.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/abi_manifold_contract.rs"]
+mod manifold_contract_tests;
 
 /// Decode bounded mesh bytes without expanding each byte through the value codec.
 /// # Safety

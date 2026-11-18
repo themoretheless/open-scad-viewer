@@ -27,9 +27,9 @@ fn moving_longitudinal_guide_twist_affine_bound_covers_retained_interpolation() 
         .with_affine_laws(&axes, &center).unwrap();
     let level = sweep.preview_at(16).unwrap();
     assert!(level.report.accepted, "{:?}", level.report);
-    assert!(level.report.authored_frames_applied && level.report.orientation_guide_applied
-        && level.report.affine_laws_applied);
-    let upper = level.report.certified_error_upper.unwrap();
+    assert!(level.report.applied.authored_frames && level.report.applied.orientation_guide
+        && level.report.applied.affine_laws);
+    let upper = level.report.error.certified_upper.unwrap();
     // Independent closed form: the rail offset is X, perpendicular to the
     // tilted axis (0,f/2,1). Twist rotates X into its right-handed side.
     // Point checks falsify the certificate; they do not constitute its proof.
@@ -73,7 +73,7 @@ fn guide_affine_generation_certifies_actual_rail_orientation() {
     let sweep=Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_orientation_guide(&guide).unwrap().with_affine_laws(&axes,&center).unwrap();
     assert!(!sweep.preview_at(1).unwrap().report.accepted);
     let level=sweep.preview_at(16).unwrap();assert!(level.report.accepted,"{:?}",level.report);
-    assert!(level.report.affine_laws_applied && level.report.orientation_guide_applied && !level.report.authored_frames_applied);
+    assert!(level.report.applied.affine_laws && level.report.applied.orientation_guide && !level.report.applied.authored_frames);
     let reverse_order=Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_affine_laws(&axes,&center).unwrap().with_orientation_guide(&guide).unwrap().sections_at(16).unwrap();
     assert_eq!(level.sections.last().unwrap()[0].control_points,reverse_order.last().unwrap()[0].control_points);
     for framed in [
@@ -81,10 +81,10 @@ fn guide_affine_generation_certifies_actual_rail_orientation() {
         Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_orientation_guide(&guide).unwrap().with_frame_laws(&longitudinal,&transverse).unwrap().with_affine_laws(&axes,&center).unwrap(),
     ] {
         let combined=framed.preview_at(16).unwrap();
-        assert!(combined.report.accepted && combined.report.authored_frames_applied && combined.report.orientation_guide_applied && combined.report.affine_laws_applied);
+        assert!(combined.report.accepted && combined.report.applied.authored_frames && combined.report.applied.orientation_guide && combined.report.applied.affine_laws);
         for (a,b) in combined.sections.iter().zip(&level.sections) {for (a,b) in a.iter().zip(b) {assert_eq!(a.control_points,b.control_points);}}
     }
-    let bound=level.report.certified_error_upper.unwrap();
+    let bound=level.report.error.certified_upper.unwrap();
     for i in 0..16 {for local in [0.,0.25,0.5,0.75,1.] {let f=(i as f64+local)/16.;let h=(1.+f*f).sqrt();
         for u in [0.,0.3,0.7,1.] {let r=0.1+0.1*u;let ideal=[(r*(1.+f)-f*f*f)/h,(r*(1.+f)*f+f*f)/h,10.*f+0.25*f];
             let a=level.sections[i][0].evaluate(u).unwrap().point;let b=level.sections[i+1][0].evaluate(u).unwrap().point;
@@ -108,10 +108,10 @@ fn combined_authored_frame_affine_laws_certify_actual_interpolation() {
     let sweep=Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_frame_laws(&longitudinal,&transverse).unwrap().with_affine_laws(&axes,&center).unwrap();
     assert!(!sweep.preview_at(1).unwrap().report.accepted);
     let level=sweep.preview_at(16).unwrap();assert!(level.report.accepted,"{:?}",level.report);
-    assert!(level.report.affine_laws_applied && level.report.authored_frames_applied);
+    assert!(level.report.applied.affine_laws && level.report.applied.authored_frames);
     let reverse_order=Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_affine_laws(&axes,&center).unwrap().with_frame_laws(&longitudinal,&transverse).unwrap().sections_at(16).unwrap();
     assert_eq!(level.sections.last().unwrap()[0].control_points,reverse_order.last().unwrap()[0].control_points);
-    let bound=level.report.certified_error_upper.unwrap();
+    let bound=level.report.error.certified_upper.unwrap();
     for i in 0..16 {for local in [0.,0.25,0.5,0.75,1.] {let f=(i as f64+local)/16.;let h=(1.+f*f).sqrt();
         for u in [0.,0.3,0.7,1.] {let r=0.1+0.1*u;let ideal=[(r*(1.+f)-f*f*f)/h,(r*(1.+f)*f+f*f)/h,10.*f+0.25*f];
             let a=level.sections[i][0].evaluate(u).unwrap().point;let b=level.sections[i+1][0].evaluate(u).unwrap().point;
@@ -133,12 +133,12 @@ fn authored_frame_generation_refines_and_certifies_original_profile_interpolatio
     let sweep=Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_frame_laws(&longitudinal,&transverse).unwrap();
     assert!(!sweep.preview_at(1).unwrap().report.accepted);
     let local=sweep.transport_certificate.profile_local_enclosure([0.1,0.,0.]).unwrap().unwrap();
-    sweep.transport_certificate.interpolation_upper_authored_frame(0,[0.,1./16.],local,&longitudinal,&transverse,&scale,&twist,64).unwrap().unwrap();
-    sweep.transport_certificate.station_local_authored_frame(0,[0.,0.],local,&longitudinal,&transverse,&scale,&twist,64).unwrap().unwrap();
+    sweep.transport_certificate.interpolation_upper_authored_frame_affine(0,[0.,1./16.],local,crate::sweeps::progressive_miter::frame_certificate::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },64).unwrap().unwrap();
+    sweep.transport_certificate.station_local_authored_frame_affine(0,[0.,0.],local,crate::sweeps::progressive_miter::frame_certificate::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },64).unwrap().unwrap();
     let level=sweep.preview_at(16).unwrap();
-    assert!(level.report.accepted && level.report.authored_frames_applied,"{:?}",level.report);
-    assert!(level.report.wall_regularity_certified.unwrap());
-    let bound=level.report.certified_error_upper.unwrap();
+    assert!(level.report.accepted && level.report.applied.authored_frames,"{:?}",level.report);
+    assert!(level.report.regularity.wall_certified.unwrap());
+    let bound=level.report.error.certified_upper.unwrap();
     for i in 0..16 {
         for local in [0.,0.25,0.5,0.75,1.] {
             let f=(i as f64+local)/16.;let h=(1.+f*f).sqrt();
@@ -170,7 +170,7 @@ fn affine_closed_miter_checks_law_closure_and_last_retained_interval(){
     let opts=Options {normal:[0.,0.,1.],closed:true,miter_limit:2.,initial_steps:1,max_steps:16,max_deviation:0.01};
     let sweep=Sweep::new(&profiles,&points,&scale,&twist,opts).unwrap().with_affine_laws(&axes,&center).unwrap();
     let level=sweep.preview_at(8).unwrap();
-    assert!(level.report.accepted && level.report.affine_laws_applied);
+    assert!(level.report.accepted && level.report.applied.affine_laws);
     assert_eq!(level.sections[0][0].control_points,level.sections.last().unwrap()[0].control_points);
     let mut altered=level.sections.clone();
     altered.last_mut().unwrap()[0].control_points[0][2]+=0.125;
@@ -195,10 +195,10 @@ fn affine_generator_retains_laws_and_certifies_entire_interpolated_profile(){
     let mut opts=options(false);opts.normal=[1.,0.,0.];opts.max_deviation=0.01;
     let sweep=Sweep::new(&profiles,&points,&scale,&twist,opts).unwrap().with_affine_laws(&axes,&center).unwrap();
     let level=sweep.preview_at(8).unwrap();
-    assert!(level.report.affine_laws_applied && level.report.accepted);
-    let bound=level.report.certified_error_upper.unwrap();
+    assert!(level.report.applied.affine_laws && level.report.accepted);
+    let bound=level.report.error.certified_upper.unwrap();
     assert!(bound<opts.max_deviation);
-    assert_eq!(level.report.continuous_error_upper,bound);
+    assert_eq!(level.report.error.continuous_upper,bound);
     for (i,pair) in level.sections.windows(2).enumerate(){
         for j in 0..=10 {let local=j as f64/10.;let f=(i as f64+local)/8.;
             for u in [0.,0.25,0.5,0.75,1.] {
@@ -237,7 +237,7 @@ fn local_phase_hulls_prevent_whole_turn_probe_aliasing() {
     opts.max_deviation = 1e-3;
     let sweep = Sweep::new(&profiles, &points, &scale, &twist, opts).unwrap();
     let level = sweep.preview_at(1).unwrap();
-    assert!(level.report.sampled_control_deviation < 1e-12);
+    assert!(level.report.error.sampled_control_deviation < 1e-12);
     assert!(!level.report.phase_resolved && !level.report.accepted);
     let result = approximate(&profiles, &points, &scale, &twist, opts).unwrap();
     assert!(result.levels.last().unwrap().accepted);
@@ -282,15 +282,15 @@ fn real_arithmetic_bound_covers_nondyadic_rational_law_interpolation() {
                     let error =
                         norm(std::array::from_fn(|k| p[k] - (1. - f) * a[k] - f * b[k]));
                     assert!(
-                        error <= level.report.continuous_error_upper + 1e-12,
+                        error <= level.report.error.continuous_upper + 1e-12,
                         "{error} exceeds {}",
-                        level.report.continuous_error_upper
+                        level.report.error.continuous_upper
                     );
                 }
             }
         }
     }
-    assert!(level.report.continuous_error_upper >= level.report.sampled_control_deviation);
+    assert!(level.report.error.continuous_upper >= level.report.error.sampled_control_deviation);
 }
 #[test]
 fn discontinuous_laws_are_refused_and_internal_corners_use_lipschitz_bound() {
@@ -308,7 +308,7 @@ fn discontinuous_laws_are_refused_and_internal_corners_use_lipschitz_bound() {
     let twist = scalar(0., 0.);
     let sweep = Sweep::new(&profiles, &points, &scale, &twist, opts).unwrap();
     let level = sweep.preview_at(1).unwrap();
-    assert!(level.report.continuous_error_upper >= 0.2);
+    assert!(level.report.error.continuous_upper >= 0.2);
     let certified = sweep.certify_level(1, &level.sections, 10, 4).unwrap();
     assert_eq!(certified.status, scalar_certificate::Status::Certified);
     assert!(certified.error_upper.unwrap() >= 0.2);
@@ -358,10 +358,10 @@ fn unresolved_transport_limit_cannot_promote_a_zero_error_level() {
         approximate(&profiles, &points, &scalar(1., 1.), &scalar(0., 0.), opts).unwrap();
     assert!(approximation.sections.is_none());
     let r = approximation.levels.last().unwrap();
-    assert!(r.sampled_control_deviation < 1e-12 && r.phase_resolved);
-    assert!(!r.frame_transport_certified && !r.accepted);
+    assert!(r.error.sampled_control_deviation < 1e-12 && r.phase_resolved);
+    assert!(!r.frame_transport.certified && !r.accepted);
     assert_eq!(
-        r.frame_transport_reason,
+        r.frame_transport.reason,
         Some("transport-enclosure-unresolved")
     );
 }
@@ -586,13 +586,31 @@ fn retained_level_certificate_counts_stored_error_and_discards_partial_budget() 
     assert_eq!(separation.boundary_only_pairs.len(), 2);
     assert!(separation.all_pairs_compatible && separation.unresolved.is_empty());
     let geometry = sweep
-        .inspect_wall_geometry(&sweep.sections_at(3).unwrap(), 0., 1e-6, 100, 100, 63)
+        .inspect_wall_geometry(
+            &sweep.sections_at(3).unwrap(),
+            crate::sweep_wall_audit::WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 1e-6,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 63,
+            },
+        )
         .unwrap();
     assert!(geometry.charts_and_pairs_certified, "{geometry:?}");
     assert!(geometry.declared_boundaries_c0);
     assert_eq!(geometry.c0_boundaries, vec![[0, 1], [1, 2]]);
     let geometry = sweep
-        .inspect_wall_geometry(&sweep.sections_at(3).unwrap(), 0., 1e-6, 0, 100, 63)
+        .inspect_wall_geometry(
+            &sweep.sections_at(3).unwrap(),
+            crate::sweep_wall_audit::WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 1e-6,
+                max_injectivity_cells: 0,
+                max_pairs: 100,
+                max_pair_cells: 63,
+            },
+        )
         .unwrap();
     assert!(!geometry.charts_and_pairs_certified);
     assert_eq!(geometry.injectivity_cells, 0);
@@ -690,7 +708,16 @@ fn certified_closed_rational_levels_cover_profile_interior_and_cyclic_ownership(
         let regularity = sweep.certify_wall_regularity(&sections, 10000).unwrap();
         if steps == 8 {
             let geometry = sweep
-                .inspect_wall_geometry(&sections, 0., 1e-6, 0, 10000, 256)
+                .inspect_wall_geometry(
+                    &sections,
+                    crate::sweep_wall_audit::WallAuditLimits {
+                        clearance: 0.,
+                        distance_tolerance: 1e-6,
+                        max_injectivity_cells: 0,
+                        max_pairs: 10000,
+                        max_pair_cells: 256,
+                    },
+                )
                 .unwrap();
             assert!(!geometry.charts_and_pairs_certified);
             assert_eq!(geometry.unresolved_charts.len(), sections.len() - 1);
@@ -767,8 +794,8 @@ fn admission_requires_certified_rounding_bound_even_when_samples_match() {
     o.max_deviation = 1e-12;
     let sweep = Sweep::new(&profiles, &points, &scale, &twist, o).unwrap();
     let level = sweep.preview_at(1).unwrap();
-    assert!(level.report.sampled_control_deviation < 1e-12);
-    assert!(level.report.certified_error_upper.unwrap() > o.max_deviation);
+    assert!(level.report.error.sampled_control_deviation < 1e-12);
+    assert!(level.report.error.certified_upper.unwrap() > o.max_deviation);
     assert!(!level.report.accepted);
     o.max_deviation = 1e-4;
     let level = Sweep::new(&profiles, &points, &scale, &twist, o)
@@ -776,7 +803,7 @@ fn admission_requires_certified_rounding_bound_even_when_samples_match() {
         .preview_at(1)
         .unwrap();
     assert!(level.report.accepted);
-    assert!(level.report.certified_error_upper.unwrap() <= o.max_deviation);
+    assert!(level.report.error.certified_upper.unwrap() <= o.max_deviation);
 }
 #[test]
 fn unproved_profile_regularity_refuses_even_a_certified_zero_error_level() {
@@ -791,7 +818,7 @@ fn unproved_profile_regularity_refuses_even_a_certified_zero_error_level() {
         .unwrap()
         .preview_at(1)
         .unwrap();
-    assert!(level.report.certified_error_upper.unwrap() < o.max_deviation);
-    assert!(!level.report.profile_regularity_certified && !level.report.accepted);
-    assert_eq!(level.report.wall_regularity_certified, None);
+    assert!(level.report.error.certified_upper.unwrap() < o.max_deviation);
+    assert!(!level.report.regularity.profile_certified && !level.report.accepted);
+    assert_eq!(level.report.regularity.wall_certified, None);
 }

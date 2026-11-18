@@ -1,13 +1,15 @@
-import { nextTick, onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import { useMainSolidTask } from '../features/useMainSolidTask'
-import { createSolidPreviewWorker } from '../services/solidPreviewWorker'
+import { createSolidPreviewWorker } from '../kernel/solidPreviewWorker'
 import { downloadBlob, sanitizeFileName } from '../appHelpers'
 import type { MeshData } from '../core/mesh'
-import type { BuildPerformanceSample } from '../services/buildPerformance'
-import { detectMeshImportFormat, type MeshExportFormat } from '../services/meshFormats'
-import { SOURCE_FILE_EXTENSION, withSourceExtension } from '../services/rushFrontendDetect'
-import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
-import { encodeWorkspaceShare } from '../services/workspaceShare'
+import type { BuildPerformanceSample } from '../app/buildPerformance'
+import { detectMeshImportFormat, type MeshExportFormat } from '../exchange/meshFormats'
+import type { ExportMeshQualityPreset } from '../exchange/meshConvert'
+import { SOURCE_FILE_EXTENSION, withSourceExtension } from '../language/rushFrontendDetect'
+import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../app/workspaceDocument'
+import { encodeWorkspaceShare } from '../app/workspaceShare'
+import { encodeGlb } from '../exchange/glbExport'
 
 export interface UseWorkspaceFileActionsOptions {
   code: Ref<string>
@@ -15,6 +17,8 @@ export interface UseWorkspaceFileActionsOptions {
   error: Ref<string>
   canExport: ComputedRef<boolean>
   sceneMeshes: ComputedRef<MeshData[]>
+  /** Meshes shown in the viewport (hidden and non-isolated bodies removed); defaults to every scene mesh. */
+  visibleMeshes?: () => readonly MeshData[]
   buildCounters: ShallowRef<{
     builds: number
     superseded: number
@@ -44,8 +48,8 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   const fileInputRef = ref<HTMLInputElement | null>(null)
   const convertInputRef = ref<HTMLInputElement | null>(null)
   const exportDialogOpen = ref(false)
-  const exportDialogRef = ref<HTMLElement | null>(null)
   const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
+  const exportMeshQuality = ref<ExportMeshQualityPreset>('high')
   const conversionTask = useMainSolidTask(createSolidPreviewWorker())
   const conversionOperation = ref<'convert' | 'export'>('convert')
   const { pending: conversionPending, progress: conversionProgress } = conversionTask
@@ -55,12 +59,9 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     conversionTask.dispose()
   })
 
+  /** Initial focus, the Tab trap and focus restore belong to the shared `Modal`. */
   function openExportDialog() {
     exportDialogOpen.value = true
-    void nextTick(() => {
-      const dialog = exportDialogRef.value
-      ;(dialog?.querySelector<HTMLElement>('input:checked') ?? dialog?.querySelector<HTMLElement>('button'))?.focus()
-    })
   }
 
   async function confirmExport() {
@@ -108,8 +109,13 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
       await conversionTask.run(
         { kind: 'meshConvert', fileName: file.name, input, target, options: {} },
         result => {
-          downloadBlob(new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }), result.fileName)
-          showNotice(`${translate('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`)
+          downloadBlob(
+            new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }),
+            result.fileName,
+          )
+          showNotice(
+            `${translate('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`,
+          )
         },
         caught => showNotice(caught instanceof Error ? caught.message : 'Conversion failed'),
       )
@@ -152,14 +158,24 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
 
   async function exportScene(target: MeshExportFormat, sourceExtension: RegExp) {
     if (disposed || conversionPending.value || !canExport.value) return
-    const mesh = sceneMeshes.value, sourceName = fileName.value
+    const mesh = sceneMeshes.value,
+      sourceName = fileName.value
     conversionOperation.value = 'export'
     await conversionTask.run(
-      { kind: 'meshExport', mesh, target, options: {} },
+      {
+        kind: 'meshExport',
+        mesh,
+        target,
+        options: {
+          quality: exportMeshQuality.value,
+          source: code.value,
+        },
+      },
       artifact => {
+        const stem = sanitizeFileName(sourceName).replace(sourceExtension, '') || 'model'
         downloadBlob(
           new Blob([artifact.data.slice().buffer as ArrayBuffer], { type: artifact.mimeType }),
-          sanitizeFileName(sourceName).replace(sourceExtension, '.' + artifact.extension),
+          `${stem}.${artifact.extension}`,
         )
         showNotice(translate('exported'))
       },
@@ -168,7 +184,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   }
 
   function exportAdditionalMesh() {
-    return exportScene(additionalExportFormat.value, /\.scad$/i)
+    return exportScene(additionalExportFormat.value, SOURCE_FILE_EXTENSION)
   }
 
   function exportStl() {
@@ -198,7 +214,17 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   }
 
   function exportObj() {
-    return exportScene('obj', /\.scad$/i)
+    return exportScene('obj', SOURCE_FILE_EXTENSION)
+  }
+
+  /** Binary glTF of the visible bodies with their colours and materials. */
+  function exportGlb() {
+    if (disposed || !canExport.value) return
+    const meshes = options.visibleMeshes?.() ?? sceneMeshes.value
+    if (!meshes.length) return
+    const data = encodeGlb(meshes)
+    const stem = sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '') || 'model'
+    downloadBlob(new Blob([data.buffer as ArrayBuffer], { type: 'model/gltf-binary' }), `${stem}.glb`)
   }
 
   async function shareSource() {
@@ -217,8 +243,8 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     fileInputRef,
     convertInputRef,
     exportDialogOpen,
-    exportDialogRef,
     additionalExportFormat,
+    exportMeshQuality,
     conversionPending,
     conversionProgress,
     conversionOperation,
@@ -237,6 +263,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     exportStl,
     exportPerformance,
     exportObj,
+    exportGlb,
     shareSource,
   }
 }

@@ -73,9 +73,11 @@ impl Sweep<'_> {
                         fraction,
                         local,
                         source,
-                        self.scale,
-                        self.twist,
-                        self.affine_laws,
+                        crate::sweeps::progressive_miter::frame_certificate::StationLaws {
+                            scale: self.scale,
+                            twist: self.twist,
+                            affine: self.affine_laws,
+                        },
                         law_cells,
                     )?
                 } else {
@@ -83,9 +85,11 @@ impl Sweep<'_> {
                         edge,
                         fraction,
                         point,
-                        self.scale,
-                        self.twist,
-                        self.affine_laws,
+                        crate::sweeps::progressive_miter::frame_certificate::StationLaws {
+                            scale: self.scale,
+                            twist: self.twist,
+                            affine: self.affine_laws,
+                        },
                         law_cells,
                     )?
                 };

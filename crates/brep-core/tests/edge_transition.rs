@@ -1,8 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_transition::{self, Limits, RadiusPatch},
-    watertight,
-};
+use brep_core::{Model, feature_ops::edge_transition::{self, Limits, RadiusPatch}, watertight};
 use nurbs_core::{
     curve::Curve,
     curve_surface_agreement as agreement,

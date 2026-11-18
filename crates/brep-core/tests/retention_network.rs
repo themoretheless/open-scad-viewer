@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    face_cut::{self, FaceRetention, OwnedCut},
-};
+use brep_core::{Model, face_cut::{self, FaceRetention, OwnedCut}};
 use nurbs_core::curve::Curve;
 
 fn diagonal(model: &Model, face: usize) -> OwnedCut {

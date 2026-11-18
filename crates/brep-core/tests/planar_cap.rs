@@ -31,14 +31,34 @@ fn general_planar_cap_retains_cubic_boundary_and_proves_trim_region() {
             }
         })
         .collect();
-    let report =
-        planar_cap::build_general(&[wire.clone()], 2., 1e-8, 1000, 10000, 100000, 10000).unwrap();
+    let report = planar_cap::build_general(
+        &[wire.clone()],
+        2.,
+        1e-8,
+        planar_cap::GeneralCapLimits {
+            max_trim_pairs: 1000,
+            max_trim_cells: 10000,
+            max_domain_cells: 100000,
+            max_agreement_cells: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(report.trim.valid, Some(true));
     assert_eq!(report.trim.winding, vec![Some(1)]);
     assert_eq!(report.cap.unwrap().boundaries, vec![wire.clone()]);
     assert!(report.agreement_cells <= 10000);
     let sheet =
-        planar_cap::build_sheet_general(&[wire.clone()], 2., 1e-8, 1000, 10000, 100000, 10000)
+        planar_cap::build_sheet_general(
+            &[wire.clone()],
+            2.,
+            1e-8,
+            planar_cap::GeneralCapLimits {
+                max_trim_pairs: 1000,
+                max_trim_cells: 10000,
+                max_domain_cells: 100000,
+                max_agreement_cells: 10000,
+            },
+        )
             .unwrap();
     let model = sheet.model.unwrap();
     model.validate().unwrap();
@@ -50,19 +70,50 @@ fn general_planar_cap_retains_cubic_boundary_and_proves_trim_region() {
         assert_eq!(&edge.curve, original);
     }
     assert!(
-        planar_cap::build_sheet_general(&[wire.clone()], 2., 1e-8, 1, 1, 1, 10000)
+        planar_cap::build_sheet_general(
+            &[wire.clone()],
+            2.,
+            1e-8,
+            planar_cap::GeneralCapLimits {
+                max_trim_pairs: 1,
+                max_trim_cells: 1,
+                max_domain_cells: 1,
+                max_agreement_cells: 10000,
+            },
+        )
             .unwrap()
             .model
             .is_none()
     );
     let reversed = wire.iter().rev().map(|c| c.reverse().unwrap()).collect();
     assert!(
-        planar_cap::build_general(&[reversed], 2., 1e-8, 1000, 10000, 100000, 10000)
+        planar_cap::build_general(
+            &[reversed],
+            2.,
+            1e-8,
+            planar_cap::GeneralCapLimits {
+                max_trim_pairs: 1000,
+                max_trim_cells: 10000,
+                max_domain_cells: 100000,
+                max_agreement_cells: 10000,
+            },
+        )
             .unwrap()
             .cap
             .is_none()
     );
-    let unresolved = planar_cap::build_general(&[wire], 2., 1e-8, 1, 1, 1, 10000).unwrap();
+    let unresolved = planar_cap::build_general(
+        &[wire],
+        2.,
+        1e-8,
+        planar_cap::GeneralCapLimits {
+            max_trim_pairs: 1,
+            max_trim_cells: 1,
+            max_domain_cells: 1,
+            max_agreement_cells: 10000,
+        },
+    )
+    .unwrap();
     assert!(unresolved.cap.is_none());
 }
 fn rectangle(bounds: [f64; 4], reverse: bool) -> Vec<Curve> {
@@ -228,8 +279,18 @@ fn general_curved_cap_qualifies_holes_and_refuses_outside_hole() {
     let hole = bowed_rectangle([1., 2., 1., 2.], true);
     let loops = vec![outer.clone(), hole];
     let before = loops.clone();
-    let report =
-        planar_cap::build_sheet_general(&loops, 2., 1e-8, 10000, 100000, 1000000, 10000).unwrap();
+    let report = planar_cap::build_sheet_general(
+        &loops,
+        2.,
+        1e-8,
+        planar_cap::GeneralCapLimits {
+            max_trim_pairs: 10000,
+            max_trim_cells: 100000,
+            max_domain_cells: 1000000,
+            max_agreement_cells: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(report.trim.valid, Some(true));
     assert_eq!(report.trim.winding, vec![Some(1), Some(-1)]);
     let model = report.model.unwrap();
@@ -245,7 +306,15 @@ fn general_curved_cap_qualifies_holes_and_refuses_outside_hole() {
         .map(|wire| wire.iter().rev().map(|c| c.reverse().unwrap()).collect())
         .collect();
     let oriented = planar_cap::build_sheet_general_oriented(
-        &backwards, 2., 1e-8, 10000, 100000, 1000000, 10000,
+        &backwards,
+        2.,
+        1e-8,
+        planar_cap::GeneralCapLimits {
+            max_trim_pairs: 10000,
+            max_trim_cells: 100000,
+            max_domain_cells: 1000000,
+            max_agreement_cells: 10000,
+        },
     )
     .unwrap();
     assert!(oriented.orientation_reversed);
@@ -259,7 +328,17 @@ fn general_curved_cap_qualifies_holes_and_refuses_outside_hole() {
 
     let outside = bowed_rectangle([5., 6., 1., 2.], true);
     let rejected =
-        planar_cap::build_sheet_general(&[outer, outside], 2., 1e-8, 10000, 100000, 1000000, 10000)
+        planar_cap::build_sheet_general(
+            &[outer, outside],
+            2.,
+            1e-8,
+            planar_cap::GeneralCapLimits {
+                max_trim_pairs: 10000,
+                max_trim_cells: 100000,
+                max_domain_cells: 1000000,
+                max_agreement_cells: 10000,
+            },
+        )
             .unwrap();
     assert_eq!(rejected.trim.valid, Some(false));
     assert!(rejected.model.is_none());

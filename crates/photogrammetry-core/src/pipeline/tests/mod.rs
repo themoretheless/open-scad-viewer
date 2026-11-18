@@ -90,19 +90,16 @@ fn optimize_twice(
     options: &bundle::BundleOptions,
 ) -> ReconstructionReport {
     let mut report = ReconstructionReport::default();
-    let mut positions = Vec::new();
-    let mut observations = Vec::new();
+    let mut scratch = BundleScratch::default();
     for _ in 0..2 {
         optimize_geometry(
-            cameras,
-            points,
+            GeometryState { cameras, points },
             features,
             [0, 1],
             options,
             &mut report,
             &mut |_, _, _| true,
-            &mut positions,
-            &mut observations,
+            &mut scratch,
         )
         .unwrap();
     }

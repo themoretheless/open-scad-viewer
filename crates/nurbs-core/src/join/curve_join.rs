@@ -1,10 +1,9 @@
 //! Geometric endpoint continuity from outward original rational jets.
 use crate::{
-    check,
+    Result, check,
     curve::Curve,
     curve_jets,
-    distance_bounds::{box_distance, Interval as I},
-    Result,
+    distance_bounds::{Interval as I, box_distance},
 };
 #[derive(Clone, Copy)]
 pub enum Endpoint {
@@ -63,6 +62,20 @@ fn jets(c: &Curve, end: Endpoint, reference: bool) -> Result<Vec<Vec<I>>> {
         spans[0]
     };
     let mut j = curve_jets::endpoint(c, span, [c.knots[span], c.knots[span + 1]], last)?;
+    let domain = c.domain();
+    if !c.periodic
+        && c.knots[..=c.degree].iter().all(|&t| t == domain[0])
+        && c.knots[c.control_points.len()..]
+            .iter()
+            .all(|&t| t == domain[1])
+    {
+        // The clamped endpoint is literally its original Cartesian pole,
+        // regardless of rational gauge. Do not re-divide a tiny weight.
+        j[0] = c.control_points[if last { c.control_points.len() - 1 } else { 0 }]
+            .iter()
+            .map(|&v| I::point(v))
+            .collect();
+    }
     // Reference tangent exits its end; edited tangent enters its end.
     if reference != last {
         for v in &mut j[1] {
@@ -71,7 +84,54 @@ fn jets(c: &Curve, end: Endpoint, reference: bool) -> Result<Vec<Vec<I>>> {
     }
     Ok(j)
 }
-fn differential(j: &[Vec<I>]) -> Result<Option<(Vec<I>, Vec<I>)>> {
+fn axial_endpoint(c: &Curve, end: Endpoint) -> Option<usize> {
+    if c.periodic || c.degree == 0 {
+        return None;
+    }
+    let n = c.control_points.len();
+    let last = matches!(end, Endpoint::End);
+    let d = c.domain();
+    if !c.knots[..=c.degree].iter().all(|&t| t == d[0]) || !c.knots[n..].iter().all(|&t| t == d[1])
+    {
+        return None;
+    }
+    let count = (c.degree + 1).min(3);
+    let points = if last {
+        &c.control_points[n - count..]
+    } else {
+        &c.control_points[..count]
+    };
+    (0..points[0].len()).find(|&axis| {
+        (0..points[0].len()).all(|k| k == axis || points.iter().all(|p| p[k] == points[0][k]))
+    })
+}
+fn axial_direction(c: &Curve, end: Endpoint, reference: bool) -> Option<(usize, f64)> {
+    let axis = axial_endpoint(c, end)?;
+    let last = matches!(end, Endpoint::End);
+    let n = c.control_points.len();
+    let (a, b) = if last { (n - 2, n - 1) } else { (0, 1) };
+    let a = c.control_points[a][axis];
+    let b = c.control_points[b][axis];
+    let sign = if b > a {
+        1.
+    } else if b < a {
+        -1.
+    } else {
+        return None;
+    };
+    Some((axis, if reference != last { -sign } else { sign }))
+}
+fn differential(j: &[Vec<I>], axis: Option<(usize, f64)>) -> Result<Option<(Vec<I>, Vec<I>)>> {
+    if let Some((axis, sign)) = axis {
+        // Clamped original control identity: both endpoint derivatives lie on
+        // this coordinate axis, for ANY rational weights. The actual first
+        // derivative has the exact sign of the original adjacent pole
+        // difference: p*w1/w0/delta_u is strictly positive after validation.
+        // No near-zero component or sampled jet is rounded away.
+        let mut tangent = vec![I::point(0.); j[1].len()];
+        tangent[axis] = I::point(sign);
+        return Ok(Some((tangent, vec![I::point(0.); j[1].len()])));
+    }
     let speed = norm(&j[1])?;
     if speed.lo <= 0. {
         return Ok(None);
@@ -137,7 +197,10 @@ pub fn inspect(
         tangent_error: None,
         curvature_error: None,
     };
-    if let (Some((ta, ka)), Some((tb, kb))) = (differential(&a)?, differential(&b)?) {
+    if let (Some((ta, ka)), Some((tb, kb))) = (
+        differential(&a, axial_direction(reference, reference_end, true))?,
+        differential(&b, axial_direction(edited, edited_end, false))?,
+    ) {
         let tangent = error(&ta, &tb)?;
         let curvature = error(&ka, &kb)?;
         out.tangent_error = Some([tangent.lo, tangent.hi]);
@@ -154,4 +217,27 @@ pub fn inspect(
         };
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod axial_tests {
+    use super::*;
+    #[test]
+    fn only_exact_clamped_endpoint_jets_have_zero_normal_acceleration() {
+        let mut c = Curve::from_polyline(vec![vec![0.; 3], vec![1., 0., 0.], vec![2., 0., 0.]])
+            .unwrap()
+            .elevate(3)
+            .unwrap();
+        assert_eq!(axial_endpoint(&c, Endpoint::Start), Some(0));
+        c.control_points[1][1] = f64::from_bits(1);
+        assert_eq!(axial_endpoint(&c, Endpoint::Start), None);
+        c.control_points[1][1] = 0.;
+        c.control_points[1] = c.control_points[0].clone();
+        let j = jets(&c, Endpoint::Start, false).unwrap();
+        assert!(
+            differential(&j, axial_direction(&c, Endpoint::Start, false))
+                .unwrap()
+                .is_none()
+        );
+    }
 }

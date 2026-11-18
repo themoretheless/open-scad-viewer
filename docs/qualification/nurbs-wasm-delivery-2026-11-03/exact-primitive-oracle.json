@@ -1,0 +1,14 @@
+{
+  "acceptedWireDefinitions": 11,
+  "operations": 5,
+  "negativeControls": 8,
+  "definitionsSha256": "2db1454d84fa6d74bd688b8ba77e408fa05c59784318cea76c186f9134777a0d",
+  "oracleSources": {
+    "docs/qualification/nurbs-exact-conics-2026-11-03/exact_oracle.py": "2421d8acdc414558a34f530a5571696467a074d6320bcf64bb16b6c965dc8203",
+    "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py": "33b4ee1336e68d2ef2f1a218403502e3d0dd200cd1a46bb44c4e43bf0fe62f75",
+    "docs/qualification/nurbs-exact-tori-2026-11-03/exact_oracle.py": "50223e0c49c80b60f4430f1957df7a5c8b790b2e9c7ffdc4e3b10450026eee30",
+    "docs/qualification/nurbs-exact-frusta-2026-11-03/exact_oracle.py": "25cf425223c5ba5d348ae0e0403f97b3d25b136e50823b36fed08c0df0ecf0f9",
+    "docs/qualification/nurbs-exact-planar-regions-2026-11-03/exact_oracle.py": "850905ebd61e814a9b9fc88e79c4c85d3c47698b280703121a8b0a637840ca65"
+  },
+  "scope": "Actual serialized JSON geometry independently verified by exact Fraction full-domain primitive oracles against parsed input, plus source/metadata/authority/budget negative controls. No installed WASM, editor, STEP, B-rep or whole-app claim."
+}

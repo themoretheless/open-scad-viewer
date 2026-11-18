@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {dirname,join} from 'node:path'
 import {createHash} from 'node:crypto'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 
 // Authored curve inputs and QA only: Rust surface_sweep constructs every
 // retained surface, then Rust audits the complete multi-span seam collection.

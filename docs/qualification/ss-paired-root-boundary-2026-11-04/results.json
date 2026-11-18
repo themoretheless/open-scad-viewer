@@ -1,0 +1,26 @@
+{
+  "passed": 12,
+  "failed": 0,
+  "qualified_scope": "paired root-only embedded boundary sewing of genus zero and one, exact shared edge incidence, original U reversal, fresh census/sewing replay, rejection of unstitched original rims and holes",
+  "paired_root_boundary_embedded_proven": true,
+  "genus_zero_positive_qualified": true,
+  "genus_one_positive_qualified": true,
+  "reversed_original_uv_positive_qualified": true,
+  "outward_material_proven": false,
+  "mixed_solid_admitted": false,
+  "independent_output_volume_implemented": false,
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "general_boolean_complete": false,
+  "sources": {
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "cb375cf21bcd5e48615006d27233da0610c37a0731b637e9fa3d57641fdcb30b",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "2ed9e4f0b863e05c394866806d3242b06082fa9ee2b3544f96504679465546fb",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "6452c4b9b5b85fb61a056eb34dd057f5ea885dde004628a6e4137e2617796808",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "e9593159c384011d9605c07839f2392ca32e2d46e0e19e828b1beaf3b206778a",
+    "crates/brep-core/src/mixed_root_model.rs": "a52a8e2854aeb4e359a4875744cdf4e2b9820b151aca3c5f314d6122e5a5bfc3",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "f50ae917bf97d5d9262e2490214c3d9f889ee625cbebe58df28de2f75c4b7733",
+    "docs/design/ss-paired-root-boundary-progress-2026-11-04.md": "8c9ef2d704aff9fabc29fcbc39977b2d1ef6f384679c876158c08e4846965170",
+    "docs/design/ss-paired-root-volume-next-2026-11-04.md": "d3dfd333452380cb6323c7476e0610c0e6ff444944800fef6eaa25ac93d04f9a",
+    "docs/design/ss-nested-hole-progress-2026-11-04.md": "b0dbc587ed3e378a4a6c03701a669d381ac73f7deef6ffa0c6bc3b544d5f08bc"
+  }
+}

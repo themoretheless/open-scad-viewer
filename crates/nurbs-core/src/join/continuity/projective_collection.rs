@@ -85,9 +85,9 @@ fn inspect_collection(
         let mut nonlinear_scalar=super::station_scale::propose_station_scale_scalar(seam.normal_scale);
         let mut proof = if rational_proposal {
             super::exact_strip::inspect_station_projective_strip_jets(
-                &patches[seam.patches[0]],&patches[seam.patches[1]],
-                &seam.boundaries[0],&seam.boundaries[1],seam.order,seam.normal_scale,
-                super::station_scale::propose_station_scale_scalar(seam.normal_scale),remaining,
+                super::exact_strip::StripPair { a: &patches[seam.patches[0]], b: &patches[seam.patches[1]], ab: &seam.boundaries[0], bb: &seam.boundaries[1] },
+                super::exact_strip::StripJetRequest { order: seam.order, scale: seam.normal_scale, max_work: remaining },
+                super::station_scale::propose_station_scale_scalar(seam.normal_scale),
             )?
         }else{inspect(
             &patches[seam.patches[0]], &patches[seam.patches[1]],
@@ -108,8 +108,9 @@ fn inspect_collection(
                 nonlinear_scale=ratio;nonlinear_scalar=scalar.clone();
                 let prior_work=proof.work;
                 proof=super::exact_strip::inspect_station_projective_strip_jets(
-                    &patches[seam.patches[0]],&patches[seam.patches[1]],
-                    &seam.boundaries[0],&seam.boundaries[1],seam.order,ratio,scalar,remaining-prior_work,
+                    super::exact_strip::StripPair { a: &patches[seam.patches[0]], b: &patches[seam.patches[1]], ab: &seam.boundaries[0], bb: &seam.boundaries[1] },
+                    super::exact_strip::StripJetRequest { order: seam.order, scale: ratio, max_work: remaining-prior_work },
+                    scalar,
                 )?;
                 proof.work+=prior_work;
             }
@@ -122,8 +123,9 @@ fn inspect_collection(
                 nonlinear_scale=seam.normal_scale;nonlinear_scalar=scalar.clone();
                 let prior_work=proof.work;
                 proof=super::exact_strip::inspect_station_projective_strip_jets(
-                    &patches[seam.patches[0]],&patches[seam.patches[1]],
-                    &seam.boundaries[0],&seam.boundaries[1],seam.order,seam.normal_scale,scalar,remaining-prior_work,
+                    super::exact_strip::StripPair { a: &patches[seam.patches[0]], b: &patches[seam.patches[1]], ab: &seam.boundaries[0], bb: &seam.boundaries[1] },
+                    super::exact_strip::StripJetRequest { order: seam.order, scale: seam.normal_scale, max_work: remaining-prior_work },
+                    scalar,
                 )?;
                 proof.work+=prior_work;
             }
@@ -134,8 +136,10 @@ fn inspect_collection(
             && matches!(proof.reason,"constant-projective-jet-relation-different"|"bspline-projective-jet-relation-different"|"unsupported-common-bspline-basis") {
             let prior=proof.work;
             proof=super::exact_strip::inspect_nonlinear_station_jets(
-                &patches[seam.patches[0]],&patches[seam.patches[1]],
-                &seam.boundaries[0],&seam.boundaries[1],seam.order,nonlinear_scale,nonlinear_scalar,remaining-prior)?;
+                super::exact_strip::StripPair { a: &patches[seam.patches[0]], b: &patches[seam.patches[1]], ab: &seam.boundaries[0], bb: &seam.boundaries[1] },
+                super::exact_strip::StripJetRequest { order: seam.order, scale: nonlinear_scale, max_work: remaining-prior },
+                nonlinear_scalar,
+            )?;
             proof.work+=prior;
         }
         check(proof.work<=remaining,"Invalid native candidate work accounting")?;

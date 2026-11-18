@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0448",
+  "testedBase": "ded4c0a7c2164e6456d0119181cf5c663fbd3615",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 220,
+  "scope": [
+    "Enclose distance traveled by the number of solids covering the path.",
+    "Accumulate exact parameter fractions by coverage count, then independently enclose each resulting sum of Euclidean lengths."
+  ],
+  "logSha256": "6f40be5ff7cfc6b8dc3756893985503793131fa21a38321e1de8fa51090b4527",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "64682f24dbfb16d92f1164db24aeda2b245c06515100da17a60c15a88a93844d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "dfe318d5c19114f57f4e43908e788bfdaa0b86993ef11947307c1b50eb33b909",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "3c8474c1025e9842d33d8a5691ecfd863e8e1714625b0ac0e868b44b403cf308",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

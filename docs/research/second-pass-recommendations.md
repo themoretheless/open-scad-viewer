@@ -9,6 +9,8 @@ inspector с двусторонней связью кода и результа�
 Plasticity. SCAD-код остаётся источником истины; viewport помогает выбрать,
 объяснить, измерить и безопасно подготовить изменение.
 
+Актуализировано 2026-11-13: удалены 2 завершённых пункта (section caps из #5, 3MF из #13); ссылки на код обновлены под `src/language`, `src/kernel`, `src/render`.
+
 ## Статус реализации на 2026-07-18
 
 Первый vertical slice выполнен. В Worker теперь строятся transferable BVH и
@@ -26,9 +28,9 @@ palette с RU/EN aliases, MRU и причинами недоступности. 
 только из актуальной full-сборки.
 
 Из P0 остаются semantic CSG tree поверх уже работающего provenance, silhouette
-edges, section caps/точный контур и дополнительные snap-типы. Из P1/P2 по-прежнему открыты
+edges, точный контур сечения и дополнительные snap-типы. Из P1/P2 по-прежнему открыты
 multi-file/incremental editor, checkpoints, drag/26-direction ViewCube,
-3MF/GLB, chunked LOD и opt-in SDF.
+GLB и выбор единиц экспорта, chunked LOD и opt-in SDF.
 
 Отдельный [третий проход](ten-new-ideas-third-pass.md) добавил десять
 недублирующих открытых направлений. Приоритетный следующий пакет: исполняемые
@@ -57,11 +59,11 @@ multi-file/incremental editor, checkpoints, drag/26-direction ViewCube,
 | Масштаб | Worker передаёт один монолитный full-detail mesh | нет progressive first paint, LOD и chunk eviction |
 | Надёжность | Наружу уходят topology diagnostics, provenance и face IDs | расширить corpus сложных CSG и kernel status |
 
-Точки кода: [parser](../../src/services/openscadParser.ts),
+Точки кода: [parser](../../src/language/openscadParser.ts),
 [worker](../../src/workers/geometry.worker.ts),
-[protocol](../../src/services/geometryWorkerProtocol.ts),
-[renderer](../../src/services/webgpuRenderer.ts) и
-[ray math](../../src/services/math3d.ts).
+[protocol](../../src/kernel/geometryWorkerProtocol.ts),
+[renderer](../../src/render/webgpuRenderer.ts) и
+[ray math](../../src/kernel/geometry/math3d.ts).
 
 ## Приоритетный backlog
 
@@ -70,11 +72,11 @@ multi-file/incremental editor, checkpoints, drag/26-direction ViewCube,
 остаётся); **#2 готов по пользовательскому результату** (BVH/cycling работают,
 но текущая BVH использует balanced median split, а не записанный binned-SAH);
 **#4 готов**; **#3 частично** (silhouettes остаются); **#5
-частично** (section caps и дополнительные snaps остаются); **#6 частично**
+частично** (section caps готовы, точный контур и дополнительные snaps остаются); **#6 частично**
 (нужны расширенный degeneracy corpus и kernel status); **#7 частично**
 (Customizer готов, direct handles остаются); **#8 и #9 открыты**; **#10
 частично** (Previous View готов, drag/26 направлений/анимация остаются); **#11
-готов**; **#12 частично**; **#13 частично** (STL/OBJ готовы, units/3MF/GLB
+готов**; **#12 частично**; **#13 частично** (STL/OBJ/3MF готовы, units/GLB
 остаются); **#14 и #15 открыты**.
 
 | # | Приоритет | Что добавить | MVP и причина |

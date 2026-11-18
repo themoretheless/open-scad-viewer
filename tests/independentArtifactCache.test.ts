@@ -41,23 +41,29 @@ describe('IndependentArtifactCache', () => {
     expect(cache.get(second.id)).toBeNull()
     expect(cache.list().map(artifact => artifact.id)).toEqual([third.id, first.id])
 
-    expect(() => cache.put({
-      format: 'stl',
-      fileName: 'bad.obj',
-      mimeType: 'model/stl',
-      data: new Uint8Array(),
-    })).toThrow(/invalid file name/)
-    expect(() => cache.put({
-      format: 'stl',
-      fileName: 'bad.stl',
-      mimeType: 'application/octet-stream',
-      data: new Uint8Array(),
-    })).toThrow(/must use model\/stl/)
-    expect(() => cache.put({
-      format: 'stl',
-      fileName: 'large.stl',
-      mimeType: 'model/stl',
-      data: new Uint8Array(6),
-    })).toThrow(/exceeds cache capacity/)
+    expect(() =>
+      cache.put({
+        format: 'stl',
+        fileName: 'bad.obj',
+        mimeType: 'model/stl',
+        data: new Uint8Array(),
+      }),
+    ).toThrow(/invalid file name/)
+    expect(() =>
+      cache.put({
+        format: 'stl',
+        fileName: 'bad.stl',
+        mimeType: 'application/octet-stream',
+        data: new Uint8Array(),
+      }),
+    ).toThrow(/must use model\/stl/)
+    expect(() =>
+      cache.put({
+        format: 'stl',
+        fileName: 'large.stl',
+        mimeType: 'model/stl',
+        data: new Uint8Array(6),
+      }),
+    ).toThrow(/exceeds cache capacity/)
   })
 })

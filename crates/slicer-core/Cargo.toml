@@ -13,4 +13,3 @@ planar-geometry = { workspace = true }
 
 [dev-dependencies]
 polygon-core = { workspace = true }
-gcode-core = { workspace = true }

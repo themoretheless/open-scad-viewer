@@ -1,4 +1,6 @@
 //! JSON request/response helpers shared by the geometry bridge domain crates.
+// Adapters turn bad input into typed errors instead of panicking (refactor plan L6).
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 pub use math_core::{Error, Result};
 pub use value_codec::{Deserialize, Serialize, Value, json};
@@ -23,6 +25,11 @@ pub fn response(result: Result<Value>) -> String {
 
 pub fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
     value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
+}
+
+/// Borrow an array field without copying it; a missing or non-array value is invalid input.
+pub fn array_field<'a>(v: &'a Value, k: &str) -> Result<&'a Vec<Value>> {
+    v[k].as_array().ok_or_else(|| input(format!("Invalid {k}: expected an array")))
 }
 
 /// Consume a single-use field from an owned request; preserve `field`'s missing-value errors.

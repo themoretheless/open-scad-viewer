@@ -1,0 +1,68 @@
+{
+  "status": "passed",
+  "sourceCommit": "d2dbf1ef346db9f667b5a4093e7bfaffc7b23a6a",
+  "artifact": {
+    "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/51f66e2ceb961701084c7f4826f828adc0d8e63ea641a6286668d7c19d2524bc.wasm",
+    "sha256": "51f66e2ceb961701084c7f4826f828adc0d8e63ea641a6286668d7c19d2524bc",
+    "bytes": 21639548
+  },
+  "independentCopy": true,
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 102,
+  "workers": {
+    "started": 90,
+    "terminated": 90
+  },
+  "quadricCarrierCases": 14,
+  "frozenPredicateTests": {
+    "library": 158,
+    "commonRoot": 8,
+    "rootSign": 8,
+    "quadricRoots": 8,
+    "total": 182,
+    "status": "passed"
+  },
+  "transportSourceStage": {
+    "bridgeTests": 16,
+    "clientTests": 114,
+    "vueTsc": "passed",
+    "receipt": "../quadric-carrier-transport-2026-11-03/results.json"
+  },
+  "sharedWorkingTreeGateFixed": false,
+  "installedPackageUpdated": false,
+  "installedGeometryWasmSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "temporaryWorktreeRemoved": true,
+  "verified": [
+    "original curve/sphere transverse, tangent and exterior roots",
+    "original rational weights and unclamped span",
+    "exact circle coincidence remains missing isolated-root coverage",
+    "authored radius product versus rounded squared radius",
+    "degree-25 source and implicit multiplicity 50",
+    "shared knot preserves two one-sided residual orders",
+    "zero work and partial span coverage",
+    "cylinder and nonsymmetric matrix cross terms",
+    "carrier-only schema refuses forged finite admission and over-limit work",
+    "input preservation and owned Worker termination"
+  ],
+  "finiteSurfaceUvAdmission": false,
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "remaining": [
+    "match original target surface quadric identity",
+    "prove correct surface branch and finite UV membership",
+    "general freeform target and full surface/surface branches",
+    "periodic/poles and coincident components",
+    "trim/Body/Boolean and production integration",
+    "whole-library qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "d69ef71673b44df9f211a705872d9ae4ef3f8afac1d2751e30bdeb4fd171fa53",
+    "tools/browser-qualification/quadric-carrier-fixtures.ts": "799b266909f18932bbc3dff360943dbbd7e710227b0b791da13c710e647d0ae8",
+    "tools/browser-qualification/surface-self-intersection.ts": "7bd634f16b01c33f972e5a670dc7c91a6dca01ba19ed1df6d8f455b03908fc7b",
+    "tools/browser-qualification/surface-self-intersection.mjs": "7980c0129680dc1f1c381e3cd92afae3c4d031c2fc1a1060fdad399c6ace9091",
+    "src/services/originalQuadricCarrierProtocol.ts": "93b453603aad994429c1a39ada6643fd51b765ef53d4b17ddc6050b5a0a7fd69",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "1be4852f9ae5c617d5d9022214934e109b769df20463d53f9f6b33bbe0d4db3c",
+    "src/workers/surfaceSelfIntersection.worker.ts": "66c3c6a9284a919c081b64537443d8ecfc1d4371ee56c94a69ba280491ed5d7a"
+  }
+}

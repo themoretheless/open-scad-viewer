@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::parametric_network::{Limits, thicken_with_maps};
+use brep_core::shell_thickness::parametric_network::{Limits, OffsetSettings, thicken_with_maps};
 use nurbs_core::surface::Surface;
 
 fn plane(x: f64) -> Surface {
@@ -56,10 +56,12 @@ fn curved_original_uv_map_closes_a_literal_source_with_independent_wall_bases() 
         &[c.clone()],
         &[m.clone()],
         &[false],
-        0.25,
-        0.005,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.25,
+            normal_tolerance: 0.005,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -90,10 +92,12 @@ fn curved_caps_share_the_actual_seam_without_an_internal_wall() {
         &caps,
         &maps,
         &[false; 2],
-        0.25,
-        0.005,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.25,
+            normal_tolerance: 0.005,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -131,11 +135,13 @@ fn normal_bounds_cannot_authorize_a_gap_fold_or_exhausted_construction() {
             &caps,
             &maps,
             &[false; 2],
-            0.25,
-            0.005,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.25,
+                normal_tolerance: 0.005,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -148,11 +154,13 @@ fn normal_bounds_cannot_authorize_a_gap_fold_or_exhausted_construction() {
             &caps,
             &maps,
             &[false; 2],
-            0.25,
-            0.005,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.25,
+                normal_tolerance: 0.005,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -163,11 +171,13 @@ fn normal_bounds_cannot_authorize_a_gap_fold_or_exhausted_construction() {
             &caps,
             &maps,
             &[false; 2],
-            0.25,
-            1e-12,
-            1,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.25,
+                normal_tolerance: 1e-12,
+                normal_cells: 1,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );

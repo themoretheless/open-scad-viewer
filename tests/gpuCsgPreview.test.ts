@@ -4,7 +4,6 @@ import {
   multiplyMat4,
   translationMat4,
   scaleMat4,
-  rotationEulerMat4,
   normalMatrixFromModel,
   generateUnitCube,
   generateUnitCylinder,
@@ -15,9 +14,9 @@ import {
   GpuCsgPipelineManager,
   GpuCsgRenderer,
   type GpuCsgNode,
-} from '../src/services/gpuCsgPreview'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
-import { compileOpenSCAD } from '../src/services/openscadCompiler'
+} from '../src/render/gpuCsgPreview'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
+import { compileOpenSCAD } from '../src/language/openscadCompiler'
 
 describe('gpuCsgPreview math and primitives', () => {
   it('computes 4x4 matrix multiplication and translations correctly', () => {
@@ -199,29 +198,43 @@ describe('gpuCsgPreview tree flattening & AST compilation', () => {
 })
 
 describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
+  interface FakePass {
+    desc: GPURenderPassDescriptor
+    pipeline?: unknown
+    stencilRef?: number
+    bindGroups: unknown[]
+    drawCalls: number
+  }
+  interface FakePassEncoder extends FakePass {
+    setPipeline: (p: unknown) => void
+    setBindGroup: (idx: number, bg: unknown) => void
+    setVertexBuffer: () => undefined
+    setIndexBuffer: () => undefined
+    setStencilReference: (ref: number) => void
+    drawIndexed: () => void
+    end: () => undefined
+  }
+  /** The mock device returns each pipeline as its creation descriptor. */
+  const pipeDesc = (pipeline: GPURenderPipeline) =>
+    (pipeline as unknown as { pipeDesc: GPURenderPipelineDescriptor }).pipeDesc
+
   function makeMockDevice() {
     vi.stubGlobal('GPUShaderStage', { VERTEX: 1, FRAGMENT: 2 })
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 32, INDEX: 16, UNIFORM: 64, COPY_DST: 8, STORAGE: 128 })
 
-    const createdPipelines: Array<{ descriptor: any }> = []
-    const passes: Array<{
-      desc: any
-      pipeline?: any
-      stencilRef?: number
-      bindGroups: any[]
-      drawCalls: number
-    }> = []
+    const createdPipelines: Array<{ descriptor: GPURenderPipelineDescriptor }> = []
+    const passes: FakePass[] = []
 
-    const dev: any = {
-      createBindGroupLayout: (desc: any) => ({ desc }),
-      createPipelineLayout: (desc: any) => ({ desc }),
-      createShaderModule: (desc: any) => ({ desc }),
-      createRenderPipeline: (desc: any) => {
+    const dev = {
+      createBindGroupLayout: (desc: GPUBindGroupLayoutDescriptor) => ({ desc }),
+      createPipelineLayout: (desc: GPUPipelineLayoutDescriptor) => ({ desc }),
+      createShaderModule: (desc: GPUShaderModuleDescriptor) => ({ desc }),
+      createRenderPipeline: (desc: GPURenderPipelineDescriptor) => {
         const pipe = { pipeDesc: desc }
         createdPipelines.push({ descriptor: desc })
         return pipe
       },
-      createBuffer: (desc: any) => {
+      createBuffer: (desc: GPUBufferDescriptor) => {
         let mapped: ArrayBuffer | null = null
         if (desc.mappedAtCreation) {
           mapped = new ArrayBuffer(desc.size)
@@ -233,30 +246,38 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
           destroy: () => undefined,
         }
       },
-      createBindGroup: (desc: any) => ({ desc }),
+      createBindGroup: (desc: GPUBindGroupDescriptor) => ({ desc }),
       queue: {
         writeBuffer: () => undefined,
       },
-    }
+    } as unknown as GPUDevice
 
-    const encoder: any = {
-      beginRenderPass: (desc: any) => {
-        const currentPass: any = {
+    const encoder = {
+      beginRenderPass: (desc: GPURenderPassDescriptor) => {
+        const currentPass: FakePassEncoder = {
           desc,
           bindGroups: [],
           drawCalls: 0,
-          setPipeline: (p: any) => { currentPass.pipeline = p },
-          setBindGroup: (idx: number, bg: any) => { currentPass.bindGroups[idx] = bg },
+          setPipeline: (p: unknown) => {
+            currentPass.pipeline = p
+          },
+          setBindGroup: (idx: number, bg: unknown) => {
+            currentPass.bindGroups[idx] = bg
+          },
           setVertexBuffer: () => undefined,
           setIndexBuffer: () => undefined,
-          setStencilReference: (ref: number) => { currentPass.stencilRef = ref },
-          drawIndexed: () => { currentPass.drawCalls++ },
+          setStencilReference: (ref: number) => {
+            currentPass.stencilRef = ref
+          },
+          drawIndexed: () => {
+            currentPass.drawCalls++
+          },
           end: () => undefined,
         }
         passes.push(currentPass)
         return currentPass
       },
-    }
+    } as unknown as GPUCommandEncoder
 
     return { dev, encoder, createdPipelines, passes }
   }
@@ -273,14 +294,14 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
     expect(pipelines.shadeIntersectPipeline).toBeDefined()
 
     // Pass 1: Depth pipeline: writes depth, culls back
-    const depthDesc = (pipelines.depthPipeline as any).pipeDesc
+    const depthDesc = pipeDesc(pipelines.depthPipeline)
     expect(depthDesc.depthStencil.format).toBe('depth24plus-stencil8')
     expect(depthDesc.depthStencil.depthWriteEnabled).toBe(true)
     expect(depthDesc.depthStencil.depthCompare).toBe('less')
     expect(depthDesc.primitive.cullMode).toBe('back')
 
     // Pass 2: Parity pipeline: depthWrite false, cullMode none, stencilFront increment-wrap, stencilBack decrement-wrap
-    const parityDesc = (pipelines.parityPipeline as any).pipeDesc
+    const parityDesc = pipeDesc(pipelines.parityPipeline)
     expect(parityDesc.depthStencil.depthWriteEnabled).toBe(false)
     expect(parityDesc.depthStencil.depthCompare).toBe('less')
     expect(parityDesc.primitive.cullMode).toBe('none')
@@ -288,13 +309,13 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
     expect(parityDesc.depthStencil.stencilBack.passOp).toBe('decrement-wrap')
 
     // Pass 3: Shade base pipeline: depthCompare equal, stencilFront compare equal
-    const shadeBaseDesc = (pipelines.shadeBasePipeline as any).pipeDesc
+    const shadeBaseDesc = pipeDesc(pipelines.shadeBasePipeline)
     expect(shadeBaseDesc.depthStencil.depthCompare).toBe('equal')
     expect(shadeBaseDesc.depthStencil.stencilFront.compare).toBe('equal')
     expect(shadeBaseDesc.primitive.cullMode).toBe('back')
 
     // Pass 4: Shade cut pipeline: cullMode front (inside cavity)
-    const shadeCutDesc = (pipelines.shadeCutPipeline as any).pipeDesc
+    const shadeCutDesc = pipeDesc(pipelines.shadeCutPipeline)
     expect(shadeCutDesc.primitive.cullMode).toBe('front')
     expect(shadeCutDesc.depthStencil.depthCompare).toBe('less')
   })
@@ -313,8 +334,8 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
     }
     const tree = { terms: flattenCsgNode(diffNode) }
 
-    const fakeColorView = {} as any
-    const fakeDepthStencilView = {} as any
+    const fakeColorView = {} as GPUTextureView
+    const fakeDepthStencilView = {} as GPUTextureView
     const opts = {
       viewProjection: identityMat4(),
       eyePosition: [0, 0, 100] as [number, number, number],
@@ -353,7 +374,7 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
     }
     const tree = { terms: flattenCsgNode(unionNode) }
 
-    renderer.renderCsg(dev, encoder, {} as any, {} as any, tree, {
+    renderer.renderCsg(dev, encoder, {} as GPUTextureView, {} as GPUTextureView, tree, {
       viewProjection: identityMat4(),
       eyePosition: [0, 0, 100],
     })
@@ -367,7 +388,7 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
   })
 
   it('integrates seamlessly with WebGPURenderer lifecycle and render passes', () => {
-    const { dev } = makeMockDevice()
+    makeMockDevice()
     // Test WebGPURenderer methods
     const renderer = new WebGPURenderer()
     expect(renderer.getCsgPreviewTree()).toBeNull()

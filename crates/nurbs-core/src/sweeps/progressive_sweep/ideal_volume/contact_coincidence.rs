@@ -11,8 +11,11 @@ mod exact;
 use exact::{R,Spline,add,sub,mul,div,same,unit};
 #[derive(Debug)]
 pub(super) struct Witness {
+    #[cfg_attr(not(test), allow(dead_code))]
     pub raw_path_parameters:[f64;2],
+    #[cfg_attr(not(test), allow(dead_code))]
     pub normalized_cap_parameters:[[Q;2];2],
+    #[cfg_attr(not(test), allow(dead_code))]
     pub world:[Q;3],
 }
 fn visit(cells:&mut usize,limit:usize)->R<()> {

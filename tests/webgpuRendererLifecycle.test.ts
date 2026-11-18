@@ -1,28 +1,32 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import * as geometryKernel from '../src/services/geometry/kernel'
-import {
-  WebGPURenderer,
-  type RendererLifecycleEvent,
-} from '../src/services/webgpuRenderer'
+import * as geometryKernel from '../src/kernel/geometry/kernel'
+import { WebGPURenderer, type RendererLifecycleEvent } from '../src/render/webgpuRenderer'
 
 describe('WebGPURenderer lifecycle reporting', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('does not allocate a device after teardown during kernel warmup',async()=>{
-    let finish!:()=>void
-    const pending=new Promise<void>(resolve=>{finish=resolve})
-    const warmup=vi.spyOn(geometryKernel,'warmGeometryKernel').mockReturnValue(pending)
-    const requestDevice=vi.fn()
-    vi.stubGlobal('navigator',{gpu:{requestAdapter:async()=>({requestDevice})}})
-    const renderer=new WebGPURenderer()
-    try{
-      const running=renderer.init({} as HTMLCanvasElement)
+  it('does not allocate a device after teardown during kernel warmup', async () => {
+    let finish!: () => void
+    const pending = new Promise<void>(resolve => {
+      finish = resolve
+    })
+    const warmup = vi.spyOn(geometryKernel, 'warmGeometryKernel').mockReturnValue(pending)
+    const requestDevice = vi.fn()
+    vi.stubGlobal('navigator', { gpu: { requestAdapter: async () => ({ requestDevice }) } })
+    const renderer = new WebGPURenderer()
+    try {
+      const running = renderer.init({} as HTMLCanvasElement)
       await Promise.resolve()
       expect(warmup).toHaveBeenCalledOnce()
-      renderer.destroy();finish()
+      renderer.destroy()
+      finish()
       expect(await running).toBe(false)
       expect(requestDevice).not.toHaveBeenCalled()
-    }finally{finish();renderer.destroy();warmup.mockRestore()}
+    } finally {
+      finish()
+      renderer.destroy()
+      warmup.mockRestore()
+    }
   })
 
   it('reports typed initialization and availability states without changing init semantics', async () => {
@@ -43,10 +47,13 @@ describe('WebGPURenderer lifecycle reporting', () => {
 
   it('surfaces frame failures and reports recovery after a successful retry', () => {
     let retry: FrameRequestCallback | null = null
-    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
-      retry = callback
-      return 1
-    }))
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        retry = callback
+        return 1
+      }),
+    )
     const renderer = new WebGPURenderer()
     const events: RendererLifecycleEvent[] = []
     renderer.onStatusChange = event => events.push(event)
@@ -62,7 +69,9 @@ describe('WebGPURenderer lifecycle reporting', () => {
     internal.dead = false
     internal.lost = false
     internal.initialized = true
-    internal.render = () => { throw failure }
+    internal.render = () => {
+      throw failure
+    }
 
     internal.drawFrame()
 
@@ -93,11 +102,23 @@ describe('WebGPURenderer lifecycle reporting', () => {
     renderer.onMeasurementChange = (measurement, active) => {
       events.push({ points: measurement?.points.map(point => [...point]) ?? [], active })
     }
-    const snapshot = { points: [[1, 2, 3], [4, 6, 3]] as [number, number, number][], distance: 5 }
+    const snapshot = {
+      points: [
+        [1, 2, 3],
+        [4, 6, 3],
+      ] as [number, number, number][],
+      distance: 5,
+    }
 
     expect(renderer.restoreMeasurement(snapshot, true)).toBe(true)
     snapshot.points[0][0] = 99
-    expect(events.at(-1)).toEqual({ points: [[1, 2, 3], [4, 6, 3]], active: true })
+    expect(events.at(-1)).toEqual({
+      points: [
+        [1, 2, 3],
+        [4, 6, 3],
+      ],
+      active: true,
+    })
     expect(renderer.restoreMeasurement({ points: [[Number.NaN, 0, 0]], distance: null }, false)).toBe(false)
   })
 })
@@ -109,7 +130,12 @@ describe('first scene frame submission boundary', () => {
     renderer.onFrameSubmitted = submitted
     const queueSubmit = vi.fn()
     const pass = { setPipeline() {}, setBindGroup() {}, end() {} }
-    const internal = renderer as unknown as { drawable: boolean; render(): void; pendingFrameToken: number | null; pipelines: unknown }
+    const internal = renderer as unknown as {
+      drawable: boolean
+      render(): void
+      pendingFrameToken: number | null
+      pipelines: unknown
+    }
     Object.assign(internal, {
       canvas: { width: 640, height: 480 },
       dev: {
@@ -120,8 +146,11 @@ describe('first scene frame submission boundary', () => {
         createRenderPipeline: () => ({}),
       },
       ctx: { getCurrentTexture: () => ({ createView() {} }) },
-      depth: { createView() {} }, sceneUB: {}, drawable: false,
-      updateSize() {}, pendingFrameToken: 7,
+      depth: { createView() {} },
+      sceneUB: {},
+      drawable: false,
+      updateSize() {},
+      pendingFrameToken: 7,
     })
     Object.assign(internal.pipelines as object, {
       vertexLayouts: { mesh: [], edge: [], line: [], grid: [] },
@@ -130,7 +159,9 @@ describe('first scene frame submission boundary', () => {
     internal.render()
     expect(submitted).not.toHaveBeenCalled()
     internal.drawable = true
-    queueSubmit.mockImplementationOnce(() => { throw new Error('queue failed') })
+    queueSubmit.mockImplementationOnce(() => {
+      throw new Error('queue failed')
+    })
     expect(() => internal.render()).toThrow('queue failed')
     expect(submitted).not.toHaveBeenCalled()
     expect(internal.pendingFrameToken).toBe(7)
@@ -138,7 +169,9 @@ describe('first scene frame submission boundary', () => {
     expect(submitted).toHaveBeenCalledWith(7, expect.any(Number))
     internal.render()
     expect(submitted).toHaveBeenCalledTimes(1)
-    renderer.onFrameSubmitted = () => { throw new Error('consumer failed') }
+    renderer.onFrameSubmitted = () => {
+      throw new Error('consumer failed')
+    }
     internal.pendingFrameToken = 8
     expect(() => internal.render()).not.toThrow()
     expect(internal.pendingFrameToken).toBeNull()

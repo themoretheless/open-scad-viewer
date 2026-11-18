@@ -1,0 +1,37 @@
+{
+  "cwd": "/tmp/osv-ss-cycle-delivery-20261103",
+  "args": [
+    "build",
+    "--locked",
+    "--release",
+    "--config",
+    "profile.release.opt-level=\"z\"",
+    "--config",
+    "profile.release.strip=\"symbols\"",
+    "--config",
+    "profile.release.package.brep-core.opt-level=\"z\"",
+    "--config",
+    "profile.release.package.geometry-bridge.opt-level=\"z\"",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--manifest-path",
+    "crates/geometry-wasm/Cargo.toml"
+  ],
+  "env": {
+    "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/tmp/osv-ss-cycle-delivery-20261103=/src"
+  },
+  "optimizer": {
+    "version": "Binaryen 116",
+    "flags": [
+      "-Oz",
+      "--enable-bulk-memory",
+      "--enable-sign-ext",
+      "--enable-nontrapping-float-to-int",
+      "--enable-mutable-globals",
+      "--enable-reference-types",
+      "--enable-multivalue"
+    ],
+    "inputSha256": "222b35ae347f0c2cb2d0149a9027259800e8adbc7870c49065d109658c58bf5c",
+    "outputSha256": "65158c6cda6b12550c3c41134c6850a890e671047a4bf9d27e048c35572417e5"
+  }
+}

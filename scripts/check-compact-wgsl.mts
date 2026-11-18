@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {compactWgslLiterals} from './compact-wgsl.mjs'
-import {instancedObjectShader,immediateObjectShader} from '../src/services/shaders/variants'
+import {instancedObjectShader,immediateObjectShader} from '../src/render/shaders/variants'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const output=process.argv[2]??'/tmp/compact-wgsl'
 await mkdir(output,{recursive:true})
 const normalize=(s:string)=>s.replace(/\/\/[^\r\n]*/g,'').replace(/\s+/g,' ').trim()
 const sources=[] as {name:string;code:string}[]
 let saved=0
-for(const file of ['src/services/shaders/generated/sources.ts','src/services/solidGpuView.ts']){
+for(const file of ['src/render/shaders/generated/sources.ts','src/kernel/solidGpuView.ts']){
  const original=await readFile(file,'utf8'),compact=compactWgslLiterals(original)
  saved+=Buffer.byteLength(original)-Buffer.byteLength(compact)
  const literals=(s:string)=>Array.from(s.matchAll(/const (\w+) = \/\* wgsl \*\/\s*`([^`]*)`/g),m=>({name:m[1],code:m[2]}))

@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {encodeBinary,decodeBinary} from '../src/services/valueBinaryCodec.ts'
+import {encodeBinary,decodeBinary} from '../src/core/valueBinaryCodec.ts'
+/** Decoded ABI payload; its shape is asserted at runtime by this script. */
+type Wire = ReturnType<typeof JSON.parse>
 const [wasmPath,fixturePath,directory]=process.argv.slice(2)
 assert(wasmPath&&fixturePath&&directory,'Expected wasm path, native artifact JSON, output directory')
 mkdirSync(directory,{recursive:true})
@@ -12,7 +14,7 @@ assert.deepEqual(WebAssembly.Module.imports(module),[])
 const instance=await WebAssembly.instantiate(module,{})
 const wasm=instance.exports as unknown as {memory:WebAssembly.Memory;abi_alloc(n:number):number;abi_free(p:number,n:number):void;abi_request(op:number,p:number,n:number):bigint}
 const cases:object[]=[]
-function request(value:unknown):any{
+function request(value:unknown):Wire{
  const data=encodeBinary(value),ptr=wasm.abi_alloc(data.length);assert(ptr)
  new Uint8Array(wasm.memory.buffer,ptr,data.length).set(data)
  try{

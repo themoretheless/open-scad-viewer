@@ -1,9 +1,9 @@
-import {afterEach, describe, expect, it, vi} from 'vitest'
-import {decodePhoto, photoFocalHint, PhotoCollection, validPhotoFocal} from '../src/services/photogrammetry/input'
-import {photoPly, photoScadSource} from '../src/services/photogrammetry/export'
-import {photoRegistrationReason, photoReportJson} from '../src/services/photogrammetry/report'
-import {PhotoPreview} from '../src/services/photogrammetry/preview'
-import type {PhotoSurface} from '../src/services/photogrammetry/kernel'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { decodePhoto, photoFocalHint, PhotoCollection, validPhotoFocal } from '../src/app/photogrammetry/input'
+import { photoPly, photoScadSource } from '../src/app/photogrammetry/export'
+import { photoRegistrationReason, photoReportJson } from '../src/app/photogrammetry/report'
+import { PhotoPreview } from '../src/app/photogrammetry/preview'
+import type { PhotoSurface } from '../src/app/photogrammetry/kernel'
 
 const tetrahedron: PhotoSurface = {
   positions: new Float64Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
@@ -12,9 +12,11 @@ const tetrahedron: PhotoSurface = {
 }
 function objectUrls() {
   let sequence = 0
-  return {createObjectURL: vi.fn(() => `blob:photo-${sequence++}`), revokeObjectURL: vi.fn()}
+  return { createObjectURL: vi.fn(() => `blob:photo-${sequence++}`), revokeObjectURL: vi.fn() }
 }
-function imageFile(name = 'photo.jpg') { return new File([new Uint8Array([1, 2, 3])], name) }
+function imageFile(name = 'photo.jpg') {
+  return new File([new Uint8Array([1, 2, 3])], name)
+}
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -60,11 +62,15 @@ describe('photo input resource ownership', () => {
     const photos = new PhotoCollection(urls)
     const file = imageFile()
     let resolve!: (value: ArrayBuffer) => void
-    vi.spyOn(file, 'arrayBuffer').mockReturnValue(new Promise(done => { resolve = done }))
+    vi.spyOn(file, 'arrayBuffer').mockReturnValue(
+      new Promise(done => {
+        resolve = done
+      }),
+    )
     const adding = photos.add([file])
     photos.dispose()
     resolve(new ArrayBuffer(0))
-    await expect(adding).rejects.toMatchObject({name: 'AbortError'})
+    await expect(adding).rejects.toMatchObject({ name: 'AbortError' })
     expect(urls.createObjectURL).not.toHaveBeenCalled()
     expect(photos.entries).toEqual([])
   })
@@ -85,18 +91,24 @@ describe('photo input resource ownership', () => {
   it('closes a bitmap when cancellation arrives during asynchronous decoding', async () => {
     let resolve!: (bitmap: ImageBitmap) => void
     const close = vi.fn()
-    vi.stubGlobal('createImageBitmap', () => new Promise(done => { resolve = done }))
+    vi.stubGlobal(
+      'createImageBitmap',
+      () =>
+        new Promise(done => {
+          resolve = done
+        }),
+    )
     const abort = new AbortController()
     const decoding = decodePhoto(imageFile(), 50, 960, abort.signal)
     abort.abort()
-    resolve({width: 640, height: 480, close} as unknown as ImageBitmap)
-    await expect(decoding).rejects.toMatchObject({name: 'AbortError'})
+    resolve({ width: 640, height: 480, close } as unknown as ImageBitmap)
+    await expect(decoding).rejects.toMatchObject({ name: 'AbortError' })
     expect(close).toHaveBeenCalledOnce()
   })
 
   it('rejects unusable resized aspect ratios before allocating a canvas', async () => {
     const close = vi.fn()
-    vi.stubGlobal('createImageBitmap', async () => ({width: 10000, height: 48, close}))
+    vi.stubGlobal('createImageBitmap', async () => ({ width: 10000, height: 48, close }))
     await expect(decodePhoto(imageFile(), 50)).rejects.toThrow('too small or narrow')
     expect(close).toHaveBeenCalledOnce()
   })
@@ -104,8 +116,12 @@ describe('photo input resource ownership', () => {
 
 describe('photo export and preview separation', () => {
   it('scales the document copy by the full observed extent and leaves PLY untouched', () => {
-    const surface = {...tetrahedron, positions: new Float64Array([...tetrahedron.positions, 2, 0, 0]),
-      colors: new Uint8Array([...tetrahedron.colors, 50, 60, 70]), documentSurface: tetrahedron}
+    const surface = {
+      ...tetrahedron,
+      positions: new Float64Array([...tetrahedron.positions, 2, 0, 0]),
+      colors: new Uint8Array([...tetrahedron.colors, 50, 60, 70]),
+      documentSurface: tetrahedron,
+    }
     const before = photoPly(surface)
     const source = photoScadSource(surface, 100, 250000)
     const points = JSON.parse(source.match(/polyhedron\(points=(.*), faces=/)![1]!)
@@ -115,7 +131,9 @@ describe('photo export and preview separation', () => {
     expect(before).toContain('element vertex 5')
     expect(() => photoScadSource(surface, Infinity, 250000)).toThrow('positive width')
     expect(() => photoScadSource(surface, 100, 10)).toThrow('document budget')
-    expect(() => photoScadSource({...tetrahedron, triangles: new Uint32Array([0, 1, 2])}, 100, 250000)).toThrow('valid CAD solid')
+    expect(() => photoScadSource({ ...tetrahedron, triangles: new Uint32Array([0, 1, 2]) }, 100, 250000)).toThrow(
+      'valid CAD solid',
+    )
   })
 
   it('reuses preview geometry across mode changes and keeps point colors in separate materials', () => {
@@ -135,7 +153,7 @@ describe('photo export and preview separation', () => {
   it('bounds displayed points without reducing the exported cloud', () => {
     const positions = new Float64Array(12001 * 3)
     for (let i = 0; i < 12001; i++) positions.set([i, i % 3, i % 7], i * 3)
-    const surface: PhotoSurface = {positions, colors: new Uint8Array(), triangles: new Uint32Array()}
+    const surface: PhotoSurface = { positions, colors: new Uint8Array(), triangles: new Uint32Array() }
     const preview = new PhotoPreview(surface)
     const count = preview.meshes('points').reduce((total, mesh) => total + mesh.vertices.length / 24, 0)
     expect(count).toBeLessThanOrEqual(6000)
@@ -145,12 +163,42 @@ describe('photo export and preview separation', () => {
 
 describe('photo diagnostics download', () => {
   it('keeps decoder settings and camera refusal reasons when reconstruction fails', () => {
-    const input = {image: 0, name: 'canon.jpg', bytes: 1000, equivalent: 35, width: 960, height: 640, focalPixels: 930}
-    const diagnostics = {images: [{image: 0, features: 4, candidateCorrespondences: 0, acceptedObservations: 0,
-      conflictingMatches: 0, poseAttempts: 0, registered: false, reason: 'insufficient_features'}],
-      initialPair: null, seedPairsTested: 0, matchingRequests: 0, computedPairs: 0, bundleRuns: [], warnings: []}
-    const json = photoReportJson({settings: {dense: true, resolution: 128, maxImageSide: 960},
-      inputs: [input], sparse: diagnostics, dense: null, timings: null})
+    const input = {
+      image: 0,
+      name: 'canon.jpg',
+      bytes: 1000,
+      equivalent: 35,
+      width: 960,
+      height: 640,
+      focalPixels: 930,
+    }
+    const diagnostics = {
+      images: [
+        {
+          image: 0,
+          features: 4,
+          candidateCorrespondences: 0,
+          acceptedObservations: 0,
+          conflictingMatches: 0,
+          poseAttempts: 0,
+          registered: false,
+          reason: 'insufficient_features',
+        },
+      ],
+      initialPair: null,
+      seedPairsTested: 0,
+      matchingRequests: 0,
+      computedPairs: 0,
+      bundleRuns: [],
+      warnings: [],
+    }
+    const json = photoReportJson({
+      settings: { dense: true, resolution: 128, maxImageSide: 960 },
+      inputs: [input],
+      sparse: diagnostics,
+      dense: null,
+      timings: null,
+    })
     const report = JSON.parse(json)
     expect(report.version).toBe(1)
     expect(report.inputs).toEqual([input])

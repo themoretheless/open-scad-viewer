@@ -103,12 +103,18 @@ fn prove(source: &Curve, partition: &Report, max_work: u64) -> Result<(bool, u64
         );
         let receipt = cad_predicates::rational_bspline_restriction_identity(
             &mut ctx,
-            source.degree,
-            &rows(0, source.control_points.len()),
-            &refs(offset, source.knots.len()),
-            p.curve.degree,
-            &rows(source.control_points.len(), p.curve.control_points.len()),
-            &refs(offset + source.knots.len(), p.curve.knots.len()),
+            [
+                cad_predicates::SplineLeafRefs {
+                    controls: &rows(0, source.control_points.len()),
+                    knots: &refs(offset, source.knots.len()),
+                    degree: source.degree,
+                },
+                cad_predicates::SplineLeafRefs {
+                    controls: &rows(source.control_points.len(), p.curve.control_points.len()),
+                    knots: &refs(offset + source.knots.len(), p.curve.knots.len()),
+                    degree: p.curve.degree,
+                },
+            ],
             std::array::from_fn(|i| arena.leaf(shift + i).unwrap()),
         )
         .map_err(|_| crate::input("Exact partition source predicate failed"))?;

@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0307",
+  "testedBase": "5529cf21a4d3afa56c359a365f66e66de0daf12e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_angle_bands_contracts",
+    "--test",
+    "exact_pcurve_angle_contracts",
+    "--test",
+    "exact_pcurve_gap_bands_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Isolate strict angular tolerance violations with exact rational sign and root proofs on the complete shared parameter partition.",
+    "Unoriented regular tangent planes; all strict bands with certified endpoint brackets. Singular normals and arithmetic refusal withhold all bands."
+  ],
+  "logSha256": "ce0b6633c8f0801e70287c17d09bd24a3069ee1ac20975e253246620d0a7da76",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "83100a54995484118a4a9b3662c6ebed3bbe67fce3bdf7c9e9ea3c4bed8aed90",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_angle.rs": "9055fb7da9cf7ffabb2b82f00f1dbd33a7e0885d24f86edd08f3028fd17820c3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_angle_bands.rs": "ac08ae0c48e85cf1ba5ec1df3d2e5b5f4c89766718f0cad7f5f381d1e9bd72d3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_gap_bands.rs": "75405646e6c13ad385aeb4504f0c36398138fd3cdf35a44371b195b77c8e52aa",
+    "crates/nurbs-core/tests/exact_pcurve_angle_bands_contracts.rs": "4d47af7ac6a3407b1a979deb31afd06bb79fd8aa88fc95c72b8e31ba11a2eaa5"
+  }
+}

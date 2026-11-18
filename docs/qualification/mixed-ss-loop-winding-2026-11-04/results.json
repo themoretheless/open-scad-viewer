@@ -1,0 +1,16 @@
+{
+  "passed": 8,
+  "tests": [
+    "root_uv_closure",
+    "root_model"
+  ],
+  "checks": [
+    "mixed-pair inside and outside",
+    "whole query box",
+    "reversed traversal",
+    "boundary refusal",
+    "budget refusal",
+    "replay"
+  ],
+  "general_trim_complete": false
+}

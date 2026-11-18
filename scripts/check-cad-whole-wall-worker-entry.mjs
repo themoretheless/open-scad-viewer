@@ -7,7 +7,7 @@ import {setFlagsFromString} from 'node:v8'
 // Match the existing disposable Node worker's termination workaround.
 if(process.versions.node.startsWith('20.')&&process.arch==='arm64')setFlagsFromString('--liftoff-only')
 register()
-const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime.ts')
+const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime.ts')
 // Bind qualification to the identity imported by this worker's kernel module,
 // including replacement workers created by Cancel/Retry during publication.
 if(workerData?.expectedArtifact){

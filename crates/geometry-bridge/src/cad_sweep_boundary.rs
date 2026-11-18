@@ -162,6 +162,10 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
     let sections = field(&v, "sections")?;
     let tolerance_uv = field(&v, "toleranceUv")?;
     let error_budget = field(&v, "maxDeviation")?;
+    let accuracy = owned::SweepAccuracy {
+        tolerance_uv,
+        error_budget,
+    };
     if matches!(kind, Kind::SmoothClosed | Kind::SmoothClosedAudit) {
         if ideal_method != "atlas" {
             return Err(input(
@@ -172,8 +176,7 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
             &sweep,
             &loop_sizes,
             sections,
-            tolerance_uv,
-            error_budget,
+            accuracy,
             ideal_limits.ok_or_else(|| input("Smooth closed ideal-body limits required"))?,
             &v,
             kind == Kind::SmoothClosedAudit,
@@ -197,8 +200,7 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
             &sweep,
             &loop_sizes,
             sections,
-            tolerance_uv,
-            error_budget,
+            accuracy,
             limits,
             ideal_limits.ok_or_else(|| input("Closed original ideal-body limits required"))?,
             &v,
@@ -208,34 +210,21 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
     let retained_caps = caps(&v["retainedCaps"])?;
     let source_caps = [&source_caps[0], &source_caps[1]];
     let retained_caps = [&retained_caps[0], &retained_caps[1]];
+    let source = owned::SweepSource {
+        sweep: &sweep,
+        loop_sizes: &loop_sizes,
+        sections,
+        source_caps,
+    };
     let attempt = if let Some(ideal) = ideal_limits {
         let construct = if ideal_method == "atlas" {
             owned::construct_with_ideal_atlas
         } else {
             owned::construct_with_ideal
         };
-        construct(
-            &sweep,
-            &loop_sizes,
-            sections,
-            source_caps,
-            retained_caps,
-            tolerance_uv,
-            error_budget,
-            limits,
-            ideal,
-        )?
+        construct(source, retained_caps, accuracy, limits, ideal)?
     } else {
-        owned::construct(
-            &sweep,
-            &loop_sizes,
-            sections,
-            source_caps,
-            retained_caps,
-            tolerance_uv,
-            error_budget,
-            limits,
-        )?
+        owned::construct(source, retained_caps, accuracy, limits)?
     };
     let joint=match &attempt {
         owned::Attempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),

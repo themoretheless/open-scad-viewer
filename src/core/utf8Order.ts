@@ -7,7 +7,9 @@ function utf8CompareEncoded(left: string, right: string): number {
   const rightBytes = UTF8.encode(right)
   const shared = Math.min(leftBytes.length, rightBytes.length)
   for (let index = 0; index < shared; index++) {
-    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index] - rightBytes[index]
+    const leftByte = leftBytes[index] ?? 0
+    const rightByte = rightBytes[index] ?? 0
+    if (leftByte !== rightByte) return leftByte - rightByte
   }
   return leftBytes.length - rightBytes.length
 }
@@ -40,7 +42,10 @@ export function utf8ByteLength(value: string): number {
     else if (unit < 0x800) length += 2
     else if (unit >= 0xd800 && unit <= 0xdbff && index + 1 < value.length) {
       const next = value.charCodeAt(index + 1)
-      if (next >= 0xdc00 && next <= 0xdfff) { length += 4; index++ } else length += 3
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        length += 4
+        index++
+      } else length += 3
     } else length += 3
   }
   return length

@@ -352,10 +352,9 @@ pub(super) fn checked(
     v: &[Curve],
     pu: &[f64],
     pv: &[f64],
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: super::CurveAudit,
 ) -> Result<(Surface, Vec<value_codec::Value>)> {
+        let tolerance = audit.tolerance;
     let surface = assemble(u, v, pu, pv, tolerance)?;
     let certificates = curve_audits(
         &surface,
@@ -363,9 +362,7 @@ pub(super) fn checked(
         v,
         pu,
         pv,
-        tolerance,
-        max_cells,
-        max_map_evaluations,
+        audit,
     )?;
     Ok((surface, certificates))
 }
@@ -376,10 +373,9 @@ fn curve_audits(
     v: &[Curve],
     pu: &[f64],
     pv: &[f64],
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: super::CurveAudit,
 ) -> Result<Vec<value_codec::Value>> {
+    let super::CurveAudit { tolerance, max_cells, max_map_evaluations } = audit;
     let pu = stations(pu, v.len())?;
     let pv = stations(pv, u.len())?;
     let mut certificates = Vec::new();
@@ -426,10 +422,9 @@ pub(super) fn checked_with_tangents(
     pu: &[f64],
     pv: &[f64],
     targets: &[Curve; 2],
-    tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    audit: super::CurveAudit,
 ) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    let super::CurveAudit { tolerance, max_cells, .. } = audit;
     let surface = assemble_mode(u, v, pu, pv, tolerance, Some(targets))?;
     let curves = curve_audits(
         &surface,
@@ -437,9 +432,7 @@ pub(super) fn checked_with_tangents(
         v,
         pu,
         pv,
-        tolerance,
-        max_cells,
-        max_map_evaluations,
+        audit,
     )?;
     let mut tangents = Vec::new();
     for (end, target) in targets.iter().enumerate() {
@@ -483,7 +476,17 @@ mod tests {
         let patches = cells(&u, &v, &[0., 1.], &[0., 1.], 0.).unwrap();
         #[cfg(feature = "codec")]
         {
-            let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
+            let (_, certificates) = checked(
+                &u,
+                &v,
+                &[0., 1.],
+                &[0., 1.],
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 200000,
+                },
+            ).unwrap();
             assert_eq!(certificates.len(), 4);
             assert!(
                 certificates
@@ -632,7 +635,17 @@ mod tests {
             })
             .collect();
         let (surface, certificates) =
-            super::super::patch_cartesian(&u, &v, &stations, &stations, 1e-6, 50000, 200000)
+            super::super::patch_cartesian(
+                &u,
+                &v,
+                &stations,
+                &stations,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 200000,
+                },
+            )
                 .unwrap();
         assert_eq!(certificates.len(), 6);
         assert!(
@@ -737,9 +750,11 @@ mod tests {
                 &[0., 1.],
                 &[0., 1.],
                 &tangents,
-                1e-6,
-                50000,
-                200000,
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 200000,
+                },
             )
             .unwrap();
         assert_eq!(curve_certificates.len(), 4);
@@ -772,9 +787,11 @@ mod tests {
                 &[0., 1.],
                 &[0., 1.],
                 &conflict,
-                1e-6,
-                50000,
-                200000
+                crate::construct::surfaces::gordon::CurveAudit {
+                    tolerance: 1e-6,
+                    max_cells: 50000,
+                    max_map_evaluations: 200000,
+                },
             )
             .is_err()
         );

@@ -1,0 +1,50 @@
+{
+  "id": "NURBS-0633",
+  "testedBase": "91d61b8e95521b0a830d1f46a8d1f41f9c2ab6c6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 267,
+  "scope": [
+    "Return component mass bounds and sum them independently of centroidal inertia availability.",
+    "Check weighted component mass intervals, their sum, stable outer-contour identities through WASM, and no partial masses under insufficient budget."
+  ],
+  "logSha256": "1bd60a455136c59639ed87e753dd5466a5c6c9c36c4454462fe4cad4ed5eee4c",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "169f3decb5919b187fcdd37acae205257dedf634943379072022e0fbad51102a",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "dbdbc40eb2c6d820d3e38c3e829577ba583b360bda854b69cbe7c281055a62b5",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "99d7f3643fdc762ce399eb4671a461cdb2a4b97efb1112673169855cc15214da",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "62d64bd06595fc8bad4a5ab28551e4311c38f901d4f71e493e97ff753c599a4f",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4f53ec1261320370cd62eb00ac30e1a11379ff2c0d3e38d13eebcdf12bad6cab"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

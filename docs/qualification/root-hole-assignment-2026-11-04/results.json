@@ -1,0 +1,11 @@
+{
+  "passed": 12,
+  "tests": [
+    "root_uv_closure",
+    "root_model",
+    "root_brep_subdivision"
+  ],
+  "whole_hole_boundary_assignment": true,
+  "general_material_trim_complete": false,
+  "root_uv_closure_seconds": 64.02
+}

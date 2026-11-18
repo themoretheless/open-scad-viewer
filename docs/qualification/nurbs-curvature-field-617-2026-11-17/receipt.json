@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0617",
+  "testedBase": "ed0f7644302e8451efe878bdd585059c10ca5a94",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 208,
+  "scope": [
+    "Enclose the inertia of all retained components about their shared centroid on one set of integration cells.",
+    "Check analytic central tensor terms with offset islands, symmetry, and refusal without complete positive area."
+  ],
+  "logSha256": "d1b1733800839c763dbe20540363e2fcb939dda86cc9099d5411b008827e290e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e5362c49cf16519e0063141528a1f50a2ddfe6d331376b94ffb67ce8fc683803",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "7841bbcefbaec435b354d38539fa1366ced923c13d3b785837529b165ec34193"
+  }
+}

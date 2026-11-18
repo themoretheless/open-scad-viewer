@@ -82,13 +82,8 @@ fn g2_changes_transverse_curvature_that_whole_g1_does_not_constrain() {
     .unwrap();
     assert!(g1.evidence().admitted);
     let not_g2 = nurbs_core::surface_g2_pcurves::inspect(
-        &c,
-        [&p, &p],
-        [g1.surface(), &support],
-        [false; 2],
-        1e-8,
-        1e-5,
-        1e-5,
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [g1.surface(), &support], reversed: [false; 2] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-8, normal: 1e-5, curvature: 1e-5 },
         100000,
         1000000,
     )
@@ -253,13 +248,8 @@ fn near_identical_high_degree_original_fields_have_common_basis_g2_evidence() {
     let p = pc(0.5);
     let c = support.iso(Axis::V, 0.5).unwrap();
     let proof = nurbs_core::surface_g2_pcurves::inspect(
-        &c,
-        [&p, &p],
-        [&actual, &support],
-        [false; 2],
-        1e-8,
-        1e-5,
-        1e-5,
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&actual, &support], reversed: [false; 2] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-8, normal: 1e-5, curvature: 1e-5 },
         100,
         0,
     )
@@ -487,13 +477,8 @@ fn changed_rational_weights_do_not_inherit_common_basis_curvature() {
     let (_, _, vv) = at.second_derivatives().unwrap();
     assert!((vv[2] / (v[1] * v[1]) - 56. * b / 25.).abs() < 1e-12);
     let proof = nurbs_core::surface_g2_pcurves::inspect(
-        &c,
-        [&p, &p],
-        [&actual, &source],
-        [false; 2],
-        1e-8,
-        1e-5,
-        1e-5,
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&actual, &source], reversed: [false; 2] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-8, normal: 1e-5, curvature: 1e-5 },
         100000,
         1000000,
     )

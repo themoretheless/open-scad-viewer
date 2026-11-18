@@ -191,12 +191,14 @@ fn main() {
         supports,
         skin,
         [&middle[0], &middle[1]],
-        &RadiusLaw::Constant(1.),
         [0.5, 1.5],
-        [1., -1.],
-        1e-7,
-        100000,
-        1000000,
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [1., -1.],
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     println!(
@@ -204,11 +206,13 @@ fn main() {
         radius.decision, radius.reason, radius.maximum_center_gap_mm
     );
     let retention = face_cut::plan_contact_retention(
-        &source,
-        0,
-        request,
-        skin,
-        [&contacts[0], &contacts[1]],
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
         "expanded-runout",
         1e-8,
         Default::default(),
@@ -348,10 +352,12 @@ fn main() {
     let local = if saved_graph {
         r::sew_g2_patch_set_with_graph_work(
             &retention.plan().model,
-            &selected,
-            &authored.vertices,
-            &authored.edges,
-            &patches,
+            r::PatchReplacement {
+                selected: &selected,
+                new_vertices: &authored.vertices,
+                new_edges: &authored.edges,
+                patches: &patches,
+            },
             "expanded-runout-local",
             1e-8,
             Default::default(),
@@ -360,10 +366,12 @@ fn main() {
     } else {
         r::sew_g2_patch_set(
             &retention.plan().model,
-            &selected,
-            &authored.vertices,
-            &authored.edges,
-            &patches,
+            r::PatchReplacement {
+                selected: &selected,
+                new_vertices: &authored.vertices,
+                new_edges: &authored.edges,
+                patches: &patches,
+            },
             "expanded-runout-local",
             1e-8,
             Default::default(),

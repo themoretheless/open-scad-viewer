@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0528",
+  "testedBase": "b1ff213a528282d3fb7ed398a610378a99c7befd",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 113,
+  "scope": [
+    "Prove and remove redundant interior knots in one cyclic-axis pass with exact reclosure.",
+    "Open once, prove each removal in a bounded tensor pass, and publish a net reduction only after exact reclosure."
+  ],
+  "logSha256": "28b6c0caba2951ee84b85dea1548bf317d36c7feb8abb5b5fee6eaac901aacec",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c8de9f8dd72fd0064bfb84d3fef75cbe98a112ca848aebbf5f5cc04a3ab352da",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "3f17e4e76c2e9fd5bfb268ec7046704daad39795f29df011a75514bcc39b60c4"
+  }
+}

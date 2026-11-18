@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0386",
+  "testedBase": "8e2cf0d5bed1a5193c127bb46c211a7e1abe08b2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 97,
+  "scope": [
+    "Infer exact rational planes of free shell boundary cycles and group coplanar rings for capping.",
+    "Free coedges assemble by source vertex identity. Exact rational cross and dot products infer and verify a unique plane from all authored curve poles; canonical coefficients group coplanar cycles."
+  ],
+  "logSha256": "aaad3dd45f625f188c074ab4fc9b312780eb77724a2fe9795be0f238282c3f9c",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "9057f6f5ce506346c487cce6919e96939ca1869834ae8c37493e21176e4b1217",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "a09a2c928a3323093106bf630237238336252349bb46cf7432f12d6f4c94d854",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "847f76ee6f1cedac12251fb948fcf8cfb82f82b29919c14964fbc7238fda46fc",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "5689229e6c31929e39720fbc1d1ddf8faa4493fbd93d7f1014197d6a5457733c",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "bc5c74e42368b1084186139f5d7c523b824be4a4e726a7d4629535f0066467ed"
+  }
+}

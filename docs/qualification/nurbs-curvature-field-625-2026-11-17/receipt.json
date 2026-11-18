@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0625",
+  "testedBase": "15b88d25f5c9d0fcb89bfe59e26638902ff0d548",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 251,
+  "scope": [
+    "Expose an optional fixed spatial axis in the complete patch-set mass request.",
+    "Check the analytic offset moment of a patch set with a nested island through WASM, compatible principal moments, and rejection or null output for malformed or unproved axes."
+  ],
+  "logSha256": "7feb753b1395227b28e002f9a054e838135de5fa29d545081989d361936c974e",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "83dc3ccfd18765f32aea50667ad7d49da15d22741abf320c74f360bbfb930cfc",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "72468f161540b728b202dd71795ea8966449596fe5bb6813e5e718efdd80cca6",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "ad69aa7b1634f657d25cc522aa8f58e24d5caa3b6c28504abbaec9325a68c88f",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "6c0b81e46bdf7c679222365e90c2a7ba86ba70ebb6fdc0e12782dc9c79b08a20"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

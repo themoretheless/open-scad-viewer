@@ -1,9 +1,6 @@
 #[path = "../examples/support/face_window_fixture.rs"]
 mod fixture;
-use brep_core::{
-    face_window,
-    sweep_smoothness::geometric::{self, Tolerances},
-};
+use brep_core::{face_window, sweep_smoothness::geometric::{self, Tolerances}};
 use nurbs_core::surface_join::Decision;
 fn tolerances() -> Tolerances {
     Tolerances {

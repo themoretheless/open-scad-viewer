@@ -1,19 +1,15 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import {
-  OPENSCAD_2021_01_BUILTIN_MODULES,
-  OPENSCAD_2021_01_SMOKE_FIXTURES,
-} from '../src/core/openScad2021Contract'
-import { OpenScadProject } from '../src/services/openScadProject'
-import { parseOpenSCAD, parseOpenScadProject } from '../src/services/openscadParser'
-import { OpenScadImportPositionedError } from '../src/services/openScadImport'
-import { OpenScadSurfaceError } from '../src/services/openScadSurface'
-import { OpenScadTextPositionedError } from '../src/services/openScadText'
+import { OPENSCAD_2021_01_BUILTIN_MODULES, OPENSCAD_2021_01_SMOKE_FIXTURES } from '../src/core/openScad2021Contract'
+import { OpenScadProject } from '../src/language/openScadProject'
+import { parseOpenSCAD, parseOpenScadProject } from '../src/language/openscadParser'
+import { OpenScadImportPositionedError } from '../src/exchange/openScadImport'
+import { OpenScadSurfaceError } from '../src/language/openScadSurface'
+import { OpenScadTextPositionedError } from '../src/language/openScadText'
 
-const RGBA_PNG_2X2 = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
-const BASIC_TTF = new Uint8Array(readFileSync(
-  new URL('./fixtures/Basic-Regular.ttf', import.meta.url),
-))
+const RGBA_PNG_2X2 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
+const BASIC_TTF = new Uint8Array(readFileSync(new URL('./fixtures/Basic-Regular.ttf', import.meta.url)))
 
 function bounds(vertices: Float32Array): { min: number[]; max: number[] } {
   const min = [Infinity, Infinity, Infinity]
@@ -59,10 +55,12 @@ describe('independent OpenSCAD project evaluation', () => {
   })
 
   it('requires a project VFS when surface() is called through the direct source parser', async () => {
-    await expect(parseOpenSCAD('surface(file = "heightmap.dat");', {
-      languageProfile: 'openscad/stable-2021.01',
-      quality: 'full',
-    })).rejects.toMatchObject({
+    await expect(
+      parseOpenSCAD('surface(file = "heightmap.dat");', {
+        languageProfile: 'openscad/stable-2021.01',
+        quality: 'full',
+      }),
+    ).rejects.toMatchObject({
       name: 'OpenScadSurfaceError',
       code: 'E_SURFACE_PROJECT_REQUIRED',
       details: { sourcePath: '<inline>' },
@@ -72,10 +70,12 @@ describe('independent OpenSCAD project evaluation', () => {
   })
 
   it('requires a project VFS when import() is called through the direct source parser', async () => {
-    await expect(parseOpenSCAD('import(file = "shape.svg");', {
-      languageProfile: 'openscad/stable-2021.01',
-      quality: 'full',
-    })).rejects.toMatchObject({
+    await expect(
+      parseOpenSCAD('import(file = "shape.svg");', {
+        languageProfile: 'openscad/stable-2021.01',
+        quality: 'full',
+      }),
+    ).rejects.toMatchObject({
       name: 'OpenScadImportPositionedError',
       importCode: 'E_IMPORT_PROJECT_REQUIRED',
       details: { sourcePath: '<inline>', specifier: '' },
@@ -85,10 +85,12 @@ describe('independent OpenSCAD project evaluation', () => {
   })
 
   it('requires a project VFS when text() is called through the direct source parser', async () => {
-    await expect(parseOpenSCAD('text("A", font = "Basic");', {
-      languageProfile: 'openscad/stable-2021.01',
-      quality: 'full',
-    })).rejects.toMatchObject({
+    await expect(
+      parseOpenSCAD('text("A", font = "Basic");', {
+        languageProfile: 'openscad/stable-2021.01',
+        quality: 'full',
+      }),
+    ).rejects.toMatchObject({
       name: 'OpenScadTextPositionedError',
       textCode: 'E_TEXT_PROJECT_REQUIRED',
       details: { sourcePath: '<inline>' },
@@ -100,13 +102,16 @@ describe('independent OpenSCAD project evaluation', () => {
   it('executes the exact canonical text smoke through the direct project evaluator', async () => {
     const smoke = OPENSCAD_2021_01_BUILTIN_MODULES.find(entry => entry.name === 'text')!.smoke
     const fixture = OPENSCAD_2021_01_SMOKE_FIXTURES.find(entry => entry.id === 'fontconfig-default-font')!
-    const result = await parseOpenScadProject(new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: smoke.source },
-        { kind: 'blob', path: fixture.path, data: BASIC_TTF },
-      ],
-    }), { quality: 'full' })
+    const result = await parseOpenScadProject(
+      new OpenScadProject({
+        entrypoint: 'main.scad',
+        files: [
+          { kind: 'source', path: 'main.scad', source: smoke.source },
+          { kind: 'blob', path: fixture.path, data: BASIC_TTF },
+        ],
+      }),
+      { quality: 'full' },
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeGreaterThan(0)
@@ -118,18 +123,22 @@ describe('independent OpenSCAD project evaluation', () => {
   })
 
   it('resolves text font paths relative to their defining module source', async () => {
-    const result = await parseOpenScadProject(new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: 'use <lib/label.scad> label();' },
-        {
-          kind: 'source',
-          path: 'lib/label.scad',
-          source: 'module label() { linear_extrude(height = 2) text("AV", size = 5, font = "../fonts/Basic-Regular.ttf", halign = "center", valign = "center", spacing = 1.2, direction = "ltr", language = "en", script = "Latn", $fn = 24); }',
-        },
-        { kind: 'blob', path: 'fonts/Basic-Regular.ttf', data: BASIC_TTF },
-      ],
-    }), { quality: 'full' })
+    const result = await parseOpenScadProject(
+      new OpenScadProject({
+        entrypoint: 'main.scad',
+        files: [
+          { kind: 'source', path: 'main.scad', source: 'use <lib/label.scad> label();' },
+          {
+            kind: 'source',
+            path: 'lib/label.scad',
+            source:
+              'module label() { linear_extrude(height = 2) text("AV", size = 5, font = "../fonts/Basic-Regular.ttf", halign = "center", valign = "center", spacing = 1.2, direction = "ltr", language = "en", script = "Latn", $fn = 24); }',
+          },
+          { kind: 'blob', path: 'fonts/Basic-Regular.ttf', data: BASIC_TTF },
+        ],
+      }),
+      { quality: 'full' },
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeGreaterThan(0)
@@ -171,13 +180,16 @@ describe('independent OpenSCAD project evaluation', () => {
     const smoke = OPENSCAD_2021_01_BUILTIN_MODULES.find(entry => entry.name === 'import')!.smoke
     const fixture = OPENSCAD_2021_01_SMOKE_FIXTURES.find(entry => entry.id === 'import-square-svg')!
     if (fixture.provisioning !== 'inline-text') throw new Error('Expected inline SVG fixture')
-    const result = await parseOpenScadProject(new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: smoke.source },
-        { kind: 'source', path: fixture.path, source: fixture.text },
-      ],
-    }), { quality: 'full' })
+    const result = await parseOpenScadProject(
+      new OpenScadProject({
+        entrypoint: 'main.scad',
+        files: [
+          { kind: 'source', path: 'main.scad', source: smoke.source },
+          { kind: 'source', path: fixture.path, source: fixture.text },
+        ],
+      }),
+      { quality: 'full' },
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeGreaterThan(0)
@@ -187,18 +199,21 @@ describe('independent OpenSCAD project evaluation', () => {
   it('resolves import assets relative to the defining module source', async () => {
     const fixture = OPENSCAD_2021_01_SMOKE_FIXTURES.find(entry => entry.id === 'import-square-svg')!
     if (fixture.provisioning !== 'inline-text') throw new Error('Expected inline SVG fixture')
-    const result = await parseOpenScadProject(new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: 'use <lib/part.scad> imported_part();' },
-        {
-          kind: 'source',
-          path: 'lib/part.scad',
-          source: 'module imported_part() { linear_extrude(height = 2) import(file = "../assets/part.svg"); }',
-        },
-        { kind: 'source', path: 'assets/part.svg', source: fixture.text },
-      ],
-    }), { quality: 'full' })
+    const result = await parseOpenScadProject(
+      new OpenScadProject({
+        entrypoint: 'main.scad',
+        files: [
+          { kind: 'source', path: 'main.scad', source: 'use <lib/part.scad> imported_part();' },
+          {
+            kind: 'source',
+            path: 'lib/part.scad',
+            source: 'module imported_part() { linear_extrude(height = 2) import(file = "../assets/part.svg"); }',
+          },
+          { kind: 'source', path: 'assets/part.svg', source: fixture.text },
+        ],
+      }),
+      { quality: 'full' },
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeGreaterThan(0)
@@ -241,13 +256,16 @@ describe('independent OpenSCAD project evaluation', () => {
     const smoke = OPENSCAD_2021_01_BUILTIN_MODULES.find(entry => entry.name === 'surface')!.smoke
     const fixture = OPENSCAD_2021_01_SMOKE_FIXTURES.find(entry => entry.id === 'heightmap-dat')!
     if (fixture.provisioning !== 'inline-text') throw new Error('Expected inline DAT fixture')
-    const result = await parseOpenScadProject(new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        { kind: 'source', path: 'main.scad', source: smoke.source },
-        { kind: 'source', path: fixture.path, source: fixture.text },
-      ],
-    }), { quality: 'full' })
+    const result = await parseOpenScadProject(
+      new OpenScadProject({
+        entrypoint: 'main.scad',
+        files: [
+          { kind: 'source', path: 'main.scad', source: smoke.source },
+          { kind: 'source', path: fixture.path, source: fixture.text },
+        ],
+      }),
+      { quality: 'full' },
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeGreaterThan(0)
@@ -262,7 +280,8 @@ describe('independent OpenSCAD project evaluation', () => {
         {
           kind: 'source',
           path: 'lib/terrain.scad',
-          source: 'module terrain() { surface(file = "../assets/terrain.dat", center = true, invert = true, convexity = 7); }',
+          source:
+            'module terrain() { surface(file = "../assets/terrain.dat", center = true, invert = true, convexity = 7); }',
         },
         { kind: 'source', path: 'assets/terrain.dat', source: '0\t1\n2  3\n' },
       ],
@@ -285,17 +304,18 @@ describe('independent OpenSCAD project evaluation', () => {
 
   it('evaluates PNG scale and historical invert semantics through project blobs', async () => {
     const data = new Uint8Array(Buffer.from(RGBA_PNG_2X2, 'base64'))
-    const makeProject = (invert: boolean) => new OpenScadProject({
-      entrypoint: 'main.scad',
-      files: [
-        {
-          kind: 'source',
-          path: 'main.scad',
-          source: `surface(file = "assets/heightmap.png", center = true, invert = ${invert});`,
-        },
-        { kind: 'blob', path: 'assets/heightmap.png', data },
-      ],
-    })
+    const makeProject = (invert: boolean) =>
+      new OpenScadProject({
+        entrypoint: 'main.scad',
+        files: [
+          {
+            kind: 'source',
+            path: 'main.scad',
+            source: `surface(file = "assets/heightmap.png", center = true, invert = ${invert});`,
+          },
+          { kind: 'blob', path: 'assets/heightmap.png', data },
+        ],
+      })
 
     const normal = await parseOpenScadProject(makeProject(false), { quality: 'full' })
     const inverted = await parseOpenScadProject(makeProject(true), { quality: 'full' })

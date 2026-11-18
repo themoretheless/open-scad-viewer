@@ -1,0 +1,66 @@
+{
+  "base": "450605cef7173a3c73e66b2ef3675f36e868e7a1",
+  "checks": [
+    {
+      "suite": "root",
+      "passed": 22,
+      "failed": 0
+    },
+    {
+      "suite": "gcd",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "suite": "legacy",
+      "passed": 25,
+      "failed": 0
+    }
+  ],
+  "total_passed": 49,
+  "architecture": "passed",
+  "scope": "native source only",
+  "complete_general_boolean": false,
+  "complete_material_trim": false,
+  "wasm_delivery": false,
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "5282e912b13b6ba83ea676f0bc15caecfb838236de32b71ed8852e1d9b9c8d62",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "c870f6dc0012e82f78630ff845a49309a045b0aaa8a34cb2dad4f7a3ac46eb1a",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/deflate.rs": "61babcd810d524b5babe98757148ff23ea7d9b6b29f506968daecae98d922178",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/division.rs": "db3f851e1d043fdcc4b1e03bd8803b96fb01eaec3dd06b1b5c78d325c7826370",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/fiber.rs": "e85c72b7f0b814a37724dd94d53544a462dfc0ac3776d82392a113db74c01f64",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/fiber/interval.rs": "8bd5347ab8ca4562bf6a58027db63dc5c5dfee732d3cd1a31907c9eedc724758",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/fiber/operator.rs": "8a23fcd6f1540677f1b0135bcd3ed03f66c95355475dc399e3f3da361226485d",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/gcd.rs": "c2cf2e196053331d9e992b3f285d3bafa9bd6502babbfa82f954a925ce6ba8e4",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/gcd/field.rs": "c2acd7dcf2f6b5213ace7bf3883156c0f5ce619236ba34b0600c774dc7119313",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/gcd/tests.rs": "101aafa3bbcda3ee678d06113cf0ed60659a0c0adff4fb8eeee59bca1955d39b",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/groebner.rs": "c5b73f560b22238507c76e19370399827fcf80e5b8b94b66979a3baaf44e88ed",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/pole.rs": "d285b035c535d0523aaf5cb146b427c7eaeedc302d9c9f0374550bfe43bccdfd",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/polynomial.rs": "2c4cad921a0d985d74cc331ba2abca49d2f34f1a781565aa8c1c9959d163b872",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/span.rs": "1a69abcbe610a6cb42f9dc7e9c7883f65ea98775a82ca1468749e9b0fbdbe8fe",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs": "5b44b58d1a94e6ed3b84073817fcea6e5ab5c2bc7759e737768cfad09279cf30",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/fiber_certificate.rs": "a2f762bc4c60bfcb1d9e48d9b8abd6ad74736152fec8d1a4c84a881bcc9d76c2",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/krawczyk.rs": "5dbe83d8e23570353a6ed416b482640e476a999fc6a4d20d8370a67e9d52a340",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient.rs": "8dc15f6078e851fce5208c56f610264e5d9ddecb203a06d684e12ae0fbcb8d62",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/axes.rs": "48246371fc59945c1b86059173449832f04b1e77c9e88d498ea8eeca1d19510b",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/coverage.rs": "483e203b335eb770c0c97f2d07064faaccd5c5ee6e1661be7871329f3ac41422",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/coverage/discovery.rs": "00bff552ab5beebca352443f5927b14d9e12f9d46b1cc8c9888b8bb956d0d3b8",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/discover.rs": "944c95830ee455dd4f2ddff0488ce45879c30b91cb4d6f303e2d6d025a3cfe35",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/discover/proposals.rs": "9b7e165f3224bacef099534d3d557c2f4616281ecad77368fb186bf02ca977d4",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/operator.rs": "48066498e11e927c2a3335a5848822aedd3666bfedc1f38bdfa9b46dfb73381b",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "ae2ff0aaffac6943137d0c350927f17e62893895d39b852de7c0bc9828493a42",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/frames.rs": "53fead43aed66cee6fe6a256e231dc626ffb30c1d1ec61f581b44045a8afb875",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "a24a38e9b78a24795f58a3bbbd44490c47860dbd219aef64a94ca718bd90bbff",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port/membership.rs": "0addce5979f9ef4fc45f657c60183ebeff381a315e509a69bc6f5ee0e17949ae",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/query.rs": "82c15d5ba6f55dd8aa84f759d81a20a79cdfb5c3a3ca4c65257cbe9d30516d8d",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire.rs": "88f14d7e60ee27eb58ca67b67a4ec4da4affd04402e39f46f06f810f78b2e227",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire/winding.rs": "6eb52b1e659bf568f0450b58f6f25703a00f34812183615ced1f853eb38ede53",
+    "crates/nurbs-core/tests/ss_original_ideals.rs": "cbd550f1a04e7d0742dc0b11cbca7e650d5932229e235d0568cb3e651f5a36ea",
+    "crates/nurbs-core/tests/ss_pole_ideals.rs": "ff28e146269ae03678e5bdf041bbc74079cbc2e11ddb439035684170129dedc1",
+    "crates/nurbs-core/tests/ss_quotient_fibers.rs": "6a8e15727c3aff8cfc262f0401d22c64c936cd0f90eb2928c2038f248fc0e9c5",
+    "crates/nurbs-core/tests/ss_root_geometry.rs": "b0f3a51579e5d763ec8345a4a941d24ec74e87acaa95073dd7c8b39b45de8c6f",
+    "crates/nurbs-core/tests/ss_root_ports.rs": "4cc23d895962f506a1cb5d7854e14124f3774aec1159c05e0ffbec2d6c1e60ea",
+    "crates/nurbs-core/tests/support/ss_original_ideal.rs": "a0be321f7b46e883059ffb81de1d271f443098fd4da7c360c0caf3182509d67e",
+    "docs/design/ss-general-root-progress-2026-11-04.md": "b4fbed36e9b52e62b6996d9b4e5c877f121b0bda59bbd00d5ed193c27ca9e383"
+  }
+}

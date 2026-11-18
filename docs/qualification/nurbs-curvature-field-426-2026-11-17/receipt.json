@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0426",
+  "testedBase": "d2eb06846981dbc5e0bde6372c84336cccf27962",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 176,
+  "scope": [
+    "Return the exact nearest point and squared distance to a retained polyhedral boundary.",
+    "Exact face projection and trim parity preserve voids. Boundary segment minimization handles rejected projections, and exact plane distance supplies a safe pruning bound."
+  ],
+  "logSha256": "0ab4541716ed79a62a0bf1d7d351a1394f2544618adb72f954189bdd6ebfa9ce",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "f1ffa718b1647885a9d2b97c1864e07e185bc66b495e823138eaac3d014199ad",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "ef74e2b035d356685e1f9b5009da15e1046a6ff972441669747f9f31f4b273ce",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "ccbd3476aa8539d4d83df86eb06a865ca86c95d6f279dd694dc3352d4b2ecde6",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs": "68f28bb45b09f826f38163ed7ea04ab8e97e7a408cf606ed69f868e76687b4aa"
+  }
+}

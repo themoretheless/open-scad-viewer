@@ -19,9 +19,17 @@ const MAX_LOG_ENTRIES = 128
 const MAX_LOG_ENTRY_BYTES = 2 * 1024
 const FORMATS = new Set(['stl', 'off', 'wrl', '3mf', 'csg', 'dxf', 'svg'])
 const EXPERIMENTS = new Set([
-  'roof', 'lazy-union', 'vertex-object-renderers-indexing', 'textmetrics',
-  'import-function', 'object-function', 'predictible-output', 'vector-swizzle',
-  'discretization-by-error', 'ai-features', 'unicode-identifiers',
+  'roof',
+  'lazy-union',
+  'vertex-object-renderers-indexing',
+  'textmetrics',
+  'import-function',
+  'object-function',
+  'predictible-output',
+  'vector-swizzle',
+  'discretization-by-error',
+  'ai-features',
+  'unicode-identifiers',
 ])
 const MIME_TYPES = Object.freeze({
   stl: 'model/stl',
@@ -57,17 +65,30 @@ async function readBoundedStdin() {
 }
 
 function normalizedPath(value) {
-  if (typeof value !== 'string' || value.length === 0 || value.length > 1_024
-    || value !== value.normalize('NFC') || value.includes('\\') || value.includes('\0')
-    || value.startsWith('/')) return false
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    value.length > 1_024 ||
+    value !== value.normalize('NFC') ||
+    value.includes('\\') ||
+    value.includes('\0') ||
+    value.startsWith('/')
+  )
+    return false
   const segments = value.split('/')
-  return !segments.some(segment => segment.length === 0 || segment === '.' || segment === '..')
-    && value !== 'main.scad' && !value.startsWith('main.scad/')
-    && value !== 'fonts'
-    && value !== 'fonts/Basic-Regular.ttf' && !value.startsWith('fonts/Basic-Regular.ttf/')
-    && value !== 'fonts/fonts.conf' && !value.startsWith('fonts/fonts.conf/')
-    && value !== 'home' && !value.startsWith('home/')
-    && !value.startsWith('__open_scad_result.')
+  return (
+    !segments.some(segment => segment.length === 0 || segment === '.' || segment === '..') &&
+    value !== 'main.scad' &&
+    !value.startsWith('main.scad/') &&
+    value !== 'fonts' &&
+    value !== 'fonts/Basic-Regular.ttf' &&
+    !value.startsWith('fonts/Basic-Regular.ttf/') &&
+    value !== 'fonts/fonts.conf' &&
+    !value.startsWith('fonts/fonts.conf/') &&
+    value !== 'home' &&
+    !value.startsWith('home/') &&
+    !value.startsWith('__open_scad_result.')
+  )
 }
 
 function pathsConflict(left, right) {
@@ -75,16 +96,19 @@ function pathsConflict(left, right) {
 }
 
 function decodeStrictBase64(value) {
-  if (typeof value !== 'string' || value.length % 4 !== 0
-    || value.length > Math.ceil(MAX_FILE_BYTES / 3) * 4) return null
+  if (typeof value !== 'string' || value.length % 4 !== 0 || value.length > Math.ceil(MAX_FILE_BYTES / 3) * 4)
+    return null
   const paddingIndex = value.indexOf('=')
-  if (paddingIndex >= 0 && (paddingIndex < value.length - 2
-    || !/^={1,2}$/.test(value.slice(paddingIndex)))) return null
+  if (paddingIndex >= 0 && (paddingIndex < value.length - 2 || !/^={1,2}$/.test(value.slice(paddingIndex)))) return null
   const dataEnd = paddingIndex < 0 ? value.length : paddingIndex
   for (let index = 0; index < dataEnd; index += 1) {
     const code = value.charCodeAt(index)
-    const allowed = (code >= 0x41 && code <= 0x5a) || (code >= 0x61 && code <= 0x7a)
-      || (code >= 0x30 && code <= 0x39) || code === 0x2b || code === 0x2f
+    const allowed =
+      (code >= 0x41 && code <= 0x5a) ||
+      (code >= 0x61 && code <= 0x7a) ||
+      (code >= 0x30 && code <= 0x39) ||
+      code === 0x2b ||
+      code === 0x2f
     if (!allowed) return null
   }
   const decoded = Buffer.from(value, 'base64')
@@ -92,37 +116,56 @@ function decodeStrictBase64(value) {
 }
 
 function validateRequest(value) {
-  if (value === null || Array.isArray(value) || typeof value !== 'object'
-    || value.protocolVersion !== PROTOCOL_VERSION || !Number.isSafeInteger(value.jobId)
-    || value.jobId <= 0 || (value.operation !== 'check' && value.operation !== 'export')
-    || typeof value.source !== 'string' || Buffer.byteLength(value.source) > MAX_SOURCE_BYTES
-    || typeof value.sourceSha256 !== 'string' || sha256(value.source) !== value.sourceSha256
-    || !Array.isArray(value.files) || value.files.length > MAX_FILES
-    || (value.operation === 'check' ? value.format !== null : !FORMATS.has(value.format))) {
+  if (
+    value === null ||
+    Array.isArray(value) ||
+    typeof value !== 'object' ||
+    value.protocolVersion !== PROTOCOL_VERSION ||
+    !Number.isSafeInteger(value.jobId) ||
+    value.jobId <= 0 ||
+    (value.operation !== 'check' && value.operation !== 'export') ||
+    typeof value.source !== 'string' ||
+    Buffer.byteLength(value.source) > MAX_SOURCE_BYTES ||
+    typeof value.sourceSha256 !== 'string' ||
+    sha256(value.source) !== value.sourceSha256 ||
+    !Array.isArray(value.files) ||
+    value.files.length > MAX_FILES ||
+    (value.operation === 'check' ? value.format !== null : !FORMATS.has(value.format))
+  ) {
     throw new Error('Official OpenSCAD child received an invalid request')
   }
   const options = value.options
-  if (options === null || Array.isArray(options) || typeof options !== 'object'
-    || !Array.isArray(options.experimentalFeatures)
-    || !options.experimentalFeatures.every(feature => EXPERIMENTS.has(feature))
-    || new Set(options.experimentalFeatures).size !== options.experimentalFeatures.length
-    || !Array.isArray(options.defines) || options.defines.length > 64
-    || !options.defines.every(define => typeof define === 'string' && !/[\r\n\0]/.test(define)
-      && /^[$A-Za-z_][$A-Za-z0-9_]*\s*=/.test(define))
-    || (options.time !== null && (typeof options.time !== 'number'
-      || !Number.isFinite(options.time) || options.time < 0 || options.time > 1))
-    || (options.backend !== 'Manifold' && options.backend !== 'CGAL')
-    || typeof options.hardWarnings !== 'boolean'
-    || typeof options.checkParameters !== 'boolean'
-    || typeof options.checkParameterRanges !== 'boolean') {
+  if (
+    options === null ||
+    Array.isArray(options) ||
+    typeof options !== 'object' ||
+    !Array.isArray(options.experimentalFeatures) ||
+    !options.experimentalFeatures.every(feature => EXPERIMENTS.has(feature)) ||
+    new Set(options.experimentalFeatures).size !== options.experimentalFeatures.length ||
+    !Array.isArray(options.defines) ||
+    options.defines.length > 64 ||
+    !options.defines.every(
+      define => typeof define === 'string' && !/[\r\n\0]/.test(define) && /^[$A-Za-z_][$A-Za-z0-9_]*\s*=/.test(define),
+    ) ||
+    (options.time !== null &&
+      (typeof options.time !== 'number' || !Number.isFinite(options.time) || options.time < 0 || options.time > 1)) ||
+    (options.backend !== 'Manifold' && options.backend !== 'CGAL') ||
+    typeof options.hardWarnings !== 'boolean' ||
+    typeof options.checkParameters !== 'boolean' ||
+    typeof options.checkParameterRanges !== 'boolean'
+  ) {
     throw new Error('Official OpenSCAD child received invalid execution options')
   }
   let projectBytes = Buffer.byteLength(value.source)
   const paths = new Set()
   for (const file of value.files) {
-    if (file === null || Array.isArray(file) || typeof file !== 'object'
-      || !normalizedPath(file.path)
-      || [...paths].some(path => pathsConflict(path, file.path))) {
+    if (
+      file === null ||
+      Array.isArray(file) ||
+      typeof file !== 'object' ||
+      !normalizedPath(file.path) ||
+      [...paths].some(path => pathsConflict(path, file.path))
+    ) {
       throw new Error('Official OpenSCAD child received an invalid project path')
     }
     const data = decodeStrictBase64(file.dataBase64)
@@ -142,7 +185,9 @@ function createLogs() {
   let bytes = 0
   let truncated = false
   const append = (target, raw) => {
-    let value = String(raw).replace(/[\r\n\u2028\u2029]+/g, ' ').trim()
+    let value = String(raw)
+      .replace(/[\r\n\u2028\u2029]+/g, ' ')
+      .trim()
     if (!value) return
     while (Buffer.byteLength(value) > MAX_LOG_ENTRY_BYTES) value = value.slice(0, -1)
     const valueBytes = Buffer.byteLength(value)
@@ -162,7 +207,9 @@ function createLogs() {
 
 function ensureDirectory(FS, path) {
   if (path === '/project') {
-    try { FS.mkdir(path) } catch (error) {
+    try {
+      FS.mkdir(path)
+    } catch (error) {
       if (!error || error.errno !== 20) throw error
     }
     return
@@ -171,7 +218,9 @@ function ensureDirectory(FS, path) {
   let current = ''
   for (const segment of segments) {
     current += `/${segment}`
-    try { FS.mkdir(current) } catch (error) {
+    try {
+      FS.mkdir(current)
+    } catch (error) {
       if (!error || error.errno !== 20) throw error
     }
   }
@@ -214,13 +263,17 @@ function posixPathForRuntime(runtimePath) {
     if ((request === 'path' || request === 'node:path') && parent?.filename === runtimeFile) return posixPath
     return originalLoad.call(this, request, parent, isMain)
   }
-  return () => { Module._load = originalLoad }
+  return () => {
+    Module._load = originalLoad
+  }
 }
 
 async function loadRuntime(runtimePath, logs) {
   let initialized = false
   let resolveInitialized
-  const initializedPromise = new Promise(resolve => { resolveInitialized = resolve })
+  const initializedPromise = new Promise(resolve => {
+    resolveInitialized = resolve
+  })
   const injected = {
     noInitialRun: true,
     noExitRuntime: true,
@@ -268,8 +321,7 @@ const FONTCONFIG = `<?xml version="1.0"?>
 async function execute(request, runtimePath, fontPath, expectedFontSha256, logs) {
   const startedAt = performance.now()
   const font = await readFile(fontPath)
-  if (font.byteLength === 0 || font.byteLength > 2 * 1024 * 1024
-    || sha256(font) !== expectedFontSha256) {
+  if (font.byteLength === 0 || font.byteLength > 2 * 1024 * 1024 || sha256(font) !== expectedFontSha256) {
     throw Object.assign(new Error('Installed default font failed child integrity verification'), {
       code: 'E_OPENSCAD_FONT_INTEGRITY',
     })
@@ -298,21 +350,28 @@ async function execute(request, runtimePath, fontPath, expectedFontSha256, logs)
     if (error && Number.isSafeInteger(error.status)) exitStatus = error.status
     else throw error
   }
-  if (exitStatus !== 0) throw Object.assign(new Error(`OpenSCAD exited with status ${exitStatus}`), { code: 'E_OPENSCAD_COMPILE' })
+  if (exitStatus !== 0)
+    throw Object.assign(new Error(`OpenSCAD exited with status ${exitStatus}`), { code: 'E_OPENSCAD_COMPILE' })
   const warning = logs.snapshot().stderr.find(line => /^(?:ERROR|WARNING):/i.test(line))
   if (warning && request.options.hardWarnings) {
     throw Object.assign(new Error(warning), { code: 'E_OPENSCAD_COMPILE' })
   }
   let stat
-  try { stat = FS.stat(outputPath) } catch {
+  try {
+    stat = FS.stat(outputPath)
+  } catch {
     throw Object.assign(new Error('OpenSCAD did not produce the requested output'), { code: 'E_OPENSCAD_NO_OUTPUT' })
   }
   if (!Number.isSafeInteger(stat.size) || stat.size < 0 || stat.size > MAX_OUTPUT_BYTES) {
-    throw Object.assign(new Error(`OpenSCAD output exceeds ${MAX_OUTPUT_BYTES} bytes`), { code: 'E_OPENSCAD_OUTPUT_LIMIT' })
+    throw Object.assign(new Error(`OpenSCAD output exceeds ${MAX_OUTPUT_BYTES} bytes`), {
+      code: 'E_OPENSCAD_OUTPUT_LIMIT',
+    })
   }
   const output = Buffer.from(FS.readFile(outputPath))
   if (output.byteLength !== stat.size || output.byteLength > MAX_OUTPUT_BYTES) {
-    throw Object.assign(new Error('OpenSCAD output violated its declared bounded size'), { code: 'E_OPENSCAD_OUTPUT_LIMIT' })
+    throw Object.assign(new Error('OpenSCAD output violated its declared bounded size'), {
+      code: 'E_OPENSCAD_OUTPUT_LIMIT',
+    })
   }
   const format = request.operation === 'check' ? 'csg' : request.format
   return {
@@ -341,19 +400,18 @@ try {
   const runtimePath = process.argv[2]
   const fontPath = process.argv[3]
   const expectedFontSha256 = process.argv[4]
-  if (typeof runtimePath !== 'string' || runtimePath.length === 0) throw new Error('Official OpenSCAD runtime path is missing')
-  if (typeof fontPath !== 'string' || fontPath.length === 0
-    || typeof expectedFontSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(expectedFontSha256)) {
+  if (typeof runtimePath !== 'string' || runtimePath.length === 0)
+    throw new Error('Official OpenSCAD runtime path is missing')
+  if (
+    typeof fontPath !== 'string' ||
+    fontPath.length === 0 ||
+    typeof expectedFontSha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/.test(expectedFontSha256)
+  ) {
     throw new Error('Official OpenSCAD default font metadata is missing')
   }
   request = validateRequest(JSON.parse(await readBoundedStdin()))
-  process.stdout.write(JSON.stringify(await execute(
-    request,
-    runtimePath,
-    fontPath,
-    expectedFontSha256,
-    logs,
-  )))
+  process.stdout.write(JSON.stringify(await execute(request, runtimePath, fontPath, expectedFontSha256, logs)))
 } catch (error) {
   const terminal = {
     protocolVersion: PROTOCOL_VERSION,
@@ -365,9 +423,10 @@ try {
     logs: logs.snapshot(),
     status: 'failed',
     error: {
-      code: typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)
-        ? error.code
-        : 'E_OPENSCAD_RUNTIME',
+      code:
+        typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)
+          ? error.code
+          : 'E_OPENSCAD_RUNTIME',
       name: typeof error?.name === 'string' && error.name ? error.name.slice(0, 128) : 'Error',
       message: safeMessage(error),
     },

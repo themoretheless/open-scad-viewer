@@ -408,7 +408,18 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
         })
         .transpose()?;
     let wall_qualification=wall_request.map(|(groups,minimum,tolerance,uv,grid,attempts,work)|->Result<Value>{
-        let r=brep_core::source_material_wall::search_and_qualify(body,[&groups[0],&groups[1]],minimum,tolerance,uv,grid,attempts,work)?;
+        let r=brep_core::source_material_wall::search_and_qualify(
+            body,
+            [&groups[0],&groups[1]],
+            brep_core::source_material_wall::WallRequirement {
+                minimum_mm: minimum,
+                tolerance_mm: tolerance,
+            },
+            uv,
+            grid,
+            attempts,
+            work,
+        )?;
         let witness=r.certificate.as_ref().map(|c| {
             let chord=c.chord();
             let endpoints=chord.endpoints().map(|e|json!({"face":e.face,"parameter":e.parameter,"uv":e.uv,"worldMm":e.world_mm}));
@@ -446,7 +457,14 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
-        let r=brep_core::source_wall_coverage::qualify_with_mixed_pair_pass(body,minimum,work,facts,products,factors,Vec::new(),retained,Vec::new(),mixed)?;
+        let r=brep_core::source_wall_coverage::qualify_with_mixed_pair_pass(
+            body,
+            minimum,
+            brep_core::source_wall_coverage::WallLimits { limits: work, products, factors },
+            facts,
+            brep_core::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: retained },
+            brep_core::source_wall_coverage::MixedPairPass { certificates: Vec::new(), limits: mixed },
+        )?;
         let retained_report=r.retained_gap.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"domainQueries":d.domain_queries,"endpointQueries":d.endpoint_queries,
             "pairs":d.pairs.iter().map(|p|json!({"faces":p.faces,"qualified":p.qualified,"reason":p.reason,"cells":p.cells,"spans":p.spans,"domainCells":p.domain_cells,"domainQueries":p.domain_queries,"endpointQueries":p.endpoint_queries,"outsideProducts":p.outside_products,"unresolvedProducts":p.unresolved_products})).collect::<Vec<_>>()}));
         let mixed_report=r.mixed.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"normalSpans":d.normal_spans,
@@ -468,19 +486,10 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
     } else {
         let option = &v["stepExchange"];
         let tolerance: f64 = field(option, "toleranceMm")?;
-        let work = &option["limits"];
-        let candidate = brep_core::source_exchange_step::prepare(
+        let candidate = cad_step::source_exchange_step::prepare(
             body,
             tolerance,
-            brep_core::source_exchange_endpoints::Limits {
-                root_checks: field(work, "rootChecks")?,
-                mapping_cells: field(work, "mappingCells")?,
-                replay_mapping_per_use: field(work, "replayMappingPerUse")?,
-                exact_work: field(work, "exactWork")?,
-                driver_cells: field(work, "driverCells")?,
-                spans: field(work, "spans")?,
-                endpoints: field(work, "endpoints")?,
-            },
+            parse_step_exchange_limits(&option["limits"])?,
             field(option, "trimWork")?,
         )?;
         match candidate {
@@ -507,13 +516,13 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
         let uses = shell.uses()[index];
         let mut vertices = shell.vertices()[uses[0].face][uses[0].wire][uses[0].edge];
         if shell.edges()[index].restriction_reversed(0) { vertices.reverse(); }
-        let display = if display_segments == 0 { None } else { Some(boundary_display.as_ref().unwrap().edges[index].segments.iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
+        let display = if display_segments == 0 { None } else { Some(boundary_display.as_ref().expect("boundary display is built whenever display_segments > 0").edges[index].segments.iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
         Ok(json!({"index":index,"displaySegments":display,"definition":r.definition(),"parameterBounds":r.parameter_bounds()?,
             "endpointBoxes":r.endpoint_boxes(max_spans)?,"vertices":vertices,
             "uses":uses.map(|a|[a.face,a.wire,a.edge])}))
     }).collect::<Result<Vec<_>>>()?;
     let display_faces = face_display.map(|(divisions,tolerance_uv,domain_cells)| -> Result<Vec<Value>> {
-        shell.regions().unwrap().iter().enumerate().map(|(index,region)| -> Result<Value> {
+        shell.regions().ok_or_else(|| super::input("Source body has no retained regions for face display"))?.iter().enumerate().map(|(index,region)| -> Result<Value> {
             let preview=brep_core::source_region_display::prepare(region,divisions,tolerance_uv,domain_cells)?;
             let tiles=preview.tiles.into_iter().map(|tile| {
                 let mut corners=tile.corners;
@@ -534,6 +543,18 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
+}
+
+fn parse_step_exchange_limits(work: &Value) -> Result<brep_core::source_exchange_endpoints::Limits> {
+    Ok(brep_core::source_exchange_endpoints::Limits {
+        root_checks: field(work, "rootChecks")?,
+        mapping_cells: field(work, "mappingCells")?,
+        replay_mapping_per_use: field(work, "replayMappingPerUse")?,
+        exact_work: field(work, "exactWork")?,
+        driver_cells: field(work, "driverCells")?,
+        spans: field(work, "spans")?,
+        endpoints: field(work, "endpoints")?,
+    })
 }
 #[cfg(test)]
 #[path = "cad_source_body/tests/mod.rs"]

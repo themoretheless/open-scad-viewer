@@ -45,6 +45,8 @@ jobs:
             ~/.cargo/registry
             crates/target
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Block new clippy warnings (per-crate pins in architecture-baseline.json)
+        run: node scripts/audit-clippy.mjs
       - name: Check typed geometry without wire codecs
         run: cargo check --locked --manifest-path crates/Cargo.toml -p brep-core -p nurbs-intersect -p brep-intersect --no-default-features
       - name: Verify complete native test partition
@@ -55,6 +57,10 @@ jobs:
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
       - name: Test remaining native workspace cases
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
+      # Five source shell proofs take minutes each in debug; they are ignored above
+      # and run here once, optimized.
+      - name: Test slow source shell proofs
+        run: cargo test --locked --release --manifest-path crates/Cargo.toml -p brep-core --features slow-proofs --lib source_body -- --skip aag
       - name: Test required manifold library and ABI smoke
         run: |
           npm run test:manifold:core
@@ -82,9 +88,8 @@ jobs:
           npm ci
           npm run test:differential
       - run: python3 scripts/check-gpu-architecture.py
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math-compute --features gpu,tensor --all-targets -- -D warnings
+      # Forma packages are external dependencies; their source repository owns
+      # the native and WASM lint matrices for its published packages.
 
   manifold-performance:
     runs-on: macos-latest
@@ -103,16 +108,19 @@ jobs:
         working-directory: tools/manifold-bench
         run: npm run test:rbench
       # Both revisions run on this same machine; never compare absolute times
-      # from a developer workstation with a hosted runner.
-      # quick is a smoke profile (8 x 1 ms). Use 100 x 10 ms observations
-      # for the blocking comparison; the regression threshold stays at 25%.
+      # from a developer workstation with a hosted runner. `measure` runs every
+      # kernel suite present in a checkout (manifold-core and manifold-ops);
+      # suites the base lacks are reported as new and not gated.
+      # thorough is 100 x 10 ms observations; the regression budget is 15%.
       - name: Measure base manifold kernels
-        run: cargo run --quiet --locked --release --manifest-path baseline/crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile thorough --json --output "$RUNNER_TEMP/manifold-rbench-base"
-      - name: Measure current manifold kernels
-        run: cargo run --quiet --locked --release --manifest-path crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile thorough --json --output "$RUNNER_TEMP/manifold-rbench-current"
-      - name: Block manifold performance regressions over 25 percent
         working-directory: tools/manifold-bench
-        run: node rbench-regression.mjs compare --baseline "$RUNNER_TEMP/manifold-rbench-base/run.json" --current "$RUNNER_TEMP/manifold-rbench-current/run.json" --max-regression 0.25 --report "$RUNNER_TEMP/manifold-rbench-comparison.json"
+        run: node rbench-regression.mjs measure --root "$GITHUB_WORKSPACE/baseline" --out "$RUNNER_TEMP/manifold-rbench-base.json" --profile thorough
+      - name: Measure current manifold kernels
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs measure --out "$RUNNER_TEMP/manifold-rbench-current.json" --profile thorough
+      - name: Block manifold performance regressions over 15 percent
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs compare --baseline "$RUNNER_TEMP/manifold-rbench-base.json" --current "$RUNNER_TEMP/manifold-rbench-current.json" --max-regression 0.15 --report "$RUNNER_TEMP/manifold-rbench-comparison.json"
       - name: Upload the manifold performance comparison
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,8 +128,35 @@ jobs:
           name: manifold-rbench-comparison
           path: |
             ${{ runner.temp }}/manifold-rbench-comparison.json
-            ${{ runner.temp }}/manifold-rbench-base/run.json
-            ${{ runner.temp }}/manifold-rbench-current/run.json
+            ${{ runner.temp }}/manifold-rbench-base.json
+            ${{ runner.temp }}/manifold-rbench-current.json
+          if-no-files-found: warn
+
+  manifold-performance-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+      - name: Test the rbench regression comparator
+        working-directory: tools/manifold-bench
+        run: npm run test:rbench
+      # Compares against the committed rbench-baseline.linux-x86_64.json when
+      # it exists (failing over 15%). Until then it only records a baseline
+      # and uploads it, so a reviewed run can be committed as that file.
+      - name: Compare manifold kernels with the committed Linux baseline
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs check --profile thorough --max-regression 0.15 --record-missing "$RUNNER_TEMP/rbench-baseline.linux-x86_64.json" --report "$RUNNER_TEMP/manifold-rbench-linux-comparison.json"
+      - name: Upload the Linux manifold baseline or comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifold-rbench-linux
+          path: |
+            ${{ runner.temp }}/rbench-baseline.linux-x86_64.json
+            ${{ runner.temp }}/manifold-rbench-linux-comparison.json
           if-no-files-found: warn
 
   check:
@@ -171,6 +206,8 @@ jobs:
           echo "OSV_TEST_WASM_OPT_NATIVE=$wasm_opt" >> "$GITHUB_ENV"
       - run: npm run test:architecture
       - run: npm run audit:architecture
+      # TypeScript/JavaScript lint ratchet: per-directory ESLint and Prettier counts may only go down.
+      - run: npm run lint
       - run: npm run test:wasm-optimize
       - run: npm run test:qualification-drift
       - run: npm run build:geometry
@@ -196,14 +233,13 @@ jobs:
           if-no-files-found: error
       - name: Qualify current WASM graph caps and pole queries
         run: node --import tsx scripts/qualify-global-geometry.mts docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz global-geometry-wasm.json
-      - run: cargo check --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-mlx --target wasm32-unknown-unknown
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json
         env:
           READINESS_CONCURRENCY: '4'
       # Kernels are built above. npm lifecycle hooks would optimize/pack them
       # again before each command, despite Cargo's incremental cache.
-      - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
+      - run: node node_modules/typescript/bin/tsc --noEmit
       - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
       - name: Record disposable worker memory under the Linux allocator policy
         run: timeout 60s node --expose-gc --import tsx tests/fixtures/mcp-manifold-plan-memory-probe.ts > manifold-plan-memory.json
@@ -224,6 +260,51 @@ jobs:
             provider-readiness.json
             provider-readiness-concurrent.json
             manifold-plan-memory.json
+          if-no-files-found: warn
+
+  browser-smoke:
+    # P5: built app in headless Chromium with the no-GPU render seam
+    # (?renderSeam=recording), UI flows, operation budgets and a visual fixture.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - run: npm ci
+      - name: Install checksummed native Binaryen 116
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/binaryen-version_116-x86_64-linux.tar.gz"
+          curl --fail --location --retry 3 "https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz" --output "$archive"
+          echo "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "OSV_WASM_OPT_NATIVE=$RUNNER_TEMP/binaryen-version_116/bin/wasm-opt" >> "$GITHUB_ENV"
+      - run: npm run build:geometry
+      - run: node node_modules/vite/bin/vite.js build
+      - name: Install the qualification Playwright package and Chromium
+        run: |
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          tools/browser-qualification/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-browser-smoke.mjs tmp/browser-smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-smoke
+          path: tmp/browser-smoke
           if-no-files-found: warn
 
   native-smoke:
@@ -335,7 +416,7 @@ jobs:
       - run: npm run audit:architecture
       - run: npm run test:qualification-drift
       - run: npm run build:geometry
-      - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
+      - run: node node_modules/typescript/bin/tsc --noEmit
       - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
       # Hosted Windows runs the heaviest native sweep/NURBS cases in 31-36 s,
       # past the 30 s config default; explicit per-test timeouts still apply.

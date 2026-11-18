@@ -1,34 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { extractSharpFeatureEdges } from '../src/services/meshTopology'
-import {
-  computePinchZoomFactor,
-  stepInertialOrbitCamera,
-  type OrbitCameraState,
-} from '../src/services/cameraGestures'
-import { inspectStepHeaderMetadata } from '../src/services/cadStepConformance'
-import { extractOpenScadDependencies } from '../src/services/openScadProject'
-import {
-  computeLinearPatternOffsets,
-  computeCircularPatternTransforms,
-} from '../src/services/directModelingTools'
-import {expandLiveBodyPatterns} from '../src/services/liveBodyPattern'
-import type {DirectDocument} from '../src/services/directModeling'
+import { extractSharpFeatureEdges } from '../src/kernel/meshTopology'
+import { computePinchZoomFactor, stepInertialOrbitCamera, type OrbitCameraState } from '../src/render/cameraGestures'
+import { inspectStepHeaderMetadata } from '../src/kernel/cadStepConformance'
+import { extractOpenScadDependencies } from '../src/language/openScadProject'
+import { computeLinearPatternOffsets, computeCircularPatternTransforms } from '../src/app/directModelingTools'
+import { expandLiveBodyPatterns } from '../src/app/liveBodyPattern'
+import type { DirectDocument } from '../src/app/directModeling'
 import { formatEngineeringSummaryMarkdown } from '../src/mcp/rushGraphReport'
 
 describe('Tier IV Wave 3 Improvements', () => {
   describe('meshTopology extractSharpFeatureEdges', () => {
     it('extracts 4 boundary edges and ignores the coplanar diagonal of a flat quad', () => {
       // Quad in XY plane (z = 0): two triangles (0, 1, 2) and (0, 2, 3) sharing diagonal (0, 2)
-      const positions = [
-        0, 0, 0,
-        10, 0, 0,
-        10, 10, 0,
-        0, 10, 0,
-      ]
-      const indices = [
-        0, 1, 2,
-        0, 2, 3,
-      ]
+      const positions = [0, 0, 0, 10, 0, 0, 10, 10, 0, 0, 10, 0]
+      const indices = [0, 1, 2, 0, 2, 3]
       const edges = extractSharpFeatureEdges({ positions, indices }, 30)
       expect(edges).toHaveLength(4)
       // Verify the shared diagonal (0,0,0) -> (10,10,0) is NOT in the extracted sharp edges
@@ -44,16 +29,8 @@ describe('Tier IV Wave 3 Improvements', () => {
       // Two triangles sharing edge (0,0,0)-(10,0,0):
       // Triangle 1 in XY plane (z=0, y>=0), normal (0, 0, +1)
       // Triangle 2 in XZ plane (y=0, z<=0), normal (0, -1, 0) -> 90° dihedral angle
-      const positions = [
-        0, 0, 0,
-        10, 0, 0,
-        5, 10, 0,
-        5, 0, -10,
-      ]
-      const indices = [
-        0, 1, 2,
-        1, 0, 3,
-      ]
+      const positions = [0, 0, 0, 10, 0, 0, 5, 10, 0, 5, 0, -10]
+      const indices = [0, 1, 2, 1, 0, 3]
       // At 30° threshold: 4 boundary edges + 1 sharp 90° crease edge = 5 edges
       const sharpAt30 = extractSharpFeatureEdges({ positions, indices }, 30)
       expect(sharpAt30).toHaveLength(5)
@@ -88,12 +65,7 @@ describe('Tier IV Wave 3 Improvements', () => {
       expect(step1.moving).toBe(true)
 
       // Large time step brings velocity to rest
-      const settled = stepInertialOrbitCamera(
-        step1.state,
-        step1.velocity,
-        5.0,
-        8,
-      )
+      const settled = stepInertialOrbitCamera(step1.state, step1.velocity, 5.0, 8)
       expect(settled.moving).toBe(false)
       expect(settled.velocity).toEqual({
         yawRadPerSec: 0,
@@ -200,11 +172,23 @@ describe('Tier IV Wave 3 Improvements', () => {
 
   describe('native live body patterns & directModelingTools pattern helpers', () => {
     it('computes 2D grid linear pattern offsets in row-major order', () => {
-
       const offsets = computeLinearPatternOffsets(3, 2, 15, 25)
-      const source:DirectDocument={version:1,sketches:[],bodies:[{id:'seed',name:'Seed',mesh:{positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]},livePattern:{kind:'grid',rows:2,columns:3,spacing:[15,25]}}]}
-      const expanded=expandLiveBodyPatterns(source)
-      expect(expanded.bodies.slice(1).map(b=>b.instance!.matrix.slice(0,3).map(row=>row[3]))).toEqual(offsets.slice(1))
+      const source: DirectDocument = {
+        version: 1,
+        sketches: [],
+        bodies: [
+          {
+            id: 'seed',
+            name: 'Seed',
+            mesh: { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] },
+            livePattern: { kind: 'grid', rows: 2, columns: 3, spacing: [15, 25] },
+          },
+        ],
+      }
+      const expanded = expandLiveBodyPatterns(source)
+      expect(expanded.bodies.slice(1).map(b => b.instance!.matrix.slice(0, 3).map(row => row[3]))).toEqual(
+        offsets.slice(1),
+      )
       expect(offsets).toEqual([
         [0, 0, 0],
         [15, 0, 0],

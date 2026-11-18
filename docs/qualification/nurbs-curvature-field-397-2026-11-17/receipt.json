@@ -1,0 +1,41 @@
+{
+  "id": "NURBS-0397",
+  "testedBase": "19630e15db9672e41f231a1a5f82807fd9929cd3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 118,
+  "scope": [
+    "Close a shell over multiple supplied planes with expandable exact supports and cumulative budgets.",
+    "Plane order determines cap order. Shared work limits cover every discovery and lift; the operation publishes a model only after complete closure."
+  ],
+  "logSha256": "501a5a9eccaa2b820a237c28e71ff61c6d15cf9ae9469a82391b125be16ef973",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "80d50a0b0a3048cb4a62199c1a6fdf21ab153bf581ecacb81ce9850e67cd5be4",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "78baeaf1744d5f978a05704df17810d0ec1b08cf52b0b3a1fcab87b36358a959",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "45db72ddd1f23ba88f1eab92d45dcc04a8373dec22d092731cf699c6334940ba",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "e6b04d6967199d71c2d384f8edbecbe6d070ace1883fd009253395fca5955bd1",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "6da5012ec1d0f258ce8bdbcf2e57778b8c93d2f2abc0310609fd1d37ee17df11",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "b354b108e78cefd988c066490de00a364e317183d0c93db402bcf0931f84d77f",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a"
+  }
+}

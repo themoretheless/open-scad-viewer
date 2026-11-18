@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0364",
+  "testedBase": "8b3d4c96f4ed7fdbc9716cbc55ca92688b569cab",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 59,
+  "scope": [
+    "Construct a rational XYZ polyline with a continuous Euclidean error bound for a surface-plane graph.",
+    "Rational quotient derivative bounds and the implicit graph derivative give a continuous world chord envelope. Exact surface evaluations use rational UV vertex coordinates and include their root uncertainty."
+  ],
+  "logSha256": "af346d62ac11883f37c3b0008cfa6885d06b6417043e02819a3a62b9b62cdfee",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "44097c2d222062bed8057009f8edf5209ca3e44ef16ce96b933198f47d955075",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "d385c5f68c1282a2d115e918c3ecd3f83fe2485ae9e0f8a6d9e0a678e09e2c01",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "244ed8072d228a272ff3c5eeab34e229cbd919e4d0dbc263e9236c48b4a28e87",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs": "d31eed5df1ea6aa68a23402a74e2040d73f6b48ab13d89196ce73ba7b938a312",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs": "bb3808229dd97daf252fd6144749bb6d390e139941e40f94869b1013a2621146",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/polyline.rs": "1a983b6cbdfd919938f06ecad9ba6467e5f3fdb21a382a4c4f81a122e658311e",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_polyline.rs": "d6119b1a95f83c1cf0a1ba0cc8af9aaf00e8748d50bde167946a52ffdbbdc213"
+  }
+}

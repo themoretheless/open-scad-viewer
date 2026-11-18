@@ -1,0 +1,476 @@
+{
+  "baseCommit": "dad0a42322ec3c26784c6ac26efb00d0c8d44b75",
+  "status": "native-qualified",
+  "catalogueCapability": "NURBS-0246",
+  "scope": "Exact mixed partial vector fields of total order1..3 on all original surface UVcells. No global knot differentiability, topology or application/artifact authority.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "22c2054cf67b5ae0a31a9c1a18e0f4203ac0b1ca19f986f90f3a26666f91210b",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs": "4bf68ee823cbdc2ee0fcca66505ad3d07d8234344b4432d6a817d94aff2ab511",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "7449b6ca4f84690284f25b0bfd2673d1bf293b19dd9cff58726f2f53df8d005f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "d8a320834c296b7e1c39bc64008bbb8b6aff05e092e23f7bf37950879fece193",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/content.rs": "88c741945ab98489aed27c16fc6e18b1524cf307d61300e95a53e69c75fbc6e9",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/src/editing/rational_factor/polynomial.rs": "fb5ddabb8e7b294868b5447b7eed52180febaf5bac827cec908840bb532e3da5",
+    "crates/nurbs-core/tests/exact_metric_field_contracts.rs": "230df69ff8777da3dc31c4b9987b8f58a626c12b0793a2ca81e97a257dff9951",
+    "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/exact_oracle.py": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/mixed.rs": "993469bbe4da13f0daaf6a8e39cc2747763476eec0a88ffba3c8da91319cc2fa",
+    "crates/nurbs-core/tests/exact_mixed_partial_contracts.rs": "f08c0f43c5e4e7adcd733d7be1e102dbcdf565f63b6244a39ca0d83fc2862768",
+    "docs/qualification/nurbs-exact-mixed-partial-2026-11-03/exact_oracle.py": "7916c13f5139163d7cbacd00987ab7644f716e272c50319dae598d38041aff4c"
+  },
+  "explicitTestEnvironment": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-rational-reduction-target-20261102",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "commands": {
+    "native249-default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--test",
+        "exact_mixed_partial_contracts",
+        "--test",
+        "exact_metric_field_contracts",
+        "--test",
+        "exact_area_normal_mixed_weights",
+        "--test",
+        "exact_area_normal_contracts",
+        "--test",
+        "exact_surface_derivative_content",
+        "--test",
+        "exact_surface_derivative_contracts",
+        "--test",
+        "exact_surface_derivative_boundaries",
+        "--test",
+        "exact_derivative_rational_spans",
+        "--test",
+        "exact_derivative_contracts",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T02:14:54.993850+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T02:18:46.736297+00:00"
+    },
+    "native249-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib",
+        "--test",
+        "exact_mixed_partial_contracts",
+        "--test",
+        "exact_metric_field_contracts",
+        "--test",
+        "exact_area_normal_mixed_weights",
+        "--test",
+        "exact_area_normal_contracts",
+        "--test",
+        "exact_surface_derivative_content",
+        "--test",
+        "exact_surface_derivative_contracts",
+        "--test",
+        "exact_surface_derivative_boundaries",
+        "--test",
+        "exact_derivative_rational_spans",
+        "--test",
+        "exact_derivative_contracts",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T02:18:46.736763+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T02:22:59.945436+00:00"
+    }
+  },
+  "tests": {
+    "default": {
+      "passed": 2368,
+      "ignored": 1,
+      "libraryPassed": 2258,
+      "newMixedPartialTests": 14,
+      "existingRelatedNativeContracts": 96,
+      "groups": [
+        [
+          2258,
+          0,
+          1
+        ],
+        [
+          13,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          10,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0
+        ],
+        [
+          15,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ]
+      ]
+    },
+    "no-codec": {
+      "passed": 2163,
+      "ignored": 1,
+      "libraryPassed": 2053,
+      "newMixedPartialTests": 14,
+      "existingRelatedNativeContracts": 96,
+      "groups": [
+        [
+          2053,
+          0,
+          1
+        ],
+        [
+          13,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          10,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0
+        ],
+        [
+          15,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ]
+      ]
+    }
+  },
+  "totalFinalRustExecutions": 4531,
+  "oracle": {
+    "acceptedSourceRecords": 27,
+    "outputPatches": 63,
+    "negativeControls": 10,
+    "positiveGlobalGaugeControl": true,
+    "nonzeroRationalDerivativeAbovePolynomialDegree": true,
+    "definitionsSha256": "1aebc964b3c6d3bccdda7447f1171320d8e011d5969aeb4c148a1b04869e42c8",
+    "sourceReconstructionSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Exact original homogeneous reconstruction; independent generic quotient-pair mixed differentiation, original UV clocks, complete cell cover and actual stored output cross-identities. Not finite differences, global knot smoothness, topology, installed WASM/editor/STEP or whole-application qualification."
+  },
+  "unitInventory": {
+    "previousNames": 2259,
+    "retainedNames": 2259,
+    "removedNames": [],
+    "actualCurrentBinaryListMatchesRuntimeNames": true,
+    "namesSha256": "961fd250796271108082815873ebe7af8be2915a0cad4fd32b0b738e08e30a00",
+    "priorSurfacePartialAndContentDefinitionsLiteralEqual": true,
+    "diagnosticNote": "Initial immediate-baseline content-record comparison required stdout emission order equality. Four actual records were literal equal as sorted multisets; parallel test output order differed. Compare canonical record multisets, preserving complete patch order inside every record. No Rust source/test or geometry change; full exact oracles passed before this diagnostic assertion."
+  },
+  "limits": {
+    "maxExactWork": 1000000,
+    "rationalBits": 4096,
+    "outputDegree": 25,
+    "geometryLimitsChanged": false
+  },
+  "catalogue": {
+    "target": 1000,
+    "specified": 246,
+    "integrated": 79,
+    "native": 167,
+    "unallocated": 754
+  },
+  "ownership": "Existing editing root and exact_surface_derivative engine; mixed helper private, all prior output definitions preserved literally.",
+  "remainingQualification": [
+    "General mixed-variable GCD and exhaustive alternate representation admission",
+    "JSON/WASM/Rush/editor/STEP and current-source production/main delivery",
+    "Original1000 scope remains active"
+  ],
+  "metricRegression": {
+    "acceptedSourceRecords": 13,
+    "outputPatches": 35,
+    "negativeControls": 10,
+    "positiveGlobalGaugeControl": true,
+    "fullGramDeterminantAreaIdentity": true,
+    "definitionsSha256": "0aebb0e0f40462d6860aa684bb29e3057584e4c6d349b5b44b9bb6c8e9b538f2",
+    "sourceReconstructionSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Exact original homogeneous source reconstruction; actual E/F/G full-cell Gram identities, physical UV clocks and det(metric)=squared area-vector norm. No numerical sampling certification, positive-definite/regularity/body certificate, topology or application delivery credit."
+  },
+  "areaRegression": {
+    "acceptedSourceRecords": 10,
+    "outputPatches": 32,
+    "negativeControls": 10,
+    "positiveGlobalGaugeControl": true,
+    "definitionsSha256": "53764d150429099ce2fedc8d07c6fcd526f1e77a6f527586a4154aab4ad38a6d",
+    "sourceReconstructionSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Exact original homogeneous tensor reconstruction, physical U/V partial numerators, signed cross product and fourth-power denominator; fresh actual output full-cell identities and coverage. Not unit normals, regularity, body-outward orientation, topology, WASM/editor or evaluator-bit qualification."
+  },
+  "surface-fieldRegression": {
+    "existingSourceRecords": 17,
+    "newSourceRecords": 4,
+    "currentOutputPatches": 67,
+    "changedExistingRepresentations": 2,
+    "changedExistingPatchEncodings": 18,
+    "negativeControls": 10,
+    "positiveGlobalGaugeControl": true,
+    "currentDefinitionsSha256": "dfc24cec058d331c798c2fa1b18b8053e964b1b904141ed9f90934cbab1610ce",
+    "verifierSourceSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Every prior and new actual output independently satisfies full bivariate original-source partial identity, original UV clocks and cell cover. Source/axis multiset unchanged; binary net representations intentionally may shrink. No old topology/certificate or installed artifact authority transferred."
+  },
+  "curve-fieldRegression": {
+    "acceptedDefinitions": 12,
+    "pieces": 21,
+    "negativeControls": 8,
+    "definitionsSha256": "2bc474b5aec93cb5c5b0b51d6a548c95b3f09d879647c68efbaa0e781b4346bc",
+    "scope": "Exact full-domain polynomial derivative identities from independently reconstructed original Cox-de Boor basis, absolute clock, actual stored output bits and complete one-sided span cover. No sampling, topology, JSON/WASM/editor qualification."
+  },
+  "projectiveRegression": {
+    "acceptedDefinitions": 12,
+    "negativeControls": 8,
+    "definitionsSha256": "6ad55f0db3c0381fb740c8c2666ea40ec0f1316cf351346540111fde70fe1084",
+    "scope": "Exact permutation determinant, common homogeneous coefficient identity for actual serialized output over unchanged full basis and strictly signed whole-domain denominator. No sampled identity, evaluator-bit, topology, WASM or application claim."
+  },
+  "curve-factorRegression": {
+    "passed": 8,
+    "failed": 0,
+    "checks": {
+      "elevated-primitive": true,
+      "constant": true,
+      "degree25": true,
+      "negative-factor": true,
+      "rational-clock": true,
+      "3d-clock": true,
+      "wrong-clock-detected": true,
+      "per-pole-weight-sign-change-detected": true
+    },
+    "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+    "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+  },
+  "surface-factorRegression": {
+    "acceptedDefinitions": 6,
+    "negativeControls": 4,
+    "failed": 0,
+    "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+    "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+    "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+  },
+  "archives": {
+    "native249-inventory-parser-note.txt.gz": {
+      "bytes": 254,
+      "sha256": "f7932a6b9429b60de6fa86823a2a0ff05cadd3946b11c30926cea3141af2d7ef",
+      "decodedSha256": "2f821250b1a37a451c3f99cafa37721753eca4e2010a56ea5921e266ea2139ac"
+    },
+    "native249-contracts-first.log.gz": {
+      "bytes": 3626,
+      "sha256": "48c76419572fac809b1188f7f4b984bcb4a1653c646a1ab02769db667f020731",
+      "decodedSha256": "9ef92f936bec41d0f8ebb0241cca84e4135182c3d2f99863bdcd1b8249b2b923"
+    },
+    "native249-default.log.gz": {
+      "bytes": 71560,
+      "sha256": "74f8bdc95edf475161939b857568d17c08bccac18c3803530037b7af1567f173",
+      "decodedSha256": "41426fdf7a95e0f5d4bc52d0647a3e42c4bc4c1588fe491c318d87be53f8a3a6"
+    },
+    "native249-no-codec.log.gz": {
+      "bytes": 55639,
+      "sha256": "0e577ae302ceb2afc5cc3858deda4ff36fc902de5d310b3c8cd284ce120a2be8",
+      "decodedSha256": "dae5aa88b7216213c066bbf97f53b665bba76ce566b714af8be978cf6069d1e0"
+    },
+    "native249-source-inputs.json.gz": {
+      "bytes": 440,
+      "sha256": "5342a5dd90fab2afbe466bcb17feeaaffdd593afda678fdba7e89f13d32989a7",
+      "decodedSha256": "87c3e79e0a249ccd5ee676286dbcc54acd45be3094ad72c32c55b8903a2b8795"
+    },
+    "native249-runner-state.json.gz": {
+      "bytes": 418,
+      "sha256": "db34ddec5631a807dfed23589e291105480f7ef352d860bb487d81819fc15f7e",
+      "decodedSha256": "3551520456aa0e57fd1990e6ce25987d936e3e84307640de11aa7b8776369df7"
+    },
+    "native249-unit-inventory.json.gz": {
+      "bytes": 219,
+      "sha256": "5dab823171d8e2082a112bf65eca4176f103361ac4e3300fbdff445c62b76942",
+      "decodedSha256": "435439dd9c3d4f059dc7c33c9baa27262e97696b9159f2bc632758b8e2c32a66"
+    },
+    "native249-lib-test-list.log.gz": {
+      "bytes": 48766,
+      "sha256": "41eaae667eabdfb52e0d456ff1180497aef9ca798f1abfc5be735804f76ee023",
+      "decodedSha256": "cbeea60883d55c4e9134ec76203752c1464ed253ce136283bd33ba9a704e80d6"
+    },
+    "native249-oracle-final.json.gz": {
+      "bytes": 458,
+      "sha256": "2fcb53b76090d0b5b85bc76ed954a4e3ba1e2f0c600f71147774e9e9a3b24e30",
+      "decodedSha256": "0c5de02808b11caf31f25f77061e44917aea5fa7d16e6d8a147f811413cb2fea"
+    },
+    "native249-metric-regression.json.gz": {
+      "bytes": 435,
+      "sha256": "8719dfee0e61e36436cb7d5711fd7a993e822c33ac6689ecbfca27bf6a8c4c3c",
+      "decodedSha256": "f91d64190be56a966c94c72bea1abd1bfec47bed36628347edb1f15a8e071434"
+    },
+    "native249-area-regression.json.gz": {
+      "bytes": 429,
+      "sha256": "2252a8c71afff04db65daf1800cc2565af3a175cb91ca7c8291a02e4d3f41999",
+      "decodedSha256": "1fce532284c604a6c373dc0d758d07b7c72c3ec357c92169953082730d5a6d65"
+    },
+    "native249-surface-field-regression.json.gz": {
+      "bytes": 464,
+      "sha256": "77d2b243ea69e88e483d8ae4b77a2b01239ff0351c881505d9a281b6bf432008",
+      "decodedSha256": "7785019fa2355398af890df52bc678ff251976ee0482bcdd0dbd8315e39810c2"
+    },
+    "native249-curve-field-regression.json.gz": {
+      "bytes": 318,
+      "sha256": "a059e513f7e9f19be57653bfa5d24177540a54934ba7cbac1974fb25e88da5c1",
+      "decodedSha256": "9b371f60e06afd71287163c2a2375686103cdff70affdff63c1fc2159998fa54"
+    },
+    "native249-projective-regression.json.gz": {
+      "bytes": 304,
+      "sha256": "7822c5f74876ab8c637a8f5628052688855115ee2f845c052b145c5518c5d8a4",
+      "decodedSha256": "935f079e8ec9a274cc22d7e2e2202ad231414b8da96ddd7b913eb6b1e840a29d"
+    },
+    "native249-curve-factor-regression.json.gz": {
+      "bytes": 362,
+      "sha256": "4e1aa48b2019a197f03ce53bfa662a991a9726df4579036903bed18afb60ae1e",
+      "decodedSha256": "2b1149e31e59531f263438c5a69c4aa3c968ac2f15d9e236754b6016bf72a1d1"
+    },
+    "native249-surface-factor-regression.json.gz": {
+      "bytes": 424,
+      "sha256": "8af4615fdbd373bef219f36da1892e09ccdc5b6aa63eda9de21e68a498f40e5d",
+      "decodedSha256": "1b2dbe9d754d84affb1ce20b38fe1e584ed65f815555ef1379e95331505f4aaf"
+    }
+  },
+  "checks": {
+    "apiMap": "244 registered roots,246 entries; existing editing owner",
+    "catalogue": "246/1000=79 integrated+167 native;754 unallocated;0 errors",
+    "architecture": "54 existing oversized pins,0 layer violations",
+    "diffCheck": "passed"
+  }
+}

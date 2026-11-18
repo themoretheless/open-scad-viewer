@@ -23,10 +23,7 @@ describe('G0.8 protocol v6 contract pack', () => {
 
   it('rejects GeometrySceneV2 fixtures that break fullEquivalent=!reduced', () => {
     const scene = JSON.parse(
-      readFileSync(
-        resolve(protocolRoot, 'geometry-scene-v2.negative-inconsistent-equivalence.json'),
-        'utf8',
-      ),
+      readFileSync(resolve(protocolRoot, 'geometry-scene-v2.negative-inconsistent-equivalence.json'), 'utf8'),
     ) as {
       fullEquivalent: boolean
       reduced: boolean
@@ -35,10 +32,11 @@ describe('G0.8 protocol v6 contract pack', () => {
   })
 
   it('lists every current message in the migration matrix', () => {
-    const matrix = JSON.parse(
-      readFileSync(resolve(protocolRoot, 'migration-matrix-v1.json'), 'utf8'),
-    ) as { rows: { message: string }[]; newSceneV2Fields: string[] }
-    const messages = matrix.rows.map((row) => row.message)
+    const matrix = JSON.parse(readFileSync(resolve(protocolRoot, 'migration-matrix-v1.json'), 'utf8')) as {
+      rows: { message: string }[]
+      newSceneV2Fields: string[]
+    }
+    const messages = matrix.rows.map(row => row.message)
     for (const required of [
       'build request',
       'cancel request',
@@ -60,10 +58,7 @@ describe('G0.8 protocol v6 contract pack', () => {
 describe('G0.10 comparator artifact', () => {
   it('owns 18 mutation rows outside the G1 plan document', () => {
     const comparator = JSON.parse(
-      readFileSync(
-        resolve(root, 'docs/qualification/legacy-direct-differential-comparator-v1.json'),
-        'utf8',
-      ),
+      readFileSync(resolve(root, 'docs/qualification/legacy-direct-differential-comparator-v1.json'), 'utf8'),
     ) as { mutations: unknown[]; comparatorId: string }
     expect(comparator.comparatorId).toBe('legacy-direct-differential-v1')
     expect(comparator.mutations).toHaveLength(18)

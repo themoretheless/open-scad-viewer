@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0518",
+  "testedBase": "159f36af291381f6dab1e4ea72a02f7425e9a0b9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 93,
+  "scope": [
+    "Partition one shifted period into exact tensor strips with atomic refusal.",
+    "Rotate one seam and clamp ordered strips across the lifted interval, preserving the transverse basis and sharing one budget."
+  ],
+  "logSha256": "064478fc7f7282a37d5d2fde68ec0685f0079d6c1a4902c8f572d983358da371",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "64aa3448e34ec2dd69728f85e2a30f1e8043d9d887ece3f0472030a068e7753f",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d1e06a9e4abfe073f0bbe0b0108b42c6c34d88bd523c48b252a892df71441361",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "60a512eaa713cdef8ec48ebca8dfd7c8579df0ba3f4ce3d91f54e79fb44587e8"
+  }
+}

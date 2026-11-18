@@ -1,6 +1,6 @@
 {
   "schema": "cad-source-capped-body-step-occt/1",
-  "stepSha256": "6f21d3e1235b0860a7a42fd2e65e11404b5f49e35708940ab89ed230d30bca58",
+  "stepSha256": "b905781c5540c61bfec515d7cb82639da86f3d90ebbfcebf7d4d927cd903180c",
   "scope": "One specified native source-body STEP export; independent solid validity, signed volume and axis extents.",
   "fixture": {
     "centers": [

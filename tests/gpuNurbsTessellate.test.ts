@@ -7,7 +7,7 @@ import {
   generateQuadIndices,
   NURBS_TESSELLATE_WGSL,
   type GpuNurbsSurface,
-} from '../src/services/gpuNurbsTessellate'
+} from '../src/render/gpuNurbsTessellate'
 
 describe('WebGPU Compute NURBS Surface Tessellation', () => {
   it('generates correct quad index topology and winding', () => {
@@ -32,12 +32,7 @@ describe('WebGPU Compute NURBS Surface Tessellation', () => {
   })
 
   it('evaluates flat bilinear patch with exact geometry and upward normals', () => {
-    const patch = createBilinearNurbsPatch(
-      [0, 0, 0],
-      [2, 0, 0],
-      [0, 3, 0],
-      [2, 3, 0]
-    )
+    const patch = createBilinearNurbsPatch([0, 0, 0], [2, 0, 0], [0, 3, 0], [2, 3, 0])
 
     const result = referenceNurbsTessellate(patch, 5, 5)
     expect(result.vertexCount).toBe(25)
@@ -160,12 +155,7 @@ describe('WebGPU Compute NURBS Surface Tessellation', () => {
   })
 
   it('runGpuNurbsTessellate returns conformant vertices and indices', async () => {
-    const patch = createBilinearNurbsPatch(
-      [0, 0, 1],
-      [1, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1]
-    )
+    const patch = createBilinearNurbsPatch([0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1])
 
     const result = await runGpuNurbsTessellate(patch, 8, 8)
     expect(result.vertexCount).toBe(64)
@@ -190,12 +180,7 @@ describe('WebGPU Compute NURBS Surface Tessellation', () => {
   })
 
   it('supports custom domain parameters [uMin, uMax] and [vMin, vMax]', () => {
-    const patch = createBilinearNurbsPatch(
-      [10, 20, 5],
-      [30, 20, 5],
-      [10, 40, 5],
-      [30, 40, 5]
-    )
+    const patch = createBilinearNurbsPatch([10, 20, 5], [30, 20, 5], [10, 40, 5], [30, 40, 5])
     patch.domainU = [0.25, 0.75]
     patch.domainV = [0.25, 0.75]
 

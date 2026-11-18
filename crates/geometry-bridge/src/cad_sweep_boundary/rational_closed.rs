@@ -58,22 +58,26 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
     };
     let attempt = if let Some(model) = supplied.as_ref() {
         owned::verify_rational_closed_material(
-            &profiles,
-            &material,
-            origin,
-            &motion,
-            &caps,
+            owned::RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin,
+                motion: &motion,
+                cap_profiles: &caps,
+            },
             tolerance_uv,
             limits,
             model,
         )?
     } else {
         owned::construct_rational_closed_material(
-            &profiles,
-            &material,
-            origin,
-            &motion,
-            &caps,
+            owned::RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin,
+                motion: &motion,
+                cap_profiles: &caps,
+            },
             tolerance_uv,
             limits,
         )?
@@ -88,33 +92,33 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
         owned::RationalClosedAttempt::Certified(b) => (Some(b.model()), b.report()),
         owned::RationalClosedAttempt::Refused(r) => (None, r.as_ref()),
     };
-    let g1 = r.certified && r.source_g1;
-    let g2 = r.certified && r.source_g2;
+    let g1 = r.certified && r.source.g1;
+    let g2 = r.certified && r.source.g2;
     Ok(json!({
         "model":model,"jointContinuousGlobalCertified":joint[0],"jointContinuousGlobalG1Certified":joint[1],"jointContinuousGlobalG2Certified":joint[2],"certified":r.certified,"solidGeometryCertified":r.certified,
         "scope":"original-rational-frames-and-filled-annular-caps",
-        "continuousBound":r.certified && r.source_boundary_exact,"boundaryErrorUpper":r.boundary_error_upper,
-        "sourceBoundaryExact":r.source_boundary_exact,"topologyPreserved":r.topology_preserved,
-        "shellRolesCertified":r.certified,"seamContinuity":r.seam_continuity,
+        "continuousBound":r.certified && r.source.boundary_exact,"boundaryErrorUpper":r.source.boundary_error_upper,
+        "sourceBoundaryExact":r.source.boundary_exact,"topologyPreserved":r.topology_preserved,
+        "shellRolesCertified":r.certified,"seamContinuity":r.source.seam_continuity,
         "fullBoundaryG1Certified":g1,"fullBoundaryG2Certified":g2,
         "idealSourceBoundaryG1Certified":g1,"idealSourceBoundaryG2Certified":g2,
         "physicalCapCount":r.caps.len(),"physicalCapsCertified":r.certified && !r.caps.is_empty(),
         "filledCapErrorUpper":if r.certified && !r.caps.is_empty(){Some(0.)}else{None},
-        "sourceWork":{"cells":r.source_cells,"exactWork":r.source_exact_work,"constructionRows":r.construction_rows,"capCells":r.cap_cells,"orientationCells":r.orientation_cells},
-        "originalVolume":r.volume.as_ref().map(|p|json!({"embeddingCertified":p.embedding_certified,"volumeRegularityCertified":p.regularity_certified,"parameterTopologyPreserved":p.parameter_topology_preserved,"cells":p.cells,"exactWork":p.exact_work,"boxes":p.boxes,"projection":p.projection,"reason":p.reason})),
-        "originalMaterialUVBounds":r.material_uv_bounds,"originalProofUVWindow":if r.material_plane_chart.is_none(){Some(r.proof_uv_window)}else{None},
-        "originalMaterialPlaneChart":r.material_plane_chart.as_ref().map(|c|json!({"axes":c.axes,"constantAxis":c.constant_axis,"constant":c.constant,"determinant":c.determinant,"bounds":c.bounds,"orientationParameter":c.orientation_parameter})),
-        "sourceShear":r.source_shear.as_ref().map(|s|json!({"base":s.base,"dependent":s.dependent,"scale":s.scale})),
-        "proofCoordinates":r.proof_coordinates.as_ref().map(|c|json!({"rows":c.rows,"offset":c.offset,"determinant":c.determinant,
+        "sourceWork":{"cells":r.work.source_cells,"exactWork":r.work.source_exact_work,"constructionRows":r.work.construction_rows,"capCells":r.work.cap_cells,"orientationCells":r.work.orientation_cells},
+        "originalVolume":r.audits.volume.as_ref().map(|p|json!({"embeddingCertified":p.embedding_certified,"volumeRegularityCertified":p.regularity_certified,"parameterTopologyPreserved":p.parameter_topology_preserved,"cells":p.cells,"exactWork":p.exact_work,"boxes":p.boxes,"projection":p.projection,"reason":p.reason})),
+        "originalMaterialUVBounds":r.chart.material_uv_bounds,"originalProofUVWindow":if r.chart.material_plane_chart.is_none(){Some(r.chart.proof_uv_window)}else{None},
+        "originalMaterialPlaneChart":r.chart.material_plane_chart.as_ref().map(|c|json!({"axes":c.axes,"constantAxis":c.constant_axis,"constant":c.constant,"determinant":c.determinant,"bounds":c.bounds,"orientationParameter":c.orientation_parameter})),
+        "sourceShear":r.chart.source_shear.as_ref().map(|s|json!({"base":s.base,"dependent":s.dependent,"scale":s.scale})),
+        "proofCoordinates":r.chart.proof_coordinates.as_ref().map(|c|json!({"rows":c.rows,"offset":c.offset,"determinant":c.determinant,
             "columnFactor":c.column_factor.as_ref().map(|f|json!({"base":f.base,"dependent":f.dependent,"scale":f.scale,"constant":f.constant}))})),
-        "material":r.material.as_ref().map(|p|json!({"valid":p.valid,"winding":p.winding,"pairs":p.pairs,"cells":p.cells,"domainCells":p.domain_cells,"reason":p.reason})),
-        "retainedBinding":r.binding.as_ref().map(|p|json!({"certified":p.certified,"inspectedFaces":p.faces,"exactWork":p.exact_work,"reparameterizedFaces":p.reparameterized_faces(),"reason":p.reason})),
+        "material":r.audits.material.as_ref().map(|p|json!({"valid":p.valid,"winding":p.winding,"pairs":p.pairs,"cells":p.cells,"domainCells":p.domain_cells,"reason":p.reason})),
+        "retainedBinding":r.audits.binding.as_ref().map(|p|json!({"certified":p.certified,"inspectedFaces":p.faces,"exactWork":p.exact_work,"reparameterizedFaces":p.reparameterized_faces(),"reason":p.reason})),
         "caps":r.caps.iter().map(|p|json!({"ring":p.ring,"span":p.span,"faces":p.faces,"sourceUDomain":p.source_u_domain,"sourceVBounds":p.source_v_bounds,
             "parameterMonotonicityCertified":p.parameter_monotonicity.spanwise_regular,"cells":p.parameter_monotonicity.cells})).collect::<Vec<_>>(),
-        "smoothness":r.smoothness.as_ref().map(|p|json!({"extractionComplete":p.extraction_complete,"vertexLinksComplete":p.vertex_links_complete,"edgeIds":p.edge_ids,"unresolvedEdges":p.unresolved_edges,"exactWork":p.exact_work,
+        "smoothness":r.audits.smoothness.as_ref().map(|p|json!({"extractionComplete":p.extraction_complete,"vertexLinksComplete":p.vertex_links_complete,"edgeIds":p.edge_ids,"unresolvedEdges":p.unresolved_edges,"exactWork":p.exact_work,
             "edgeCorrespondenceCertified":p.edge_correspondence.as_ref().is_some_and(|p|p.all_equal && p.all_joins_exact),"agreementWork":p.edge_correspondence.as_ref().map_or(0,|p|p.work),
             "allFacesRegular":p.regularity.all_faces_regular,"regularityCells":p.regularity.cells,"fullBoundaryG1Certified":p.g1_certified,"fullBoundaryG2Certified":p.g2_certified})),
-        "c0":if r.seam_continuity=="C0" {Some(json!({"allFacesRegular":r.c0_regularity.as_ref().is_some_and(|p|p.all_faces_regular),"edgeCorrespondenceCertified":r.c0_agreement.as_ref().is_some_and(|p|p.all_equal && p.all_joins_exact)}))}else{None},
+        "c0":if r.source.seam_continuity=="C0" {Some(json!({"allFacesRegular":r.audits.c0_regularity.as_ref().is_some_and(|p|p.all_faces_regular),"edgeCorrespondenceCertified":r.audits.c0_agreement.as_ref().is_some_and(|p|p.all_equal && p.all_joins_exact)}))}else{None},
         "reason":r.reason
     }))
 }

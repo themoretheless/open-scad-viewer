@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {inspectSelfIntersection,selfIntersectionExpectation,validSelfIntersection} from '../src/services/solidSelfIntersection'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectSelfIntersection,selfIntersectionExpectation,validSelfIntersection} from '../src/kernel/solidSelfIntersection'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const source=resolve(process.argv[3]??'docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/transition-face-pairs/embedding-joined-charts.json')
 const model=JSON.parse(readFileSync(source,'utf8')).sourceModel

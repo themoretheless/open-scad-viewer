@@ -54,7 +54,7 @@ const capability = {
     'crates/brep-core/src/operations.rs',
     'crates/brep-core/src/solid_audit.rs',
     'crates/geometry-bridge/src/lib.rs',
-    'src/services/geometry/brep.ts',
+    'src/kernel/geometry/brep.ts',
   ],
 }
 const resetPolicy = 'false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID'
@@ -95,7 +95,7 @@ write(capability.plan, {
   })),
   bindings: {
     implementation: capability.implementation,
-    registry: 'src/services/geometry/brepCapability.ts',
+    registry: 'src/kernel/geometry/brepCapability.ts',
     evidenceJson: capability.evidence,
   },
   evidence: {
@@ -187,7 +187,7 @@ write('docs/qualification/brep-capability-registry-release-full-v4.json', {
   planId: 'brep-capability-registry-release-full-v4',
   lifecycle: 'frozen-pending-execution',
   successorOf: v3ReleasePath,
-  registry: 'src/services/geometry/brepCapability.ts',
+  registry: 'src/kernel/geometry/brepCapability.ts',
   closedMatrix: 'docs/qualification/brep-full-closed-matrix-v4.json',
   g8Index: 'docs/qualification/plans/g8-full-matrix-index-v4.json',
   capabilities: v3Release.capabilities,

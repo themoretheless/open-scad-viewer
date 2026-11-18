@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {resolve,join} from 'node:path'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 const root=process.cwd()
 const output=process.argv[2]

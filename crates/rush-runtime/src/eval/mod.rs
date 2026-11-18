@@ -18,16 +18,14 @@ include!("../eval_match.rs");
 mod tests;
 
 mod value;
-mod evaluator;
 mod array;
 #[cfg(test)]
 mod guarded_tests;
 #[cfg(test)]
 mod memo_tests;
 pub use value::*;
-use evaluator::*;
 use array::*;
 
-mod evaluator_impl_1;
-mod evaluator_impl_2;
-mod evaluator_impl_3;
+mod evaluation;
+mod resolve;
+mod checks;

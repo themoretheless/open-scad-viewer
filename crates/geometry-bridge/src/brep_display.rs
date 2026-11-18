@@ -1,8 +1,8 @@
 //! Native display conversion; these mesh metrics are estimates, not B-rep certificates.
-use super::{Mesh, Result, Value, field, input, take_field};
+use super::{field, input, take_field, Mesh, Result, Value};
+use math_core::cross;
 use std::collections::BTreeMap;
 use value_codec::json;
-use math_core::cross;
 pub(crate) fn prepare(mesh: &Mesh) -> Result<(Vec<f32>, Vec<usize>, f64)> {
     mesh.validate()?;
     if mesh.indices.len() / 3 > 20_000 {
@@ -85,6 +85,31 @@ pub(crate) fn dispatch(mut v: Value) -> Result<Value> {
     }
     Ok(value)
 }
+/// Certified display levels for `nurbs_viewer_lod_select`; `levels` is null
+/// when a single level already shows the model exactly.
+pub(crate) fn dispatch_levels(mut v: Value) -> Result<Value> {
+    let segments: Vec<usize> = field(&v, "segments")?;
+    let Some(levels) =
+        super::brep::certified_display_levels(&take_field(&mut v, "model")?, &segments)?
+    else {
+        return Ok(json!({"levels": null, "reason": "deviation-not-decreasing"}));
+    };
+    let mut out = Vec::with_capacity(levels.len());
+    for (count, bound, tessellation) in levels {
+        let (vertices, indices, area) = prepare(&tessellation.built.mesh)?;
+        out.push(json!({
+            "segments": count,
+            "errorUpper": bound,
+            "triangleCount": indices.len() / 3,
+            "faceIds": tessellation.face_ids,
+            "displayVertices": vertices,
+            "displayIndices": indices,
+            "surfaceArea": area,
+            "closed": tessellation.built.report.closed,
+        }));
+    }
+    Ok(json!({"levels": out}))
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,12 +136,10 @@ mod tests {
             vec![0., 0., 0., 1., 1., 0., 2., 2. + 1e-9, 0.],
             vec![1e40, 0., 0., 0., 1., 0., 0., 0., 1.],
         ] {
-            assert!(
-                prepare(&triangle(positions))
-                    .unwrap_err()
-                    .message
-                    .contains("Float32")
-            );
+            assert!(prepare(&triangle(positions))
+                .unwrap_err()
+                .message
+                .contains("Float32"));
         }
     }
 }

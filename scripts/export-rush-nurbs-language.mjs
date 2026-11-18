@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs'
 import { z } from 'zod/v4'
-import { rushGraphNurbsSchema, RUSH_GRAPH_NURBS_GUIDE, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs.ts'
+import { rushGraphNurbsSchema, RUSH_GRAPH_NURBS_GUIDE, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/language/rushGraphNurbs.ts'
 const write = (name,value) => writeFileSync(new URL(`../docs/languages/${name}`,import.meta.url),typeof value==='string'?value:JSON.stringify(value,null,2)+'\n')
 write('rush-nurbs-1.schema.json',z.toJSONSchema(rushGraphNurbsSchema))
 write('rush-nurbs-1.example.json',RUSH_GRAPH_NURBS_EXAMPLE)

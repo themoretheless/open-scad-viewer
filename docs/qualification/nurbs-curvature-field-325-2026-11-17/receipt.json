@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0325",
+  "testedBase": "52758bb5299e18780de8c3af6b8cd757f9472e32",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "certified_planar_moment_contracts",
+    "--test",
+    "exact_planar_inertia_contracts",
+    "--test",
+    "exact_projected_face_area_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Integrate six signed area moments using outward rational interval jets and adaptive cell refinement.",
+    "Exact closed 2D contours, positive rational weights, separate tolerances by moment order. Exhausted cell budgets retain outward enclosures."
+  ],
+  "logSha256": "2565fe13285c5ccceec2db708221e773c68c10efaaca01d03841ae2fe508bed6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim.rs": "d78b6a846d0a8db975ef42dc6a776cff79e3f026e4bc893c7209be90da19000a",
+    "crates/nurbs-core/src/trim/planar_mass_bounds.rs": "12c6386ea9891bff600d446137f11a5b2c0f2214a43d069c42575e8ef08f3a3b",
+    "crates/nurbs-core/src/trim/planar_area.rs": "63fd9aa15dd324bba702346ee28b73724a14578163ce9375353e63beda69ffe0",
+    "crates/nurbs-foundation/src/distance/curve_jets.rs": "0c1198726aecff20a5e4a0f1565145a20837d9935871210d0f4be5fa6d5414ad",
+    "crates/nurbs-core/tests/certified_planar_moment_contracts.rs": "afe63b05bbe3823690ec8cef2f2529d7f6ec8fdf5e793472789335d8a9373d89"
+  }
+}

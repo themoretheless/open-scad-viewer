@@ -1,25 +1,22 @@
-//! Numeric kernels: compensated arithmetic, interval methods, robust solvers,
-//! bounding structures and exact predicates.
-pub(crate) mod distance_bounds;
-pub(crate) mod interval_vec3;
-pub(crate) mod bernstein_tensor;
-pub(crate) mod exact_curve_segments;
-pub(crate) mod exact_products;
-pub(crate) mod periodic_chart;
-pub(crate) mod curve_jets;
-pub mod bezier_extraction;
-pub mod compensated;
-pub mod conditioning;
-pub mod convex_distance;
-pub mod dual;
-pub mod interval_eval;
-pub mod interval_newton;
-pub mod normal_cone;
-pub mod obb_tree;
-pub mod robust_solvers;
-pub mod simd_kernels;
-pub mod sparse_linalg;
-pub mod sturm;
+//! Numeric kernels live in the `nurbs-numerics` crate (refactor plan O3); this module keeps
+//! the `nurbs_core::numerics::*` paths.
+pub(crate) use nurbs_numerics::distance_bounds;
+pub(crate) use nurbs_numerics::bernstein_product;
+pub(crate) use nurbs_numerics::interval_vec3;
+pub(crate) use nurbs_numerics::bernstein_tensor;
+pub(crate) use nurbs_numerics::exact_products;
+pub(crate) use nurbs_numerics::geometric_weights;
+pub(crate) use nurbs_numerics::periodic_chart;
+pub(crate) use nurbs_numerics::outward_interval;
+pub use nurbs_numerics::compensated;
+pub use nurbs_numerics::robust_solvers;
+pub use nurbs_numerics::sparse_linalg;
+pub use nurbs_numerics::sturm;
+pub use nurbs_numerics::error_upper;
+pub use nurbs_numerics::bernstein_interpolation;
+pub use nurbs_numerics::guards;
+pub use nurbs_numerics::progress;
 
-/// Certified nonnegative error-bound arithmetic.
-pub mod error_upper;
+#[cfg(test)]
+#[path = "numerics/integration_tests.rs"]
+mod integration_tests;

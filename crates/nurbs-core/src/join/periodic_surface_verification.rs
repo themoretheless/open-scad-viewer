@@ -35,7 +35,7 @@ impl Ord for Cell {
     }
 }
 fn domains(s: &Surface) -> [[f64; 2]; 2] {
-    crate::certificates::audit::surface_domains(s)
+    crate::core::span_domains::surface_domains(s)
 }
 fn original_image(
     source: &Surface,
@@ -143,12 +143,12 @@ pub fn verify_surface(
         (1..=100000).contains(&max_cells),
         "Surface phase verification needs 1..100000 cells",
     )?;
-    let us = crate::certificates::audit::nonempty_spans(
+    let us = crate::core::span_domains::nonempty_spans(
         &candidate.knots_u,
         candidate.degree_u,
         candidate.control_points.len(),
     );
-    let vs = crate::certificates::audit::nonempty_spans(
+    let vs = crate::core::span_domains::nonempty_spans(
         &candidate.knots_v,
         candidate.degree_v,
         candidate.control_points[0].len(),

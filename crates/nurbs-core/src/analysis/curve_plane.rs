@@ -306,9 +306,9 @@ pub(crate) fn exact_linear_parameter(c: &Curve, span: usize, t: f64, n: [f64; 3]
     }
     let [lo, hi] = [c.knots[span], c.knots[span + 1]];
     let [wa, wb] = [c.weights[span - 1], c.weights[span]];
-    let a = &c.control_points[span - 1];
-    let b = &c.control_points[span];
-    exact_weighted_pair(a, b, wa, wb, lo, hi, t, n, o)
+    let a = c.control_points[span - 1].as_slice();
+    let b = c.control_points[span].as_slice();
+    exact_weighted_pair([(a, wa), (b, wb)], [lo, hi], t, n, o)
 }
 fn exact_quadratic_knot(c: &Curve, t: f64, n: [f64; 3], o: f64) -> bool {
     if c.degree != 2 {
@@ -323,25 +323,21 @@ fn exact_quadratic_knot(c: &Curve, t: f64, n: [f64; 3], o: f64) -> bool {
     // At a simple quadratic knot only these two basis functions survive.
     // Their common denominator U[k+1]-U[k-1] is strictly positive.
     exact_weighted_pair(
-        &c.control_points[k - 2],
-        &c.control_points[k - 1],
-        c.weights[k - 2],
-        c.weights[k - 1],
-        c.knots[k - 1],
-        c.knots[k + 1],
+        [
+            (c.control_points[k - 2].as_slice(), c.weights[k - 2]),
+            (c.control_points[k - 1].as_slice(), c.weights[k - 1]),
+        ],
+        [c.knots[k - 1], c.knots[k + 1]],
         t,
         n,
         o,
     )
 }
-#[allow(clippy::too_many_arguments)]
+/// Whether the two weighted control points `(point, weight)` blended linearly
+/// over `[lo, hi]` hit the plane `n·x = o` exactly at `t`.
 fn exact_weighted_pair(
-    a: &[f64],
-    b: &[f64],
-    wa: f64,
-    wb: f64,
-    lo: f64,
-    hi: f64,
+    [(a, wa), (b, wb)]: [(&[f64], f64); 2],
+    [lo, hi]: [f64; 2],
     t: f64,
     n: [f64; 3],
     o: f64,

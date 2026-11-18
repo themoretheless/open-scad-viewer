@@ -211,10 +211,7 @@ fn main() {
         let mut mixed_domains = domains;
         mixed_domains.cells_per_pair = args.get(6).map(|v|v.parse::<usize>().expect("automatic product cell limit")).unwrap_or(1024);
         mixed_domains.spans_per_pair = 4096;
-        let r = w::qualify_with_mixed_pair_pass(
-            body,
-            5.99,
-            w::Limits {
+        let r = w::qualify_with_mixed_pair_pass(body, 5.99, w::WallLimits { limits: w::Limits {
                 pairs: 378,
                 plane_controls: 10000,
                 normal_spans: 20000,
@@ -223,27 +220,19 @@ fn main() {
                     spans: 100000,
                 },
                 max_sine_squared: 1e-6,
-            },
-            Vec::new(),
-            w::NormalProductLimits {
+            }, products: w::NormalProductLimits {
                 cells: 50000,
                 cells_per_pair: 128,
-            },
-            w::FactoredNormalLimits {
+            }, factors: w::FactoredNormalLimits {
                 exact_work: 100000000,
                 queries: 10000,
                 cells: 10000,
                 cells_per_pair: 128,
-            },
-            Vec::new(),
-            Some(domains),
-            Vec::new(),
-            Some(w::MixedPairLimits {
+            } }, Vec::new(), w::RetainedGapPass { certificates: Vec::new(), limits: Some(domains) }, w::MixedPairPass { certificates: Vec::new(), limits: Some(w::MixedPairLimits {
                 domains: mixed_domains,
                 normal_spans: 100000,
                 normal_spans_per_pair: 10000,
-            }),
-        )
+            }) })
         .unwrap();
         let d = r.mixed.unwrap();
         json!({"factoredQueries":r.factored_queries,"factoredExactWork":r.factored_exact_work,"wholeWallQualified":r.certificate.is_some(),"cells":d.cells,"spans":d.spans,

@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::{self, Limits, seam::compact},
-};
+use brep_core::{Model, feature_ops::edge_partition::{self, Limits, seam::compact}};
 use brep_topology::CoedgeTrim;
 #[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize};

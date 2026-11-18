@@ -48,8 +48,8 @@ pub fn certify_contraction(s: &Surface, max_spans: usize) -> Result<Report> {
         lo: f64::INFINITY,
         hi: f64::NEG_INFINITY,
     }; 2]; 3];
-    let us = crate::certificates::audit::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
-    let vs = crate::certificates::audit::nonempty_spans(&s.knots_v, s.degree_v, s.control_points[0].len());
+    let us = crate::core::span_domains::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
+    let vs = crate::core::span_domains::nonempty_spans(&s.knots_v, s.degree_v, s.control_points[0].len());
     for &u in &us {
         for &v in &vs {
             if report.spans == max_spans {

@@ -11,9 +11,11 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let chart = closed.model.faces[closed.face].surface.clone();
@@ -88,10 +90,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
         &chart,
         &[rim.clone()],
         reversed,
-        1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        region_replacement::G2Qualification {
+            tolerance_uv: 1e-8,
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.interior.certified);
@@ -142,13 +146,8 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
         .find(|c| c.edge == edge.edge && c.reversed != edge.reversed)
         .unwrap();
     let invalid = nurbs_core::surface_g2_pcurves::inspect(
-        &source.edges[edge.edge].curve,
-        [&support.pcurve, &edge.pcurve],
-        [&chart, &kink],
-        [support.reversed, edge.reversed],
-        1e-7,
-        1e-5,
-        1e-4,
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &source.edges[edge.edge].curve, pcurves: [&support.pcurve, &edge.pcurve], surfaces: [&chart, &kink], reversed: [support.reversed, edge.reversed] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         100000,
         1000000,
     )
@@ -165,10 +164,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
             &kink,
             &[rim.clone()],
             reversed,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -181,10 +182,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
             &bad,
             &[rim.clone()],
             reversed,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -195,10 +198,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
             &chart,
             &[rim],
             reversed,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            4,
-            0
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 4,
+                max_exact: 0,
+            },
         )
         .is_err()
     );
@@ -206,10 +211,7 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
 }
 #[test]
 fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
-    use brep_core::{
-        corner_close::BoundaryUse,
-        edge_partition::{self, PcurveCut},
-    };
+    use brep_core::{corner_close::BoundaryUse, edge_partition::{self, PcurveCut}};
     let (open, supports, options) = corner_fixture::fixture_extended();
     let closed = brep_core::corner_close::close(
         &open,
@@ -217,9 +219,11 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let selected = closed.face;
@@ -277,10 +281,12 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
         &[selected],
         chains.clone(),
         options,
-        1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        region_replacement::G2Qualification {
+            tolerance_uv: 1e-8,
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.corner.admitted && out.corner.interior.certified);
@@ -325,10 +331,12 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
             &[selected],
             duplicate,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -340,10 +348,12 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
             &[selected],
             gap,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -359,9 +369,11 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let selected = closed.face;
@@ -395,10 +407,12 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
         &[selected],
         supports,
         options,
-        1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        region_replacement::G2Qualification {
+            tolerance_uv: 1e-8,
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.corner.admitted && out.corner.interior.certified && out.corner.within_tolerance);
@@ -435,10 +449,12 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
             &[selected],
             bad,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -448,10 +464,12 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
             &[selected],
             supports,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            1,
-            0
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 1,
+                max_exact: 0,
+            },
         )
         .is_err()
     );

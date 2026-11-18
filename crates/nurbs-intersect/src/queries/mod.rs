@@ -13,6 +13,7 @@ mod codec;
 mod curve_coincidence;
 mod curve_curve;
 mod curve_plane;
+mod curve_plane_tangency;
 mod curve_ruled_surface;
 mod curve_segment;
 mod curve_surface;
@@ -47,7 +48,8 @@ pub struct Plane {
 }
 
 impl Plane {
-    pub(crate) fn normalized(self) -> Result<Self> {
+    #[doc(hidden)]
+    pub fn normalized(self) -> Result<Self> {
         if !self.normal.iter().all(|v| v.is_finite()) || !self.offset.is_finite() {
             return Err(invalid(
                 "Plane needs a finite, nonzero normal and finite offset",
@@ -82,7 +84,8 @@ impl Plane {
         }
         Ok(plane)
     }
-    pub(crate) fn distance(self, point: [f64; 3]) -> f64 {
+    #[doc(hidden)]
+    pub fn distance(self, point: [f64; 3]) -> f64 {
         dot(self.normal, point) - self.offset
     }
 }
@@ -184,8 +187,22 @@ impl<T> Report<T> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Contact {
+    /// Simple (multiplicity 1) crossing.
     Transverse,
     Boundary,
+    /// Certified isolated root of the given multiplicity (at least 2): even
+    /// multiplicity touches without crossing, odd multiplicity crosses
+    /// tangentially. Currently produced by curve/plane only.
+    Tangent { multiplicity: u32 },
+}
+impl Contact {
+    /// Root multiplicity: 1 for transverse and boundary contacts.
+    pub fn multiplicity(self) -> u32 {
+        match self {
+            Self::Tangent { multiplicity } => multiplicity,
+            _ => 1,
+        }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct CurvePoint {

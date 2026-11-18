@@ -24,7 +24,7 @@ pub use projective_collection::{
     inspect_projective_seam_collection,
 };
 pub mod curve_match;
-pub mod deviation;
+pub use crate::foundation::surface_deviation as deviation;
 pub mod preparation;
 mod regularity;
 mod station_scale;
@@ -396,6 +396,15 @@ pub fn inspect_surface_jets_checked_report(
     })
 }
 
+/// Requested jet order, transverse scale, boundary orientation and accepted
+/// jet deviation of one checked surface jet match.
+#[derive(Clone, Copy, Debug)]
+pub struct JetMatchOptions {
+    pub order: usize,
+    pub scale: f64,
+    pub reverse: bool,
+    pub max_error: f64,
+}
 /// Application gate: require regularity, the requested tangential smoothness,
 /// and a continuous bound on all independently varying jet components.
 pub fn match_surface_jets_checked_report(
@@ -403,11 +412,14 @@ pub fn match_surface_jets_checked_report(
     edited: &Surface,
     reference_boundary: &str,
     edited_boundary: &str,
-    order: usize,
-    scale: f64,
-    reverse: bool,
-    max_error: f64,
+    options: JetMatchOptions,
 ) -> Result<SurfaceJetMatch> {
+    let JetMatchOptions {
+        order,
+        scale,
+        reverse,
+        max_error,
+    } = options;
     check(
         max_error.is_finite() && max_error >= 0.,
         "Surface matching tolerance must be finite and nonnegative",
@@ -489,5 +501,9 @@ pub fn inspect_surface_mapped_projective_strip_jets(
     check(a.control_points.iter().chain(&b.control_points).flatten().all(|p|p.len()==3)
         && map.control_points.iter().all(|p|p.len()==2&&p[1]==0.)&&!map.periodic,"Mapped jets require XYZ surfaces and a nonperiodic scalar map stored as [value,0]")?;
     check(matches!(order,1|2)&&scale.is_finite()&&scale>0.&&max_work<=1000000,"Invalid mapped seam options")?;
-    super::continuity::bspline_strip::inspect_mapped(a,b,Boundary::parse(ab)?,Boundary::parse(bb)?,order,scale,max_work,map)
+    super::continuity::bspline_strip::inspect_mapped(
+        super::continuity::bspline_strip::BoundaryPair { a, b, ab: Boundary::parse(ab)?, bb: Boundary::parse(bb)? },
+        super::continuity::exact_strip::StripJetRequest { order, scale, max_work },
+        map,
+    )
 }

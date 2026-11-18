@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 class FakeBuffer {
   destroyCalls = 0
   readonly contents: Float32Array
-  constructor(readonly size: number) { this.contents = new Float32Array(size / 4) }
-  destroy() { this.destroyCalls++ }
+  constructor(readonly size: number) {
+    this.contents = new Float32Array(size / 4)
+  }
+  destroy() {
+    this.destroyCalls++
+  }
 }
 
 class FakeDevice {
@@ -25,7 +29,9 @@ class FakeDevice {
 interface GridInternals {
   dev: GPUDevice
   dist: number
-  tx: number; ty: number; tz: number
+  tx: number
+  ty: number
+  tz: number
   gridStep: number
   gridVB: FakeBuffer | null
   gridVC: number
@@ -83,12 +89,15 @@ describe('WebGPURenderer grid', () => {
   it('scales the fade distance and plane extent with the orbit distance and target', () => {
     const { internal } = harness()
     internal.dist = 10
-    internal.tx = 0; internal.ty = 0; internal.tz = 0
+    internal.tx = 0
+    internal.ty = 0
+    internal.tz = 0
     expect(internal.gridFadeDistance()).toBe(200)
     expect(internal.gridExtent()).toBe(200)
     internal.dist = 500
     expect(internal.gridFadeDistance()).toBe(3000)
-    internal.tx = 300; internal.ty = 400
+    internal.tx = 300
+    internal.ty = 400
     expect(internal.gridExtent()).toBe(3500)
   })
 })

@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0547",
+  "testedBase": "c14aaad9966e7fcbce2e014a9621ee162c2f0d71",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 151,
+  "scope": [
+    "Detect exact segment contacts in a closed UV lift and with its overlapping periodic copies.",
+    "Check exact segment contacts across the bounded set of period translates and report the first offending edge pair."
+  ],
+  "logSha256": "8c79e29c86b0e05d0bb08c029dfb60a642ac7f70e4fc704e8e57b9a304257f75",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8815f183b528da9217818f81f9efb39ea2fa66784a8df9903685296c38343ff3",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "2e4318756aa0db389e4f98bb07f2b2d16427cdf99df3f33c6b1da8a29966eaa9"
+  }
+}

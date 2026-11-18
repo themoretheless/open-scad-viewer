@@ -71,9 +71,11 @@ fn original_multispan_images_cover_irrational_other_curve_knot_preimages() {
     assert!(partitions[1].pieces[0].curve.control_points.len() > 7);
     let sources = vec![a, b];
     let owner = proof::regularize_multispan_periodic_winding(
-        &sources,
-        &partitions,
-        &[[0; 2]; 2],
+        proof::WindingSources {
+            sources: &sources,
+            partitions: &partitions,
+            windings: &[[0; 2]; 2],
+        },
         [[0., 8.]; 2],
         [1., 1.],
         limits(),
@@ -154,15 +156,17 @@ fn original_multispan_images_cover_irrational_other_curve_knot_preimages() {
         damaged[1].pieces[0].curve.control_points[2][0].next_up();
     assert!(
         proof::regularize_multispan_periodic_winding(
-            &sources,
-            &damaged,
-            &[[0; 2]; 2],
+            proof::WindingSources {
+                sources: &sources,
+                partitions: &damaged,
+                windings: &[[0; 2]; 2],
+            },
             [[0., 8.]; 2],
             [1., 1.],
             limits(),
             &[[0, 2], [1, 3]],
             1e-7,
-            1_000_000
+            1_000_000,
         )
         .is_err()
     );
@@ -180,9 +184,11 @@ fn reverse_multispan_traversals_cancel_with_original_source_roles() {
     partitions[1].pieces[1].curve = partitions[1].pieces[1].curve.insert(0.75, 1).unwrap();
     let sources = vec![a.insert(0.625, 1).unwrap(), b.insert(0.75, 1).unwrap()];
     let owner = proof::regularize_multispan_periodic_winding(
-        &sources,
-        &partitions,
-        &[[0; 2]; 2],
+        proof::WindingSources {
+            sources: &sources,
+            partitions: &partitions,
+            windings: &[[0; 2]; 2],
+        },
         [[0., 8.]; 2],
         [1., 1.],
         limits(),

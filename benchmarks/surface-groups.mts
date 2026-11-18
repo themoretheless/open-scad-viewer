@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs'
 import {pathToFileURL, fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 
-const source = process.argv[2] ? pathToFileURL(resolve(process.argv[2])) : new URL('../src/services/meshSurfaceGroups.ts', import.meta.url)
+const source = process.argv[2] ? pathToFileURL(resolve(process.argv[2])) : new URL('../src/kernel/meshSurfaceGroups.ts', import.meta.url)
 const {inferSurfaceIds} = await import(source.href)
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 const bytes = (value: Float32Array | Uint32Array) => new Uint8Array(value.buffer, value.byteOffset, value.byteLength)

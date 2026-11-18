@@ -36,10 +36,30 @@ pub(super) struct Context<'a, 'b> {
     // Allocated only for ONE atlas certificate and its ONE aggregate ledger.
     // No source proof or cache credit escapes into another call/budget.
     pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::PairedPose>>>,
+    pub(super) cap_jets: Option<RefCell<BTreeMap<(usize, [[u64; 2]; 2]), [V3; 3]>>>,
 }
 impl Context<'_, '_> {
     pub(super) fn same_cap(&self) -> bool {
         self.cap_identity.as_ref().is_some_and(|p| p.matches(self.caps))
+    }
+    fn cached_cap_jets(
+        &self,
+        index: usize,
+        uv: [[f64; 2]; 2],
+        out: &mut IdealVolumeReport,
+        max: usize,
+    ) -> Result<Option<[V3; 3]>> {
+        let key = (index, uv.map(|d| d.map(f64::to_bits)));
+        if let Some(cache) = &self.cap_jets {
+            if let Some(jets) = cache.borrow().get(&key).copied() {
+                return Ok(Some(jets));
+            }
+        }
+        let jets = cap_jets(self.caps[index], uv, &mut out.cells, max)?;
+        if let (Some(cache), Some(jets)) = (&self.cap_jets, jets) {
+            cache.borrow_mut().insert(key, jets);
+        }
+        Ok(jets)
     }
     pub(super) fn bound(
         &self,
@@ -73,13 +93,13 @@ impl Context<'_, '_> {
         }
         out.cells += 1;
         out.boxes += 1;
-        let Some(a) = cap_jets(caps[0], [b[0], b[1]], &mut out.cells, max_cells)? else {
+        let Some(a) = self.cached_cap_jets(0, [b[0], b[1]], out, max_cells)? else {
             return Ok(Enclosed::Unavailable(None));
         };
         let z = if self.same_cap() {
             a
         } else {
-            let Some(z) = cap_jets(caps[1], [b[0], b[1]], &mut out.cells, max_cells)? else {
+            let Some(z) = self.cached_cap_jets(1, [b[0], b[1]], out, max_cells)? else {
                 return Ok(Enclosed::Unavailable(None));
             };
             z
@@ -210,11 +230,13 @@ impl Context<'_, '_> {
                 b[2],
                 phase,
                 guide_phase,
-                self.offset.as_ref(),
-                self.transport.as_ref(),
-                self.shared_guide,
-                zero,
-                self.arc.as_ref().map(|m|m.length()),
+                arc_frames::ArcFrameSources {
+                    offset: self.offset.as_ref(),
+                    transport: self.transport.as_ref(),
+                    shared_guide: self.shared_guide,
+                    zero,
+                    length: self.arc.as_ref().map(|map| map.length()),
+                },
                 max_cells - out.cells,
             )?
         } else {
@@ -239,9 +261,7 @@ impl Context<'_, '_> {
         f.cells = 0;
         if let Some(cache) = &self.poses {
             let origin = frame::control_trajectories_with_phase(
-                s.path,
-                s.scale,
-                s.affine_laws,
+                frame::ControlLaws { path: s.path, scale: s.scale, affine: s.affine_laws },
                 &[[[0., 0.]; 3]],
                 b[2],
                 max_cells - out.cells,
@@ -260,9 +280,7 @@ impl Context<'_, '_> {
                 })
             });
             let linear = frame::control_trajectories_with_fit(
-                zero,
-                s.scale,
-                s.affine_laws.map(|(a, _)| (a, zero)),
+                frame::ControlLaws { path: zero, scale: s.scale, affine: s.affine_laws.map(|(a, _)| (a, zero)) },
                 &axes,
                 b[2],
                 max_cells - out.cells,
@@ -287,9 +305,7 @@ impl Context<'_, '_> {
             return Ok(Enclosed::Value(e));
         }
         let actual = frame::control_trajectories_with_phase(
-            s.path,
-            s.scale,
-            s.affine_laws,
+            frame::ControlLaws { path: s.path, scale: s.scale, affine: s.affine_laws },
             &[encode(q[0])],
             b[2],
             max_cells - out.cells,
@@ -307,9 +323,7 @@ impl Context<'_, '_> {
         f.cells = 0;
         let affine = s.affine_laws.map(|(a, _)| (a, zero));
         let linear = frame::control_trajectories_with_fit(
-            zero,
-            s.scale,
-            affine,
+            frame::ControlLaws { path: zero, scale: s.scale, affine },
             &[encode(q[1]), encode(q[2]), encode(qt)],
             b[2],
             max_cells - out.cells,

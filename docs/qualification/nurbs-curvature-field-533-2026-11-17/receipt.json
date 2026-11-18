@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0533",
+  "testedBase": "5e0c9f52e75d1ee434d5c37394b1654558d2a809",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 123,
+  "scope": [
+    "Extract a clamped surface strip over full and partial turns while preserving absolute UV.",
+    "Extend exact cyclic tensor support only as far as needed and clamp the selected absolute interval under one work budget."
+  ],
+  "logSha256": "d5e2e2f13ddb04cce6e95b4bdcce614117eb6a8362ad502bbc1658ddfaffaa42",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "12b90c01733cd9f66179e805c91b54490161c05c6029c74589ad55ad52b115cd",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "fce14fcd183de8256197824c5a1b6c92739be04799bb16876d2e4f57b990147d"
+  }
+}

@@ -28,7 +28,16 @@ fn main() {
     ] {
         let started = std::time::Instant::now();
         let r = brep_core::shell_distance::distance_between_face_sets(
-            &model, &a, &model, &b, 1e-5, 1e-8, 10000, 1000000,
+            &model,
+            &a,
+            &model,
+            &b,
+            brep_core::shell_distance::DistanceLimits {
+                tolerance_mm: 1e-5,
+                tolerance_uv: 1e-8,
+                max_cells: 10000,
+                max_domain_cells: 1000000,
+            },
         )
         .unwrap();
         let passed = r.converged

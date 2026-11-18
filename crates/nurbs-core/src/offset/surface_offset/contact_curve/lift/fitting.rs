@@ -1,7 +1,8 @@
 //! Rounded polynomial lift proposals, admitted only by complete actual lift proof.
+use crate::offset::polynomial_fit;
 use crate::{
-    Result, bernstein_interpolation as interpolation, check, curve::Curve,
-    distance_bounds::Interval as I, surface::Surface, surface_offset,
+    Result, bernstein_interpolation as interpolation, check, curve::Curve, surface::Surface,
+    surface_offset,
 };
 #[derive(Clone, Copy)]
 pub struct FitLimits {
@@ -104,10 +105,7 @@ pub fn fit(
         proof_cells: 0,
         stop: FitStop::DegreeLimit,
     };
-    let mut degrees = vec![1usize];
-    while *degrees.last().unwrap() < limits.max_degree {
-        degrees.push((2 * degrees.last().unwrap()).min(limits.max_degree));
-    }
+    let degrees = polynomial_fit::degree_ladder(limits.max_degree);
     let clock = uv.domain();
     for (attempt, &degree) in degrees.iter().enumerate() {
         let n = degree + 1;
@@ -124,20 +122,9 @@ pub fn fit(
             out.stop = FitStop::CoefficientLimit;
             break;
         }
-        let sites: Vec<_> = (0..n)
-            .map(|i| {
-                if i == 0 {
-                    clock[0]
-                } else if i == degree {
-                    clock[1]
-                } else {
-                    let f = (1. - (std::f64::consts::PI * i as f64 / degree as f64).cos()) * 0.5;
-                    clock[0] * (1. - f) + clock[1] * f
-                }
-            })
-            .collect();
-        check(
-            sites.windows(2).all(|r| r[0] < r[1]),
+        let sites = polynomial_fit::chebyshev_sites(
+            clock,
+            degree,
             "Lift proposal clock resolution exhausted",
         )?;
         let (Some(basis), work) = interpolation::basis_on(
@@ -163,28 +150,13 @@ pub fn fit(
             };
             samples.push(point.map(|r| r[0] * 0.5 + r[1] * 0.5));
         }
-        let mut points = vec![vec![0.; 3]; n];
-        for k in 0..3 {
-            let data: Vec<_> = samples.iter().map(|p| I::point(p[k])).collect();
-            let c = interpolation::reconstruct(&data, &basis)?;
-            out.coefficient_work += n * n;
-            for (i, c) in c.into_iter().enumerate() {
-                points[i][k] = c.lo * 0.5 + c.hi * 0.5;
-            }
-        }
+        let mut points =
+            polynomial_fit::interpolate_poles(&samples, &basis, &mut out.coefficient_work)?;
         if let Some(ends) = ends {
             points[0] = ends[0].to_vec();
             points[n - 1] = ends[1].to_vec();
         }
-        let candidate = Curve {
-            degree,
-            knots: std::iter::repeat_n(clock[0], n)
-                .chain(std::iter::repeat_n(clock[1], n))
-                .collect(),
-            control_points: points,
-            weights: vec![1.; n],
-            periodic: false,
-        };
+        let candidate = polynomial_fit::bezier(clock, points);
         let cells = ((limits.proof_cells - out.proof_cells) / (degrees.len() - attempt)).max(1);
         let proof = super::certify(
             &candidate,

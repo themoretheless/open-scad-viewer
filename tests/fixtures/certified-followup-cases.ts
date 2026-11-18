@@ -1,5 +1,5 @@
-import type {NurbsBrep} from '../../src/services/geometry/brep'
-import type {NurbsCurve} from '../../src/services/nurbsCurve'
+import type {NurbsBrep} from '../../src/kernel/geometry/brep'
+import type {NurbsCurve} from '../../src/kernel/nurbsCurve'
 export function rationalRoof(base:NurbsBrep):NurbsBrep {
  const m=structuredClone(base),s=m.faces[1].surface
  s.degreeU=2;s.degreeV=2;s.knotsU=[0,0,0,1,1,1];s.knotsV=[0,0,0,1,1,1]

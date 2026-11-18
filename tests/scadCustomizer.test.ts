@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractCustomizerParameters, replaceCustomizerValue } from '../src/services/scadCustomizer'
+import { extractCustomizerParameters, replaceCustomizerValue } from '../src/language/scadCustomizer'
 
 describe('OpenSCAD Customizer parameters', () => {
   it('extracts top-level slider, boolean and choice metadata', () => {

@@ -11,7 +11,7 @@ fn mirror(knots: &[f64], domain: [f64; 2]) -> Option<Vec<f64>> {
     let sum = exact_add(domain[0], domain[1])?;
     knots.iter().rev().map(|&u| exact_add(sum, -u)).collect()
 }
-fn bind(
+pub(super) fn bind(
     c: &Curve,
     p: &Curve,
     s: &Surface,

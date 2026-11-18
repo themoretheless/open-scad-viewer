@@ -108,10 +108,12 @@ pub fn match_ends(
                 &prepared.edited,
                 c.boundary,
                 edge,
-                c.order,
-                c.scale,
-                false,
-                budget,
+                continuity::JetMatchOptions {
+                    order: c.order,
+                    scale: c.scale,
+                    reverse: false,
+                    max_error: budget,
+                },
             )?;
             check(
                 matched.report.decision.as_ref().is_some_and(|d| d.accepted),

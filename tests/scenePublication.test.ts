@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData, SceneEntityId } from '../src/core/mesh'
-import { planScenePublication } from '../src/services/scenePublication'
+import { planScenePublication } from '../src/app/scenePublication'
 
-const IDENTITY = Float32Array.from([
-  1, 0, 0, 0,
-  0, 1, 0, 0,
-  0, 0, 1, 0,
-  0, 0, 0, 1,
-])
+const IDENTITY = Float32Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
 
 function mesh(entityId: SceneEntityId): MeshData {
   return {
@@ -34,23 +29,19 @@ function mesh(entityId: SceneEntityId): MeshData {
 
 describe('scene publication', () => {
   it('preserves state from preview to full for the exact same snapshot', () => {
-    const previousMeshes = [
-      mesh('entity:root/cube%230'),
-      mesh('entity:root/cube%231'),
-    ]
-    const nextMeshes = [
-      mesh('entity:root/cube%230'),
-      mesh('entity:root/cube%231'),
-    ]
+    const previousMeshes = [mesh('entity:root/cube%230'), mesh('entity:root/cube%231')]
+    const nextMeshes = [mesh('entity:root/cube%230'), mesh('entity:root/cube%231')]
 
-    expect(planScenePublication({
-      previousMeshes,
-      previousVisibility: [false, true],
-      previousSelectedIndex: 1,
-      previousIsolated: true,
-      nextMeshes,
-      sameSourceSnapshot: true,
-    })).toEqual({
+    expect(
+      planScenePublication({
+        previousMeshes,
+        previousVisibility: [false, true],
+        previousSelectedIndex: 1,
+        previousIsolated: true,
+        nextMeshes,
+        sameSourceSnapshot: true,
+      }),
+    ).toEqual({
       previousIndexByNextIndex: [0, 1],
       nextVisibility: [false, true],
       nextSelectedIndex: 1,
@@ -63,14 +54,16 @@ describe('scene publication', () => {
     const cube = mesh('entity:root/cube%230')
     const sphere = mesh('entity:root/sphere%230')
 
-    expect(planScenePublication({
-      previousMeshes: [cube, sphere],
-      previousVisibility: [false, true],
-      previousSelectedIndex: 1,
-      previousIsolated: true,
-      nextMeshes: [sphere, cube],
-      sameSourceSnapshot: false,
-    })).toEqual({
+    expect(
+      planScenePublication({
+        previousMeshes: [cube, sphere],
+        previousVisibility: [false, true],
+        previousSelectedIndex: 1,
+        previousIsolated: true,
+        nextMeshes: [sphere, cube],
+        sameSourceSnapshot: false,
+      }),
+    ).toEqual({
       previousIndexByNextIndex: [1, 0],
       nextVisibility: [true, false],
       nextSelectedIndex: 0,
@@ -83,15 +76,17 @@ describe('scene publication', () => {
     const first = mesh('entity:root/cube%230')
     const second = mesh('entity:root/cube%231')
 
-    expect(planScenePublication({
-      previousMeshes: [first, second],
-      previousVisibility: [false, false],
-      previousSelectedIndex: 0,
-      previousIsolated: true,
-      // Positional IDs can stay equal even when the two cube statements swap.
-      nextMeshes: [mesh(first.entityId!), mesh(second.entityId!)],
-      sameSourceSnapshot: false,
-    })).toEqual({
+    expect(
+      planScenePublication({
+        previousMeshes: [first, second],
+        previousVisibility: [false, false],
+        previousSelectedIndex: 0,
+        previousIsolated: true,
+        // Positional IDs can stay equal even when the two cube statements swap.
+        nextMeshes: [mesh(first.entityId!), mesh(second.entityId!)],
+        sameSourceSnapshot: false,
+      }),
+    ).toEqual({
       previousIndexByNextIndex: [-1, -1],
       nextVisibility: [true, true],
       nextSelectedIndex: null,
@@ -106,14 +101,16 @@ describe('scene publication', () => {
     const cylinder = mesh('entity:root/cylinder%230')
     const cone = mesh('entity:root/cone%230')
 
-    expect(planScenePublication({
-      previousMeshes: [cube, sphere, cylinder],
-      previousVisibility: [true, true, false],
-      previousSelectedIndex: 2,
-      previousIsolated: true,
-      nextMeshes: [cone, cylinder],
-      sameSourceSnapshot: false,
-    })).toEqual({
+    expect(
+      planScenePublication({
+        previousMeshes: [cube, sphere, cylinder],
+        previousVisibility: [true, true, false],
+        previousSelectedIndex: 2,
+        previousIsolated: true,
+        nextMeshes: [cone, cylinder],
+        sameSourceSnapshot: false,
+      }),
+    ).toEqual({
       previousIndexByNextIndex: [-1, 2],
       nextVisibility: [true, false],
       nextSelectedIndex: null,
@@ -127,14 +124,16 @@ describe('scene publication', () => {
     const sphere = mesh('entity:root/sphere%230')
     const cylinder = mesh('entity:root/cylinder%230')
 
-    expect(planScenePublication({
-      previousMeshes: [cube, sphere],
-      previousVisibility: [true, true],
-      previousSelectedIndex: 1,
-      previousIsolated: true,
-      nextMeshes: [cylinder, sphere],
-      sameSourceSnapshot: false,
-    })).toMatchObject({
+    expect(
+      planScenePublication({
+        previousMeshes: [cube, sphere],
+        previousVisibility: [true, true],
+        previousSelectedIndex: 1,
+        previousIsolated: true,
+        nextMeshes: [cylinder, sphere],
+        sameSourceSnapshot: false,
+      }),
+    ).toMatchObject({
       previousIndexByNextIndex: [-1, 1],
       nextVisibility: [true, true],
       nextSelectedIndex: 1,
@@ -146,14 +145,16 @@ describe('scene publication', () => {
     const cube = mesh('entity:root/cube%230')
     const sphere = mesh('entity:root/sphere%230')
 
-    expect(planScenePublication({
-      previousMeshes: [cube, sphere],
-      previousVisibility: [false, true],
-      previousSelectedIndex: 0,
-      previousIsolated: true,
-      nextMeshes: [sphere],
-      sameSourceSnapshot: false,
-    })).toMatchObject({
+    expect(
+      planScenePublication({
+        previousMeshes: [cube, sphere],
+        previousVisibility: [false, true],
+        previousSelectedIndex: 0,
+        previousIsolated: true,
+        nextMeshes: [sphere],
+        sameSourceSnapshot: false,
+      }),
+    ).toMatchObject({
       previousIndexByNextIndex: [1],
       nextVisibility: [true],
       nextSelectedIndex: null,

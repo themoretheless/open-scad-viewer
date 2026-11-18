@@ -1,8 +1,12 @@
+import {rootExcisionCases} from './root-excision-fixtures'
+import {quadricGraphCases,graphQuery,boundaryQuery} from './quadric-graph-fixtures'
+import {quadricCarrierCases} from './quadric-carrier-fixtures'
+import {commonRootPatchCases} from './common-root-patch-fixtures'
 import {advancedPatchCases} from './advanced-patch-fixtures'
 import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from './original-patch-fixtures'
 import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from './surface-self-fixtures'
-import {SurfaceSelfIntersectionBrowser} from '../../src/services/surfaceSelfIntersectionBrowser'
-import type {NurbsSurface} from '../../src/services/nurbsSurface'
+import {SurfaceSelfIntersectionBrowser} from '../../src/kernel/surfaceSelfIntersectionBrowser'
+import type {NurbsSurface} from '../../src/kernel/nurbsSurface'
 function graph():NurbsSurface{return{degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,.5,1].map(x=>[[x,0,x*x],[x,1,x*x]]),weights:[[1,1],[1,1],[1,1]],periodicU:false,periodicV:false}}
 async function qualify(){
  const module=await WebAssembly.compile(await(await fetch('/__audit.wasm')).arrayBuffer())
@@ -52,11 +56,32 @@ async function qualify(){
   const originalPatchCommonRootBoundary=await lane.inspectOriginalPatchContacts(originalPatchAlgebraicBoundaryFixture(true))
   const advancedPatch=[]
   for(const fixture of advancedPatchCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalPatchContacts(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Advanced patch input changed');advancedPatch.push({name:fixture.name,report})}
+  const commonRootPatch=[]
+  for(const fixture of commonRootPatchCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalPatchContacts(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Common-root patch input changed');commonRootPatch.push({name:fixture.name,report})}
+  const scalarOnlyQuery=originalPatchAlgebraicBoundaryFixture(true);for(const p of scalarOnlyQuery.curve.controlPoints)p[1]=2
+  const commonRootScalarOnly=await lane.inspectOriginalPatchContacts(scalarOnlyQuery)
+  const commonRootAuxiliaryBudget=await lane.inspectOriginalPatchContacts({...originalPatchAlgebraicBoundaryFixture(true),maxExactWork:commonRootScalarOnly.exactWork+10})
+  const quadricCarriers=[]
+  for(const fixture of quadricCarrierCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalQuadricCarrierRoots(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Quadric input changed');quadricCarriers.push({name:fixture.name,report})}
+  const finiteGraphs=[]
+  for(const fixture of quadricGraphCases){const before=JSON.stringify(fixture.query),started=performance.now(),report=await lane.inspectOriginalQuadricGraphContacts(fixture.query),elapsedMs=performance.now()-started;fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Finite graph input changed');finiteGraphs.push({name:fixture.name,elapsedMs,report})}
+  const graphBaseline=finiteGraphs.find(x=>x.name==='graph-edge-0')!.report
+  if(!graphBaseline.carrier)throw new Error('Missing graph carrier baseline')
+  const graphBoundaryBudget=await lane.inspectOriginalQuadricGraphContacts({...boundaryQuery(),maxExactWork:graphBaseline.targetMembership.workUsed+graphBaseline.carrier.exactWork})
+  const graphBadWeights=graphQuery();graphBadWeights.patch.weights[1]![1]=2
+  const graphUnprovedWeights=await lane.inspectOriginalQuadricGraphContacts(graphBadWeights)
+  const graphBadSheet=graphQuery();graphBadSheet.quadric=[[0,0,0,0],[0,0,0,0],[0,0,1,0],[0,0,0,-1]]
+  const graphUnsupportedSheet=await failure(lane.inspectOriginalQuadricGraphContacts(graphBadSheet))
+  const graphWorkersBefore=lane.snapshot().workersStarted
+  const graphInvalidBudget=await failure(lane.inspectOriginalQuadricGraphContacts({...graphQuery(),maxExactWork:1000001}))
+  if(lane.snapshot().workersStarted!==graphWorkersBefore)throw new Error('Invalid graph budget started a Worker')
+  const rootExcision=[]
+  for(const fixture of rootExcisionCases){const before=JSON.stringify(fixture.query),started=performance.now(),report=await lane.inspectIsoTarget(fixture.query),elapsedMs=performance.now()-started;fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw Error('Root excision input changed');rootExcision.push({name:fixture.name,elapsedMs,report})}
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{rootExcision,finiteGraphs,graphBoundaryBudget,graphUnprovedWeights,graphUnsupportedSheet,graphInvalidBudget,quadricCarriers,commonRootScalarOnly,commonRootAuxiliaryBudget,commonRootPatch,advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}

@@ -10,9 +10,12 @@
 //! region — this cell never falls back to numerical surface/surface
 //! subdivision. Axiality is certified, never forced: a perpendicular offset
 //! at pure rounding scale snaps to the axis, an offset inside the
-//! recognition-scale band reports a `NearCoincidence` region, and a clearly
-//! off-axis pair is `UnsupportedSurface` (the general sphere/cylinder pair is
-//! a quartic, out of scope). Classification uses outward binary64 bands
+//! recognition-scale band reports a `NearCoincidence` region. A clearly
+//! off-axis sphere strictly between the cap planes is traced and certified
+//! as `Traced` loops on the side wall with a completeness certificate (or
+//! resolves empty when it provably misses the wall); an off-axis sphere
+//! reaching a cap plane gives closed cycles of clipped wall arcs and cap
+//! circle arcs (see `capped`), recertified piece by piece. Classification uses outward binary64 bands
 //! widened by the observed recognition deviation. Resolved contacts are exact
 //! rational circles (four 90-degree arcs, weights cos(pi/4)) with UV lifts on
 //! both surfaces: iso-v lines across all four cylinder side patches, an exact
@@ -25,13 +28,14 @@
 #[cfg(feature = "codec")]
 mod serialization;
 use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+    self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
     lift,
 };
 pub(crate) use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
 use super::*;
 use brep_core::Model;
 
+pub(crate) mod capped;
 mod cylinder_patch_curve;
 #[cfg(test)]
 mod tests;

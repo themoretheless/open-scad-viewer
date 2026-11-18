@@ -17,7 +17,7 @@ pub fn inspect(v: Value) -> Result<Value> {
         segment_domain_cells: field(&config, "segmentDomainCells")?,
     };
     let normal_config: Option<Value> = field(&v, "normalAudit")?;
-    let (r, normal_evidence, normal_alignment) = if let Some(audit) = normal_config.as_ref() {
+    let (r, audit) = if let Some(audit) = normal_config.as_ref() {
         let sine: f64 = field(audit, "maxSineSquared")?;
         let spans: usize = field(audit, "maxSpans")?;
         let nr = brep_core::material_chord::inspect_with_normals(
@@ -29,31 +29,56 @@ pub fn inspect(v: Value) -> Result<Value> {
             sine,
             spans,
         )?;
-        let evidence = normal_evidence(&nr);
-        let status = match nr.aligned {
-            Some(true) => "angular-tolerance",
-            Some(false) => "oblique",
-            None => "unresolved",
-        };
-        (nr.chord, Some(evidence), status)
+        let audit = NormalAudit::of(audit, &nr);
+        (nr.chord, audit)
     } else {
         (
             brep_core::material_chord::inspect(&model, origin, direction, tolerance_uv, limits)?,
-            None,
-            "not-qualified",
+            NormalAudit {
+                config: None,
+                evidence: None,
+                alignment: "not-qualified",
+            },
         )
     };
     render(
         &model,
         &r,
-        origin,
-        direction,
-        tolerance_uv,
-        &config,
-        &normal_config,
-        normal_evidence,
-        normal_alignment,
+        ChordRequest {
+            origin,
+            direction,
+            tolerance_uv,
+            config: &config,
+        },
+        audit,
     )
+}
+/// The request fields a chord report echoes back.
+#[derive(Clone, Copy)]
+pub(super) struct ChordRequest<'a> {
+    pub origin: [f64; 3],
+    pub direction: [f64; 3],
+    pub tolerance_uv: f64,
+    pub config: &'a Value,
+}
+/// Optional normal audit of a chord: its request block, evidence and verdict.
+pub(super) struct NormalAudit<'a> {
+    pub config: Option<&'a Value>,
+    pub evidence: Option<Value>,
+    pub alignment: &'static str,
+}
+impl<'a> NormalAudit<'a> {
+    pub(super) fn of(config: &'a Value, nr: &brep_core::material_chord::NormalReport) -> Self {
+        Self {
+            config: Some(config),
+            evidence: Some(normal_evidence(nr)),
+            alignment: match nr.aligned {
+                Some(true) => "angular-tolerance",
+                Some(false) => "oblique",
+                None => "unresolved",
+            },
+        }
+    }
 }
 pub(super) fn normal_evidence(nr: &brep_core::material_chord::NormalReport) -> Value {
     json!({"aligned":nr.aligned,"spans":nr.spans,
@@ -66,14 +91,20 @@ pub(super) fn normal_evidence(nr: &brep_core::material_chord::NormalReport) -> V
 pub(super) fn render(
     model: &brep_core::Model,
     r: &brep_core::material_chord::Report,
-    origin: [f64; 3],
-    direction: [f64; 3],
-    tolerance_uv: f64,
-    config: &Value,
-    normal_config: &Option<Value>,
-    normal_evidence: Option<Value>,
-    normal_alignment: &str,
+    request: ChordRequest<'_>,
+    audit: NormalAudit<'_>,
 ) -> Result<Value> {
+    let ChordRequest {
+        origin,
+        direction,
+        tolerance_uv,
+        config,
+    } = request;
+    let NormalAudit {
+        config: normal_config,
+        evidence: normal_evidence,
+        alignment: normal_alignment,
+    } = audit;
     let seed = r.seed.as_ref().map(|s| {
         json!({"inside":s.parity,
             "cells":s.cells,"domainCells":s.domain_cells,

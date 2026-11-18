@@ -135,7 +135,7 @@ pub fn verify_curve(
         (1..=100000).contains(&max_cells),
         "Phase verification needs 1..100000 cells",
     )?;
-    let domains: Vec<_> = crate::certificates::audit::curve_span_domains(candidate)
+    let domains: Vec<_> = crate::core::span_domains::curve_span_domains(candidate)
         .into_iter()
         .map(|(_, d)| d)
         .collect();

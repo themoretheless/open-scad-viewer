@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0648",
+  "testedBase": "4fd6c5622d389024681758f44e0a8fb4cc78187c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 244,
+  "scope": [
+    "Enclose adjacent ordered moment differences and cap the upper gap by the least moment.",
+    "Check distinct and repeated roots, and the strict physical cap under uncertain tensor entries."
+  ],
+  "logSha256": "de2d0d7501336c6b076e5c35f844dffae6d842a50279d75c85ea74b8bb0f429c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "ec2dd1610b5f8c46df183177f59bc8a5175b9169ae1391c22dd0dcaef3fe32eb",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "11a281e6dacd0dfb4ba161f23c1104c0e6285943d5788476c788b8070567a8c4"
+  }
+}

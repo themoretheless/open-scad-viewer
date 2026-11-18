@@ -1,14 +1,15 @@
-import { createApp, markRaw } from 'vue'
-import { sourceFileExtension } from './services/rushFrontendDetect'
-import App from './App.vue'
-import { EXAMPLES } from './data/examples'
-import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './services/safeStorage'
-import { resolveTheme, THEME_SELECTIONS, type ThemeSelection } from './services/themePreferences'
-import { IndexedDbWorkspaceRepository } from './services/workspaceIndexedDb'
-import { BrowserWorkspacePersistence } from './services/workspacePersistence'
-import { readWorkspaceShareHash } from './services/workspaceShare'
-import { setOptionalWasmCompiler } from './services/wasmCompilation'
-import { compileStreamingWasm } from './services/wasmStreaming'
+import { createApp, markRaw } from 'svet'
+import { sourceFileExtension } from './language/rushFrontendDetect'
+import App from './App.svt'
+import { DEFAULT_EXAMPLE_SOURCE } from './data/examples'
+import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './core/safeStorage'
+import { resolveTheme, THEME_SELECTIONS, type ThemeSelection } from './app/themePreferences'
+import { IndexedDbWorkspaceRepository } from './app/workspaceIndexedDb'
+import { BrowserWorkspacePersistence } from './app/workspacePersistence'
+import { readWorkspaceShareHash } from './app/workspaceShare'
+import { setOptionalWasmCompiler } from './kernel/wasmCompilation'
+import { compileStreamingWasm } from './kernel/wasmStreaming'
+import { installTestSeamHooks } from './dev/testSeam'
 
 if (import.meta.env.DEV && new URLSearchParams(location.search).get('xrEmulator') === '1') {
   const { installVrEmulator } = await import('./dev/vrEmulator')
@@ -16,12 +17,11 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('xrEmulator'
 }
 
 setOptionalWasmCompiler(compileStreamingWasm)
+installTestSeamHooks()
 
 // Apply the bounded built-in palette before the asynchronous workspace bootstrap.
 const legacyThemeRaw = storageGet('scad-theme')
-const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light'
-  ? legacyThemeRaw
-  : 'system'
+const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
 const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection', THEME_SELECTIONS, legacyTheme)
 const initialThemeSelection = storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme)
 const initialTheme = resolveTheme(initialThemeSelection, matchMedia('(prefers-color-scheme: dark)').matches)
@@ -42,22 +42,17 @@ const legacyStorage = {
   },
   keys: storageKeys,
 }
-const workspacePersistence = new BrowserWorkspacePersistence(
-  new IndexedDbWorkspaceRepository(),
-  legacyStorage,
-)
+const workspacePersistence = new BrowserWorkspacePersistence(new IndexedDbWorkspaceRepository(), legacyStorage)
 const importedSource = readWorkspaceShareHash(location.hash)
 const bootstrap = await workspacePersistence.initialize({
-  fallbackSource: EXAMPLES.basic,
+  fallbackSource: DEFAULT_EXAMPLE_SOURCE,
   importedSource,
   importedFileName: `shared-model${sourceFileExtension(importedSource ?? '')}`,
 })
 
 // A valid shared source remains recoverable in the URL until IndexedDB has
 // committed it. localStorage-only fallback keeps the URL as a second copy.
-const importedCommittedToIndexedDb = bootstrap.imported
-  && bootstrap.durable
-  && bootstrap.backend === 'indexeddb'
+const importedCommittedToIndexedDb = bootstrap.imported && bootstrap.durable && bootstrap.backend === 'indexeddb'
 if (importedCommittedToIndexedDb) {
   history.replaceState(null, '', location.pathname + location.search)
 }

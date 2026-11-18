@@ -7,7 +7,7 @@ import Module from 'manifold-3d/manifold.js'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const corpus = JSON.parse(await readFile(new URL('./differential-corpus.json', import.meta.url), 'utf8'))
-if (corpus.schemaVersion !== 1 || !Array.isArray(corpus.cases) || corpus.cases.length === 0) {
+if (corpus.schemaVersion !== 1 || !Array.isArray(corpus.cases) || corpus.cases.length < 100) {
   throw new Error('Invalid differential corpus')
 }
 
@@ -38,6 +38,26 @@ const operations = [
   ['intersection', (a, b) => a.intersect(b)],
   ['difference', (a, b) => a.subtract(b)],
 ]
+function solid(spec) {
+  if (spec.mesh) {
+    const mesh = new wasm.Mesh({
+      numProp: 3,
+      vertProperties: Float32Array.from(spec.mesh.positions),
+      triVerts: Uint32Array.from(spec.mesh.indices),
+    })
+    if (spec.mesh.positions.some((v, i) => mesh.vertProperties[i] !== v)) {
+      throw new Error('Mesh corpus coordinates must be exactly representable in f32')
+    }
+    return new wasm.Manifold(mesh)
+  }
+  const box = wasm.Manifold.cube(spec.size, false)
+  const rotated = spec.rotate ? box.rotate(spec.rotate) : box
+  const placed = rotated.translate(spec.origin)
+  if (rotated !== box) rotated.delete()
+  box.delete()
+  return placed
+}
+
 const mismatches = []
 let comparisons = 0
 
@@ -49,14 +69,41 @@ function compareNumber(id, op, metric, own, reference) {
   }
 }
 
+const ids = new Set()
 for (const testCase of corpus.cases) {
-  const a = wasm.Manifold.cube(testCase.a.size, false).translate(testCase.a.origin)
-  const b = wasm.Manifold.cube(testCase.b.size, false).translate(testCase.b.origin)
+  if (ids.has(testCase.id)) throw new Error(`Duplicate corpus id ${testCase.id}`)
+  ids.add(testCase.id)
+  const expect = testCase.expect
+  if (expect?.refused) {
+    for (const [op] of operations) {
+      const own = actualByKey.get(`${testCase.id}:${op}`)
+      comparisons++
+      if (!own?.error) mismatches.push(`${testCase.id} ${op}: expected refusal, got a result`)
+    }
+    continue
+  }
+  const a = solid(testCase.reference?.a ?? testCase.a)
+  const b = solid(testCase.reference?.b ?? testCase.b)
   for (const [op, evaluate] of operations) {
     const own = actualByKey.get(`${testCase.id}:${op}`)
     if (!own) {
       mismatches.push(`${testCase.id} ${op}: missing Rust result`)
       continue
+    }
+    const policy = expect?.ops?.[op]
+    if (policy === 'refused' || policy === 'empty') {
+      comparisons++
+      const ok = policy === 'refused' ? Boolean(own.error) : !own.error && own.volume === 0 && own.surface_area === 0
+      if (!ok) mismatches.push(`${testCase.id} ${op}: expected ${policy}, got ${own.error ? `error ${own.error}` : `volume ${own.volume}`}`)
+      continue
+    } else if (policy) {
+      throw new Error(`${testCase.id}: unknown policy ${policy}`)
+    }
+    if (expect?.repaired) {
+      comparisons++
+      if (JSON.stringify(own.repaired) !== JSON.stringify(expect.repaired)) {
+        mismatches.push(`${testCase.id} ${op}: repaired=${JSON.stringify(own.repaired)}, expected ${JSON.stringify(expect.repaired)} (error=${own.error || 'none'})`)
+      }
     }
     let reference
     try {

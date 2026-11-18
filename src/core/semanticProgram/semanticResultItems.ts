@@ -1,13 +1,28 @@
 import { CAPABILITY_BY_KIND } from '../semanticProgram'
-import type { SemanticAmbiguityGroupId, SemanticDynamicSlot, SemanticNode, SemanticOccurrenceId, SemanticOperationCategory, SemanticOperationId, SemanticOutputRef, SemanticProgramCoreV1, SemanticResult, SemanticSceneEntityId, SemanticStructuralPathSegment } from '../semanticProgram'
+import type {
+  SemanticAmbiguityGroupId,
+  SemanticDynamicSlot,
+  SemanticNode,
+  SemanticOccurrenceId,
+  SemanticOperationCategory,
+  SemanticOperationId,
+  SemanticOutputRef,
+  SemanticProgramCoreV1,
+  SemanticResult,
+  SemanticSceneEntityId,
+  SemanticStructuralPathSegment,
+} from '../semanticProgram'
 import { sha256Hex } from '../sha256'
 import { utf8Compare } from '../utf8Order'
 
 export function semanticResultItems(result: SemanticResult): readonly SemanticOutputRef[] {
   switch (result.tag) {
-    case 'empty': return []
-    case 'single': return [result.item]
-    case 'multi': return result.items
+    case 'empty':
+      return []
+    case 'single':
+      return [result.item]
+    case 'multi':
+      return result.items
   }
 }
 
@@ -32,30 +47,48 @@ export function semanticNodeInputs(node: SemanticNode): readonly number[] {
 /** Source operation names that may author a concrete node (aliases excluded). */
 export function semanticNodeProducerOperationNames(node: SemanticNode): readonly string[] {
   switch (node.kind) {
-    case 'box': return ['cube']
+    case 'box':
+      return ['cube']
     case 'sphere-analytic':
-    case 'sphere-polygonal': return ['sphere']
+    case 'sphere-polygonal':
+      return ['sphere']
     case 'cylinder-analytic':
-    case 'cylinder-polygonal': return ['cylinder']
-    case 'polyhedron': return ['polyhedron']
-    case 'rectangle': return ['square']
+    case 'cylinder-polygonal':
+      return ['cylinder']
+    case 'polyhedron':
+      return ['polyhedron']
+    case 'rectangle':
+      return ['square']
     case 'circle-analytic':
-    case 'circle-polygonal': return ['circle']
-    case 'polygon': return ['polygon']
-    case 'transform': return ['translate', 'rotate', 'scale', 'mirror', 'multmatrix']
-    case 'boolean': return [node.operation]
-    case 'hull': return ['hull']
-    case 'linear-extrude': return ['linear_extrude']
+    case 'circle-polygonal':
+      return ['circle']
+    case 'polygon':
+      return ['polygon']
+    case 'transform':
+      return ['translate', 'rotate', 'scale', 'mirror', 'multmatrix']
+    case 'boolean':
+      return [node.operation]
+    case 'hull':
+      return ['hull']
+    case 'linear-extrude':
+      return ['linear_extrude']
     case 'rotate-extrude-analytic':
-    case 'rotate-extrude-polygonal': return ['rotate_extrude']
-    case 'projection': return ['projection']
-    case 'offset': return ['offset']
-    case 'full-round-exact': return ['full_round_exact']
+    case 'rotate-extrude-polygonal':
+      return ['rotate_extrude']
+    case 'projection':
+      return ['projection']
+    case 'offset':
+      return ['offset']
+    case 'full-round-exact':
+      return ['full_round_exact']
   }
 }
 
 export function deriveSemanticCapabilityClosure(
-  core: Pick<SemanticProgramCoreV1, 'language' | 'nodes' | 'result' | 'operations' | 'occurrences' | 'declaredCapabilities' | 'diagnosticTemplates'>,
+  core: Pick<
+    SemanticProgramCoreV1,
+    'language' | 'nodes' | 'result' | 'operations' | 'occurrences' | 'declaredCapabilities' | 'diagnosticTemplates'
+  >,
 ): readonly string[] {
   const capabilities = new Set(core.declaredCapabilities)
   capabilities.add('semantic.program-v1')
@@ -81,15 +114,20 @@ export function deriveSemanticCapabilityClosure(
     }
     for (const inputIndex of semanticNodeInputs(node)) {
       const input = core.nodes[inputIndex]
-      if (input.valueType.geometryKind !== node.valueType.geometryKind
-        || input.valueType.space !== node.valueType.space) {
+      if (!input) continue
+      if (
+        input.valueType.geometryKind !== node.valueType.geometryKind ||
+        input.valueType.space !== node.valueType.space
+      ) {
         capabilities.add(
-          `geometry.transition.${input.valueType.geometryKind}.${input.valueType.space}`
-          + `.to.${node.valueType.geometryKind}.${node.valueType.space}`,
+          `geometry.transition.${input.valueType.geometryKind}.${input.valueType.space}` +
+            `.to.${node.valueType.geometryKind}.${node.valueType.space}`,
         )
       }
       if (input.valueType.representation !== node.valueType.representation) {
-        capabilities.add(`representation.transition.${input.valueType.representation}.to.${node.valueType.representation}`)
+        capabilities.add(
+          `representation.transition.${input.valueType.representation}.to.${node.valueType.representation}`,
+        )
       }
       if (input.valueType.evidence.tag !== node.valueType.evidence.tag) {
         capabilities.add(`evidence.transition.${input.valueType.evidence.tag}.to.${node.valueType.evidence.tag}`)
@@ -100,7 +138,8 @@ export function deriveSemanticCapabilityClosure(
 }
 
 export function stableJson(value: unknown): string {
-  if (value === null || typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') return JSON.stringify(value)
+  if (value === null || typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string')
+    return JSON.stringify(value)
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`
   return `{${Object.entries(value as Record<string, unknown>)
     .sort(([left], [right]) => utf8Compare(left, right))
@@ -120,7 +159,10 @@ export function identityDigest(domain: string, payload: unknown): string {
   let domainBytes = getDomainBytes(domain)
   if (domainBytes === undefined) {
     domainBytes = UTF8.encode(domain)
-    if (domainBytesCount < 64) { setDomainBytes(domain, domainBytes); domainBytesCount++ }
+    if (domainBytesCount < 64) {
+      setDomainBytes(domain, domainBytes)
+      domainBytesCount++
+    }
   }
   const payloadBytes = UTF8.encode(stableJson(payload))
   const preimage = new Uint8Array(4 + domainBytes.length + 4 + payloadBytes.length)

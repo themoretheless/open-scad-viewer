@@ -7,9 +7,9 @@ pub(super) fn resample_polyline(line: &[[f64; 3]], n: usize) -> Result<Vec<[f64;
         "Hold lines need 2..=4096 points",
     )?;
     for (i, p) in line.iter().enumerate() {
-        crate::foundation::guards::require_finite_at(p[0], "hold_line", 3 * i)?;
-        crate::foundation::guards::require_finite_at(p[1], "hold_line", 3 * i + 1)?;
-        crate::foundation::guards::require_finite_at(p[2], "hold_line", 3 * i + 2)?;
+        crate::numerics::guards::require_finite_at(p[0], "hold_line", 3 * i)?;
+        crate::numerics::guards::require_finite_at(p[1], "hold_line", 3 * i + 1)?;
+        crate::numerics::guards::require_finite_at(p[2], "hold_line", 3 * i + 2)?;
     }
     let mut s = vec![0.; line.len()];
     for i in 1..line.len() {

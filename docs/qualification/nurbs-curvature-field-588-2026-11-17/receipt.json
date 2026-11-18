@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0588",
+  "testedBase": "87b340c46e33cf65caa5045c5e344f1ecf31714a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 177,
+  "scope": [
+    "Expose certified arc-length stations and resource-limit status through the binary ABI.",
+    "Verify original vertex and seam stations through the binary ABI, distinct refusal statuses, and preservation of proved brackets."
+  ],
+  "logSha256": "664787755f1f91d7e84c1dae2f78a64b3764fc473f7443fc9e227590f227fe47",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "9f2acb57cb61217cf5f487176d05643a3f0ce2ec1c3dbb80b34026983b1e4efa",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "4023e29a49ae4e43ef57111d71722becf4972087dce3572911d0b350d7845838",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "d03e01bd54f553bbee7f9537231ec6627ef38984a0546546c666ded5db77f58b",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "51c489ae5e4bc4330ab033f050d03ec5ba318397a789f837c1b289a7b16a6af7"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

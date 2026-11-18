@@ -66,8 +66,23 @@ pub struct Query<'a> {
     pub excluded: &'a BTreeSet<u32>,
 }
 
+/// The query ray in BVH-local coordinates with its current parameter window.
+#[derive(Clone, Copy)]
+struct LocalRay {
+    o: V3,
+    d: V3,
+    lo: f64,
+    hi: f64,
+}
+
 #[inline]
-fn near(bounds: &[f32], node: usize, o: V3, d: V3, mut lo: f64, mut hi: f64) -> Option<f64> {
+fn near(bounds: &[f32], node: usize, ray: LocalRay) -> Option<f64> {
+    let LocalRay {
+        o,
+        d,
+        mut lo,
+        mut hi,
+    } = ray;
     for axis in 0..3 {
         let min = bounds[node * 6 + axis] as f64;
         let max = bounds[node * 6 + axis + 3] as f64;
@@ -97,20 +112,14 @@ fn near(bounds: &[f32], node: usize, o: V3, d: V3, mut lo: f64, mut hi: f64) -> 
     Some(lo)
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "ray-triangle query keeps hot-path inputs explicit"
-)]
 fn triangle(
     vertices: &[f32],
     indices: &[u32],
     stride: usize,
     id: u32,
-    o: V3,
-    d: V3,
-    lo: f64,
-    hi: f64,
+    ray: LocalRay,
 ) -> Option<Hit> {
+    let LocalRay { o, d, lo, hi } = ray;
     let start = (id as usize).checked_mul(3)?;
     let ids: [u32; 3] = indices.get(start..start.checked_add(3)?)?.try_into().ok()?;
     let mut points = [[0.; 3]; 3];
@@ -216,7 +225,11 @@ pub fn raycast(
                 + m[i * 4 + 2] * query.direction[2]
         });
     }
-    if !finite(o) || !finite(d) || d == [0.; 3] || near(&bvh.bounds, 0, o, d, lo, hi).is_none() {
+    if !finite(o)
+        || !finite(d)
+        || d == [0.; 3]
+        || near(&bvh.bounds, 0, LocalRay { o, d, lo, hi }).is_none()
+    {
         return Ok(None);
     }
     let mut visited = BTreeSet::new();
@@ -229,7 +242,7 @@ pub fn raycast(
         if !visited.insert(node) {
             return Err(QueryError::InvalidTree);
         }
-        if near(&bvh.bounds, node, o, d, lo, hi).is_none() {
+        if near(&bvh.bounds, node, LocalRay { o, d, lo, hi }).is_none() {
             continue;
         }
         let first = bvh.nodes[node * 2] as usize;
@@ -242,7 +255,8 @@ pub fn raycast(
                 if query.excluded.contains(&id) {
                     continue;
                 }
-                if let Some(next) = triangle(vertices, indices, stride, id, o, d, lo, hi)
+                let ray = LocalRay { o, d, lo, hi };
+                if let Some(next) = triangle(vertices, indices, stride, id, ray)
                     && hit
                         .as_ref()
                         .is_none_or(|old| next.t < old.t || (next.t == old.t && id < old.triangle))
@@ -254,12 +268,12 @@ pub fn raycast(
         } else {
             let right = metadata as usize;
             let left_near = if first < count {
-                near(&bvh.bounds, first, o, d, lo, hi)
+                near(&bvh.bounds, first, LocalRay { o, d, lo, hi })
             } else {
                 None
             };
             let right_near = if right < count {
-                near(&bvh.bounds, right, o, d, lo, hi)
+                near(&bvh.bounds, right, LocalRay { o, d, lo, hi })
             } else {
                 None
             };

@@ -11,12 +11,15 @@ pub(super) fn construct(
     sweep: &MultiSweep<'_>,
     loop_sizes: &[usize],
     sections: usize,
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: owned::SweepAccuracy,
     ideal: owned::IdealLimits,
     v: &Value,
     audit: bool,
 ) -> Result<Value> {
+    let owned::SweepAccuracy {
+        tolerance_uv,
+        error_budget,
+    } = accuracy;
     let material = LoftCap {
         surface: field(&v["material"], "surface")?,
         trims: field(&v["material"], "trims")?,
@@ -72,29 +75,26 @@ pub(super) fn construct(
         orientation_cells: field(s, "maxOrientationCells")?,
     };
     let sharp = optional::<Vec<usize>>(v, "sharpStations")?.unwrap_or_default();
+    let source = owned::ClosedSweepSource {
+        sweep,
+        loop_sizes,
+        sections,
+        material: &material,
+    };
+    let accuracy = owned::SweepAccuracy {
+        tolerance_uv,
+        error_budget,
+    };
     let attempt = if audit {
         owned::verify_smooth_closed_with_ideal_atlas(
-            sweep,
-            loop_sizes,
-            sections,
-            &material,
-            tolerance_uv,
-            error_budget,
+            source,
+            accuracy,
             &sharp,
             limits,
             &field(v, "model")?,
         )?
     } else {
-        owned::construct_smooth_closed_with_ideal_atlas(
-            sweep,
-            loop_sizes,
-            sections,
-            &material,
-            tolerance_uv,
-            error_budget,
-            &sharp,
-            limits,
-        )?
+        owned::construct_smooth_closed_with_ideal_atlas(source, accuracy, &sharp, limits)?
     };
     let joint=match &attempt {
         owned::SmoothClosedAttempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),

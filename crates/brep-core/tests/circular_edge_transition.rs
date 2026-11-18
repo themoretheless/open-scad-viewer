@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_transition::{self, Limits},
-};
+use brep_core::{Model, feature_ops::edge_transition::{self, Limits}};
 fn source(angle: f64) -> Model {
     brep_core::revolve_angle(&[[1., 0.], [4., 0.], [4., 3.], [1., 3.]], angle).unwrap()
 }

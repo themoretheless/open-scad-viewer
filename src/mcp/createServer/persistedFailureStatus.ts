@@ -1,12 +1,17 @@
 import type { GeometryAnalysis, McpGeometryService } from '../geometryService'
 import type { GeometryBuildPurpose, GeometryExecutionDescriptor } from '../../core/geometryExecution'
-import { GeometryCapabilityUnavailableError, GeometryEngineUnavailableError, GeometryLanguageContractError, geometryExecutionForError } from '../../services/geometryBuildEngine'
+import {
+  GeometryCapabilityUnavailableError,
+  GeometryEngineUnavailableError,
+  GeometryLanguageContractError,
+  geometryExecutionForError,
+} from '../../kernel/geometryBuildEngine'
 import type { IndependentArtifactFormat } from '../independentArtifactCache'
 import { ModelNotFoundError, buildDiagnostic, isAbortError, publicToolError } from '../publicError'
 import type { ModelStore, StoredBuild } from '../modelStore'
 import { OfficialOpenScadRemoteError } from '../officialOpenScadRuntimeService'
 import type { SelectedModel } from '../createServer'
-import { buildObj } from '../../services/meshExport'
+import { buildObj } from '../../exchange/meshExport'
 import { buildUri, executionToWire, sha256 } from './officialToolInputSchema'
 import { truncateWellFormed } from '../../core/unicode'
 
@@ -22,13 +27,15 @@ export function buildToWire(build: StoredBuild) {
     status: build.status,
     duration_ms: build.durationMs,
     warnings: build.warnings,
-    metrics: build.metrics ? {
-      mesh_count: build.metrics.meshCount,
-      triangle_count: build.metrics.triangleCount,
-      volume: build.metrics.volume,
-      surface_area: build.metrics.surfaceArea,
-      reduced: build.metrics.reduced,
-    } : null,
+    metrics: build.metrics
+      ? {
+          mesh_count: build.metrics.meshCount,
+          triangle_count: build.metrics.triangleCount,
+          volume: build.metrics.volume,
+          surface_area: build.metrics.surfaceArea,
+          reduced: build.metrics.reduced,
+        }
+      : null,
     error: build.error,
     created_at: build.createdAt,
     resource_uri: buildUri(build.id),
@@ -44,11 +51,12 @@ export function textResult<T extends object>(structuredContent: T) {
 }
 
 export function executionForFailure(error: unknown): GeometryExecutionDescriptor | undefined {
-  return geometryExecutionForError(error)
-    ?? (error instanceof GeometryEngineUnavailableError
-    || error instanceof GeometryCapabilityUnavailableError
-    ? error.execution
-    : undefined)
+  return (
+    geometryExecutionForError(error) ??
+    (error instanceof GeometryEngineUnavailableError || error instanceof GeometryCapabilityUnavailableError
+      ? error.execution
+      : undefined)
+  )
 }
 
 export function errorResult(error: unknown, extra: Record<string, unknown> = {}) {
@@ -59,9 +67,7 @@ export function errorResult(error: unknown, extra: Record<string, unknown> = {})
   const execution = executionForFailure(error)
   const structured = {
     ...extra,
-    ...(execution && extra.execution === undefined
-      ? { execution: executionToWire(execution) }
-      : {}),
+    ...(execution && extra.execution === undefined ? { execution: executionToWire(execution) } : {}),
     error: problem.error,
   }
   return {
@@ -72,10 +78,11 @@ export function errorResult(error: unknown, extra: Record<string, unknown> = {})
 }
 
 export function officialErrorResult(error: unknown) {
-  const exposesCompilerDiagnostics = error instanceof OfficialOpenScadRemoteError
-    && (error.code === 'E_OPENSCAD_COMPILE'
-      || error.code === 'E_OPENSCAD_NO_OUTPUT'
-      || error.code === 'E_OPENSCAD_OUTPUT_LIMIT')
+  const exposesCompilerDiagnostics =
+    error instanceof OfficialOpenScadRemoteError &&
+    (error.code === 'E_OPENSCAD_COMPILE' ||
+      error.code === 'E_OPENSCAD_NO_OUTPUT' ||
+      error.code === 'E_OPENSCAD_OUTPUT_LIMIT')
   return exposesCompilerDiagnostics
     ? errorResult(error, {
         official_logs: error.logs,
@@ -86,27 +93,24 @@ export function officialErrorResult(error: unknown) {
 
 export async function resolveSource(
   store: ModelStore,
-  input: { source?: string; model_id?: string; revision?: number },
+  input: { source?: string | undefined; model_id?: string | undefined; revision?: number | undefined },
 ): Promise<{ source: string; model: SelectedModel | null }> {
   if (input.source !== undefined) return { source: input.source, model: null }
-  const model = input.revision === undefined
-    ? await store.getModel(input.model_id!)
-    : await store.getModelRevision(input.model_id!, input.revision)
+  const model =
+    input.revision === undefined
+      ? await store.getModel(input.model_id!)
+      : await store.getModelRevision(input.model_id!, input.revision)
   if (!model) throw new ModelNotFoundError(input.model_id!, input.revision)
   return { source: model.source, model }
 }
 
 export function analysisDimensions(analysis: GeometryAnalysis): [number, number, number] {
   if (!analysis.bounds) return [0, 0, 0]
-  return analysis.bounds.max.map((value, index) => (
-    value - analysis.bounds!.min[index]
-  )) as [number, number, number]
+  const { min, max } = analysis.bounds
+  return max.map((value, index) => value - (min[index] ?? NaN)) as [number, number, number]
 }
 
-export function comparisonSide(
-  selected: Awaited<ReturnType<typeof resolveSource>>,
-  analysis: GeometryAnalysis,
-) {
+export function comparisonSide(selected: Awaited<ReturnType<typeof resolveSource>>, analysis: GeometryAnalysis) {
   return {
     source_sha256: sha256(selected.source),
     model_id: selected.model?.id ?? null,
@@ -128,18 +132,17 @@ export function comparisonSide(
   }
 }
 
-export function comparisonDelta(
-  left: ReturnType<typeof comparisonSide>,
-  right: ReturnType<typeof comparisonSide>,
-) {
+export function comparisonDelta(left: ReturnType<typeof comparisonSide>, right: ReturnType<typeof comparisonSide>) {
   return {
     mesh_count: right.mesh_count - left.mesh_count,
     triangle_count: right.triangle_count - left.triangle_count,
     volume: right.volume - left.volume,
     surface_area: right.surface_area - left.surface_area,
-    dimensions: right.dimensions.map((value, index) => (
-      value - left.dimensions[index]
-    )) as [number, number, number],
+    dimensions: right.dimensions.map((value, index) => value - (left.dimensions[index] ?? NaN)) as [
+      number,
+      number,
+      number,
+    ],
     topology: {
       boundary: right.topology.boundary - left.topology.boundary,
       crease: right.topology.crease - left.topology.crease,
@@ -149,29 +152,27 @@ export function comparisonDelta(
   }
 }
 
-export function sameExecutionContext(
-  left: GeometryExecutionDescriptor,
-  right: GeometryExecutionDescriptor,
-): boolean {
-  const stableLimits = (limits: Record<string, number>) => JSON.stringify(
-    Object.entries(limits).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey)),
+export function sameExecutionContext(left: GeometryExecutionDescriptor, right: GeometryExecutionDescriptor): boolean {
+  const stableLimits = (limits: Record<string, number>) =>
+    JSON.stringify(Object.entries(limits).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey)))
+  return (
+    left.languageContract === right.languageContract &&
+    left.engineClass === right.engineClass &&
+    left.engineKey === right.engineKey &&
+    left.kernelFingerprint === right.kernelFingerprint &&
+    left.semanticProgramVersion === right.semanticProgramVersion &&
+    left.capabilityManifestVersion === right.capabilityManifestVersion &&
+    left.manifestDigest === right.manifestDigest &&
+    left.requiredCapabilities.join('\0') === right.requiredCapabilities.join('\0') &&
+    left.purpose === right.purpose &&
+    left.quality === right.quality &&
+    left.representation === right.representation &&
+    left.automaticFallback === right.automaticFallback &&
+    stableLimits(left.effectiveLimits) === stableLimits(right.effectiveLimits)
   )
-  return left.languageContract === right.languageContract
-    && left.engineClass === right.engineClass
-    && left.engineKey === right.engineKey
-    && left.kernelFingerprint === right.kernelFingerprint
-    && left.semanticProgramVersion === right.semanticProgramVersion
-    && left.capabilityManifestVersion === right.capabilityManifestVersion
-    && left.manifestDigest === right.manifestDigest
-    && left.requiredCapabilities.join('\0') === right.requiredCapabilities.join('\0')
-    && left.purpose === right.purpose
-    && left.quality === right.quality
-    && left.representation === right.representation
-    && left.automaticFallback === right.automaticFallback
-    && stableLimits(left.effectiveLimits) === stableLimits(right.effectiveLimits)
 }
 
-export function safeFileName(name: string, format: 'stl' | 'obj'): string {
+export function safeFileName(name: string, format: 'stl' | 'obj' | 'step'): string {
   const extension = `.${format}`
   const trimmed = name.trim().replace(/[/\\\0]/g, '_') || `model${extension}`
   const base = trimmed.toLowerCase().endsWith(extension) ? trimmed.slice(0, -extension.length) : trimmed
@@ -182,15 +183,9 @@ export function estimatedIndependentExportBytes(
   meshes: Parameters<typeof buildObj>[0],
   format: IndependentArtifactFormat,
 ): number {
-  const triangles = meshes.reduce(
-    (total, mesh) => total + Math.floor(mesh.indices.length / 3),
-    0,
-  )
+  const triangles = meshes.reduce((total, mesh) => total + Math.floor(mesh.indices.length / 3), 0)
   if (format === 'stl') return 84 + triangles * 50
-  const vertices = meshes.reduce(
-    (total, mesh) => total + Math.floor(mesh.vertices.length / 6),
-    0,
-  )
+  const vertices = meshes.reduce((total, mesh) => total + Math.floor(mesh.vertices.length / 6), 0)
   return 64 + meshes.length * 64 + vertices * 100 + triangles * 50
 }
 
@@ -208,14 +203,15 @@ export async function recordFailure(
     purpose: GeometryBuildPurpose
     durationMs: number
     error: unknown
-    execution?: GeometryExecutionDescriptor
+    execution?: GeometryExecutionDescriptor | undefined
   },
 ): Promise<StoredBuild | null> {
   try {
     if (input.error instanceof GeometryLanguageContractError) return null
-    const execution = input.execution
-      ?? executionForFailure(input.error)
-      ?? geometry.planSource(input.source, input.quality, input.purpose)
+    const execution =
+      input.execution ??
+      executionForFailure(input.error) ??
+      geometry.planSource(input.source, input.quality, input.purpose)
     return await store.recordBuild({
       modelId: input.model?.id,
       modelRevision: input.model?.revision,

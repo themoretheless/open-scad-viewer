@@ -58,6 +58,7 @@ try{
  const phases=[]
  for(const phase of ['before','after']){
   const session=await context.newCDPSession(page);await session.send('Debugger.enable')
+  // eslint-disable-next-line no-debugger -- debugger pauses the page through CDP at the chosen IndexedDB write
   await page.evaluate(({key,phase})=>{const original=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,...args){if(this.name==='heads'&&value.key===key){if(phase==='before')debugger;if(phase==='after')this.transaction.addEventListener('complete',()=>{debugger});return original.call(this,value,...args)}return original.call(this,value,...args)}},{key,phase})
   const referenceBefore=await page.evaluate(key=>localStorage.getItem(key),key)
   const paused=new Promise(resolve=>session.once('Debugger.paused',resolve))

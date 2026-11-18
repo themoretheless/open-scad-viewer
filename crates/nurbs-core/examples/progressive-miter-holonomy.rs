@@ -38,8 +38,8 @@ fn main() -> Result<()> {
             "steps={} sections={} sampled_deviation={} continuous_error_upper={} phase_resolved={} holonomy_radians={} accepted={}",
             r.steps,
             r.sections,
-            r.sampled_control_deviation,
-            r.continuous_error_upper,
+            r.error.sampled_control_deviation,
+            r.error.continuous_upper,
             r.phase_resolved,
             r.holonomy_correction,
             r.accepted

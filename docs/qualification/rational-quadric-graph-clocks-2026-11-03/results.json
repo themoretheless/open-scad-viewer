@@ -1,0 +1,57 @@
+{
+  "status": "passed-focused-native-and-client",
+  "baseCommit": "04e85c81e3c82d65642251cd1f1fd530c5a0db8a",
+  "coreBridgeTests": 94,
+  "clockUnitTests": 1,
+  "rustTests": 95,
+  "clientTests": 155,
+  "vueTsc": "passed",
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 54,
+    "pinnedLayerViolations": 0,
+    "baselineChangedByThisStage": false
+  },
+  "targetContract": "One original clamped positive-weight Bezier graph, degree 1..8, exact rank-one/separable weight tensor and affine Euclidean control-grid projection; original quadric identity and unique dependent-coordinate branch still independently required. Existing native input/conditioning/precision limits remain.",
+  "proof": "For f=sum(i/p)*w_i*B_i/W, p*u*(1-u)*W^2*f_prime = sum_(i<j)(j-i)^2*w_i*w_j*B_i*B_j. Positive weights imply strict monotonicity with positive endpoint derivatives and full [0,1] coverage.",
+  "inverse": "Geometric vectors retain the exact Mobius shortcut using original neighbor weights. General positive vectors use at most 64 binary64 cut proposals, each certified by rational de Casteljau comparisons; endpoints and source fractions are never proximity-snapped.",
+  "workScope": "The fixed inverse-clock schedule is separate from predicate-context work, as documented in the native API.",
+  "verified": [
+    "projective target clocks in both directions and positive weight gauge",
+    "degree-two target uses neighbor weights, not endpoint ratio",
+    "all algebraic edges/corners under projective target clocks",
+    "arbitrary nongeometric separable weighted saddle has refined irrational UV inverses",
+    "general rational edge and weight gauge",
+    "one-ULP factorization perturbation refuses chart admission",
+    "separable clock alone does not admit a target failing original quadric identity",
+    "independent direct Bernstein evaluation checks exact inverse enclosures at every supported degree 1..8, including subnormal fractions",
+    "explicit optional targetParameterization metadata preserves legacy reports"
+  ],
+  "rawWasmQualified": false,
+  "runtimeFixtures": 37,
+  "runtimePending": "Expected 146 ABI cases and 130 Workers, not yet run on the new binary",
+  "installedPackageUpdated": false,
+  "remaining": [
+    "actual new rational-target WASM/Chromium qualification",
+    "nonseparable/coupled target weights",
+    "multi-span and non-affine projected target charts",
+    "non-graph quadric sheets and general freeform supports",
+    "complete surface/surface branches, periodic/poles, coincident components",
+    "trim/Body/Boolean, production integration and full-library qualification"
+  ],
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "128e8342aa52da30dfbdaee9d3aaa68e815cee1317b43261d9ed927efc4c4eb5",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "3d2b7b81c8574fcb64e069a4c65b990b4ebc061736d97a42b690708f0df513c0",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "369615f0adcf580f33876f0cc8afc1720b88ca200a3ff94d1dddc5575fb8a993",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock.rs": "18ab9e5cedae46e8917223ca0ecf577fd58eab47dc5c09651556eb465096a604",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/membership.rs": "bc0d8196421ae429670de3f140e4c1c7b1fe83eecd13d7a240f42e78577ed7a3",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "1ff544468e03f69a3e88f7f5e25f7d0ca66f1b575c9092b5582182c80b19c242",
+    "crates/geometry-bridge/src/intersections/quadric_graph.rs": "626bc77347d88bda0c85d3d9c4e1686aa031a140a99a1ae6cdba722e38b11a73",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "293efb3364ac981ff8406e3ccb952126eb42265da2b1a38707313ab7e60921b5",
+    "src/services/originalQuadricGraphProtocol.ts": "664cc603ff04ed4f20068da73c38348a51b3ccf64beae1fd70403747657245c3",
+    "tests/originalQuadricGraphProtocol.test.ts": "2ea90b7670324fecc76e9be6545194bf88bce179c4c790ad47fb87b25458ec07",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "a14c84b15c69109dc412429120ad68deb1e9f9bfd44bec60a43bc865a7ed4f32",
+    "scripts/check-surface-self-intersection-wasm.mts": "3dd8b1ccfb5b06965ce30df9127a120fd6a26afb8fd8626886eed0705bebd74f",
+    "tools/browser-qualification/surface-self-intersection.mjs": "b6e20df1d0a7d76c138e4f873599dd3d3481cc3dfed570519090571bdb8062cf"
+  }
+}

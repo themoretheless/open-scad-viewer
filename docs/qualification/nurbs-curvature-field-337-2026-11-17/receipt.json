@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0337",
+  "testedBase": "16af18a48a80a114f54551a8dad454e4983a5793",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_planar_face_ray_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Partition a coplanar ray into certified contact-free material or exterior intervals and conservative contact bands.",
+    "Closed rational contours with nonzero winding. Merged contact bands remain conservative, and exhausted classification yields unresolved gaps."
+  ],
+  "logSha256": "ef025a214f9b218515efe00a7d0ffe6fb9cfaa50c42bc11a23cb4d70aa4a4c90",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "f4459758b11def7bd83930e5343c266acd902efe28854e8fa94e7aa0b1753c88",
+    "crates/nurbs-core/src/trim/trim_domain.rs": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f",
+    "crates/nurbs-core/tests/exact_coplanar_face_ray_contracts.rs": "b01ca0fa11f8970b7f8e69edd2ed31c074b84749d756487586539f5c8c1c7342"
+  }
+}

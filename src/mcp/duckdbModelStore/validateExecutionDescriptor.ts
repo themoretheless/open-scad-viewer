@@ -1,10 +1,35 @@
-import { MAX_STORED_ARTIFACT_BYTES, MAX_STORED_BUILD_WARNINGS, MAX_STORED_EXECUTION_JSON_BYTES, MAX_STORED_WARNING_LENGTH, isWellFormedUnicode, validateModelId, validateModelName, validateModelSource } from '../modelStore'
+import {
+  MAX_STORED_ARTIFACT_BYTES,
+  MAX_STORED_BUILD_WARNINGS,
+  MAX_STORED_EXECUTION_JSON_BYTES,
+  MAX_STORED_WARNING_LENGTH,
+  isWellFormedUnicode,
+  validateModelId,
+  validateModelName,
+  validateModelSource,
+} from '../modelStore'
 import type { BuildMetrics, StoredArtifactSummary, StoredBuild, StoredModel, StoredModelRevision } from '../modelStore'
-import { LEGACY_MANIFOLD_EXECUTION, geometryEngineClassForLanguageContract, parseGeometrySourceRoutingHeader } from '../../core/geometryExecution'
+import {
+  LEGACY_MANIFOLD_EXECUTION,
+  geometryEngineClassForLanguageContract,
+  parseGeometrySourceRoutingHeader,
+} from '../../core/geometryExecution'
 import type { GeometryExecutionDescriptor } from '../../core/geometryExecution'
 import type { Row } from '../duckdbModelStore'
 import { createHash } from 'node:crypto'
-import { finiteNumber, isoTimestamp, legacyExecutionDescriptor, optionalString, parseJson, requiredString, safeInteger, storedBuildDiagnostic, validateBoundedJson, validateDiagnosticExecutionContext, validateManifestAttestation } from './boundedLimit'
+import {
+  finiteNumber,
+  isoTimestamp,
+  legacyExecutionDescriptor,
+  optionalString,
+  parseJson,
+  requiredString,
+  safeInteger,
+  storedBuildDiagnostic,
+  validateBoundedJson,
+  validateDiagnosticExecutionContext,
+  validateManifestAttestation,
+} from './boundedLimit'
 
 export function validateExecutionDescriptor(
   value: unknown,
@@ -15,7 +40,9 @@ export function validateExecutionDescriptor(
   validateBoundedJson(value, 'Build execution provenance')
   const encoded = JSON.stringify(value)
   if (Buffer.byteLength(encoded, 'utf8') > MAX_STORED_EXECUTION_JSON_BYTES) {
-    throw new RangeError(`Build execution provenance exceeds ${MAX_STORED_EXECUTION_JSON_BYTES.toLocaleString('en-US')} bytes`)
+    throw new RangeError(
+      `Build execution provenance exceeds ${MAX_STORED_EXECUTION_JSON_BYTES.toLocaleString('en-US')} bytes`,
+    )
   }
   if (!value || Array.isArray(value) || typeof value !== 'object') {
     throw new TypeError('Build execution provenance must be an object')
@@ -34,15 +61,20 @@ export function validateExecutionDescriptor(
     'representation',
     'evidence',
   ] as const
-  if (requiredStringFields.some(field => typeof descriptor[field] !== 'string'
-    || !(descriptor[field] as string).length || (descriptor[field] as string).length > 256)) {
+  if (
+    requiredStringFields.some(
+      field =>
+        typeof descriptor[field] !== 'string' ||
+        !(descriptor[field] as string).length ||
+        (descriptor[field] as string).length > 256,
+    )
+  ) {
     throw new TypeError('Build execution provenance has an invalid required string field')
   }
   if (descriptor.engineClass !== 'mesh' && descriptor.engineClass !== 'brep') {
     throw new TypeError('Build execution provenance has an unsupported engine class')
   }
-  if (descriptor.languageContract !== 'legacy/current'
-    && descriptor.languageContract !== 'openscad-viewer/brep-1') {
+  if (descriptor.languageContract !== 'legacy/current' && descriptor.languageContract !== 'openscad-viewer/brep-1') {
     throw new TypeError('Build execution provenance has an unsupported language contract')
   }
   const routedEngine = geometryEngineClassForLanguageContract(descriptor.languageContract)
@@ -58,11 +90,14 @@ export function validateExecutionDescriptor(
   if (expectedQuality !== undefined && descriptor.quality !== expectedQuality) {
     throw new TypeError('Build execution provenance quality must match build quality')
   }
-  if (!Array.isArray(descriptor.requiredCapabilities)
-    || descriptor.requiredCapabilities.length > 32
-    || descriptor.requiredCapabilities.some(capability => typeof capability !== 'string'
-      || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(capability))
-    || new Set(descriptor.requiredCapabilities).size !== descriptor.requiredCapabilities.length) {
+  if (
+    !Array.isArray(descriptor.requiredCapabilities) ||
+    descriptor.requiredCapabilities.length > 32 ||
+    descriptor.requiredCapabilities.some(
+      capability => typeof capability !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(capability),
+    ) ||
+    new Set(descriptor.requiredCapabilities).size !== descriptor.requiredCapabilities.length
+  ) {
     throw new TypeError('Build execution provenance has invalid required capabilities')
   }
   if (descriptor.representation !== 'mesh' && descriptor.representation !== 'brep') {
@@ -71,33 +106,40 @@ export function validateExecutionDescriptor(
   if (descriptor.engineClass === 'mesh' && descriptor.representation !== 'mesh') {
     throw new TypeError('Mesh execution provenance must use the mesh representation')
   }
-  if (descriptor.evidence !== 'planned'
-    && descriptor.evidence !== 'runtime'
-    && descriptor.evidence !== 'legacy-backfill') {
+  if (
+    descriptor.evidence !== 'planned' &&
+    descriptor.evidence !== 'runtime' &&
+    descriptor.evidence !== 'legacy-backfill'
+  ) {
     throw new TypeError('Build execution provenance has unsupported evidence')
   }
-  if (descriptor.evidence === 'legacy-backfill' && (
-    descriptor.languageContract !== LEGACY_MANIFOLD_EXECUTION.languageContract
-    || descriptor.engineClass !== LEGACY_MANIFOLD_EXECUTION.engineClass
-    || descriptor.engineKey !== LEGACY_MANIFOLD_EXECUTION.engineKey
-    || descriptor.kernelFingerprint !== LEGACY_MANIFOLD_EXECUTION.kernelFingerprint
-    || descriptor.semanticProgramVersion !== LEGACY_MANIFOLD_EXECUTION.semanticProgramVersion
-    || descriptor.capabilityManifestVersion !== LEGACY_MANIFOLD_EXECUTION.capabilityManifestVersion
-    || descriptor.manifestDigest !== LEGACY_MANIFOLD_EXECUTION.manifestDigest
-    || descriptor.representation !== LEGACY_MANIFOLD_EXECUTION.representation
-    || descriptor.purpose !== descriptor.quality
-    || (descriptor.requiredCapabilities as unknown[]).length !== 0
-    || Object.keys(descriptor.effectiveLimits as Record<string, number>).length !== 0
-  )) {
+  if (
+    descriptor.evidence === 'legacy-backfill' &&
+    (descriptor.languageContract !== LEGACY_MANIFOLD_EXECUTION.languageContract ||
+      descriptor.engineClass !== LEGACY_MANIFOLD_EXECUTION.engineClass ||
+      descriptor.engineKey !== LEGACY_MANIFOLD_EXECUTION.engineKey ||
+      descriptor.kernelFingerprint !== LEGACY_MANIFOLD_EXECUTION.kernelFingerprint ||
+      descriptor.semanticProgramVersion !== LEGACY_MANIFOLD_EXECUTION.semanticProgramVersion ||
+      descriptor.capabilityManifestVersion !== LEGACY_MANIFOLD_EXECUTION.capabilityManifestVersion ||
+      descriptor.manifestDigest !== LEGACY_MANIFOLD_EXECUTION.manifestDigest ||
+      descriptor.representation !== LEGACY_MANIFOLD_EXECUTION.representation ||
+      descriptor.purpose !== descriptor.quality ||
+      (descriptor.requiredCapabilities as unknown[]).length !== 0 ||
+      Object.keys(descriptor.effectiveLimits as Record<string, number>).length !== 0)
+  ) {
     throw new TypeError('Legacy-backfill provenance is reserved for the exact historical Manifold descriptor')
   }
   if (expectedStatus === 'succeeded' && descriptor.evidence === 'planned') {
     throw new TypeError('A succeeded build cannot have planned-only execution evidence')
   }
-  if (!descriptor.effectiveLimits || Array.isArray(descriptor.effectiveLimits)
-    || typeof descriptor.effectiveLimits !== 'object'
-    || Object.values(descriptor.effectiveLimits).some(limit => typeof limit !== 'number'
-      || !Number.isFinite(limit) || limit < 0)) {
+  if (
+    !descriptor.effectiveLimits ||
+    Array.isArray(descriptor.effectiveLimits) ||
+    typeof descriptor.effectiveLimits !== 'object' ||
+    Object.values(descriptor.effectiveLimits).some(
+      limit => typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0,
+    )
+  ) {
     throw new TypeError('Build execution provenance has invalid effective limits')
   }
   if (descriptor.automaticFallback !== false) {
@@ -125,13 +167,17 @@ export function sha256(data: Uint8Array | string): string {
   return createHash('sha256').update(data).digest('hex')
 }
 
-export function expectedArtifactMimeType(format: 'stl' | 'obj'): string {
-  return format === 'stl' ? 'model/stl' : 'model/obj'
+export function expectedArtifactMimeType(format: 'stl' | 'obj' | 'step'): string {
+  if (format === 'stl') return 'model/stl'
+  if (format === 'obj') return 'model/obj'
+  return 'model/step'
 }
 
 export function modelFromRow(row: Row): StoredModel {
   const model = {
-    id: requiredString(row, 'id'), name: requiredString(row, 'name'), source: requiredString(row, 'source'),
+    id: requiredString(row, 'id'),
+    name: requiredString(row, 'name'),
+    source: requiredString(row, 'source'),
     revision: safeInteger(row, 'revision'),
     createdAt: isoTimestamp(row, 'created_at'),
     updatedAt: isoTimestamp(row, 'updated_at'),
@@ -165,31 +211,37 @@ export function buildFromRow(row: Row): StoredBuild {
   }
   const status = statusValue
   const qualityValue = requiredString(row, 'quality')
-  if (qualityValue !== 'preview' && qualityValue !== 'full') throw new TypeError('DuckDB returned an invalid build quality')
+  if (qualityValue !== 'preview' && qualityValue !== 'full')
+    throw new TypeError('DuckDB returned an invalid build quality')
   const warnings = parseJson<unknown>(row, 'warnings_json', [])
-  if (!Array.isArray(warnings) || warnings.length > MAX_STORED_BUILD_WARNINGS
-    || warnings.some(value => typeof value !== 'string'
-      || value.length > MAX_STORED_WARNING_LENGTH || !isWellFormedUnicode(value))) {
+  if (
+    !Array.isArray(warnings) ||
+    warnings.length > MAX_STORED_BUILD_WARNINGS ||
+    warnings.some(
+      value => typeof value !== 'string' || value.length > MAX_STORED_WARNING_LENGTH || !isWellFormedUnicode(value),
+    )
+  ) {
     throw new TypeError('DuckDB returned invalid build warnings')
   }
   const sourceSha256 = requiredString(row, 'source_sha256')
   if (!/^[a-f0-9]{64}$/i.test(sourceSha256)) throw new TypeError('DuckDB returned an invalid source digest')
-  const metrics: BuildMetrics | null = status === 'succeeded' ? {
-    meshCount: safeInteger(row, 'mesh_count'),
-    triangleCount: safeInteger(row, 'triangle_count'),
-    volume: finiteNumber(row, 'volume'),
-    surfaceArea: finiteNumber(row, 'surface_area'),
-    reduced: row.reduced === true,
-  } : null
+  const metrics: BuildMetrics | null =
+    status === 'succeeded'
+      ? {
+          meshCount: safeInteger(row, 'mesh_count'),
+          triangleCount: safeInteger(row, 'triangle_count'),
+          volume: finiteNumber(row, 'volume'),
+          surfaceArea: finiteNumber(row, 'surface_area'),
+          reduced: row.reduced === true,
+        }
+      : null
   const execution = validateExecutionDescriptor(
     parseJson<unknown>(row, 'execution_json', legacyExecutionDescriptor(qualityValue)),
     qualityValue,
     status,
   )
   const rawError = parseJson<unknown>(row, 'error_json', null)
-  const error = rawError === null
-    ? null
-    : storedBuildDiagnostic(rawError, 'DuckDB build diagnostic')
+  const error = rawError === null ? null : storedBuildDiagnostic(rawError, 'DuckDB build diagnostic')
   if (error?.contractVersion === 1) {
     validateDiagnosticExecutionContext(error, execution, 'DuckDB build diagnostic')
   }
@@ -203,9 +255,11 @@ export function buildFromRow(row: Row): StoredBuild {
   const modelRevision = row.model_revision === null ? null : safeInteger(row, 'model_revision')
   const inlineSource = optionalString(row, 'source_snapshot')
   const sourceAttestationValue = requiredString(row, 'source_attestation')
-  if (sourceAttestationValue !== 'model-revision'
-    && sourceAttestationValue !== 'inline-snapshot'
-    && sourceAttestationValue !== 'historical-unattested') {
+  if (
+    sourceAttestationValue !== 'model-revision' &&
+    sourceAttestationValue !== 'inline-snapshot' &&
+    sourceAttestationValue !== 'historical-unattested'
+  ) {
     throw new TypeError('DuckDB returned an invalid build source attestation class')
   }
   const sourceAttestation = sourceAttestationValue
@@ -215,9 +269,11 @@ export function buildFromRow(row: Row): StoredBuild {
   if (modelId !== null && inlineSource !== null) {
     throw new TypeError('DuckDB returned both model-backed and inline build source snapshots')
   }
-  if ((sourceAttestation === 'model-revision' && (modelId === null || inlineSource !== null))
-    || (sourceAttestation === 'inline-snapshot' && (modelId !== null || inlineSource === null))
-    || (sourceAttestation === 'historical-unattested' && (modelId !== null || inlineSource !== null))) {
+  if (
+    (sourceAttestation === 'model-revision' && (modelId === null || inlineSource !== null)) ||
+    (sourceAttestation === 'inline-snapshot' && (modelId !== null || inlineSource === null)) ||
+    (sourceAttestation === 'historical-unattested' && (modelId !== null || inlineSource !== null))
+  ) {
     throw new TypeError('DuckDB returned build source evidence that contradicts its attestation class')
   }
   let attestedSource: string | null = inlineSource
@@ -238,11 +294,11 @@ export function buildFromRow(row: Row): StoredBuild {
     }
     if (execution.evidence !== 'legacy-backfill') {
       const route = parseGeometrySourceRoutingHeader(attestedSource)
-      if (route.languageContract !== execution.languageContract
-        || route.requiredCapabilities.length !== execution.requiredCapabilities.length
-        || route.requiredCapabilities.some((capability, index) => (
-          capability !== execution.requiredCapabilities[index]
-        ))) {
+      if (
+        route.languageContract !== execution.languageContract ||
+        route.requiredCapabilities.length !== execution.requiredCapabilities.length ||
+        route.requiredCapabilities.some((capability, index) => capability !== execution.requiredCapabilities[index])
+      ) {
         throw new TypeError('DuckDB returned build provenance that does not match its immutable source route')
       }
     }
@@ -266,7 +322,9 @@ export function buildFromRow(row: Row): StoredBuild {
 
 export function artifactSummaryFromRow(row: Row): StoredArtifactSummary {
   const formatValue = requiredString(row, 'format')
-  if (formatValue !== 'stl' && formatValue !== 'obj') throw new TypeError('DuckDB returned an invalid artifact format')
+  if (formatValue !== 'stl' && formatValue !== 'obj' && formatValue !== 'step') {
+    throw new TypeError('DuckDB returned an invalid artifact format')
+  }
   const summary: StoredArtifactSummary = {
     id: requiredString(row, 'id'),
     buildId: requiredString(row, 'build_id'),
@@ -281,9 +339,15 @@ export function artifactSummaryFromRow(row: Row): StoredArtifactSummary {
   validateModelId(summary.id)
   validateModelId(summary.buildId)
   if (summary.modelId !== null) validateModelId(summary.modelId)
-  if (!summary.fileName || summary.fileName.length > 255 || /[/\\\0]/.test(summary.fileName)
-    || !isWellFormedUnicode(summary.fileName)) throw new TypeError('DuckDB returned an invalid artifact file name')
-  if (summary.mimeType !== expectedArtifactMimeType(summary.format)) throw new TypeError('DuckDB returned an invalid artifact MIME type')
+  if (
+    !summary.fileName ||
+    summary.fileName.length > 255 ||
+    /[/\\\0]/.test(summary.fileName) ||
+    !isWellFormedUnicode(summary.fileName)
+  )
+    throw new TypeError('DuckDB returned an invalid artifact file name')
+  if (summary.mimeType !== expectedArtifactMimeType(summary.format))
+    throw new TypeError('DuckDB returned an invalid artifact MIME type')
   if (!/^[a-f0-9]{64}$/i.test(summary.sha256)) throw new TypeError('DuckDB returned an invalid artifact digest')
   if (summary.byteLength < 0 || summary.byteLength > MAX_STORED_ARTIFACT_BYTES) {
     throw new RangeError('DuckDB returned an oversized artifact')

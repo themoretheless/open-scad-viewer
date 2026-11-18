@@ -1,8 +1,5 @@
 //! Independent guards for a constructive six-patch corner, not solid admission.
-use brep_core::{
-    Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_curvature as c, face_domain,
-    region_replacement::propose_corner_patch_network,
-};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_curvature as c, face_domain, region_replacement::propose_corner_patch_network};
 use nurbs_core::{
     curve::Curve,
     surface::{Axis, Surface},
@@ -147,13 +144,8 @@ fn main() {
         assert_eq!(uses.len(), 2);
         eprintln!("phase=seam-{a}-{b}");
         let proof = nurbs_core::surface_g2_pcurves::inspect_owned(
-            &curve,
-            [&uses[0].1, &uses[1].1],
-            [surfaces[uses[0].0], surfaces[uses[1].0]],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &curve, pcurves: [&uses[0].1, &uses[1].1], surfaces: [surfaces[uses[0].0], surfaces[uses[1].0]], reversed: [false; 2] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000,
             1000000,
         )

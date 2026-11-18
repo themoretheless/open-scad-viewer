@@ -1,28 +1,34 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { computePinchUpdate, projectAxesToScreen, WebGPURenderer } from '../src/services/webgpuRenderer'
-import { transformPoint, type Mat4, type Vec3 } from '../src/services/math3d'
+import { computePinchUpdate, projectAxesToScreen, WebGPURenderer } from '../src/render/webgpuRenderer'
+import { transformPoint, type Mat4, type Vec3 } from '../src/kernel/geometry/math3d'
 
 describe('WebGPURenderer close zoom', () => {
-  it.each(['orthographic', 'perspective'] as const)('uses protected %s depth after restoring a close camera', projection => {
-    const renderer = new WebGPURenderer()
-    const internal = renderer as unknown as {
-      bounds: { min: Vec3; max: Vec3; center: Vec3; radius: number }
-      cameraState(): { eye: Vec3; viewProjection: Mat4 }
-    }
-    internal.bounds = { min: [-34, -34, 0], max: [34, 34, 10], center: [0, 0, 5], radius: 49 }
-    renderer.restoreCameraState({
-      yaw: Math.PI / 4, pitch: Math.atan(1 / Math.sqrt(2)), distance: 0.01,
-      target: [0, 0, 5], projection,
-    })
+  it.each(['orthographic', 'perspective'] as const)(
+    'uses protected %s depth after restoring a close camera',
+    projection => {
+      const renderer = new WebGPURenderer()
+      const internal = renderer as unknown as {
+        bounds: { min: Vec3; max: Vec3; center: Vec3; radius: number }
+        cameraState(): { eye: Vec3; viewProjection: Mat4 }
+      }
+      internal.bounds = { min: [-34, -34, 0], max: [34, 34, 10], center: [0, 0, 5], radius: 49 }
+      renderer.restoreCameraState({
+        yaw: Math.PI / 4,
+        pitch: Math.atan(1 / Math.sqrt(2)),
+        distance: 0.01,
+        target: [0, 0, 5],
+        projection,
+      })
 
-    const frame = internal.cameraState()
-    // This front corner was behind the old eye and was cut by the near plane.
-    const depth = transformPoint(frame.viewProjection, [34, -34, 10])[2]
-    expect(depth).toBeGreaterThan(0)
-    expect(depth).toBeLessThan(1)
-    expect(renderer.getCameraState().distance).toBe(0.01)
-    expect(renderer.canGoToPreviousView).toBe(false)
-  })
+      const frame = internal.cameraState()
+      // This front corner was behind the old eye and was cut by the near plane.
+      const depth = transformPoint(frame.viewProjection, [34, -34, 10])[2]
+      expect(depth).toBeGreaterThan(0)
+      expect(depth).toBeLessThan(1)
+      expect(renderer.getCameraState().distance).toBe(0.01)
+      expect(renderer.canGoToPreviousView).toBe(false)
+    },
+  )
 })
 
 describe('WebGPURenderer camera history integration', () => {
@@ -60,6 +66,31 @@ describe('WebGPURenderer camera history integration', () => {
     expect(renderer.getCameraState()).toMatchObject({ yaw: 0, pitch: 0, projection: 'orthographic' })
     expect(renderer.previousView()).toEqual(initial)
     expect(renderer.canGoToPreviousView).toBe(false)
+  })
+
+  it('applies keyboard orbit, pan, zoom and stepped orbit angles as history actions', () => {
+    const renderer = new WebGPURenderer()
+    const initial = renderer.getCameraState()
+
+    expect(renderer.applyKeyboardCameraStep({ kind: 'orbit', dx: 24, dy: 0 })).toBe(true)
+    const orbited = renderer.getCameraState()
+    expect(orbited.yaw).not.toBe(initial.yaw)
+    expect(orbited.target).toEqual(initial.target)
+
+    expect(renderer.applyKeyboardCameraStep({ kind: 'pan', dx: 40, dy: 0 })).toBe(true)
+    const panned = renderer.getCameraState()
+    expect(panned.yaw).toBe(orbited.yaw)
+    expect(panned.target).not.toEqual(orbited.target)
+
+    expect(renderer.applyKeyboardCameraStep({ kind: 'zoom', delta: -120 })).toBe(true)
+    expect(renderer.getCameraState().distance).toBeLessThan(panned.distance)
+
+    expect(renderer.setOrbitAngles(0.5, 0.25)).toBe(true)
+    expect(renderer.getCameraState()).toMatchObject({ yaw: 0.5, pitch: 0.25 })
+    expect(renderer.setOrbitAngles(Number.NaN, 0)).toBe(false)
+
+    for (let i = 0; i < 4; i++) renderer.previousView()
+    expect(renderer.getCameraState()).toEqual(initial)
   })
 
   it('notifies consumers when history becomes available or empty', () => {
@@ -237,11 +268,7 @@ describe('computePinchUpdate', () => {
   const state = { yaw: 0, pitch: 0, dist: 100, tx: 5, ty: 6, tz: 7 }
 
   it('zooms by the pointer-span ratio without panning when the midpoint is fixed', () => {
-    const spread = computePinchUpdate(
-      { x: 0, y: 0 }, { x: 0, y: 100 },
-      { x: 0, y: -50 }, { x: 0, y: 150 },
-      state, 400,
-    )
+    const spread = computePinchUpdate({ x: 0, y: 0 }, { x: 0, y: 100 }, { x: 0, y: -50 }, { x: 0, y: 150 }, state, 400)
     expect(spread.dist).toBeCloseTo(50, 10)
     expect(spread.tx).toBeCloseTo(5, 10)
     expect(spread.ty).toBeCloseTo(6, 10)
@@ -249,21 +276,13 @@ describe('computePinchUpdate', () => {
     expect(spread.yaw).toBe(0)
     expect(spread.pitch).toBe(0)
 
-    const squeeze = computePinchUpdate(
-      { x: 0, y: -50 }, { x: 0, y: 150 },
-      { x: 0, y: 0 }, { x: 0, y: 100 },
-      state, 400,
-    )
+    const squeeze = computePinchUpdate({ x: 0, y: -50 }, { x: 0, y: 150 }, { x: 0, y: 0 }, { x: 0, y: 100 }, state, 400)
     expect(squeeze.dist).toBeCloseTo(200, 10)
   })
 
   it('pans with the midpoint using the same math as a right-drag pan', () => {
-    const next = computePinchUpdate(
-      { x: 0, y: 0 }, { x: 0, y: 100 },
-      { x: 10, y: 20 }, { x: 10, y: 120 },
-      state, 400,
-    )
-    const scale = 2 * 100 * Math.tan(Math.PI / 8) / 400
+    const next = computePinchUpdate({ x: 0, y: 0 }, { x: 0, y: 100 }, { x: 10, y: 20 }, { x: 10, y: 120 }, state, 400)
+    const scale = (2 * 100 * Math.tan(Math.PI / 8)) / 400
     expect(next.dist).toBeCloseTo(100, 10)
     // At yaw 0 / pitch 0 the screen right axis is +X and screen down is +Z.
     expect(next.tx).toBeCloseTo(5 - 10 * scale, 10)
@@ -273,15 +292,21 @@ describe('computePinchUpdate', () => {
 
   it('clamps a single step to the same factor as a wheel step', () => {
     const collapse = computePinchUpdate(
-      { x: 0, y: 0 }, { x: 0, y: 100 },
-      { x: 0, y: 49.5 }, { x: 0, y: 50.5 },
-      state, 400,
+      { x: 0, y: 0 },
+      { x: 0, y: 100 },
+      { x: 0, y: 49.5 },
+      { x: 0, y: 50.5 },
+      state,
+      400,
     )
     expect(collapse.dist).toBeCloseTo(100 * Math.E, 8)
     const explode = computePinchUpdate(
-      { x: 0, y: 49.5 }, { x: 0, y: 50.5 },
-      { x: 0, y: 0 }, { x: 0, y: 1000 },
-      state, 400,
+      { x: 0, y: 49.5 },
+      { x: 0, y: 50.5 },
+      { x: 0, y: 0 },
+      { x: 0, y: 1000 },
+      state,
+      400,
     )
     expect(explode.dist).toBeCloseTo(100 / Math.E, 8)
   })
@@ -352,7 +377,12 @@ describe('projectAxesToScreen', () => {
   })
 
   it('is a rotation: projected axes stay unit-length and mutually orthogonal', () => {
-    for (const [yaw, pitch] of [[0.3, -0.9], [-2.1, 1.2], [2.9, 0.05], [1.1, -1.5]]) {
+    for (const [yaw, pitch] of [
+      [0.3, -0.9],
+      [-2.1, 1.2],
+      [2.9, 0.05],
+      [1.1, -1.5],
+    ]) {
       const axes = projectAxesToScreen(yaw, pitch)
       for (const axis of [axes.x, axes.y, axes.z]) {
         expect(Math.hypot(axis.x, axis.y, axis.depth)).toBeCloseTo(1, 10)
@@ -403,8 +433,13 @@ describe('WebGPURenderer two-pointer gestures', () => {
   }
 
   const touch = (id: number, x: number, y: number): PointerLike => ({
-    pointerId: id, pointerType: 'touch', button: 0, shiftKey: false,
-    clientX: x, clientY: y, preventDefault() {},
+    pointerId: id,
+    pointerType: 'touch',
+    button: 0,
+    shiftKey: false,
+    clientX: x,
+    clientY: y,
+    preventDefault() {},
   })
 
   it('enters pinch on a second touch, zooms by span ratio, and ignores a third pointer', () => {
@@ -453,8 +488,24 @@ describe('WebGPURenderer two-pointer gestures', () => {
 
   it('keeps mouse gestures on the single-pointer path', () => {
     const { internal } = makeRenderer()
-    internal.onDown({ pointerId: 5, pointerType: 'mouse', button: 0, shiftKey: false, clientX: 0, clientY: 0, preventDefault() {} })
-    internal.onDown({ pointerId: 6, pointerType: 'mouse', button: 2, shiftKey: false, clientX: 10, clientY: 10, preventDefault() {} })
+    internal.onDown({
+      pointerId: 5,
+      pointerType: 'mouse',
+      button: 0,
+      shiftKey: false,
+      clientX: 0,
+      clientY: 0,
+      preventDefault() {},
+    })
+    internal.onDown({
+      pointerId: 6,
+      pointerType: 'mouse',
+      button: 2,
+      shiftKey: false,
+      clientX: 10,
+      clientY: 10,
+      preventDefault() {},
+    })
     expect(internal.pinching).toBe(false)
     expect(internal.activePointer).toBe(5)
   })

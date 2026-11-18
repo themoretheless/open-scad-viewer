@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer, type PickHit } from '../src/services/webgpuRenderer'
+import { WebGPURenderer, type PickHit } from '../src/render/webgpuRenderer'
+import * as meshBounds from '../src/render/meshBounds'
+
+vi.mock('../src/render/meshBounds', async original => {
+  const actual = await original<typeof import('../src/render/meshBounds')>()
+  return { ...actual, combineBounds: vi.fn(actual.combineBounds) }
+})
 
 const hit = (meshIndex: number): PickHit => ({
   meshIndex,
@@ -56,7 +62,7 @@ describe('WebGPURenderer batched visibility', () => {
       hovered: number | null
       hoveredHit: PickHit | null
       isolated: boolean
-      combineBounds: (bounds: typeof firstBounds[]) => typeof firstBounds | null
+      combineBounds: (bounds: (typeof firstBounds)[]) => typeof firstBounds | null
       updateMeshStyles: () => void
       rebuildSelectionOverlays: () => void
       rebuildSourceHighlightOverlay: () => void
@@ -72,12 +78,13 @@ describe('WebGPURenderer batched visibility', () => {
     internal.hoveredHit = hit(2)
     internal.isolated = true
 
-    const combineBounds = vi.fn(() => firstBounds)
+    const combineBounds = vi.mocked(meshBounds.combineBounds)
+    combineBounds.mockClear()
+    combineBounds.mockImplementation(() => firstBounds)
     const updateMeshStyles = vi.fn()
     const rebuildSelectionOverlays = vi.fn()
     const rebuildSourceHighlightOverlay = vi.fn()
     const requestRender = vi.spyOn(renderer, 'requestRender').mockImplementation(() => undefined)
-    internal.combineBounds = combineBounds
     internal.updateMeshStyles = updateMeshStyles
     internal.rebuildSelectionOverlays = rebuildSelectionOverlays
     internal.rebuildSourceHighlightOverlay = rebuildSourceHighlightOverlay

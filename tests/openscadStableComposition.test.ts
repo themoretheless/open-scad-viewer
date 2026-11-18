@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 
 const stable = { languageProfile: 'openscad/stable-2021.01' as const }
 
@@ -33,14 +33,17 @@ describe('OpenSCAD 2021.01 independent geometry composition', () => {
 
   it('unions projection output and ignores non-3D children in cut and flat modes', async () => {
     for (const cut of ['false', 'true']) {
-      const result = await parseOpenSCAD(`
+      const result = await parseOpenSCAD(
+        `
         linear_extrude(height=1)
           projection(cut=${cut}, convexity=4) {
             cube(1);
             translate([0.5,0,0]) cube(1);
             square(2);
           }
-      `, stable)
+      `,
+        stable,
+      )
       expect(result.meshes, cut).toHaveLength(1)
       expect(result.volume, cut).toBeCloseTo(1.5, 6)
       expect(result.warnings).toContain('projection() ignored non-3D child geometry')
@@ -48,11 +51,14 @@ describe('OpenSCAD 2021.01 independent geometry composition', () => {
   })
 
   it('convexifies a single concave hull child instead of treating hull as identity', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       linear_extrude(height=1)
         hull()
           polygon([[0,0],[2,0],[2,1],[1,1],[1,2],[0,2]]);
-    `, stable)
+    `,
+      stable,
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(3.5, 6)

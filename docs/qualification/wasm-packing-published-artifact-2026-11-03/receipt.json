@@ -1,0 +1,19 @@
+{
+  "status": "focused-passed",
+  "baseCommit": "60e7517ce1983112c31701503072dc4b6fb22d43",
+  "command": "node node_modules/vitest/vitest.mjs run tests/wasmBrotliPacking.test.ts --maxWorkers 1",
+  "testsPassed": 10,
+  "testsFailed": 0,
+  "change": "Compare decoded photogrammetry package to the published public/wasm/photogrammetry.wasm instead of an untracked Cargo cache path. Keep exact byte equality and import-free module assertion.",
+  "postRunInputSha256": {
+    "tests/wasmBrotliPacking.test.ts": "329caf886b40516b30fb6aafc92e41f046d8c8283217b107418b918de71f5e6d",
+    "public/wasm/photogrammetry.wasm": "157296f8a4c4d1a0be7d982a1c8b5782050a2f363cbd3e46be14aa86ee8e6dde",
+    "src/generated/photogrammetry/bytes.ts": "f9886b5274ad2933b8c0925784323f5b455ca2128a4f98f80bf997175538df8e",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+    "src/generated/geometry-kernels/bytes.ts": "88e1630f03f8398359423c36464a6b407bb1e23791d552a7a3c4f97fa742cb20",
+    "src/generated/wasm-brotli/bytes.ts": "ca7f93afc7a31c8f8a295a97c17c5e334048b65de194373dfbb310f1c4512dc9"
+  },
+  "productionChanged": false,
+  "catalogueCredit": 0,
+  "scope": "Current installed packing focused contracts, including malformed streams and bounds. Source inventory captured after test only; no whole-run generated-input freeze, current Rust provenance, browser or full application qualification."
+}

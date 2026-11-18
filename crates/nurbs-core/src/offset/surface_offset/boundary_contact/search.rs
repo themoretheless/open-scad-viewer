@@ -161,8 +161,10 @@ pub fn discover(
             }
             out.predictor_queries += 1;
             let root = match predictor::propose(
-                ordered,
-                d,
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces: ordered,
+                    distances: d,
+                },
                 seed,
                 b.axis,
                 limits.numerical_tolerance_mm,

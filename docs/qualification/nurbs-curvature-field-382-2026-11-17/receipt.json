@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0382",
+  "testedBase": "c5a7864ce3b85ffe4676844112328dc6dc3520d3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 89,
+  "scope": [
+    "Sew planar section caps with certified support rounding to unchanged spatial boundary edges.",
+    "Each authored cap carries an exact rational error upper bound for the stored planar support. The original spatial edges are checked against the rounded support at model tolerance before sewing."
+  ],
+  "logSha256": "2c62e02c07d18a2f150380fb03fc8306dc8cfcab9fa154a474a5fb402feecbd5",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "36c4c8b6988120236cec5aa231aba13ff5e81db518063905735a3e0403809cf5",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "6a92e7b582c4e6de29e85b979357354c5f3babab390b280a35c1065348240b93",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "e58540b3a417bbcd779c17543780747186e1bd5fc21748c6b9f0f31ca6c3f167",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs": "77cb264370c548778e518b0470e05ae8d244fe21796b6a64cd5252316d729a70"
+  }
+}

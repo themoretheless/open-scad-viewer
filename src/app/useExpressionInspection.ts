@@ -1,0 +1,19 @@
+import type { Ref } from 'svet'
+import { createSolidPreviewWorker } from '../kernel/solidPreviewWorker'
+import { expressionInspectionExpectation, type ExpressionInspectionOptions } from '../kernel/expressionShellInspection'
+import type { MainSolidWorkerClient } from '../kernel/mainSolidWorkerClient'
+import { useBoundNativeInspection } from './useBoundNativeInspection'
+/** Independent inspection realm; recipe edits invalidate every pending result. */
+export function useExpressionInspection(
+  options: Ref<ExpressionInspectionOptions | undefined>,
+  active: Ref<boolean>,
+  worker: Pick<MainSolidWorkerClient, 'run' | 'cancel' | 'dispose'> = createSolidPreviewWorker(),
+) {
+  return useBoundNativeInspection(
+    options,
+    active,
+    expressionInspectionExpectation,
+    request => worker.run({ kind: 'expressionShellInspect', options: request }),
+    worker,
+  )
+}

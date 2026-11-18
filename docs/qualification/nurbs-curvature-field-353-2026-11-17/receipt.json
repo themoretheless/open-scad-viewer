@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0353",
+  "testedBase": "f5f315e2239dd73fee8cc37e54db55bba2946097",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 38,
+  "scope": [
+    "Isolate ordered algebraic contact coordinates in disjoint rational clock intervals and construct exact witnesses between them.",
+    "Exact comparisons refine only neighboring boxes that overlap. Each gap receives an exact rational witness. Coincident input coordinates share one box with all source indices."
+  ],
+  "logSha256": "d63dd5fa9702e6561879ea9719a3718959d2b5fc524d542c2ba255d98ad629a9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "45808837aae5583511d40d95ce2cf0f6fa684f9d9174997bd298d81a31740428",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "a555d1b5202839ee7165f0ed65bb30c6ffe155c4a387fc255e0ad743f6a49321",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "76747b0e52820ef1819781bc502266abc0720701373c7e5099da1dfc20067637",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "e6fe2d768c0d50105fb0753bb0d1102ecc008d87cb7ef15a3b21ecfb7b1e96da",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs": "8cfbf49910531a0fff136e6b309082e99de779e0ea6f456f4c131058628fc5d8",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs": "e4bb9d1d839f6fe368d01b059dc6029d0dfe09746fd2f2b3eb94db7ef519082b"
+  }
+}

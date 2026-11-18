@@ -43,9 +43,16 @@ fn unequal_weights_and_knot_partitions_use_original_homogeneous_nets() {
     for w in b.weights.iter_mut().flatten() {
         *w *= 2.;
     }
-    let r = inspect(&a, &b, 1e-9, limits()).unwrap();
+    let r = inspect(&a, &b, 0., limits()).unwrap();
     assert!(r.within_budget, "{r:?}");
+    assert_eq!(r.error_upper, Some(0.));
     assert!(r.products > 27);
+    let short = inspect(&a, &b, 0., Limits { products: r.products - 1, ..limits() }).unwrap();
+    assert!(!short.within_budget);
+    let mut drift = b.clone();
+    drift.weights[0][1] = drift.weights[0][1].next_up();
+    let changed = inspect(&a, &drift, 0., Limits { cells: 1, ..limits() }).unwrap();
+    assert!(!changed.within_budget);
     let b = nurbs_core::surface_edit::insert(&b, nurbs_core::surface::Axis::U, 0.5, 1).unwrap();
     let r = inspect(&a, &b, 1e-8, limits()).unwrap();
     assert!(r.within_budget, "{r:?}");
@@ -158,14 +165,17 @@ fn affine_parameter_rates_keep_non_dyadic_original_knots_and_refuse_zero_rates()
         32,
     )
     .unwrap();
-    assert!(proof.certified && proof.cells == 5);
+    // The original constant-weight coefficient hull proves one common metric
+    // over all five spans. cells counts proof cells, not source knot spans.
+    assert!(proof.certified, "{proof:?}");
+    assert_eq!(proof.cells, 1, "{proof:?}");
     assert!(
         !nurbs_core::surface_linear_monotonicity::inspect_strong_reparameterized(
             &s,
             p,
             [1., 1.],
             [[-2., -2.], [0.5, 0.5]],
-            4
+            proof.cells - 1
         )
         .unwrap()
         .certified
@@ -180,6 +190,19 @@ fn affine_parameter_rates_keep_non_dyadic_original_knots_and_refuse_zero_rates()
         )
         .is_err()
     );
+    let mut folded = s.clone();
+    for row in &mut folded.control_points {
+        row[2][1] = -0.1;
+    }
+    let changed = nurbs_core::surface_linear_monotonicity::inspect_strong_reparameterized(
+        &folded,
+        p,
+        [1., 1.],
+        [[-2., -2.], [0.5, 0.5]],
+        32,
+    )
+    .unwrap();
+    assert!(!changed.certified, "{changed:?}");
     assert_eq!(s, original);
 }
 

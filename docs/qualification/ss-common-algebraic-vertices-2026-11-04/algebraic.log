@@ -1,0 +1,66 @@
+    Blocking waiting for file lock on build directory
+warning: module `methods_mean_matrix__coordinate_path` should have a snake case name
+   --> nurbs-core/src/surface_self_chord.rs:688:5
+    |
+688 | mod methods_mean_matrix__coordinate_path;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_mean_matrix_coordinate_path`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: module `methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:254:5
+    |
+254 | mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_crate_surface_weight_profile_weight_profile_inspect_self_chord_pair`
+
+warning: module `methods_rail_constrained_bridge______self_chord_continuous` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:256:5
+    |
+256 | mod methods_rail_constrained_bridge______self_chord_continuous;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_self_chord_continuous`
+
+warning: module `methods_rail_constrained_bridge______inspect_radius_on_domains` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:258:5
+    |
+258 | mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_radius_on_domains`
+
+warning: module `methods_rail_constrained_bridge______section` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:100:5
+    |
+100 | mod methods_rail_constrained_bridge______section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_section`
+
+warning: module `methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:102:5
+    |
+102 | mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_transverse_corrected_injectivity_policy`
+
+warning: module `methods_profile_section___profile` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:252:5
+    |
+252 | mod methods_profile_section___profile;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_section_profile`
+
+warning: module `methods_profile_end_transition___section` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:254:5
+    |
+254 | mod methods_profile_end_transition___section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_end_transition_section`
+
+warning: `nurbs-core` (lib) generated 8 warnings
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-ss-mixed-trim-20261104/crates/nurbs-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.54s
+     Running tests/ss_algebraic_clock.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/673269782b4832de/out/ss_algebraic_clock-673269782b4832de)
+
+running 7 tests
+test absent_ambiguous_endpoint_and_exhausted_proofs_cannot_own_a_clock ... ok
+test exact_unique_root_isolation_refines_without_a_float_definition ... ok
+test algebraic_points_keep_original_world_and_both_uv_images ... ok
+test overlapping_clock_boxes_do_not_authorize_endpoint_order ... ok
+test exact_close_clocks_order_an_edge_when_binary64_cannot_separate_them ... ok
+test algebraic_ports_prove_mixed_axis_membership_and_reject_other_branches ... ok
+test common_selector_binds_algebraic_clock_to_a_different_axis ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.29s

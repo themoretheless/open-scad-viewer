@@ -1,10 +1,10 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {performance} from 'node:perf_hooks'
-import {emptyDirectDocument,DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {resolveSolidInstances} from '../src/services/solidInstances'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {emptyDirectDocument,DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {resolveSolidInstances} from '../src/kernel/solidInstances'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 
 // Measures materialized instances. These numbers do not imply GPU instancing or browser FPS.
 const directory=resolve(process.argv[2]??'output/qualification/solid-instances')

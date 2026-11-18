@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type {
-  JSONRPCMessage,
-  MessageExtraInfo,
-  Transport,
-  TransportSendOptions,
-} from '@modelcontextprotocol/server'
+import type { JSONRPCMessage, MessageExtraInfo, Transport, TransportSendOptions } from '@modelcontextprotocol/server'
 import { BoundedTransport, OutboundBackpressureError } from '../src/mcp/boundedTransport'
 
 class ControlledTransport implements Transport {
@@ -70,7 +65,7 @@ describe('BoundedTransport', () => {
     inner.receive({ jsonrpc: '2.0', id: 2, method: 'resources/list', params: {} })
     inner.receive({ jsonrpc: '2.0', id: 3, method: 'prompts/list', params: {} })
 
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, 2])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, 2])
     await vi.waitFor(() => expect(inner.sent).toHaveLength(1))
     expect(inner.sent[0]).toMatchObject({
       id: 3,
@@ -84,7 +79,7 @@ describe('BoundedTransport', () => {
     await response
 
     inner.receive({ jsonrpc: '2.0', id: 4, method: 'tools/list', params: {} })
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, 2, 4])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, 2, 4])
     await transport.close()
   })
 
@@ -98,10 +93,12 @@ describe('BoundedTransport', () => {
 
     const first = transport.send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' })
     const second = transport.send({ jsonrpc: '2.0', method: 'notifications/resources/list_changed' })
-    await expect(transport.send({
-      jsonrpc: '2.0',
-      method: 'notifications/prompts/list_changed',
-    })).rejects.toBeInstanceOf(OutboundBackpressureError)
+    await expect(
+      transport.send({
+        jsonrpc: '2.0',
+        method: 'notifications/prompts/list_changed',
+      }),
+    ).rejects.toBeInstanceOf(OutboundBackpressureError)
 
     await vi.waitFor(() => expect(inner.sent).toHaveLength(1))
     inner.releaseNext()
@@ -175,14 +172,14 @@ describe('BoundedTransport', () => {
     transport.cancelRequest(1)
     inner.receive({ jsonrpc: '2.0', id: 2, method: 'resources/read', params: {} })
 
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, null])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, null])
     await vi.waitFor(() => expect(inner.sent).toHaveLength(1))
     expect(inner.sent[0]).toMatchObject({ id: 2, error: { data: { code: 'server_busy' } } })
     inner.releaseNext()
     transport.settleRequest(1)
 
     inner.receive({ jsonrpc: '2.0', id: 3, method: 'resources/read', params: {} })
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, null, 3])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, null, 3])
     await transport.close()
   })
 
@@ -204,10 +201,17 @@ describe('BoundedTransport', () => {
     }
 
     await vi.waitFor(() => expect(inner.sent).toHaveLength(22))
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, 2])
-    expect(inner.sent.every(message => 'error' in message
-      && message.error.data && typeof message.error.data === 'object'
-      && 'code' in message.error.data && message.error.data.code === 'server_busy')).toBe(true)
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, 2])
+    expect(
+      inner.sent.every(
+        message =>
+          'error' in message &&
+          message.error.data &&
+          typeof message.error.data === 'object' &&
+          'code' in message.error.data &&
+          message.error.data.code === 'server_busy',
+      ),
+    ).toBe(true)
     expect(errors).toEqual([])
     await transport.close()
   })
@@ -257,7 +261,7 @@ describe('BoundedTransport', () => {
     transport.cancelRequest(1)
     transport.settleRequest(1)
     inner.receive({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, null, 2])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, null, 2])
 
     await transport.close()
   })
@@ -291,7 +295,7 @@ describe('BoundedTransport', () => {
       inner.receive({ jsonrpc: '2.0', id: 20_000 + index, result: {} })
     }
 
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, null])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, null])
     await vi.waitFor(() => expect(inner.sent).toHaveLength(1))
     inner.releaseNext()
     await acknowledgement
@@ -314,7 +318,7 @@ describe('BoundedTransport', () => {
     inner.receive({ jsonrpc: '2.0', method: 'notifications/initialized' })
     inner.receive({ jsonrpc: '2.0', method: 'notifications/initialized' })
 
-    expect(received.map(message => 'id' in message ? message.id : null)).toEqual([1, null])
+    expect(received.map(message => ('id' in message ? message.id : null))).toEqual([1, null])
     await vi.waitFor(() => expect(inner.sent).toHaveLength(1))
     inner.releaseNext()
     await response

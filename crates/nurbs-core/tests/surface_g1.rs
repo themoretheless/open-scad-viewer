@@ -25,11 +25,13 @@ fn g1_accepts_different_transverse_speeds_and_opposite_normals() {
     b.weights[1] = vec![3.; 2];
     let before = b.clone();
     let r = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         0.05,
         0.02,
         1000,
@@ -41,11 +43,13 @@ fn g1_accepts_different_transverse_speeds_and_opposite_normals() {
     assert!(r.position_bounds[1] <= 0.05);
     let reversed = surface_edit::reverse(&b, Axis::V).unwrap();
     let r = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &reversed,
-        Boundary::UMin,
-        true,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &reversed,
+            eb: Boundary::UMin,
+            reverse: true,
+        },
         0.05,
         0.02,
         1000,
@@ -56,11 +60,13 @@ fn g1_accepts_different_transverse_speeds_and_opposite_normals() {
     let at = surface_edit::transpose(&a).unwrap();
     let bt = surface_edit::transpose(&b).unwrap();
     let r = surface_g1::inspect(
-        &at,
-        Boundary::VMax,
-        &bt,
-        Boundary::VMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &at,
+            ea: Boundary::VMax,
+            b: &bt,
+            eb: Boundary::VMin,
+            reverse: false,
+        },
         0.05,
         0.02,
         1000,
@@ -73,11 +79,13 @@ fn tangent_plane_gap_is_rejected_even_when_positions_match() {
     let a = plane([-1., 0.], 0.);
     let b = plane([0., 1.], 0.25);
     let r = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         0.05,
         0.1,
         1000,
@@ -114,11 +122,13 @@ fn full_curved_seam_is_verified_by_adaptive_normal_bounds() {
     let a = curved(true);
     let b = curved(false);
     let r = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         0.05,
         0.02,
         10000,
@@ -134,11 +144,13 @@ fn singularity_work_limits_and_invalid_contracts_are_explicit() {
     let mut b = plane([0., 1.], 0.);
     b.control_points[1] = b.control_points[0].clone();
     let r = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         0.05,
         0.02,
         11,
@@ -149,11 +161,13 @@ fn singularity_work_limits_and_invalid_contracts_are_explicit() {
     assert!(r.normal_chord_upper.is_none());
     let b = plane([0., 1.], 0.);
     let r = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         1e-12,
         0.02,
         1,
@@ -163,44 +177,61 @@ fn singularity_work_limits_and_invalid_contracts_are_explicit() {
     assert_eq!(r.cells, 1);
     assert!(
         surface_g1::inspect(
-            &a,
-            Boundary::UMax,
-            &b,
-            Boundary::UMin,
-            false,
+            surface_g1::SurfaceSeam {
+                a: &a,
+                ea: Boundary::UMax,
+                b: &b,
+                eb: Boundary::UMin,
+                reverse: false,
+            },
             -1.,
             0.02,
-            100
+            100,
         )
         .is_err()
     );
     assert!(
         surface_g1::inspect(
-            &a,
-            Boundary::UMax,
-            &b,
-            Boundary::UMin,
-            false,
+            surface_g1::SurfaceSeam {
+                a: &a,
+                ea: Boundary::UMax,
+                b: &b,
+                eb: Boundary::UMin,
+                reverse: false,
+            },
             0.1,
             f64::NAN,
-            100
+            100,
         )
         .is_err()
     );
     assert!(
-        surface_g1::inspect(&a, Boundary::UMax, &b, Boundary::UMin, false, 0.1, 0.02, 0).is_err()
+        surface_g1::inspect(
+            surface_g1::SurfaceSeam {
+                a: &a,
+                ea: Boundary::UMax,
+                b: &b,
+                eb: Boundary::UMin,
+                reverse: false,
+            },
+            0.1,
+            0.02,
+            0,
+        ).is_err()
     );
     let b = surface_edit::insert(&b, Axis::V, -1., 1).unwrap();
     assert!(
         surface_g1::inspect(
-            &a,
-            Boundary::UMax,
-            &b,
-            Boundary::UMin,
-            false,
+            surface_g1::SurfaceSeam {
+                a: &a,
+                ea: Boundary::UMax,
+                b: &b,
+                eb: Boundary::UMin,
+                reverse: false,
+            },
             0.1,
             0.02,
-            100
+            100,
         )
         .is_err()
     );
@@ -228,11 +259,13 @@ fn unsampled_interior_singularity_cannot_pass_a_planar_g1_check() {
     let a = patch([-1., 0.]);
     let b = patch([0., 1.]);
     let proof = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         0.05,
         0.02,
         125,
@@ -276,11 +309,13 @@ fn interior_tangent_plane_gap_between_initial_witnesses_is_rejected() {
         );
     }
     let proof = surface_g1::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g1::SurfaceSeam {
+            a: &a,
+            ea: Boundary::UMax,
+            b: &b,
+            eb: Boundary::UMin,
+            reverse: false,
+        },
         0.05,
         0.1,
         1000,

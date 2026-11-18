@@ -1,0 +1,66 @@
+{
+  "base": "830835ed4",
+  "checks": [
+    {
+      "suite": "nurbs-integration",
+      "passed": 55,
+      "failed": 0
+    },
+    {
+      "suite": "closed-solid",
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "suite": "flux-unit",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "suite": "gcd-unit",
+      "passed": 2,
+      "failed": 0
+    }
+  ],
+  "passed": 70,
+  "architecture": "passed",
+  "scope": "isolated native source checkout",
+  "full_general_ss_complete": false,
+  "full_material_trim_complete": false,
+  "general_boolean_complete": false,
+  "implicit_root_body_complete": false,
+  "wasm_updated": false,
+  "open_plan": "docs/design/ss-singular-material-progress-2026-11-04.md",
+  "source_sha256": {
+    "crates/brep-core/src/closed_solid.rs": "e0dfd7c702c5f9d1080a73efb1729490cc8c8cc76fe03c7cf3d01c12ebd819d9",
+    "crates/brep-core/src/closed_solid/boolean_material.rs": "19e9cfc16ce973025cc615f6fe375c9dc1f4d4c2447797db9ef8a7a1c9cbb803",
+    "crates/brep-core/src/closed_solid/healing.rs": "6208cb91749709fda89a65e5bfc08d938e0b6311e6192af2e50d2874d2d347a6",
+    "crates/brep-core/src/closed_solid/material_seed.rs": "48355f8b05ff312e50561b56bc82c39316150a50a8f66c672745e3f442df34cc",
+    "crates/brep-core/src/closed_solid/shell_repair.rs": "43b4411d6a71df5d13157a6776875efd62602d91bb3e21f699029d7e611dca21",
+    "crates/brep-core/src/closed_solid/volume.rs": "ac38ad12ecc4661927a401c4c8c36e3ad4f5b14a722b2b0cb9f6f7e429de5d71",
+    "crates/brep-core/src/lib.rs": "89fe6c7d8521e63cf3026067f2b5386e12e20490c6a7680526bbc91c3ad8346a",
+    "crates/brep-core/tests/closed_solid.rs": "dd5b6a7096155f035ed87e467d0d31837ce43089a4e81bf2cd07a9e39c2cb7bd",
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "f7f2f91222d26160e7f2cd38cb649a6c47d4a4792623bfa34851ebd4b89d9169",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "f5bd92b9c604778ef1d546d3788cf06ca99f572d36927d50fa7d5b0ff76ea46f",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/blowup.rs": "5d629eab673810e7d17f0d76d40d1d9493be43fae1beb7ccf89a36fc960d0ae5",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/blowup/root.rs": "8e4e24251f12af2d8c972ab5d8b37b93fa375c913a9a2b9d4c1939476ced23c0",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/fiber.rs": "5bdb495e46ddee8d4d18c066f3105a1e5bd2911ed442283422e3746894a4cd9f",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/flux.rs": "33b59c7efb58780c153a79c9eb9f28719ac8d68e6eaca3475138691df5b0bb9e",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/localization.rs": "ae5f93302879ba0fa0db9b13589fc4f09165e35b1131aa0cc4a7999f4f2f8948",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/polynomial.rs": "e255b442d2ecff9faffb91bf791a6cae4ae74401c3bd155e9d9721efb7c5cb6d",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/rank_strata.rs": "2b8fc0b1587287c19e23048a20171b132727c8f0527b7cd61080850c75f1d80d",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "ae95c4a82f961710e53dc76bff05745c3b2d19877d281962f5ce143840fd4559",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/frames.rs": "aa36a4f7281d2eca71054f1ba9a57c00af41cf26c3d8ebf6d0b6d1a50609de68",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "c8203804121f9f260c6762548b80d3bda704a3de1d5f92530f790555f7b0e778",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/query.rs": "c13275b67042ae16fddb96a963b8943b0e53f67a9889b9beae4e40c773e19f8a",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire.rs": "86a0987b12f7771394c0d5667a9f4518258bdf4eaeeb2aba471c01ccee404df8",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire/path_parity.rs": "54c04362d533b7f895628da9e2d32b06294a39722f7ed9289b3b5c0a7785457c",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire/winding.rs": "f88293090627c842332fb17f0053b2c8f375d57c3e16e6d54e17bcf9a1dedff3",
+    "crates/nurbs-core/src/surface_flux.rs": "2c4c046d5bd5cbbbd50e9c533b4ac08bbf0948c528e8550f3c69cbd0f429ad7a",
+    "crates/nurbs-core/tests/ss_periodic_flux.rs": "9237dfc83907fe2f145ba2e7df9e38080e0c36156f0ced66fcb6eb39f5cf6489",
+    "crates/nurbs-core/tests/ss_quotient_path.rs": "715d1390d07e40daaa49406c90efa82dc7466977b5fd4e7c2332d9ab449a0b14",
+    "crates/nurbs-core/tests/ss_singular_blowup.rs": "061a418eb54bb8b285160a3869e1b4a9235122febf5b1d5577c5deca601b27e1",
+    "docs/design/ss-general-root-progress-2026-11-04.md": "29275c12ad989603371a6c785db7dc98bed9ebcbd427ccd93efdbcc3c89ce060",
+    "docs/design/ss-singular-material-progress-2026-11-04.md": "de7483982055469be14095c6e723e17e03b23e7a4b3c7ace7f768f3a3165880c"
+  }
+}

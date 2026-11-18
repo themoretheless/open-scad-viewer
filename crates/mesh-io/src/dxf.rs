@@ -19,9 +19,9 @@ pub fn export_dxf_polylines(rings: &[Vec<[f64; 2]>], closed: bool) -> Result<Str
             ring.len(),
             if closed { 1 } else { 0 }
         )
-        .unwrap();
+        .expect("writing to a String cannot fail");
         for &[x, y] in ring {
-            writeln!(out, "10\n{x}\n20\n{y}").unwrap();
+            writeln!(out, "10\n{x}\n20\n{y}").expect("writing to a String cannot fail");
         }
         check(out.len() <= 4 * 1024 * 1024, "DXF export exceeds 4 MiB.")?;
     }
@@ -47,7 +47,7 @@ pub fn export_dxf_mesh(mesh: &MeshView<'_>) -> Result<String> {
             "0\n3DFACE\n8\n0\n10\n{}\n20\n{}\n30\n{}\n11\n{}\n21\n{}\n31\n{}\n12\n{}\n22\n{}\n32\n{}\n13\n{}\n23\n{}\n33\n{}",
             a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], c[0], c[1], c[2]
         )
-        .unwrap();
+        .expect("writing to a String cannot fail");
         check(out.len() <= 4 * 1024 * 1024, "DXF export exceeds 4 MiB.")?;
     }
     out.push_str("0\nENDSEC\n0\nEOF\n");
@@ -99,9 +99,9 @@ pub fn export_dxf_drawing(
             ring.len(),
             if closed_polylines { 1 } else { 0 }
         )
-        .unwrap();
+        .expect("writing to a String cannot fail");
         for &[x, y] in ring {
-            writeln!(out, "10\n{x}\n20\n{y}").unwrap();
+            writeln!(out, "10\n{x}\n20\n{y}").expect("writing to a String cannot fail");
         }
         check(out.len() <= 4 * 1024 * 1024, "DXF export exceeds 4 MiB.")?;
     }
@@ -115,7 +115,7 @@ pub fn export_dxf_drawing(
             "0\nCIRCLE\n8\n{layer_name}\n10\n{}\n20\n{}\n40\n{}",
             c.center[0], c.center[1], c.radius
         )
-        .unwrap();
+        .expect("writing to a String cannot fail");
         check(out.len() <= 4 * 1024 * 1024, "DXF export exceeds 4 MiB.")?;
     }
     for a in arcs {
@@ -133,7 +133,7 @@ pub fn export_dxf_drawing(
             "0\nARC\n8\n{layer_name}\n10\n{}\n20\n{}\n40\n{}\n50\n{}\n51\n{}",
             a.center[0], a.center[1], a.radius, a.start_angle_deg, a.end_angle_deg
         )
-        .unwrap();
+        .expect("writing to a String cannot fail");
         check(out.len() <= 4 * 1024 * 1024, "DXF export exceeds 4 MiB.")?;
     }
     out.push_str("0\nENDSEC\n0\nEOF\n");

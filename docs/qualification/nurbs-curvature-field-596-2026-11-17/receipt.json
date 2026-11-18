@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0596",
+  "testedBase": "b369e92d07a9dd94e465c8074d321e5084867207",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 177,
+  "scope": [
+    "Integrate the Bernstein cross product exactly for polynomial B\u00e9zier trim edges.",
+    "Verify a quadratic contribution with an analytic rational result, preserve straight-edge behavior, and refuse unsupported varying weights."
+  ],
+  "logSha256": "fc6c2704c49bc672fd8357695411f0f691a4f7d158c2bf0dfe0fdd1843ddb33e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "63c73dc2594eda30433867f6e66b0a3effbda27ea12769b70f8065084c3f010d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2a58a4aaf077d2b6ec999937995855a2d1c109f867711bffe70aa31fdceb9130"
+  }
+}

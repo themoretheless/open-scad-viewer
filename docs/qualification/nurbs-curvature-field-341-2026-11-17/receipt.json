@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0341",
+  "testedBase": "ce52cbddc3a6a304ccf00582430bcfa04b54439d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 11,
+  "scope": [
+    "Store rational intersection control nets as binary64 NURBS under exact continuous XYZ error bounds.",
+    "Exact squared endpoint errors bound the entire normalized parameter interval by convexity. Storage checks spatial deviation, both lifted trim deviations and their correspondence to the stored spatial curve."
+  ],
+  "logSha256": "10fd44d66397e3138cbf9dc4136d1bec83b8f7909e0ff5a129285d71a6b89f8e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "ce78f30d4d099586e28a6577bebda7941f82b8f11e5b5f9cb4e27604ea3ec8ae",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs": "4262ac11c8990a00b77b2237e7f28da0b69939df05ab4df0e01f695512781608",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/storage.rs": "4b97e1e9dc77b9c9a2ba97d463b89939cbb312ab20ce295590312e3cbacdeb31",
+    "crates/nurbs-geometry/src/bounded_rational.rs": "488907faa4c7086f601e29ba392a1addbd5f90bc6f8cc1cf57c4a098e81f0d4e",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "a6e50ca807ea5209c8f0223c0d3c94bbc5e004b1e284fe8d53b5296d8b75fdde"
+  }
+}

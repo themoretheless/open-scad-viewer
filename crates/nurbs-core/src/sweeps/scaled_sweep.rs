@@ -27,7 +27,7 @@ pub(crate) fn binomial(n: usize, k: usize) -> f64 {
 /// Path and scale domains normalize independently to [0,1]. No sampled fit.
 pub fn sweep(profile: &Curve, path: &Curve, scale: &Curve, origin: [f64; 3]) -> Result<Surface> {
     profile.validate()?;
-    crate::foundation::guards::require_finite_point(&origin, "origin")?;
+    crate::numerics::guards::require_finite_point(&origin, "origin")?;
     check(
         profile.control_points[0].len() == 3
             && profile.control_points.len() <= 32,
@@ -60,7 +60,7 @@ pub fn sweep(profile: &Curve, path: &Curve, scale: &Curve, origin: [f64; 3]) -> 
     let mut knots = vec![0.; degree + 1];
     // Unified guard as a backstop over the span-decomposition budget.
     let mut guard =
-        crate::foundation::guards::Budget::with_iterations(cuts.len())?.guard("scaled_sweep");
+        crate::numerics::guards::Budget::with_iterations(cuts.len())?.guard("scaled_sweep");
     for (span, cut) in cuts.windows(2).enumerate() {
         guard.tick()?;
         let a = path.trim(cut[0], cut[1])?;

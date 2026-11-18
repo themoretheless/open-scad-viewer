@@ -8,10 +8,7 @@ import {
 
 const fixtureUrl = new URL('./fixtures/mcp-manifold-plan-qualification.worker.mjs', import.meta.url)
 const webWorkerHarnessUrl = new URL('./fixtures/web-worker-node-harness.mjs', import.meta.url)
-const controlledIdentityWorkerUrl = new URL(
-  './fixtures/browser-qualification.worker.ts',
-  import.meta.url,
-)
+const controlledIdentityWorkerUrl = new URL('./fixtures/browser-qualification.worker.ts', import.meta.url)
 
 function fixtureSupervisor(
   options: {
@@ -32,11 +29,12 @@ function fixtureSupervisor(
 
 function controlledIdentitySupervisor(): McpManifoldPlanQualificationSupervisor {
   return new McpManifoldPlanQualificationSupervisor({
-    workerFactory: () => new Worker(webWorkerHarnessUrl, {
-      workerData: { entryUrl: controlledIdentityWorkerUrl.href, announceReady: false },
-      stdout: true,
-      stderr: true,
-    }),
+    workerFactory: () =>
+      new Worker(webWorkerHarnessUrl, {
+        workerData: { entryUrl: controlledIdentityWorkerUrl.href, announceReady: false },
+        stdout: true,
+        stderr: true,
+      }),
     startupTimeoutMs: 10_000,
     deadlineMs: 10_000,
     cancellationGraceMs: 10,
@@ -141,9 +139,7 @@ describe('MCP Manifold-plan qualification supervisor', () => {
 
   it('rejects uncorrelated identity and a child error only after the disposable realm is joined', async () => {
     const supervisor = fixtureSupervisor()
-    await expect(supervisor.evaluate('mutated-identity')).rejects.toBeInstanceOf(
-      McpManifoldPlanSupervisorError,
-    )
+    await expect(supervisor.evaluate('mutated-identity')).rejects.toBeInstanceOf(McpManifoldPlanSupervisorError)
     expect(supervisor.snapshot().lastJoinedWorkerEpoch).toBe(1)
 
     let failure: unknown
@@ -169,13 +165,16 @@ describe('MCP Manifold-plan qualification supervisor', () => {
   it('accepts only the first correlated terminal and fences a late second message by epoch teardown', async () => {
     const supervisor = fixtureSupervisor()
     let settlements = 0
-    const result = await supervisor.evaluate('double-terminal').then(value => {
-      settlements++
-      return value
-    }, error => {
-      settlements++
-      throw error
-    })
+    const result = await supervisor.evaluate('double-terminal').then(
+      value => {
+        settlements++
+        return value
+      },
+      error => {
+        settlements++
+        throw error
+      },
+    )
     expect(result).toMatchObject({ quality: 'full', meshes: [] })
     await new Promise(resolve => setTimeout(resolve, 20))
     expect(settlements).toBe(1)
@@ -318,7 +317,7 @@ describe('MCP Manifold-plan qualification supervisor', () => {
     expect(exact.meshes[0].provenance[0].source?.instanceId).toHaveLength(256)
 
     await expect(supervisor.evaluate('assert(true) if(true) let(x=2) cube(x);')).resolves.toMatchObject({
-      meshes:[expect.objectContaining({entityId:expect.stringMatching(/^entity:sha256:/)})],
+      meshes: [expect.objectContaining({ entityId: expect.stringMatching(/^entity:sha256:/) })],
     })
 
     await expect(supervisor.evaluate('cube(1);')).resolves.toMatchObject({

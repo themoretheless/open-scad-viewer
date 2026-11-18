@@ -1,0 +1,24 @@
+{
+  "id": "NURBS-0256",
+  "baseCommit": "7f439601706f1fb1f069818529ed41157ba8e5f5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "chord_interpolation_contracts"
+  ],
+  "passed": 6,
+  "failed": 0,
+  "scope": "The report combines the continuous interpolation error and the outward maximum displacement of stored vertices from exact surface points. Matching barycentric coordinates give the geometric correspondence. Mesh topology is outside this API.",
+  "sha256": {
+    "crates/nurbs-core/src/analysis/surface_chord_bound.rs": "bd580dcee93412b7f702d8206c7e98a7df7162080c0f49071839f9a0857a9dcd",
+    "crates/nurbs-core/tests/chord_interpolation_contracts.rs": "9078db5e56148a5b874b52e1f3d383a7bccf51190068282c78e957b79c953f0b"
+  },
+  "logSha256": "8c914b42f0bdba9e4dba97422778136328bef9bec3c84f8aa28d2be9129761e6"
+}

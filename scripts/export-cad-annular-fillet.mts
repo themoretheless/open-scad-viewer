@@ -3,10 +3,10 @@ import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {exactAnnularFillet,transformNurbsBrep} from '../src/services/geometry/brep'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
-import {importDirectStepV9} from '../src/services/cadNurbsStep'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {exactAnnularFillet,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
+import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 const directory=resolve(process.argv[2]??'output/qualification/annular-fillet');mkdirSync(directory,{recursive:true})
 const body=cadRoadmapParts().find(p=>p.body.id==='flange')!.body,source=body.brep!
 const edges=source.edges.flatMap((e,i)=>e.curve.degree===2&&e.vertices.every(v=>{const p=source.vertices[v].point;return Math.abs(p[2]-6)<1e-8&&Math.abs(Math.hypot(p[0],p[1])-20)<1e-8})?[i]:[])

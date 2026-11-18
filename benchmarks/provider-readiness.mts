@@ -8,8 +8,8 @@ import { cpus } from 'node:os'
 
 if (process.argv.includes('--child')) {
   const start = performance.now()
-  const { GeometryBuildEngine } = await import('../src/services/geometryBuildEngine')
-  const { warmGeometryKernel } = await import('../src/services/openscadParser')
+  const { GeometryBuildEngine } = await import('../src/kernel/geometryBuildEngine')
+  const { warmGeometryKernel } = await import('../src/language/openscadParser')
   const importMs = performance.now() - start
   const engine = new GeometryBuildEngine()
   const coldStart = performance.now()

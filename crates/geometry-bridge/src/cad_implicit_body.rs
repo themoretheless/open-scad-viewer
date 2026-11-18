@@ -3,9 +3,7 @@
 use crate::{Result, Value, field};
 use value_codec::json;
 pub fn sphere(v: Value, audit: bool) -> Result<Value> {
-    use brep_core::{
-        boundary_embedding, face_contacts, source_implicit_body as source, volume_validity,
-    };
+    use brep_core::{boundary_embedding, face_contacts, source_implicit_body as source, volume_validity};
     let s = &v["source"];
     let center = field::<[f64; 3]>(s, "center")?;
     let radius = field::<f64>(s, "radius")?;

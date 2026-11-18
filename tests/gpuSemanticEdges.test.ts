@@ -1,20 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
-const gpuReadback=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/webgpuCompute',()=>({runGpuCompute:gpuReadback}))
+const gpuReadback = vi.hoisted(() => vi.fn())
+vi.mock('../src/render/webgpuCompute', () => ({ runGpuCompute: gpuReadback }))
 import {
   buildMeshEdgeAdjacency,
   referenceSemanticEdges,
   runGpuSemanticEdges,
   SEMANTIC_EDGES_WGSL,
-} from '../src/services/gpuSemanticEdges'
+} from '../src/render/gpuSemanticEdges'
 
 describe('WebGPU Semantic & Crease Edges Detection', () => {
   it('correctly builds mesh edge adjacency', () => {
     // Single quad split into 2 triangles: (0, 1, 2) and (0, 2, 3)
-    const indices = new Uint32Array([
-      0, 1, 2,
-      0, 2, 3,
-    ])
+    const indices = new Uint32Array([0, 1, 2, 0, 2, 3])
 
     const adj = buildMeshEdgeAdjacency(indices)
     // 5 unique edges in total: (0,1), (1,2), (0,2), (2,3), (0,3)
@@ -46,14 +43,30 @@ describe('WebGPU Semantic & Crease Edges Detection', () => {
   it('filters out coplanar diagonal edges and retains only 12 sharp edges of a cube', () => {
     // Standard unit cube: 8 vertices, 12 triangles (2 triangles per face)
     const vertices = new Float32Array([
-      0, 0, 0, // 0
-      1, 0, 0, // 1
-      1, 1, 0, // 2
-      0, 1, 0, // 3
-      0, 0, 1, // 4
-      1, 0, 1, // 5
-      1, 1, 1, // 6
-      0, 1, 1, // 7
+      0,
+      0,
+      0, // 0
+      1,
+      0,
+      0, // 1
+      1,
+      1,
+      0, // 2
+      0,
+      1,
+      0, // 3
+      0,
+      0,
+      1, // 4
+      1,
+      0,
+      1, // 5
+      1,
+      1,
+      1, // 6
+      0,
+      1,
+      1, // 7
     ])
 
     const indices = new Uint32Array([
@@ -93,21 +106,17 @@ describe('WebGPU Semantic & Crease Edges Detection', () => {
 
   it('extracts all boundary edges from an open planar surface', () => {
     // 2x2 quad mesh on Z=0: 9 vertices, 8 triangles
-    const vertices = new Float32Array([
-      0, 0, 0,  1, 0, 0,  2, 0, 0,
-      0, 1, 0,  1, 1, 0,  2, 1, 0,
-      0, 2, 0,  1, 2, 0,  2, 2, 0,
-    ])
+    const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 2, 1, 0, 0, 2, 0, 1, 2, 0, 2, 2, 0])
 
     const indices = new Uint32Array([
       // Quad (0,0)-(1,1)
-      0, 1, 4,  0, 4, 3,
+      0, 1, 4, 0, 4, 3,
       // Quad (1,0)-(2,1)
-      1, 2, 5,  1, 5, 4,
+      1, 2, 5, 1, 5, 4,
       // Quad (0,1)-(1,2)
-      3, 4, 7,  3, 7, 6,
+      3, 4, 7, 3, 7, 6,
       // Quad (1,1)-(2,2)
-      4, 5, 8,  4, 8, 7,
+      4, 5, 8, 4, 8, 7,
     ])
 
     const result = referenceSemanticEdges(vertices, indices, {
@@ -129,11 +138,7 @@ describe('WebGPU Semantic & Crease Edges Detection', () => {
   })
 
   it('runGpuSemanticEdges provides fallback in headless test environment', async () => {
-    const vertices = new Float32Array([
-      0, 0, 0,
-      1, 0, 0,
-      0, 1, 0,
-    ])
+    const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])
     const indices = new Uint32Array([0, 1, 2])
 
     const result = await runGpuSemanticEdges(vertices, indices)
@@ -143,12 +148,16 @@ describe('WebGPU Semantic & Crease Edges Detection', () => {
   })
 })
 
-it('reads integer shader output bits and respects readback byte offsets',async()=>{
- const counter=new Uint32Array([123,2,456]),indices=new Uint32Array([123,0,1,1,2,456])
- gpuReadback.mockResolvedValueOnce([new Float32Array(counter.buffer,4,1),new Float32Array(indices.buffer,4,4)])
- vi.stubGlobal('navigator',{gpu:{}})
- try {
-  const result=await runGpuSemanticEdges(new Float32Array([0,0,0,1,0,0,0,1,0]),new Uint32Array([0,1,2]))
-  expect(result.edgeCount).toBe(2);expect([...result.indices]).toEqual([0,1,1,2])
- } finally {vi.unstubAllGlobals()}
+it('reads integer shader output bits and respects readback byte offsets', async () => {
+  const counter = new Uint32Array([123, 2, 456]),
+    indices = new Uint32Array([123, 0, 1, 1, 2, 456])
+  gpuReadback.mockResolvedValueOnce([new Float32Array(counter.buffer, 4, 1), new Float32Array(indices.buffer, 4, 4)])
+  vi.stubGlobal('navigator', { gpu: {} })
+  try {
+    const result = await runGpuSemanticEdges(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]), new Uint32Array([0, 1, 2]))
+    expect(result.edgeCount).toBe(2)
+    expect([...result.indices]).toEqual([0, 1, 1, 2])
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

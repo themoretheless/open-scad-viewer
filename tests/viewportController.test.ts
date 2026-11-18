@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ViewportController } from '../src/services/viewportController'
+import { ViewportController } from '../src/render/viewportController'
 
 describe('ViewportController', () => {
   it('owns face-preset projection, history availability and recovery fencing', () => {

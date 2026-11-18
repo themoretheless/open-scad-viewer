@@ -6,9 +6,17 @@ use polygon_core::Mesh;
 use polygon_core::solid::{boolean, modeling, primitives as solid};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{Value, json};
+#[derive(Clone, Copy)]
+pub(crate) struct ZRigidProvenance {
+    pub(crate) origin_id: u32,
+    ///Orthonormal 2x2 XY rotation [r00, r01, r10, r11] with det = +1.
+    pub(crate) rot_xy: [f64; 4],
+    ///Translation [tx, ty, tz] from the root solid's local frame.
+    pub(crate) trans: [f64; 3],
+}
 #[derive(Clone)]
 enum Shape {
-    Solid(Mesh),
+    Solid(Mesh, Option<ZRigidProvenance>),
     Profile(Rings),
 }
 #[derive(Default)]
@@ -28,9 +36,23 @@ fn put(shape: Shape) -> Result<Value> {
             .checked_add(1)
             .ok_or_else(|| input("CAD handle ID exhausted"))?;
         let id = s.next;
+        let shape = match shape {
+            Shape::Solid(m, None) => Shape::Solid(
+                m,
+                Some(ZRigidProvenance {
+                    origin_id: id,
+                    rot_xy: [1., 0., 0., 1.],
+                    trans: [0., 0., 0.],
+                }),
+            ),
+            other => other,
+        };
         s.values.insert(id, Rc::new(shape));
         Ok(json!(id))
     })
+}
+fn put_solid(mesh: Mesh) -> Result<Value> {
+    put(Shape::Solid(mesh, None))
 }
 fn get(id: u32) -> Result<Rc<Shape>> {
     STORE.with(|s| {
@@ -43,7 +65,14 @@ fn get(id: u32) -> Result<Rc<Shape>> {
 }
 fn solid(s: &Shape) -> Result<&Mesh> {
     match s {
-        Shape::Solid(m) => Ok(m),
+        Shape::Solid(m, _) => Ok(m),
+        _ => Err(input("Expected solid")),
+    }
+}
+pub(crate) fn solid_z_rigid_provenance(id: u32) -> Result<Option<ZRigidProvenance>> {
+    let shape = get(id)?;
+    match &*shape {
+        Shape::Solid(_, prov) => Ok(*prov),
         _ => Err(input("Expected solid")),
     }
 }
@@ -128,28 +157,28 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return put(Shape::Profile(modeling::minkowski_profiles(&profiles)?));
     }
     if action == "cube" {
-        return put(Shape::Solid(solid::cube(
+        return put_solid(solid::cube(
             field(&v, "size")?,
             field(&v, "center")?,
-        )?));
+        )?);
     }
     if action == "sphere" {
-        return put(Shape::Solid(solid::sphere(
+        return put_solid(solid::sphere(
             field(&v, "radius")?,
             field(&v, "segments")?,
-        )?));
+        )?);
     }
     if action == "cylinder" {
-        return put(Shape::Solid(solid::cylinder(
+        return put_solid(solid::cylinder(
             field(&v, "height")?,
             field(&v, "bottom")?,
             field(&v, "top")?,
             field(&v, "segments")?,
             field(&v, "center")?,
-        )?));
+        )?);
     }
     if action == "mesh" {
-        return put(Shape::Solid(solid::clean(field(&v, "mesh")?)?));
+        return put_solid(solid::clean(field(&v, "mesh")?)?);
     }
     if action == "square" || action == "circle" {
         let rings = if action == "square" {
@@ -246,7 +275,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         } else {
             combine_solids(&solids, op)?
         };
-        return put(Shape::Solid(m));
+        return put_solid(m);
     }
     if matches!(
         action,
@@ -317,8 +346,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
             let cutter = solid::halfspace(mesh, field(&v, "normal")?, field(&v, "offset")?)?;
             let left = boolean(mesh, &cutter, "intersection")?;
             let right = boolean(mesh, &cutter, "difference")?;
-            let a = put(Shape::Solid(left))?;
-            let b = put(Shape::Solid(right))?;
+            let a = put_solid(left)?;
+            let b = put_solid(right)?;
             Ok(json!([a, b]))
         }
         "decompose" => {
@@ -351,14 +380,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 Some("mirror") => match math_core::affine::reflection(field(&v, "normal")?) {
                     Some(matrix) => matrix,
                     None => {
-                        return put(match &*shape {
-                            Shape::Solid(_) => Shape::Solid(Mesh {
+                        return match &*shape {
+                            Shape::Solid(_, _) => put_solid(Mesh {
                                 positions: vec![],
                                 indices: vec![],
                                 uv: None,
                             }),
-                            Shape::Profile(_) => Shape::Profile(vec![]),
-                        });
+                            Shape::Profile(_) => put(Shape::Profile(vec![])),
+                        };
                     }
                 },
                 None => field(&v, "matrix")?,
@@ -368,9 +397,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 return Err(input("Invalid affine matrix"));
             }
             match &*shape {
-                Shape::Solid(s) => {
+                Shape::Solid(s, prov) => {
                     if v["operation"].as_str() == Some("solid_matrix_projective") {
-                        return put(Shape::Solid(s.transform_projective(m)?));
+                        return put_solid(s.transform_projective(m)?);
                     }
                     // The pinned Manifold transform contract consumes only the
                     // affine 3x4 portion and ignores the authored fourth row.
@@ -390,7 +419,34 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     if det < 0. {
                         out.reverse_winding()
                     }
-                    put(Shape::Solid(out))
+                    let is_z_rigid = m[2][0].abs() <= 1e-12
+                        && m[2][1].abs() <= 1e-12
+                        && m[0][2].abs() <= 1e-12
+                        && m[1][2].abs() <= 1e-12
+                        && (m[2][2] - 1.).abs() <= 1e-12
+                        && (m[0][0] * m[0][0] + m[1][0] * m[1][0] - 1.).abs() <= 1e-10
+                        && (m[0][1] * m[0][1] + m[1][1] * m[1][1] - 1.).abs() <= 1e-10
+                        && (m[0][0] * m[0][1] + m[1][0] * m[1][1]).abs() <= 1e-10
+                        && (m[0][0] * m[1][1] - m[0][1] * m[1][0] - 1.).abs() <= 1e-10;
+                    let next_prov = if is_z_rigid {
+                        prov.map(|p| ZRigidProvenance {
+                            origin_id: p.origin_id,
+                            rot_xy: [
+                                m[0][0] * p.rot_xy[0] + m[0][1] * p.rot_xy[2],
+                                m[0][0] * p.rot_xy[1] + m[0][1] * p.rot_xy[3],
+                                m[1][0] * p.rot_xy[0] + m[1][1] * p.rot_xy[2],
+                                m[1][0] * p.rot_xy[1] + m[1][1] * p.rot_xy[3],
+                            ],
+                            trans: [
+                                m[0][0] * p.trans[0] + m[0][1] * p.trans[1] + m[0][3],
+                                m[1][0] * p.trans[0] + m[1][1] * p.trans[1] + m[1][3],
+                                p.trans[2] + m[2][3],
+                            ],
+                        })
+                    } else {
+                        None
+                    };
+                    put(Shape::Solid(out, next_prov))
                 }
                 Shape::Profile(r) => {
                     let mut r = r.clone();
@@ -415,14 +471,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
             v["join"].as_str().unwrap_or("Round"),
             field(&v, "segments")?,
         )?)),
-        "extrude" => put(Shape::Solid(modeling::extrude_rings(
+        "extrude" => put_solid(modeling::extrude_rings(
             profile(&shape)?,
             field(&v, "height")?,
             field(&v, "slices")?,
             field(&v, "twist")?,
             field(&v, "scale")?,
             field(&v, "center")?,
-        )?)),
+        )?),
         "revolve" => {
             let rings = profile(&shape)?;
             let mut m = solid::empty();
@@ -444,7 +500,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     },
                 )?;
             }
-            put(Shape::Solid(m))
+            put_solid(m)
         }
         "project" => put(Shape::Profile(
             mesh_section::project(&solid(&shape)?.view()).map_err(crate::legacy_mesh_error)?,
@@ -455,11 +511,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )),
         "minkowski" => {
             let b = get(field(&v, "other")?)?;
-            put(Shape::Solid(minkowski(solid(&shape)?, solid(&b)?)?))
+            put_solid(minkowski(solid(&shape)?, solid(&b)?)?)
         }
         "polygons" => encode(profile(&shape)?),
         "inspect" => match &*shape {
-            Shape::Solid(m) => {
+            Shape::Solid(m, _) => {
                 let report = m.inspect()?;
                 let mut area = 0.;
                 for t in m.indices.as_chunks::<3>().0 {
@@ -563,7 +619,7 @@ impl VertexTree {
         if ids.len() > Self::LEAF {
             let axis = (0..3)
                 .max_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
-                .unwrap();
+                .expect("0..3 is non-empty");
             let mid = ids.len() / 2;
             ids.select_nth_unstable_by(mid, |&a, &b| {
                 vertices[a as usize][axis].total_cmp(&vertices[b as usize][axis])
@@ -617,36 +673,21 @@ impl VertexTree {
     }
 }
 fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> {
-    if mesh.indices.is_empty() {
-        return Ok(());
-    }
-    if depth > 32 || parts.len() >= 64 {
-        return Err(input("Minkowski convex decomposition budget exceeded"));
-    }
+    if mesh.indices.is_empty() { return Ok(()); }
+    if depth > 32 || parts.len() >= 64 { return Err(input("Minkowski convex decomposition budget exceeded")); }
     let mut split = None;
     let vertices = mesh.positions.as_chunks::<3>().0;
     let tree = VertexTree::build(vertices);
     for t in mesh.indices.as_chunks::<3>().0 {
-        let a = mesh.point(t[0])?;
-        let b = mesh.point(t[1])?;
-        let c = mesh.point(t[2])?;
+        let [a, b, c] = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
         let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
         let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
+        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
         let l = n[0].hypot(n[1]).hypot(n[2]);
-        if l < 1e-16 {
-            continue;
-        }
+        if l < 1e-16 { continue; }
         let n = n.map(|x| x / l);
         let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
-        if tree.any_above(vertices, n, d, 1e-8) {
-            split = Some((n, d));
-            break;
-        }
+        if tree.any_above(vertices, n, d, 1e-8) { split = Some((n, d)); break; }
     }
     if let Some((n, d)) = split {
         let cutter = solid::halfspace(mesh, n, d)?;
@@ -680,31 +721,47 @@ fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
     Ok(result)
 }
 
-/// A detached export snapshot. Its vectors remain valid until the JS lease is freed.
-/// Commands may delete the source solid without invalidating this snapshot.
+// Planar face ids of the most recently exported/rendered solid. Export,
+// render and analysis of one retained solid share a single computation; the
+// weak pointer proves the cached entry still describes the same shape.
+type FaceIdEntry = (u32, std::rc::Weak<Shape>, Rc<Vec<u32>>);
+thread_local! {
+    static FACE_IDS: RefCell<Option<FaceIdEntry>> = const { RefCell::new(None) };
+}
+#[cfg(test)]
+thread_local! {
+    pub(crate) static FACE_ID_COMPUTATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+fn cached_face_ids(id: u32, shape: &Rc<Shape>) -> Result<Rc<Vec<u32>>> {
+    let hit = FACE_IDS.with(|slot| {
+        slot.borrow().as_ref().and_then(|(cached_id, weak, ids)| {
+            (*cached_id == id && std::ptr::eq(weak.as_ptr(), Rc::as_ptr(shape))).then(|| ids.clone())
+        })
+    });
+    if let Some(ids) = hit {
+        return Ok(ids);
+    }
+    let ids = Rc::new(face_ids(solid(shape)?)?);
+    FACE_IDS.with(|slot| *slot.borrow_mut() = Some((id, Rc::downgrade(shape), ids.clone())));
+    Ok(ids)
+}
 fn face_ids(m: &Mesh) -> Result<Vec<u32>> {
+    #[cfg(test)]
+    FACE_ID_COMPUTATIONS.with(|c| c.set(c.get() + 1));
     let mut groups = std::collections::BTreeMap::new();
     let mut ids = Vec::with_capacity(m.indices.len() / 3);
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
     for t in m.indices.as_chunks::<3>().0 {
-        let a = m.point(t[0])?;
-        let b = m.point(t[1])?;
-        let c = m.point(t[2])?;
+        let [a, b, c] = [m.point(t[0])?, m.point(t[1])?, m.point(t[2])?];
         let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
         let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
+        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
         let length = n[0].hypot(n[1]).hypot(n[2]);
         let n = n.map(|x| x / length);
         let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
         let key = [
-            (n[0] * 1e7).round() as i64,
-            (n[1] * 1e7).round() as i64,
-            (n[2] * 1e7).round() as i64,
-            (d / scale * 1e7).round() as i64,
+            (n[0] * 1e7).round() as i64, (n[1] * 1e7).round() as i64,
+            (n[2] * 1e7).round() as i64, (d / scale * 1e7).round() as i64,
         ];
         let next = groups.len() as u32;
         ids.push(*groups.entry(key).or_insert(next));
@@ -718,15 +775,10 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
     let shape = get(id)?;
     let m = solid(&shape)?;
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
-
     Ok(crate::CadMeshBuffer {
-        positions: m
-            .positions
-            .iter()
-            .map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v })
-            .collect(),
+        positions: m.positions.iter().map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v }).collect(),
         indices: m.indices.iter().map(|&v| v as u32).collect(),
-        face_ids: face_ids(m)?,
+        face_ids: (*cached_face_ids(id, &shape)?).clone(),
     })
 }
 /// Admission before display-buffer allocation for a resumable analysis.
@@ -737,17 +789,151 @@ pub(crate) fn check_analysis_triangle_budget(id: u32, limit: usize) -> Result<()
     }
     Ok(())
 }
-
 /// Detach the registry-owned solid before preparing its display buffers.
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
     let shape = get(id)?;
     let m = solid(&shape)?;
-    Ok(crate::mesh_render::render_parts(
-        &m.positions,
-        &m.indices,
-        face_ids(m)?,
-        crease_cosine,
-    ))
+    let ids = (*cached_face_ids(id, &shape)?).clone();
+    Ok(crate::mesh_render::render_parts(&m.positions, &m.indices, ids, crease_cosine))
+}
+/// Cooperative counterpart of [`render_buffers`]: owns the source shape, so
+/// deleting the solid mid-job cannot invalidate it, and yields between
+/// bounded batches. Bit-identical to the one-shot path.
+pub(crate) fn render_buffers_job(
+    id: u32,
+    crease_cosine: f64,
+) -> Result<impl std::future::Future<Output = Result<RenderMesh>> + 'static> {
+    let shape = get(id)?;
+    solid(&shape)?;
+    Ok(async move {
+        let ids = (*cached_face_ids(id, &shape)?).clone();
+        crate::mesh_render::yield_once().await;
+        let m = solid(&shape)?;
+        Ok(crate::mesh_render::render_parts_cooperative(&m.positions, &m.indices, ids, crease_cosine).await)
+    })
+}
+/// Operation of a cooperative mesh Boolean job.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum BooleanJobOp {
+    Union,
+    Difference,
+    Intersection,
+}
+impl BooleanJobOp {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::Union => "union",
+            Self::Difference => "difference",
+            Self::Intersection => "intersection",
+        }
+    }
+}
+/// Pairwise steps of the n-ary fold, known before the job runs (progress total).
+fn boolean_plan(meshes: &[&Mesh], op: BooleanJobOp) -> (Vec<Vec<usize>>, usize) {
+    match op {
+        BooleanJobOp::Union => {
+            let groups = boolean::union_groups(meshes);
+            let steps = groups.iter().map(|g| g.len().saturating_sub(1)).sum();
+            (groups, steps)
+        }
+        BooleanJobOp::Difference => match meshes.split_first() {
+            Some((base, cutters)) => {
+                let batches = boolean::difference_batches(base, cutters, DIFFERENCE_BATCH).unwrap_or_default();
+                let steps = batches.len();
+                (batches, steps)
+            }
+            None => (vec![], 0),
+        },
+        BooleanJobOp::Intersection => (vec![], meshes.len().saturating_sub(1)),
+    }
+}
+/// Cooperative n-ary Boolean over retained solids. Replays exactly the fold
+/// plan of [`combine_solids`] (bound groups for union, separated cutter
+/// batches for difference, a pairwise chain for intersection) and yields to
+/// the host after every pairwise operation, checking `token` there. The job
+/// owns its operand shapes. Completion stores the result and returns its id.
+pub(crate) fn boolean_job(
+    ids: &[u32],
+    op: BooleanJobOp,
+    token: nurbs_numerics::progress::CancellationToken,
+    progress: Rc<crate::kernel_jobs::JobProgress>,
+) -> Result<impl std::future::Future<Output = Result<Value>> + 'static> {
+    let shapes: Vec<Rc<Shape>> = ids.iter().map(|&id| get(id)).collect::<Result<_>>()?;
+    for s in &shapes {
+        solid(s)?;
+    }
+    Ok(async move {
+        let meshes: Vec<&Mesh> = shapes.iter().map(|s| solid(s)).collect::<Result<_>>()?;
+        let (plan, total) = boolean_plan(&meshes, op);
+        progress.set(0, total as u64);
+        let mut done = 0_u64;
+        let mut checkpoint = || -> Result<()> {
+            done += 1;
+            progress.set(done, total as u64);
+            token.check("mesh boolean").map_err(|c| input(&c.to_string()))
+        };
+        let pairwise = |a: &Mesh, b: &Mesh| boolean(a, b, op.name());
+        let result = match (op, meshes.split_first()) {
+            (_, None) => solid::empty(),
+            (BooleanJobOp::Union, _) => {
+                let mut parts = Vec::new();
+                for group in plan {
+                    let mut folded: Option<Mesh> = None;
+                    for i in group {
+                        folded = Some(match folded {
+                            None => meshes[i].clone(),
+                            Some(m) => {
+                                let m = pairwise(&m, meshes[i])?;
+                                checkpoint()?;
+                                crate::mesh_render::yield_once().await;
+                                m
+                            }
+                        });
+                    }
+                    if let Some(m) = folded {
+                        parts.push(m);
+                    }
+                }
+                match parts.len() {
+                    0 => solid::empty(),
+                    1 => parts.pop().expect("one part"),
+                    _ => solid::join(&parts)?,
+                }
+            }
+            (BooleanJobOp::Difference, Some((base, cutters))) => {
+                if boolean::bounds(base).is_none() {
+                    solid::empty()
+                } else {
+                    let mut result = (*base).clone();
+                    for members in plan {
+                        let cutter = if members.len() == 1 {
+                            cutters[members[0]].clone()
+                        } else {
+                            let parts: Vec<Mesh> = members.iter().map(|&j| cutters[j].clone()).collect();
+                            solid::join(&parts)?
+                        };
+                        result = pairwise(&result, &cutter)?;
+                        checkpoint()?;
+                        crate::mesh_render::yield_once().await;
+                        if result.indices.is_empty() {
+                            break;
+                        }
+                    }
+                    result
+                }
+            }
+            (BooleanJobOp::Intersection, Some((first, rest))) => {
+                let mut m = (*first).clone();
+                for b in rest {
+                    m = pairwise(&m, b)?;
+                    checkpoint()?;
+                    crate::mesh_render::yield_once().await;
+                }
+                m
+            }
+        };
+        put_solid(result)
+    })
 }
 /// Numeric contract: positions arrive as f64 (legacy f32 uploads are widened
 /// by the ABI before this call), so authored coordinates enter the kernel
@@ -757,13 +943,10 @@ pub(crate) fn import_buffers(stride: usize, vertices: &[f64], indices: &[u32]) -
         return Err(input("Invalid mesh vertex stride"));
     }
     let mesh = Mesh {
-        positions: vertices
-            .chunks_exact(stride)
-            .flat_map(|p| p[..3].iter().copied())
-            .collect(),
+        positions: vertices.chunks_exact(stride).flat_map(|p| p[..3].iter().copied()).collect(),
         indices: indices.iter().map(|&i| i as usize).collect(),
         uv: None,
     };
-    let id = put(Shape::Solid(solid::clean(mesh)?))?;
-    Ok(id.as_u64().unwrap() as u32)
+    let id = put_solid(solid::clean(mesh)?)?;
+    Ok(id.as_u64().expect("put() returns the numeric registry id") as u32)
 }

@@ -1,4 +1,4 @@
-export const EXAMPLES: Record<string, string> = {
+const EXAMPLE_SOURCES = {
   'brep-enclosure': `// @rush/1
 // Корпус с приподнятым боковым выступом и глухим карманом: дно 2 мм.
 // Источник геометрии — B-rep с рациональными дугами; сетка нужна для показа.
@@ -85,7 +85,12 @@ translate([0, 0, levels * level_h])
 translate([0, 0, levels * level_h + 5])
   cylinder(h = 14, r1 = 2, r2 = 0, $fn = 16);
 `,
-}
+} as const satisfies Record<string, string>
+
+export const EXAMPLES: Readonly<Record<string, string>> = EXAMPLE_SOURCES
+
+/** Source opened when no workspace or shared source is available. */
+export const DEFAULT_EXAMPLE_SOURCE: string = EXAMPLE_SOURCES.basic
 
 export type ExampleId = keyof typeof EXAMPLES
 
@@ -102,36 +107,42 @@ export const EXAMPLE_CATALOG: readonly ExampleCatalogEntry[] = Object.freeze([
   {
     id: 'brep-enclosure',
     title: { ru: 'B-rep: корпус с карманом', en: 'B-rep pocket enclosure' },
-    description: { ru: 'Круглый корпус, глухой карман и боковой выступ. Дно 2 мм; рациональные дуги сохраняются.', en: 'Round enclosure, blind pocket and side boss. A 2 mm floor with retained rational arcs.' },
+    description: {
+      ru: 'Круглый корпус, глухой карман и боковой выступ. Дно 2 мм; рациональные дуги сохраняются.',
+      en: 'Round enclosure, blind pocket and side boss. A 2 mm floor with retained rational arcs.',
+    },
     tags: ['brep', 'nurbs', 'cad', 'boolean', 'advanced'],
-    source: EXAMPLES['brep-enclosure'],
+    source: EXAMPLE_SOURCES['brep-enclosure'],
   },
   {
     id: 'basic',
     title: { ru: 'Примитивы', en: 'Primitives' },
     description: { ru: 'Куб, сфера и варианты цилиндра.', en: 'Cube, sphere and cylinder variants.' },
     tags: ['beginner', 'primitives', '3d'],
-    source: EXAMPLES.basic,
+    source: EXAMPLE_SOURCES.basic,
   },
   {
     id: 'csg',
     title: { ru: 'Настоящий CSG', en: 'Real CSG' },
     description: { ru: 'Разность и пересечение объёмных тел.', en: 'Difference and intersection of solid bodies.' },
     tags: ['csg', 'boolean', 'intermediate'],
-    source: EXAMPLES.csg,
+    source: EXAMPLE_SOURCES.csg,
   },
   {
     id: 'house',
     title: { ru: 'Дом с модулями', en: 'Modular house' },
-    description: { ru: 'Переменные, модуль окна и составная модель.', en: 'Variables, a window module and a composed model.' },
+    description: {
+      ru: 'Переменные, модуль окна и составная модель.',
+      en: 'Variables, a window module and a composed model.',
+    },
     tags: ['modules', 'variables', 'architecture'],
-    source: EXAMPLES.house,
+    source: EXAMPLE_SOURCES.house,
   },
   {
     id: 'tower',
     title: { ru: 'Параметрическая башня', en: 'Parametric tower' },
     description: { ru: 'Цикл, вычисляемые размеры и уровни.', en: 'A loop, computed dimensions and repeated levels.' },
     tags: ['parametric', 'loops', 'intermediate'],
-    source: EXAMPLES.tower,
+    source: EXAMPLE_SOURCES.tower,
   },
 ])

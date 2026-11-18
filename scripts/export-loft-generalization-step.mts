@@ -3,11 +3,11 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {compileModelGraphText} from '../src/services/modelGraphText'
 import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
-import {evaluateNurbsSurface,isoNurbsCurve} from '../src/services/nurbsSurface'
-import {reverseNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
-import type {NurbsBrep} from '../src/services/geometry/brep'
-import {exportDirectStepV9,importDirectStepV9} from '../src/services/cadNurbsStep'
+import {evaluateNurbsSurface,isoNurbsCurve} from '../src/kernel/nurbsSurface'
+import {reverseNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
+import {exportDirectStepV9,importDirectStepV9} from '../src/kernel/cadNurbsStep'
 const directory=resolve(process.argv[2]??'docs/qualification/loft-generalization-2026-10-02/step')
 mkdirSync(directory,{recursive:true})
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1],periodic:false})

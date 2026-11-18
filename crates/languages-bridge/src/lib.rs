@@ -2,8 +2,8 @@
 //!
 //! Split out of `geometry-bridge` so the geometry kernel ships without a language frontend: this crate
 //! only parses and compiles source into documents, and the host runs the geometry operations they name.
-#![feature(try_blocks, yeet_expr)]
-#![allow(unused_features)]
+// Adapters turn bad input into typed errors instead of panicking (refactor plan L6).
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 pub mod abi;
 mod openscad;
 use value_codec::{Value, json};
@@ -74,9 +74,12 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
         }
     };
     let controls = graph["customizer"].take();
-    let result = try {
+    let result = (|| -> rush_runtime::Result<Value> {
         let nodes = graph["nodes"].take();
-        let own = nodes.as_array().unwrap().iter().any(|n| {
+        let node_list = nodes.as_array().ok_or_else(|| {
+            rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes.")
+        })?;
+        let own = node_list.iter().any(|n| {
             [
                 "polygon_profile",
                 "polygon_loft",
@@ -114,29 +117,39 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
             .contains(&n["op"].as_str().unwrap_or(""))
         });
         let mut compiled = if own {
-            if !graph["constraints"].as_array().unwrap().is_empty()
-                || !graph["checks"].as_array().unwrap().is_empty()
-            {
-                do yeet rush_runtime::Error::new(
+            let has_constraints = graph["constraints"]
+                .as_array()
+                .is_some_and(|items| !items.is_empty());
+            let has_checks = graph["checks"]
+                .as_array()
+                .is_some_and(|items| !items.is_empty());
+            if has_constraints || has_checks {
+                return Err(rush_runtime::Error::new(
                     "text_error",
                     "",
                     "NURBS text checks are not supported; use the build topology report",
-                );
+                ));
             }
             if graph.get("segments").is_some() {
-                do yeet rush_runtime::Error::new(
+                return Err(rush_runtime::Error::new(
                     "text_error",
                     "",
                     "segments applies only to legacy geometry; use explicit tessellation arguments for own geometry",
-                );
+                ));
             }
             let Value::Array(nodes) = nodes else {
-                unreachable!()
+                return Err(rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes."));
             };
+            let parameters = graph["parameters"].as_array().ok_or_else(|| {
+                rush_runtime::Error::new("invalid_document", "/parameters", "Expected parameters.")
+            })?;
+            let root = graph["root"].as_str().ok_or_else(|| {
+                rush_runtime::Error::new("invalid_document", "/root", "Expected root.")
+            })?;
             let mut compiled = rush_runtime::nurbs::compile_text(
                 nodes,
-                graph["parameters"].as_array().unwrap(),
-                graph["root"].as_str().unwrap().into(),
+                parameters,
+                root.into(),
             )?;
             compiled["source"] = json!("");
             for key in [
@@ -166,15 +179,15 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 ("constraints", "constraints"),
                 ("checks", "geometry_assertions"),
             ] {
-                if !graph[source].as_array().unwrap().is_empty() {
+                if graph[source].as_array().is_some_and(|items| !items.is_empty()) {
                     document.insert(target.into(), graph[source].take());
                 }
             }
             rush_runtime::compile(Value::Object(document))?
         };
         compiled["customizer"] = controls.clone();
-        compiled
-    };
+        Ok(compiled)
+    })();
     runtime_value(result, Some(controls))
 }
 
@@ -221,7 +234,7 @@ pub fn abi_language(op: u32, value: Value) -> Value {
             ),
         },
         5 => runtime_value(
-            try {
+            (|| -> rush_runtime::Result<Value> {
                 let nodes = value["nodes"].as_array().ok_or_else(|| {
                     rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes")
                 })?;
@@ -235,8 +248,8 @@ pub fn abi_language(op: u32, value: Value) -> Value {
                 let root = value["root"].as_str().ok_or_else(|| {
                     rush_runtime::Error::new("invalid_document", "/root", "Expected root")
                 })?;
-                rush_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())?
-            },
+                rush_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())
+            })(),
             None,
         ),
         10 => openscad::scad_compile(&value),

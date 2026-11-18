@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0405",
+  "testedBase": "ebb1307dfe4a5b477a7e51e262f9eecae179dbb4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 134,
+  "scope": [
+    "Enclose total retained surface area within a caller-specified width using exact integer square roots.",
+    "Integer square roots produce outward rational bounds on a shared grid. Perfect squares contribute exactly, and aggregate width is bounded by the requested absolute tolerance."
+  ],
+  "logSha256": "5f4e24a06c00ac8448cfd25c8ffbdcdc0c7c3aaaccff86ec2acba2bd744f09c7",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "06028401f3940985bab20b6718f1ebb56ba1c65bd6afc73961ea31115cda1b68",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/mod.rs": "df53bb317079ae08b4d08f95000c3165c001c353303fd908881bb10a88d5fc11",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "d021b9978efc51260fe6a8364b1cbfc330ee0ae9a471c6ee036e56a4fa34b53c"
+  }
+}

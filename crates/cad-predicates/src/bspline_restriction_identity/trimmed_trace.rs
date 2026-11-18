@@ -6,14 +6,15 @@ use super::*;
 /// The caller proves the actual surface-row ownership and constant UV axis.
 pub fn rational_bspline_trimmed_boundary_identity(
     ctx: &mut PredicateContext<'_>,
-    curves: [&[[LeafRef; 4]]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
+    splines: [crate::SplineLeafRefs<'_, 4>; 2],
     uv_line: [LeafRef; 2],
     uv_clock: [LeafRef; 4],
     world_range: [LeafRef; 2],
     reverse_world: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
+    let curves = splines.map(|s| s.controls);
+    let knots = splines.map(|s| s.knots);
+    let degrees = splines.map(|s| s.degree);
     if (0..2).any(|i| {
         !(1..=32).contains(&degrees[i])
             || curves[i].len() <= degrees[i]

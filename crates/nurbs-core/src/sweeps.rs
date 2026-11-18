@@ -7,6 +7,8 @@
 //! `sweep_*_audit`/`sweep_cap_*` modules (now `audit::{pair, wall, contour,
 //! seam, cap_boundary, cap_wall}`). Old paths keep working through re-export
 //! shims in `lib.rs`.
+pub mod affine_volume;
+pub mod fibered_volume;
 pub mod framed_sweep;
 pub mod profile_sweep;
 pub mod progressive_sweep;
@@ -38,3 +40,7 @@ mod scalar;
 pub use scalar::scaled_sweep;
 #[cfg(feature = "codec")]
 pub use scalar::{checked_profile_sweep, checked_profile_sweep_with_cells};
+/// Formerly the flat `crate::sweep_seam_set` module; `lib.rs` keeps that path as a re-export.
+pub mod seam_set;
+/// Formerly the flat `crate::sweep_section_correction` module; `lib.rs` keeps that path as a re-export.
+pub mod section_correction;

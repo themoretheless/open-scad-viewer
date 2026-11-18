@@ -75,13 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         transverse[k] = ((p[0] - origin[0]) + (p[2] - origin[2])) / norm * scale;
     }
-    let report = surface_blend::g2_to_plane_trace(
-        skin,
-        Trace { at, along: ud },
-        cap,
-        &pc,
-        transverse,
-        Options {
+    let report = surface_blend::g2_to_plane_trace(skin, Trace { at, along: ud }, surface_blend::PlaneTarget { plane: cap, target: &pc, transverse }, Options {
             boundaries: [
                 if increasing {
                     Boundary::VEnd
@@ -92,11 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             gains: [0.01, 0.1],
             ..Default::default()
-        },
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
-    )?;
+        }, [1e-7, 1e-5, 1e-4], 100000, 1000000)?;
     println!(
         "curved runout: complete={} within={} cells={} exact={} patches={}",
         report.complete,

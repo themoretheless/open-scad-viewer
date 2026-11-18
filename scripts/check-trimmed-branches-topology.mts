@@ -1,8 +1,8 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {box3d} from '../tests/fixtures/minkowski3d-cases'
 import {rationalRoof,triangularRoof,constantHalf,squareParameter,retracedParameter,planarCurve,constantMultispan} from '../tests/fixtures/certified-followup-cases'
 const bytes=readFileSync(process.argv[2]),w=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any

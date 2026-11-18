@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0351",
+  "testedBase": "f482463b5b16fddc02380241ec4af04fca31aebb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 34,
+  "scope": [
+    "Enclose an algebraic support-clock point in a rational XYZ box with a certified Euclidean diameter.",
+    "Exact rational square-root brackets preserve the selected algebraic branch, then affine interval mapping gives ordered XYZ bounds and an exact squared diameter."
+  ],
+  "logSha256": "8346af725059b8a5eb9024809f3f28e6f07578fe52cae2722394364409830154",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "e982edbf0e32e0850da12caf877af1e703dbc0d25e9f8128fe608856ede0f6af",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "b4d561499906b2e80e6a69ac831764cc24045310239f0ba5b895a99b73c7c320",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "76747b0e52820ef1819781bc502266abc0720701373c7e5099da1dfc20067637",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "74ca6b53597543327972bce8967d68a9fd0e3fc00b9f9a254634aeb1ca478061",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic.rs": "c4c7516a8d37a66211436830fc129f2cb55ee31e5be9be2ed20c94a491aa042d",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs": "8aaa255c53615fd8a51839a6e91e963d5b01a4022f584b2abd468cbe526f8dc9",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs": "e4bb9d1d839f6fe368d01b059dc6029d0dfe09746fd2f2b3eb94db7ef519082b"
+  }
+}

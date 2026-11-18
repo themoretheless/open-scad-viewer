@@ -1,7 +1,14 @@
 import type { GeometryLanguageContract } from './geometryExecution'
-import { sha256Hex } from './sha256'
-import { utf8Compare } from './utf8Order'
-export { semanticResultItems, semanticNodeInputs, semanticNodeProducerOperationNames, deriveSemanticCapabilityClosure, deriveSemanticOperationId, deriveSemanticAmbiguityGroupId, deriveSemanticOccurrenceId, deriveSemanticSceneEntityId } from './semanticProgram/semanticResultItems'
+export {
+  semanticResultItems,
+  semanticNodeInputs,
+  semanticNodeProducerOperationNames,
+  deriveSemanticCapabilityClosure,
+  deriveSemanticOperationId,
+  deriveSemanticAmbiguityGroupId,
+  deriveSemanticOccurrenceId,
+  deriveSemanticSceneEntityId,
+} from './semanticProgram/semanticResultItems'
 
 export const SEMANTIC_PROGRAM_CONTRACT = 'semantic-program-contract-v1' as const
 export const SEMANTIC_PROGRAM_IDENTITY = 'semantic-program-core-v1' as const
@@ -54,7 +61,7 @@ export const SEMANTIC_PROGRAM_DIAGNOSTIC_CODES = Object.freeze([
   'E_SEMANTIC_RELOWER_REQUIRED',
 ] as const)
 
-export type SemanticProgramDiagnosticCode = typeof SEMANTIC_PROGRAM_DIAGNOSTIC_CODES[number]
+export type SemanticProgramDiagnosticCode = (typeof SEMANTIC_PROGRAM_DIAGNOSTIC_CODES)[number]
 /** Legacy evaluator convenience only; it is not serialized in SPC1. */
 export type SemanticDimension = 'region2' | 'solid3'
 export type SemanticGeometryKind = 'curve' | 'wire' | 'region' | 'sheet' | 'solid' | 'solid-set'
@@ -63,10 +70,10 @@ export type SemanticRepresentation = 'analytic-brep' | 'rational-brep' | 'certif
 export type SemanticRepresentationEvidence =
   | Readonly<{ tag: 'representation-preserving' }>
   | Readonly<{
-    tag: 'certified-approximation'
-    certificateProfile: string
-    certificatePolicyHash: string
-  }>
+      tag: 'certified-approximation'
+      certificateProfile: string
+      certificatePolicyHash: string
+    }>
 export interface SemanticValueType {
   readonly geometryKind: SemanticGeometryKind
   readonly space: SemanticSpace
@@ -81,10 +88,22 @@ export type SemanticVec3 = readonly [number, number, number]
 export type SemanticColor = readonly [number, number, number, number]
 /** Column-major affine 4x4; composition is parent × local. */
 export type SemanticMatrix4 = readonly [
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ]
 
 export type SemanticOperationId = `opv1:${string}`
@@ -113,13 +132,7 @@ export interface SemanticUnits {
 }
 
 export type SemanticOperationCategory =
-  | 'geometry'
-  | 'transform'
-  | 'boolean'
-  | 'control'
-  | 'module'
-  | 'assertion'
-  | 'presentation'
+  'geometry' | 'transform' | 'boolean' | 'control' | 'module' | 'assertion' | 'presentation'
 
 export type SemanticPathSegmentKind = 'call' | 'module' | 'control' | 'branch' | 'body'
 
@@ -295,7 +308,9 @@ export interface SemanticFullRoundExactNode extends SemanticNodeBase {
   readonly kind: 'full-round-exact'
   readonly input: SemanticNodeId
   readonly faces: readonly [number, number, number]
-  readonly limits?: Readonly<Partial<Record<'maxPairProjections' | 'maxAtoms' | 'maxRayCells' | 'refinements' | 'radiusHalvings', number>>>
+  readonly limits?: Readonly<
+    Partial<Record<'maxPairProjections' | 'maxAtoms' | 'maxRayCells' | 'refinements' | 'radiusHalvings', number>>
+  >
   readonly maxBytes?: number
 }
 

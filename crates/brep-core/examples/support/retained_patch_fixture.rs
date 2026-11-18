@@ -11,9 +11,11 @@ pub fn source() -> (Model, usize, face_cut::OwnedCut, [[f64; 2]; 1]) {
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100_000,
-        1_000_000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100_000,
+            max_exact: 1_000_000,
+        },
     )
     .unwrap();
     let m = closed.model;

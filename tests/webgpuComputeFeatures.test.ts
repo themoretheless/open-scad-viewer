@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { runGpuCompute } from '../src/services/webgpuCompute'
+import { runGpuCompute } from '../src/render/webgpuCompute'
 import {
   closestPointOnNurbsCurve,
   computeNurbsCurveBoundingBox,
@@ -7,7 +7,7 @@ import {
   evaluateNurbsCurveLength,
   subdivideNurbsCurvePolylineAdaptive,
   type NurbsCurve,
-} from '../src/services/nurbsCurve'
+} from '../src/kernel/nurbsCurve'
 import {
   closestPointOnNurbsSurface,
   computeNurbsSurfaceBoundingBox,
@@ -15,7 +15,7 @@ import {
   evaluateNurbsSurfaceNormal,
   extractNurbsSurfaceIsocurvePoints,
   type NurbsSurface,
-} from '../src/services/nurbsSurface'
+} from '../src/kernel/nurbsSurface'
 
 describe('WebGPU compute feature negotiation', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -63,11 +63,13 @@ describe('WebGPU compute feature negotiation', () => {
     await runGpuCompute({
       wgsl: 'enable subgroups;\nenable subgroup_size_control;\n@subgroup_size(32) @compute @workgroup_size(64) fn main() {}',
       entryPoint: 'main',
-      dispatches: [{
-        buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
-        outputBytes: 4,
-        workgroups: [1, 1, 1],
-      }],
+      dispatches: [
+        {
+          buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
+          outputBytes: 4,
+          workgroups: [1, 1, 1],
+        },
+      ],
     })
 
     expect(requestDevice).toHaveBeenCalledWith({ requiredFeatures: ['subgroups', 'subgroup-size-control'] })
@@ -85,15 +87,19 @@ describe('WebGPU compute feature negotiation', () => {
       },
     })
 
-    await expect(runGpuCompute({
-      wgsl: 'requires buffer_view;\n@compute @workgroup_size(1) fn main() {}',
-      entryPoint: 'main',
-      dispatches: [{
-        buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
-        outputBytes: 4,
-        workgroups: [1, 1, 1],
-      }],
-    })).rejects.toThrow('WebGPU WGSL lacks required feature(s): buffer_view')
+    await expect(
+      runGpuCompute({
+        wgsl: 'requires buffer_view;\n@compute @workgroup_size(1) fn main() {}',
+        entryPoint: 'main',
+        dispatches: [
+          {
+            buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
+            outputBytes: 4,
+            workgroups: [1, 1, 1],
+          },
+        ],
+      }),
+    ).rejects.toThrow('WebGPU WGSL lacks required feature(s): buffer_view')
     expect(requestDevice).not.toHaveBeenCalled()
   })
 
@@ -138,7 +144,8 @@ describe('WebGPU compute feature negotiation', () => {
       },
     })
 
-    const linear = 'requires linear_indexing;\n@compute @workgroup_size(1) fn main(@builtin(global_invocation_index) i: u32) {}'
+    const linear =
+      'requires linear_indexing;\n@compute @workgroup_size(1) fn main(@builtin(global_invocation_index) i: u32) {}'
     await runGpuCompute({
       wgsl: '@compute @workgroup_size(1) fn main() {}',
       wgslVariants: [
@@ -146,14 +153,16 @@ describe('WebGPU compute feature negotiation', () => {
         { label: 'linear', wgsl: linear },
       ],
       entryPoint: 'main',
-      dispatches: [{
-        buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
-        outputBytes: 4,
-        workgroups: [1, 1, 1],
-        variantWorkgroups: {
-          linear: [4, 1, 1],
+      dispatches: [
+        {
+          buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
+          outputBytes: 4,
+          workgroups: [1, 1, 1],
+          variantWorkgroups: {
+            linear: [4, 1, 1],
+          },
         },
-      }],
+      ],
     })
 
     expect(createShaderModule).toHaveBeenCalledWith({ code: linear })
@@ -208,11 +217,13 @@ describe('WebGPU compute feature negotiation', () => {
     const job = {
       wgsl: '@compute @workgroup_size(1) fn main() {}',
       entryPoint: 'main',
-      dispatches: [{
-        buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
-        outputBytes: 4,
-        workgroups: [1, 1, 1] as [number, number, number],
-      }],
+      dispatches: [
+        {
+          buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
+          outputBytes: 4,
+          workgroups: [1, 1, 1] as [number, number, number],
+        },
+      ],
     }
 
     await runGpuCompute(job)

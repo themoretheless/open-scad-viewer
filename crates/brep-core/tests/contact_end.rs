@@ -99,10 +99,12 @@ fn end_boundaries_retain_both_contact_vertices_and_lift_to_skin_and_original_end
             skin,
             model,
             face,
-            1e-6,
-            1e-8,
-            100000,
-            1000000,
+            contact_end::EndLimits {
+                tolerance_mm: 1e-6,
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .unwrap();
         assert!(out.positions.proven && out.cells <= 100000 && out.exact_work <= 1000000);
@@ -130,10 +132,12 @@ fn end_boundaries_retain_both_contact_vertices_and_lift_to_skin_and_original_end
                 skin,
                 model,
                 face,
-                1e-6,
-                1e-8,
-                100000,
-                1000000
+                contact_end::EndLimits {
+                    tolerance_mm: 1e-6,
+                    tolerance_uv: 1e-8,
+                    max_cells: 100000,
+                    max_exact: 1000000,
+                },
             )
             .is_err()
         );
@@ -144,10 +148,12 @@ fn end_boundaries_retain_both_contact_vertices_and_lift_to_skin_and_original_end
                 skin,
                 model,
                 face,
-                1e-6,
-                1e-8,
-                1,
-                1000000
+                contact_end::EndLimits {
+                    tolerance_mm: 1e-6,
+                    tolerance_uv: 1e-8,
+                    max_cells: 1,
+                    max_exact: 1000000,
+                },
             )
             .is_err()
         );
@@ -159,10 +165,12 @@ fn end_boundaries_retain_both_contact_vertices_and_lift_to_skin_and_original_end
             skin,
             &last,
             l,
-            1e-6,
-            1e-8,
-            100000,
-            1000000
+            contact_end::EndLimits {
+                tolerance_mm: 1e-6,
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -170,10 +178,12 @@ fn end_boundaries_retain_both_contact_vertices_and_lift_to_skin_and_original_end
         [&first_cut, &second_cut],
         skin,
         [(&first, f), (&last, l)],
-        1e-6,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: 1e-6,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(patch.model.vertices.len(), 4);
@@ -289,7 +299,19 @@ fn whole_end_curve_crossing_a_hole_refuses_despite_valid_endpoints() {
     )
     .unwrap();
     let end =
-        contact_end::connect([&c0, &c1], 0, skin, &first, f, 1e-6, 1e-8, 100000, 1000000).unwrap();
+        contact_end::connect(
+            [&c0, &c1],
+            0,
+            skin,
+            &first,
+            f,
+            contact_end::EndLimits {
+                tolerance_mm: 1e-6,
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
+        ).unwrap();
     let d = end.curve.domain();
     let p = end.curve.evaluate((d[0] + d[1]) * 0.5).unwrap().point;
     let hole = cap_with_hole(ys[0], [p[0], p[2]]);
@@ -316,7 +338,19 @@ fn whole_end_curve_crossing_a_hole_refuses_despite_valid_endpoints() {
     .unwrap();
     assert!(c0.coverage[0].eligible.len() == 1 && c1.coverage[0].eligible.len() == 1);
     assert!(
-        contact_end::connect([&c0, &c1], 0, skin, &hole, 0, 1e-6, 1e-8, 100000, 1000000).is_err()
+        contact_end::connect(
+            [&c0, &c1],
+            0,
+            skin,
+            &hole,
+            0,
+            contact_end::EndLimits {
+                tolerance_mm: 1e-6,
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
+        ).is_err()
     );
     assert_eq!(hole, before);
 }
@@ -369,10 +403,12 @@ fn rational_cylinder_transition_has_both_end_boundaries_and_four_shared_corner_i
         [&c0, &c1],
         skin,
         [(&first, f), (&last, l)],
-        1e-6,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: 1e-6,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(patch.ends.iter().all(|end| end.positions.proven));

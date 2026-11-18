@@ -1,4 +1,4 @@
-import type {Minkowski3dSource} from '../../src/services/geometry/minkowski3d'
+import type {Minkowski3dSource} from '../../src/kernel/geometry/minkowski3d'
 export function box3d(lo:number[],hi:number[]):Minkowski3dSource {
  const [x,y,z]=lo,[X,Y,Z]=hi
  return {positions:[x,y,z,X,y,z,X,Y,z,x,Y,z,x,y,Z,X,y,Z,X,Y,Z,x,Y,Z],indices:[0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7]}

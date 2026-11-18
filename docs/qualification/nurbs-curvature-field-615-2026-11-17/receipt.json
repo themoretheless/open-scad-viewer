@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0615",
+  "testedBase": "cae51c1d1775647ee3cbc2cda3095328f0330200",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 204,
+  "scope": [
+    "Enclose total and component retained areas under shared integration and trim work limits.",
+    "Verify total area with a nested island, separate component enclosures and refusal of incomplete coverage under either shared budget."
+  ],
+  "logSha256": "2265194504114d2ad7d89ac1e0b2bb48499835a11e3bd01b4704024b41fccc8c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "98a7a42531f27801cda94be11c335682210f3054d2766a3299574e52cba6cfdf",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "f87b73cfc91d112c540e24502a06f4e85fdbff40e065f94995a6eb11c61cb3ae"
+  }
+}

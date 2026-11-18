@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0331",
+  "testedBase": "7dee3f73c82b57c6775134360f553a148403d20b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "certified_planar_perimeter_contracts",
+    "--test",
+    "exact_projected_face_area_contracts",
+    "--test",
+    "curve_measure"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Enclose XYZ perimeter of rational planar trim loops through certified affine-mapped jets without storing lifted poles.",
+    "Closed rational 2D trims and exact rational plane coefficients. Every contour contributes positive length, independent of winding."
+  ],
+  "logSha256": "750acffb3601df4a88e4db52561679f5ed0807427967db91ce500accbe31d38b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "1d6f4fefe3bfd851411843a4138363ecaed1ca3805b3ae6e44d007725efabd07",
+    "crates/nurbs-core/src/analysis/planar_face_perimeter.rs": "5cde38e1fbd453aa64f90883898e27c4ceb24fd234e3faca4507c245b90231db",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "15ff11e77f30354be7df43c5fc12c8f35c10c824cfef59718cbe068e64e7cf5e",
+    "crates/nurbs-core/tests/certified_planar_perimeter_contracts.rs": "08c87cb01d1b9420ffb32a31b9ec8f19014ea1e51b6e092665150f6e50b9d3b2"
+  }
+}

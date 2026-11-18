@@ -3,8 +3,8 @@ import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {retainedLoftFixture} from '../tests/support/retainedLoftFixture'
-import {applySolidSceneEdit} from '../src/services/solidSceneEdit'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {applySolidSceneEdit} from '../src/kernel/solidSceneEdit'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 const directory=resolve(process.argv[2]??'/tmp/cad-retained-loft');mkdirSync(directory,{recursive:true})
 const sketches=await retainedLoftFixture(),document={version:1 as const,bodies:[],sketches}
 writeFileSync(resolve(directory,'project.json'),JSON.stringify(document,null,2)+'\n')

@@ -94,7 +94,8 @@ pub fn rational_bezier_projective_image(
         }
         let canonical = homogeneous(&c, ctx)?;
         let uv = homogeneous(&p, ctx)?;
-        let composed = composition_polynomials(&uv, &s, d, nu, nv, [false; 3], ctx)?;
+        let patch = SurfacePatch { s: &s, d, nu, nv };
+        let composed = composition_polynomials(&uv, patch, [false; 3], ctx)?;
         let mut weights = None;
         for axis in 0..3 {
             let (cn, cd) = first_jet(&canonical, axis, ctx)?;

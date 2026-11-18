@@ -106,6 +106,8 @@ pub enum QuadraticGraphSSKind {
     Empty,
     ClosedEllipse,
     IsolatedTangentPoint,
+    IsolatedBoundaryPoint,
+    TransverseLine,
     TangentDoubleLine,
     CrossingLines,
     ParallelLineFactors,
@@ -296,7 +298,13 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
             }
         }
     }
-    let ([mut a, mut b, mut k], center, basis) = diagonalize::form(&f, &mut w)?;
+    let linear = f[2][0] == 0. && f[0][2] == 0. && f[1][1] == 0.
+        && (f[1][0] != 0. || f[0][1] != 0.);
+    let ([mut a, mut b, mut k], center, basis) = if linear {
+        ([0., 0., f[0][0]], [0.; 2], [[1., 0.], [0., 1.]])
+    } else {
+        diagonalize::form(&f, &mut w)?
+    };
     if a < 0. && b <= 0. || a == 0. && b < 0. {
         a = -a;
         b = -b;
@@ -316,7 +324,9 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
         trims: vec![],
         work: 0,
     };
-    if a == 0. && b == 0. {
+    if linear {
+        line_clip::transverse(&mut d, [f[1][0], f[0][1]], f[0][0], &mut w)?;
+    } else if a == 0. && b == 0. {
         if k == 0. {
             d.kind = QuadraticGraphSSKind::CoincidentPatch;
         }

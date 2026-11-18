@@ -1,9 +1,9 @@
-// Pure helpers of App.vue: no component state, extracted by scripts/vue-extract-pure.mjs.
-import { type ComponentPublicInstance } from 'vue'
-import { type RovingFocusKey } from './services/rovingFocus'
-import { encodeWorkspaceShare } from './services/workspaceShare'
-import { clamp } from './services/math3d'
-import { storageGetJSON } from './services/safeStorage'
+// Pure helpers of App.svt: no component state, extracted by scripts/vue-extract-pure.mjs.
+import { type ComponentPublicInstance } from 'svet'
+import { type RovingFocusKey } from './app/rovingFocus'
+import { encodeWorkspaceShare } from './app/workspaceShare'
+import { clamp } from './kernel/geometry/math3d'
+import { storageGetJSON } from './core/safeStorage'
 
 export const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 
@@ -39,7 +39,12 @@ export function revealDockDetails(el: Element | ComponentPublicInstance | null) 
 }
 
 export const DOCK_KEY_MAP: Record<string, RovingFocusKey> = {
-  ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowDown: 'ArrowRight', Home: 'Home', End: 'End',
+  ArrowLeft: 'ArrowLeft',
+  ArrowUp: 'ArrowLeft',
+  ArrowRight: 'ArrowRight',
+  ArrowDown: 'ArrowRight',
+  Home: 'Home',
+  End: 'End',
 }
 
 export function closeMenus() {
@@ -88,4 +93,6 @@ export function readCommandMru(): string[] {
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
 
-export function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
+export function sanitizeFileName(name: string) {
+  return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad')
+}

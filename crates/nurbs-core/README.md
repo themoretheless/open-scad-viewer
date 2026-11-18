@@ -656,7 +656,7 @@ goal and rounding-inclusive geometric qualification remain incomplete.
 
 `surface_edit::{insert, elevate, split, transpose, reverse, decompose}` provide typed tensor-product operations. `Curve::{insert, elevate, split, trim, reverse, decompose}`, `Surface::{trim, iso}` and `foundation::reparameterize_curve_report` work directly without JSON or viewer adapters. Split/trim/decomposition preserve original parameter intervals. Transposing or reversing one surface axis reverses the normal orientation. Distinct source knots may not collapse during affine parameter remapping.
 
-Run `cargo run --manifest-path crates/Cargo.toml -p nurbs-core --no-default-features --example native_edits` from the repository root. Independent rational-equation tests are in `tests/native_edits.rs`. See [native editing contracts](../../docs/design/nurbs-native-edits.md) and [priority 200 registry](../../docs/design/nurbs-core-200.md). Finite sampled tests are not continuous binary64 error certificates.
+Run `cargo run --manifest-path crates/Cargo.toml -p nurbs-core --no-default-features --example native_edits` from the repository root. Independent rational-equation tests are in `tests/native_edits.rs`. See [native editing contracts](../../docs/design/nurbs-native-edits.md) and the [NURBS catalog](../../docs/design/nurbs-catalog.json). Finite sampled tests are not continuous binary64 error certificates.
 
 ### Native arc length and equal-distance stations
 

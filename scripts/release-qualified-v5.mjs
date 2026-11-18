@@ -87,9 +87,9 @@ const implementation=[
  'crates/brep-topology/src/lib.rs',
  'crates/geometry-bridge/src/lib.rs',
  'crates/geometry-bridge/src/tests.rs',
- 'src/services/geometry/brep.ts',
- 'src/services/geometry/brepCapability.ts',
- 'src/services/geometry/kernel.ts',
+ 'src/kernel/geometry/brep.ts',
+ 'src/kernel/geometry/brepCapability.ts',
+ 'src/kernel/geometry/kernel.ts',
 ]
 write(v5.plan,{
  $schema:'./brep-capability-qualification-plan-v5.schema.json',
@@ -104,7 +104,7 @@ write(v5.plan,{
  dependencies:dependencies.map(capability=>({capability,requiredMaturity:'Qualified'})),
  scope:{included,excluded},
  matrix:matrix.map(([id,expected])=>({id,expected,blocksQualification:true})),
- bindings:{implementation,registry:'src/services/geometry/brepCapability.ts',evidenceJson:v5.evidence},
+ bindings:{implementation,registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:v5.evidence},
  evidence:{state:'qualified',notes:[
   'Qualification is limited to the exact finite cell and operations stated in scope; /6 remains unavailable.',
   'The certificate-bearing product API is authoritative; the model-only API delegates to it and cannot bypass certification.',

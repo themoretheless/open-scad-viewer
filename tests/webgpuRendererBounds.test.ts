@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { identity, translate } from '../src/services/math3d'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { identity, translate } from '../src/kernel/geometry/math3d'
+import { measureMeshBounds, type MeshBoundsCache } from '../src/render/meshBounds'
 
 interface MeasuredBounds {
   local: { min: number[]; max: number[] }
   world: { center: number[]; radius: number; min: number[]; max: number[] }
 }
 
-function boundMeasure(renderer: WebGPURenderer) {
-  const internal = renderer as unknown as {
-    measureMeshBounds: (assetId: string | null, vertices: Float32Array, transform: Float32Array) => MeasuredBounds | null
-  }
+function boundMeasure() {
+  const cache: MeshBoundsCache = new Map()
   // The cache is keyed by content identity; the tests key it per buffer object.
   const ids = new WeakMap<Float32Array, string>()
   let next = 0
@@ -20,19 +18,15 @@ function boundMeasure(renderer: WebGPURenderer) {
       id = `test:${next++}`
       ids.set(vertices, id)
     }
-    return internal.measureMeshBounds(id, vertices, transform)
+    return measureMeshBounds(cache, id, vertices, transform) as MeasuredBounds | null
   }
 }
 
-const vertices = new Float32Array([
-  0, 0, 0, 0, 0, 1,
-  1, 2, 3, 0, 0, 1,
-  -1, 4, 2, 0, 0, 1,
-])
+const vertices = new Float32Array([0, 0, 0, 0, 0, 1, 1, 2, 3, 0, 0, 1, -1, 4, 2, 0, 0, 1])
 
-describe('WebGPURenderer mesh bounds cache', () => {
+describe('mesh bounds cache', () => {
   it('computes exact local and world bounds with a scalar scan', () => {
-    const measure = boundMeasure(new WebGPURenderer())
+    const measure = boundMeasure()
     const result = measure(vertices, translate(identity(), [10, 20, 30]))
 
     expect(result).not.toBeNull()
@@ -44,7 +38,7 @@ describe('WebGPURenderer mesh bounds cache', () => {
   })
 
   it('reuses the cached result for the same buffer and transform references', () => {
-    const measure = boundMeasure(new WebGPURenderer())
+    const measure = boundMeasure()
     const transform = translate(identity(), [1, 1, 1])
 
     const first = measure(vertices, transform)
@@ -54,7 +48,7 @@ describe('WebGPURenderer mesh bounds cache', () => {
   })
 
   it('recomputes when the transform reference changes', () => {
-    const measure = boundMeasure(new WebGPURenderer())
+    const measure = boundMeasure()
     const first = measure(vertices, identity())
     expect(first!.world.min).toEqual([-1, 0, 0])
 
@@ -73,7 +67,7 @@ describe('WebGPURenderer mesh bounds cache', () => {
   })
 
   it('retains separate bounds for instances sharing a geometry buffer', () => {
-    const measure = boundMeasure(new WebGPURenderer())
+    const measure = boundMeasure()
     const left = translate(identity(), [-5, 0, 0])
     const right = translate(identity(), [5, 0, 0])
     const first = measure(vertices, left)
@@ -85,7 +79,7 @@ describe('WebGPURenderer mesh bounds cache', () => {
   })
 
   it('invalidates an instance when its transform changes in place', () => {
-    const measure = boundMeasure(new WebGPURenderer())
+    const measure = boundMeasure()
     const transform = identity()
     const first = measure(vertices, transform)
     transform[3] = 10
@@ -97,11 +91,8 @@ describe('WebGPURenderer mesh bounds cache', () => {
   })
 
   it('skips non-finite vertices and reports fully invalid buffers as null', () => {
-    const measure = boundMeasure(new WebGPURenderer())
-    const withNaN = new Float32Array([
-      NaN, 0, 0, 0, 0, 1,
-      1, 1, 1, 0, 0, 1,
-    ])
+    const measure = boundMeasure()
+    const withNaN = new Float32Array([NaN, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1])
     expect(measure(withNaN, identity())!.local).toEqual({ min: [1, 1, 1], max: [1, 1, 1] })
 
     const allBad = new Float32Array([NaN, NaN, NaN, 0, 0, 1])

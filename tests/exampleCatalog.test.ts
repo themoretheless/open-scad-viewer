@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXAMPLE_CATALOG, EXAMPLES } from '../src/data/examples'
-import { assertExampleCatalog, filterExampleCatalog } from '../src/services/exampleCatalog'
+import { assertExampleCatalog, filterExampleCatalog } from '../src/app/exampleCatalog'
 
 describe('example catalog', () => {
   it('is complete, localized and points at canonical MCP example sources', () => {
@@ -11,14 +11,12 @@ describe('example catalog', () => {
 
   it('filters literal localized metadata with stable catalog order', () => {
     expect(filterExampleCatalog(EXAMPLE_CATALOG, 'цикл', 'ru').map(entry => entry.id)).toEqual(['tower'])
-    expect(filterExampleCatalog(EXAMPLE_CATALOG, 'boolean intermediate', 'en').map(entry => entry.id))
-      .toEqual(['csg'])
+    expect(filterExampleCatalog(EXAMPLE_CATALOG, 'boolean intermediate', 'en').map(entry => entry.id)).toEqual(['csg'])
     expect(filterExampleCatalog(EXAMPLE_CATALOG, '', 'en')).toBe(EXAMPLE_CATALOG)
   })
 
   it('rejects duplicate identities and missing translations', () => {
     expect(() => assertExampleCatalog([EXAMPLE_CATALOG[0], EXAMPLE_CATALOG[0]])).toThrow(/duplicate/)
-    expect(() => assertExampleCatalog([{ ...EXAMPLE_CATALOG[0], title: { ru: '', en: 'Basic' } }]))
-      .toThrow(/localized/)
+    expect(() => assertExampleCatalog([{ ...EXAMPLE_CATALOG[0], title: { ru: '', en: 'Basic' } }])).toThrow(/localized/)
   })
 })

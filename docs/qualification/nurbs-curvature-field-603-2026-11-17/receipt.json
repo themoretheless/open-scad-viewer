@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0603",
+  "testedBase": "32158ae21ea4c9002bf8877c1adfa3942f862af5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 186,
+  "scope": [
+    "Enclose the maximizing unit normal when the projected area vector is separated from zero.",
+    "Verify direction bounds for a nonplanar face with a hole and withhold a direction when the area vector may be zero."
+  ],
+  "logSha256": "38d9e1889c705aa61fd30e4c7d56b04ddff571ce2c27194e636cc47501168e81",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "713642f2bf841eaaf41290ae834b6832f8b39fb0038bb6854eb74ff7751dbd53"
+  }
+}

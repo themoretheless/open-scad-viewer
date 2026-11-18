@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0280",
+  "testedBase": "b8144ff57a88c8d58a1239199e5d3141d8568faa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_tensor_compression_contracts",
+    "--test",
+    "exact_surface_knot_removal_contracts",
+    "--test",
+    "exact_surface_degree_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 17,
+  "scope": [
+    "Alternates exact tensor knot removal and smooth degree reduction across both axes, preserving the complete UV law and denominator under a shared work budget.",
+    "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate."
+  ],
+  "logSha256": "c0da62c5eb107cf482b92c6fbeeab622126c1f9b33dd4f88e5a1bc996998a9f8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "430ad59582f16c203ab191c597926ae860bcd4662eda5c9aca6f93b1526229f1",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs": "affe4aaea776f0d9230519ead5a69c50e9294ac9e470a71b1bfb021d366bc24f",
+    "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs": "eae0b9b04ea7d8649dc17406738f4ceba1b429b70d574408aff2b99231a611ca",
+    "crates/nurbs-core/src/editing/exact_tensor_edit.rs": "e645914783d990bd687cd2249943f86d3835d42dbc86b6d456821b5a296c6e8e",
+    "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs": "32c6c7c8e7c5ba4245050cef7b209eddb5ad6041b3a952c3022ba4610e4f43ef"
+  }
+}

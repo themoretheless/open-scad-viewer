@@ -88,13 +88,9 @@ fn owned_c1_filled_cap_keeps_curvature_jump_and_c0_cap_wall_class_without_c2_cre
     };
     let run = |order| {
         construct_with_original_smooth_volume(
-            &sweep,
-            &[4],
-            5,
-            [&c, &c],
+            SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&c, &c] },
             [&c, &end],
-            1e-8,
-            0.05,
+            SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
             limits(),
             p,
             OriginalSmoothVolumeLimits { order, ..requested },
@@ -135,13 +131,9 @@ fn owned_c1_filled_cap_keeps_curvature_jump_and_c0_cap_wall_class_without_c2_cre
         p[2] += 2.;
     }
     let OriginalSmoothBodyAttempt::Refused(r) = construct_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&sharp, &sharp],
+        SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&sharp, &sharp] },
         [&sharp, &sharp_end],
-        1e-8,
-        0.05,
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
         limits(),
         p,
         requested,

@@ -10,7 +10,8 @@
     "bench:kernel:record": "node rbench-regression.mjs record",
     "bench:kernel:check": "node rbench-regression.mjs check",
     "test:rbench": "node --test rbench-regression.test.mjs",
-    "test:differential": "node differential.mjs"
+    "test:differential": "node generate-corpus.mjs --check && node differential.mjs",
+    "corpus:generate": "node generate-corpus.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

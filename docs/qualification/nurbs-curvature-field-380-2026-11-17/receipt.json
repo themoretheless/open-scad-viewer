@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0380",
+  "testedBase": "c4702e835bcd21d40c9e791568e2aeed2e058d80",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 85,
+  "scope": [
+    "Close a shell across multiple exact section planes under common arithmetic and verification limits.",
+    "Caps are staged under cumulative work and pcurve verification limits. The selected shell must validate as closed after the last plane. Original edges and vertices are retained."
+  ],
+  "logSha256": "bb29fa0193364f65d60b3acdac3f34f090d6aefaf5d674d7c61ec6da6a795cd8",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f458c079af606f6b3a8e1ca226f7d83263227be53010009c0f7f71487f341694",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "6d9d1e4b384ed04e80ed5983fdbd88236babddebf28e2860787a578cc8a7603e",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "e4a34a8f4b0daec96fc8a81887c7a843e7b6e392cd02b33242d0131408cf4967",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "ed8ff8a63b23e2b15a74e849cf3671164c51db8a35e61120b828555de23f6c85"
+  }
+}

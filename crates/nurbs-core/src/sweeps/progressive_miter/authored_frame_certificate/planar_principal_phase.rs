@@ -210,35 +210,42 @@ pub(crate) fn certify_planar_principal_values(
     )
 }
 pub(crate) fn certify_planar_principal_control_values(
-    path: &Curve,
-    normal: [f64; 3],
-    sign: f64,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::ProfileLaws<'_>,
+    plane: PrincipalPlane,
     qs: &[[[f64; 2]; 3]],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let PrincipalPlane { normal, sign } = plane;
     let frame = certify_planar_principal_values(
         path, normal, sign, twist, traversal, traversal, max_cells,
     )?;
     super::trajectory::control_values_with_fit(
-        path, scale, affine, qs, traversal, max_cells, frame, None,
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
     )
 }
+/// The fixed plane of a planar principal frame: its normal and the chosen orientation sign.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct PrincipalPlane {
+    pub normal: [f64; 3],
+    pub sign: f64,
+}
 pub(crate) fn certify_planar_principal_relative_values(
-    path: &Curve,
-    normal: [f64; 3],
-    sign: f64,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::ProfileLaws<'_>,
+    plane: PrincipalPlane,
     qs: &[[[f64; 2]; 3]],
     path_traversal: [f64; 2],
     law_traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let PrincipalPlane { normal, sign } = plane;
     let frame = certify_planar_principal_values(
         path,
         normal,
@@ -250,9 +257,7 @@ pub(crate) fn certify_planar_principal_relative_values(
     )?;
     let zero = crate::sweeps::progressive_sweep::constant_vector_law([0.; 3])?;
     super::trajectory::control_values_with_fit(
-        &zero,
-        scale,
-        affine,
+        super::ControlLaws { path: &zero, scale, affine },
         qs,
         law_traversal,
         max_cells,
@@ -261,16 +266,14 @@ pub(crate) fn certify_planar_principal_relative_values(
     )
 }
 pub(crate) fn certify_planar_principal_control_trajectories(
-    path: &Curve,
-    normal: [f64; 3],
-    sign: f64,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::ProfileLaws<'_>,
+    plane: PrincipalPlane,
     qs: &[[[f64; 2]; 3]],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<TrajectoriesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let PrincipalPlane { normal, sign } = plane;
     check(sign == 1. || sign == -1., "Invalid planar principal phase")?;
     let mut frame = certify_fixed_normal_path(path, normal, twist, traversal, max_cells)?;
     if frame.status == Status::Certified {
@@ -286,6 +289,11 @@ pub(crate) fn certify_planar_principal_control_trajectories(
         frame.binormal = Some(signed_jet(n, -sign));
     }
     super::trajectory::control_trajectories_with_fit(
-        path, scale, affine, qs, traversal, max_cells, frame, None,
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
     )
 }

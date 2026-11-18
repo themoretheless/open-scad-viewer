@@ -16,18 +16,31 @@ pub struct Report {
     pub pairs: sweep_pair_audit::Report,
 }
 
+/// Required clearance, distance tolerance and the injectivity, pair and
+/// pair-refinement budgets of one wall audit.
+#[derive(Clone, Copy, Debug)]
+pub struct WallAuditLimits {
+    pub clearance: f64,
+    pub distance_tolerance: f64,
+    pub max_injectivity_cells: usize,
+    pub max_pairs: usize,
+    pub max_pair_cells: usize,
+}
 /// The injectivity budget is shared across all charts, independently of the
 /// pair hierarchy and pair refinement budgets. No partial chart certificate
 /// promotes the aggregate result.
 pub fn inspect(
     walls: &[Surface],
     shared: &[[usize; 2]],
-    clearance: f64,
-    distance_tolerance: f64,
-    max_injectivity_cells: usize,
-    max_pairs: usize,
-    max_pair_cells: usize,
+    limits: WallAuditLimits,
 ) -> Result<Report> {
+    let WallAuditLimits {
+        clearance,
+        distance_tolerance,
+        max_injectivity_cells,
+        max_pairs,
+        max_pair_cells,
+    } = limits;
     check(
         max_injectivity_cells <= 100000,
         "Invalid injectivity budget",
@@ -104,9 +117,31 @@ mod tests {
     #[test]
     fn separation_does_not_mask_folded_chart_or_shared_budget_exhaustion() {
         let walls = [plane(0.), plane(3.)];
-        let r = inspect(&walls, &[], 0., 0.001, 2, 100, 100).unwrap();
+        let r = inspect(
+            &walls,
+            &[],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 2,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap();
         assert!(r.charts_and_pairs_certified);
-        let r = inspect(&walls, &[], 0., 0.001, 1, 100, 100).unwrap();
+        let r = inspect(
+            &walls,
+            &[],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 1,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap();
         assert!(!r.charts_and_pairs_certified);
         assert_eq!(r.injectivity_cells, 1);
         assert_eq!(r.unresolved_charts, vec![1]);
@@ -116,7 +151,18 @@ mod tests {
         folded.knots_u = vec![0., 0., 0.5, 1., 1.];
         folded.control_points.push(folded.control_points[0].clone());
         folded.weights.push(vec![1.; 2]);
-        let r = inspect(&[folded, plane(3.)], &[], 0., 0.001, 100, 100, 100).unwrap();
+        let r = inspect(
+            &[folded, plane(3.)],
+            &[],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap();
         assert!(r.pairs.all_pairs_separated);
         assert!(!r.charts_and_pairs_certified);
         assert!(r.injectivity_cells <= 100);
@@ -230,7 +276,18 @@ mod tests {
         s.knots_u = vec![0., 0., 0.5, 0.5, 1., 1.];
         s.control_points.extend(plane(3.).control_points);
         s.weights.extend(vec![vec![1.; 2]; 2]);
-        let error = inspect(&[s], &[], 0., 0.001, 100, 100, 100).unwrap_err();
+        let error = inspect(
+            &[s],
+            &[],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap_err();
         assert_eq!(error.code, "NURBS_INVALID_INPUT");
         assert!(error.message.contains("Interior multiplicity"));
     }
@@ -243,7 +300,18 @@ mod tests {
                 point[1] += 1.;
             }
         }
-        let r = inspect(&[a.clone(), b.clone()], &[[0, 1]], 0., 0.001, 100, 100, 100).unwrap();
+        let r = inspect(
+            &[a.clone(), b.clone()],
+            &[[0, 1]],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap();
         assert!(r.charts_and_pairs_certified && r.declared_boundaries_c0);
         assert_eq!(r.c0_boundaries, vec![[0, 1]]);
         for row in &mut b.control_points {
@@ -251,9 +319,31 @@ mod tests {
                 point[1] += 0.25;
             }
         }
-        let separated = inspect(&[a.clone(), b.clone()], &[], 0., 0.001, 100, 100, 100).unwrap();
+        let separated = inspect(
+            &[a.clone(), b.clone()],
+            &[],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap();
         assert!(separated.charts_and_pairs_certified && separated.pairs.all_pairs_separated);
-        let r = inspect(&[a, b], &[[0, 1]], 0., 0.001, 100, 100, 100).unwrap();
+        let r = inspect(
+            &[a, b],
+            &[[0, 1]],
+            WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 0.001,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 100,
+            },
+        )
+        .unwrap();
         assert!(!r.charts_and_pairs_certified && !r.declared_boundaries_c0);
         assert_eq!(r.unresolved_boundaries, vec![[0, 1]]);
     }

@@ -399,21 +399,30 @@ pub(super) fn preflight_inner(
             local_markers.insert(node.id(), refs.into_values().collect::<Vec<_>>());
         }
     }
-    #[expect(clippy::too_many_arguments, reason = "SVG traversal carries explicit inherited rendering state")]
-    fn cost<'a, 'input>(
-        node: usvg::roxmltree::Node<'a, 'input>,
-        ids: &std::collections::HashMap<&str, usvg::roxmltree::Node<'a, 'input>>,
-        local_markers: &std::collections::HashMap<
+    /// Read-only document indexes shared by every step of the cost traversal.
+    #[derive(Clone, Copy)]
+    struct CostIndex<'i, 'a, 'input> {
+        ids: &'i std::collections::HashMap<&'i str, usvg::roxmltree::Node<'a, 'input>>,
+        local_markers: &'i std::collections::HashMap<
             usvg::roxmltree::NodeId,
             Vec<MarkerLink<'a, 'input>>,
         >,
-        primitive_units: &std::collections::HashMap<usvg::roxmltree::NodeId, usize>,
+        primitive_units: &'i std::collections::HashMap<usvg::roxmltree::NodeId, usize>,
+    }
+    fn cost<'a, 'input>(
+        node: usvg::roxmltree::Node<'a, 'input>,
+        index: CostIndex<'_, 'a, 'input>,
         inherited: &[MarkerLink<'a, 'input>],
         stack: &mut Vec<usvg::roxmltree::NodeId>,
         marker_stack: &mut Vec<usvg::roxmltree::NodeId>,
         copies: usize,
         budget: &mut usize,
     ) -> Result<()> {
+        let CostIndex {
+            ids,
+            local_markers,
+            primitive_units,
+        } = index;
         if stack.contains(&node.id()) {
             return Err(invalid("Cyclic SVG use reference"));
         }
@@ -500,9 +509,7 @@ pub(super) fn preflight_inner(
                     };
                 cost(
                     marker.node,
-                    ids,
-                    local_markers,
-                    primitive_units,
+                    index,
                     &source_inherited,
                     &mut Vec::new(),
                     marker_stack,
@@ -522,9 +529,7 @@ pub(super) fn preflight_inner(
                 if let Some(target) = href.strip_prefix('#').and_then(|id| ids.get(id)) {
                     cost(
                         *target,
-                        ids,
-                        local_markers,
-                        primitive_units,
+                        index,
                         &markers,
                         stack,
                         marker_stack,
@@ -539,9 +544,7 @@ pub(super) fn preflight_inner(
         for child in node.children().filter(|n| n.is_element()) {
             cost(
                 child,
-                ids,
-                local_markers,
-                primitive_units,
+                index,
                 &markers,
                 stack,
                 marker_stack,
@@ -554,9 +557,11 @@ pub(super) fn preflight_inner(
     }
     cost(
         root,
-        &ids,
-        &local_markers,
-        &primitive_units,
+        CostIndex {
+            ids: &ids,
+            local_markers: &local_markers,
+            primitive_units: &primitive_units,
+        },
         &[],
         &mut Vec::new(),
         &mut Vec::new(),

@@ -5,6 +5,7 @@
 //! `general-nurbs-step` is lifted here for freeform cuboid / bump / cavity solids.
 
 use brep_core::Model;
+pub use brep_core::freeform_cuboid::{freeform_cuboid_solid, freeform_cuboid_with_bump_face};
 use brep_core::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
     StepGraphRoot, StepWriter, as_uniform_bicubic, emit_b_spline_surface, fmt_refs,
@@ -17,58 +18,8 @@ use nurbs_core::{Result, surface::Surface};
 pub const NURBS_STEP_SOLID_CAPABILITY: &str = "nurbs-step-solid/1";
 pub const NURBS_STEP_SOLID_V2_CAPABILITY: &str = "step-interchange/2";
 
-/// Cuboid with each face elevated to uniform bicubic (degree 3×3, w≡1) for STEP honesty.
-pub fn freeform_cuboid_solid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
-    let mut model = brep_core::cuboid(min, max)?;
-    for face in &mut model.faces {
-        let elev = as_uniform_bicubic(&face.surface).ok_or_else(|| {
-            refuse("freeform_cuboid_solid requires elevatable planar bilinear faces")
-        })?;
-        face.surface = elev;
-    }
-    model.validate()?;
-    Ok(model)
-}
 
-fn bump_top_surface(min: [f64; 3], max: [f64; 3], bump: f64) -> Surface {
-    // Match cuboid +Z face control layout: corners [4,5,6,7] → bilinear then elevate + bump.
-    let p00 = [min[0], min[1], max[2]];
-    let p10 = [max[0], min[1], max[2]];
-    let p01 = [min[0], max[1], max[2]];
-    let p11 = [max[0], max[1], max[2]];
-    let bilinear = Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![p00.to_vec(), p01.to_vec()],
-            vec![p10.to_vec(), p11.to_vec()],
-        ],
-        weights: vec![vec![1., 1.], vec![1., 1.]],
-        periodic_u: false,
-        periodic_v: false,
-    };
-    let mut s = as_uniform_bicubic(&bilinear).expect("bilinear elevates");
-    for row in s.control_points.iter_mut().skip(1).take(2) {
-        for point in row.iter_mut().skip(1).take(2) {
-            point[2] += bump;
-        }
-    }
-    s
-}
 
-/// Cuboid with +Z face replaced by a native bicubic bump (corners match).
-pub fn freeform_cuboid_with_bump_face(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
-    let mut model = freeform_cuboid_solid(min, max)?;
-    // cuboid face 1 is +Z ([4,5,6,7])
-    model.faces[1].surface = bump_top_surface(min, max, 0.15 * (max[2] - min[2]).max(0.05));
-    if !is_uniform_bicubic_positive(&model.faces[1].surface) {
-        return Err(refuse("bump face must be uniform bicubic w≡1"));
-    }
-    model.validate()?;
-    Ok(model)
-}
 
 fn admit_solid_for_export(model: &Model) -> Result<()> {
     model.validate()?;

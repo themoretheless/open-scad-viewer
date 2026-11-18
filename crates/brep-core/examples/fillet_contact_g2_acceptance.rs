@@ -35,13 +35,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut exact_work = built.exact_work;
     for (i, contact) in built.contacts.as_ref().unwrap().iter().enumerate() {
         let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &contact.curve,
-            [&contact.support_pcurve, &contact.fillet_pcurve],
-            [if i == 0 { &a } else { &c }, skin],
-            [false, false],
-            1e-6,
-            1e-5,
-            1e-4,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &contact.curve, pcurves: [&contact.support_pcurve, &contact.fillet_pcurve], surfaces: [if i == 0 { &a } else { &c }, skin], reversed: [false, false] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
             100000 - cells,
             1000000 - exact_work,
         )?;

@@ -4,15 +4,6 @@
 //! The host (CAD) sections a mesh and passes rings. This crate offsets walls,
 //! hatches infill, and can encode the plan through `gcode-core`. Coordinates
 //! are millimeters.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 
 use planar_geometry::{
     path::BezierPath,
@@ -86,6 +77,8 @@ pub enum PathRole {
     SolidSkin,
     Bridge,
     Support,
+    /// Variable-width centre-line bead for a wall thinner than two line widths.
+    ThinWall,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -249,13 +242,17 @@ pub(crate) fn path_from_ring(role: PathRole, ring: &[[f64; 2]], closed: bool) ->
 
 mod adhesion_and_support;
 mod infill;
+mod thin_walls;
 
 pub use adhesion_and_support::{
-    BrimConfig, Contour, FuzzySkinConfig, RaftConfig, SkirtConfig, SupportConfig, TreeSupportNode,
+    BrimConfig, Contour, FuzzySkinConfig, RaftConfig, ShellConfig, SkirtConfig, SupportConfig,
+    SupportPattern, TreeSupportNode,
     VariableLayerConfig, apply_fuzzy_skin_to_contour, generate_brim, generate_raft, generate_skirt,
-    plan_layers_with_skins_and_supports, plan_tree_support_trunks, schedule_adaptive_heights,
+    WidthPlan, plan_layers_with_shells, plan_layers_with_skins_and_supports,
+    plan_layers_with_thin_walls, plan_tree_support_trunks, schedule_adaptive_heights,
 };
 pub use infill::generate_gyroid_infill_lines;
+pub use thin_walls::ThinWallConfig;
 use infill::{generate_cubic_infill, generate_infill, hatch, hatch_angled};
 
 /// Offset contours and hatch one already-computed layer section. Contours use

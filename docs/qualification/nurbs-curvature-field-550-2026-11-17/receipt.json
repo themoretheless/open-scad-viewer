@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0550",
+  "testedBase": "f55c50ff5bdee27ed8f2777005cac094caec1728",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 157,
+  "scope": [
+    "Build an exact containment forest for simple, mutually disjoint periodic UV polygons.",
+    "Certify each cyclic contour and each pair of boundaries before resolving immediate parents and nesting depths."
+  ],
+  "logSha256": "8dc2a85f3dc4e3b9d96e9b55f85aa30d8fe11d04921a14d47ac8d1ba61b9bfba",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1d8d546ebbd51be6b3a1d4f606c46d005596404f0117acd680aa8ef734553672",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "8a555ef347bf5a70dbd97146f38a3e907432ea7ee8fe29b5deb5304160cfec8d"
+  }
+}

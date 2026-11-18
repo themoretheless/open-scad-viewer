@@ -1,0 +1,150 @@
+warning: module `methods_mean_matrix__coordinate_path` should have a snake case name
+   --> nurbs-core/src/surface_self_chord.rs:688:5
+    |
+688 | mod methods_mean_matrix__coordinate_path;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_mean_matrix_coordinate_path`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: module `methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:254:5
+    |
+254 | mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_crate_surface_weight_profile_weight_profile_inspect_self_chord_pair`
+
+warning: module `methods_rail_constrained_bridge______self_chord_continuous` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:256:5
+    |
+256 | mod methods_rail_constrained_bridge______self_chord_continuous;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_self_chord_continuous`
+
+warning: module `methods_rail_constrained_bridge______inspect_radius_on_domains` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:258:5
+    |
+258 | mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_radius_on_domains`
+
+warning: module `methods_rail_constrained_bridge______section` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:100:5
+    |
+100 | mod methods_rail_constrained_bridge______section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_section`
+
+warning: module `methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:102:5
+    |
+102 | mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_transverse_corrected_injectivity_policy`
+
+warning: module `methods_profile_section___profile` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:252:5
+    |
+252 | mod methods_profile_section___profile;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_section_profile`
+
+warning: module `methods_profile_end_transition___section` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:254:5
+    |
+254 | mod methods_profile_end_transition___section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_end_transition_section`
+
+warning: `nurbs-core` (lib) generated 8 warnings
+warning: function `family` is never used
+  --> nurbs-core/tests/support/ss_closed_fiber.rs:39:8
+   |
+39 | pub fn family(source: &FiberSources, ellipses: &[([f64; 2], [f64; 2])]) -> Vec<QualifiedFiber> {
+   |        ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `circle_family` is never used
+  --> nurbs-core/tests/support/ss_closed_fiber.rs:93:8
+   |
+93 | pub fn circle_family(source: &FiberSources) -> Vec<QualifiedFiber> {
+   |        ^^^^^^^^^^^^^
+
+warning: function `owner` is never used
+  --> nurbs-core/tests/support/ss_closed_fiber.rs:96:8
+   |
+96 | pub fn owner(
+   |        ^^^^^
+
+warning: function `two_ovals` is never used
+   --> nurbs-core/tests/support/ss_closed_fiber.rs:134:8
+    |
+134 | pub fn two_ovals() -> FiberSources {
+    |        ^^^^^^^^^
+
+warning: `nurbs-core` (test "ss_closed_cycle") generated 4 warnings
+warning: `nurbs-core` (test "ss_closed_automatic") generated 3 warnings (3 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running tests/ss_closed_automatic.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/4e880bfe47ba4db2/out/ss_closed_automatic-4e880bfe47ba4db2)
+
+running 15 tests
+test invalid_work_limits_refuse_without_an_owner ... ok
+test isolated_contact_replay_supports_operand_reversal_and_rejects_projection_damage ... ok
+test discovered_contact_never_absorbs_a_nonzero_gap_mixed_residual_or_projection_damage ... ok
+test quartic_flat_singular_contact_has_an_exact_complete_point_certificate ... ok
+test discovery_uses_original_shifted_contact_and_normalized_domains_with_independent_gauges ... ok
+test public_dispatch_discovers_quartic_contact_without_supplied_specification ... ok
+test exact_graph_shear_keeps_original_carriers_and_root_parameter_ownership ... ok
+test missing_chart_coverage_and_exhausted_proposals_cannot_publish_a_closed_owner ... ok
+test automatic_contact_recognition_checks_all_supported_even_orders ... ok
+test automatic_closed_census_uses_multiple_local_clocks ... ok
+test singular_isolated_quartic_contact_is_not_a_regular_closed_branch ... ok
+test smooth_nonconic_loop_has_a_complete_original_source_owner ... ok
+test automatic_closed_census_finds_both_disconnected_hidden_ovals ... ok
+test flat_quartic_loop_has_a_complete_original_graph_reduction ... ok
+test public_dispatch_builds_hidden_quartic_loop_with_complete_census_and_owned_trims ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.33s
+
+     Running tests/ss_closed_cycle.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/41b962c8578b4f6f/out/ss_closed_cycle-41b962c8578b4f6f)
+
+running 4 tests
+test missing_cycle_work_or_unknown_components_cannot_publish_a_closed_traversal ... ok
+test original_closed_component_has_an_oriented_first_return_cycle_and_shared_ports ... ok
+test whole_closed_cycle_saves_literal_paired_endpoints_with_original_root_bounds ... ok
+test rational_projective_carriers_keep_original_closed_cycle_and_saved_trace ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.81s
+
+     Running tests/ss_closed_fiber_branches.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/6460da406fdddcd7/out/ss_closed_fiber_branches-6460da406fdddcd7)
+
+running 7 tests
+test open_original_arcs_cannot_be_relabelled_as_closed_branches ... ok
+test closed_branch_stations_remain_original_root_selectors_and_reject_unowned_queries ... ok
+test source_wide_c1_gate_does_not_inherit_smoothness_from_root_samples ... ok
+test folded_complete_carrier_never_inherits_world_injection_from_local_root_charts ... ok
+test full_original_circle_is_an_embedded_closed_branch_with_two_procedural_trims ... ok
+test local_product_coverage_and_invalid_work_never_publish_a_full_closed_census ... ok
+test two_original_closed_ovals_have_complete_separate_world_ownership ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.35s
+
+     Running tests/ss_conditioned_world_trace.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/67bf8ed50c4c480c/out/ss_conditioned_world_trace-67bf8ed50c4c480c)
+
+running 3 tests
+test conditioning_does_not_admit_wrong_world_coefficients_missing_agreement_or_too_tight_error ... ok
+test automatic_trace_builder_owns_the_whole_conditioned_free_interval ... ok
+test original_world_trace_survives_nonlinear_conditioning_and_larger_second_footprint ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/ss_construct_trace.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/b838a8c0063db15d/out/ss_construct_trace-b838a8c0063db15d)
+
+running 4 tests
+test certified_unknown_box_contraction_keeps_every_free_value_and_actual_root ... ok
+test partial_or_failed_construction_never_returns_a_complete_trace ... ok
+test rotated_original_surfaces_and_second_support_clock_construct_the_same_root ... ok
+test adaptive_curved_curved_trace_qualifies_every_original_root_piece ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/ss_construct_trace_budget.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/797e460a96a08b96/out/ss_construct_trace_budget-797e460a96a08b96)
+
+running 1 test
+test complete_original_control_grids_use_caller_work_instead_of_a_fixed_replay_cap ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+

@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MainSolidWorkerPool } from '../src/services/mainSolidWorkerPool'
-import type { MainSolidPort } from '../src/services/mainSolidWorkerClient'
-import type { MainSolidRequest } from '../src/services/mainSolidProtocol'
-import type { TrussModel, TrussResponse } from '../src/services/trussAnalysis'
-import { forEachChunkedAsync, mapChunkedAsync, yieldToEventLoop } from '../src/services/cooperativeAsync'
-import { referenceMeshSlicer, referenceMeshSlicerAsync } from '../src/services/gpuSlicer'
-import { referenceFilterGcodeSegments, referenceFilterGcodeSegmentsAsync } from '../src/services/gpuGcodePreview'
-import { referenceImageContourTrace, referenceImageContourTraceAsync } from '../src/services/gpuImageTrace'
-import { referenceSemanticEdges, referenceSemanticEdgesAsync } from '../src/services/gpuSemanticEdges'
-import { buildFlatBvh, referenceBatchedBvhRaycast, referenceBatchedBvhRaycastAsync } from '../src/services/gpuBvhRaycast'
-import { referenceNurbsTessellate, referenceNurbsTessellateAsync } from '../src/services/gpuNurbsTessellate'
+import { MainSolidWorkerPool } from '../src/kernel/mainSolidWorkerPool'
+import type { MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+import type { MainSolidRequest } from '../src/kernel/mainSolidProtocol'
+import type { TrussModel, TrussResponse } from '../src/kernel/trussAnalysis'
+import { forEachChunkedAsync, mapChunkedAsync, yieldToEventLoop } from '../src/core/cooperativeAsync'
+import { referenceMeshSlicer, referenceMeshSlicerAsync } from '../src/render/gpuSlicer'
+import { referenceFilterGcodeSegments, referenceFilterGcodeSegmentsAsync } from '../src/render/gpuGcodePreview'
+import { referenceImageContourTrace, referenceImageContourTraceAsync } from '../src/render/gpuImageTrace'
+import { referenceSemanticEdges, referenceSemanticEdgesAsync } from '../src/render/gpuSemanticEdges'
+import { buildFlatBvh, referenceBatchedBvhRaycast, referenceBatchedBvhRaycastAsync } from '../src/render/gpuBvhRaycast'
+import { referenceNurbsTessellate, referenceNurbsTessellateAsync } from '../src/render/gpuNurbsTessellate'
 
 class MockSolidPort implements MainSolidPort {
   onmessage: MainSolidPort['onmessage'] = null
@@ -169,7 +169,7 @@ describe('MainSolidWorkerPool & Cooperative Async Execution', () => {
       i => {
         if (i === 5) abortController.abort()
       },
-      { checkStride: 2, signal: abortController.signal }
+      { checkStride: 2, signal: abortController.signal },
     )
     await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
 
@@ -182,11 +182,7 @@ describe('MainSolidWorkerPool & Cooperative Async Execution', () => {
     expect(asyncSlice).toEqual(syncSlice)
 
     // Verify referenceFilterGcodeSegmentsAsync matches referenceFilterGcodeSegments
-    const moves = new Float32Array([
-      0, 0, 0, 0, 50, 0, 0,
-      10, 0, 0, 1, 60, 1, 1,
-      10, 10, 0, 2, 60, 1, 1,
-    ])
+    const moves = new Float32Array([0, 0, 0, 0, 50, 0, 0, 10, 0, 0, 1, 60, 1, 1, 10, 10, 0, 2, 60, 1, 1])
     const syncGcode = referenceFilterGcodeSegments(moves, { minLayer: 1, maxLayer: 2 })
     const asyncGcode = await referenceFilterGcodeSegmentsAsync(moves, {
       minLayer: 1,
@@ -197,28 +193,15 @@ describe('MainSolidWorkerPool & Cooperative Async Execution', () => {
     expect(asyncGcode).toEqual(syncGcode)
 
     // Verify referenceImageContourTraceAsync matches referenceImageContourTrace
-    const pixels = new Uint8Array([
-      0, 0, 0, 255, 255, 255, 255, 255,
-      255, 255, 255, 255, 0, 0, 0, 255,
-    ])
+    const pixels = new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 255])
     const traceOpts = { widthPx: 2, heightPx: 2, widthMm: 10, checkStride: 1, timeBudgetMs: 0 }
     const syncTrace = referenceImageContourTrace(pixels, traceOpts)
     const asyncTrace = await referenceImageContourTraceAsync(pixels, traceOpts)
     expect(asyncTrace).toEqual(syncTrace)
 
     // Verify referenceSemanticEdgesAsync matches referenceSemanticEdges
-    const boxVerts = new Float32Array([
-      0, 0, 0,
-      10, 0, 0,
-      10, 10, 0,
-      0, 0, 10,
-    ])
-    const boxIndices = new Uint32Array([
-      0, 2, 1,
-      0, 1, 3,
-      1, 2, 3,
-      2, 0, 3,
-    ])
+    const boxVerts = new Float32Array([0, 0, 0, 10, 0, 0, 10, 10, 0, 0, 0, 10])
+    const boxIndices = new Uint32Array([0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3])
     const syncEdges = referenceSemanticEdges(boxVerts, boxIndices, { creaseAngleDeg: 30 })
     const asyncEdges = await referenceSemanticEdgesAsync(boxVerts, boxIndices, {
       creaseAngleDeg: 30,
@@ -248,12 +231,7 @@ describe('MainSolidWorkerPool & Cooperative Async Execution', () => {
       numCpV: 2,
       knotsU: new Float32Array([0, 0, 1, 1]),
       knotsV: new Float32Array([0, 0, 1, 1]),
-      controlPoints: new Float32Array([
-        0, 0, 0,
-        10, 0, 0,
-        0, 10, 0,
-        10, 10, 5,
-      ]),
+      controlPoints: new Float32Array([0, 0, 0, 10, 0, 0, 0, 10, 0, 10, 10, 5]),
     }
     const syncNurbs = referenceNurbsTessellate(patch, 4, 4)
     const asyncNurbs = await referenceNurbsTessellateAsync(patch, 4, 4, { checkStride: 1, timeBudgetMs: 0 })

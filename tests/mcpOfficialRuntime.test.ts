@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  fromJsonSchema,
-  InMemoryTransport,
-  type JSONRPCMessage,
-} from '@modelcontextprotocol/server'
+import { fromJsonSchema, InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { OPENSCAD_2021_01_CONTRACT } from '../src/core/openScad2021Contract'
 import { createOpenScadMcpServer } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
@@ -123,10 +119,7 @@ class FakeOfficialRuntime implements OfficialOpenScadRuntimeService {
     return CAPABILITIES
   }
 
-  async check(
-    source: string,
-    options?: OfficialOpenScadRunOptions,
-  ): Promise<OfficialOpenScadCheckResult> {
+  async check(source: string, options?: OfficialOpenScadRunOptions): Promise<OfficialOpenScadCheckResult> {
     this.checkCalls.push({ source, options })
     if (this.nextCheckError !== null) {
       const error = this.nextCheckError
@@ -234,11 +227,7 @@ describe('official OpenSCAD MCP facade', () => {
       ['E_OFFICIAL_OPENSCAD_CHILD_CRASH', 'internal_error', true],
     ] as const
     for (const [code, publicCode, retryable] of supervisorCases) {
-      const mapped = publicToolError(new OfficialOpenScadSupervisorError(
-        code,
-        `/private/runtime SECRET_${code}`,
-        1,
-      ))
+      const mapped = publicToolError(new OfficialOpenScadSupervisorError(code, `/private/runtime SECRET_${code}`, 1))
       expect(mapped.error).toMatchObject({ code: publicCode, retryable })
       expect(JSON.stringify(mapped.error)).not.toContain('/private/')
       expect(JSON.stringify(mapped.error)).not.toContain('SECRET_')
@@ -251,13 +240,15 @@ describe('official OpenSCAD MCP facade', () => {
       ['E_OFFICIAL_RUNNER', 'internal_error', true],
     ] as const
     for (const [code, publicCode, retryable] of remoteCases) {
-      const mapped = publicToolError(new OfficialOpenScadRemoteError(
-        code,
-        '/private/runtime SECRET_REMOTE',
-        1,
-        { stdout: [], stderr: [], truncated: false },
-        1,
-      ))
+      const mapped = publicToolError(
+        new OfficialOpenScadRemoteError(
+          code,
+          '/private/runtime SECRET_REMOTE',
+          1,
+          { stdout: [], stderr: [], truncated: false },
+          1,
+        ),
+      )
       expect(mapped.error).toMatchObject({ code: publicCode, retryable })
       expect(JSON.stringify(mapped.error)).not.toContain('/private/')
       expect(JSON.stringify(mapped.error)).not.toContain('SECRET_REMOTE')
@@ -267,20 +258,18 @@ describe('official OpenSCAD MCP facade', () => {
   it('advertises typed status/check/export tools and forwards an isolated project', async () => {
     const runtime = new FakeOfficialRuntime()
     const { request } = await connectedServer(runtime)
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{ name: string; inputSchema: Record<string, unknown>; outputSchema: Record<string, unknown> }>
     }
     const tools = new Map(listed.tools.map(tool => [tool.name, tool]))
-    expect([...tools.keys()]).toEqual(expect.arrayContaining([
-      'openscad_official_status',
-      'openscad_official_check',
-      'openscad_official_export',
-    ]))
+    expect([...tools.keys()]).toEqual(
+      expect.arrayContaining(['openscad_official_status', 'openscad_official_check', 'openscad_official_export']),
+    )
 
-    const status = await request('tools/call', {
+    const status = (await request('tools/call', {
       name: 'openscad_official_status',
       arguments: {},
-    }) as { structuredContent: Record<string, unknown> }
+    })) as { structuredContent: Record<string, unknown> }
     expect(status.structuredContent).toMatchObject({
       language_contract: {
         id: OPENSCAD_2021_01_CONTRACT.id,
@@ -301,11 +290,14 @@ describe('official OpenSCAD MCP facade', () => {
         },
       },
     })
-    expect(await fromJsonSchema(tools.get('openscad_official_status')!.outputSchema)['~standard']
-      .validate(status.structuredContent)).not.toHaveProperty('issues')
+    expect(
+      await fromJsonSchema(tools.get('openscad_official_status')!.outputSchema)['~standard'].validate(
+        status.structuredContent,
+      ),
+    ).not.toHaveProperty('issues')
 
     const source = 'include <parts/library.scad>; make_part();'
-    const checked = await request('tools/call', {
+    const checked = (await request('tools/call', {
       name: 'openscad_official_check',
       arguments: {
         source,
@@ -322,9 +314,12 @@ describe('official OpenSCAD MCP facade', () => {
         check_parameter_ranges: false,
         timeout_ms: 2_000,
       },
-    }) as { structuredContent: Record<string, unknown> }
-    expect(await fromJsonSchema(tools.get('openscad_official_check')!.outputSchema)['~standard']
-      .validate(checked.structuredContent)).not.toHaveProperty('issues')
+    })) as { structuredContent: Record<string, unknown> }
+    expect(
+      await fromJsonSchema(tools.get('openscad_official_check')!.outputSchema)['~standard'].validate(
+        checked.structuredContent,
+      ),
+    ).not.toHaveProperty('issues')
     expect(checked.structuredContent).toMatchObject({
       check: {
         provider_role: 'qualification-oracle',
@@ -354,7 +349,7 @@ describe('official OpenSCAD MCP facade', () => {
       data: new Uint8Array([0, 1, 2, 3]),
     })
 
-    const capabilities = await request('resources/read', { uri: 'openscad://capabilities' }) as {
+    const capabilities = (await request('resources/read', { uri: 'openscad://capabilities' })) as {
       contents: Array<{ text: string }>
     }
     const capabilityDocument = JSON.parse(capabilities.contents[0].text) as {
@@ -379,47 +374,52 @@ describe('official OpenSCAD MCP facade', () => {
       compatibility_tail_policy: OPENSCAD_2021_01_CONTRACT.executionRuntime.compatibilityTailPolicy,
       resource_uri: 'openscad://language/openscad-2021.01',
     })
-    const dedicated = await request('resources/read', { uri: 'openscad://official-runtime' }) as {
+    const dedicated = (await request('resources/read', { uri: 'openscad://official-runtime' })) as {
       contents: Array<{ text: string }>
     }
     expect(JSON.parse(dedicated.contents[0].text)).toEqual(status.structuredContent)
 
-    const language = await request('resources/read', {
+    const language = (await request('resources/read', {
       uri: 'openscad://language/openscad-2021.01',
-    }) as { contents: Array<{ text: string }> }
+    })) as { contents: Array<{ text: string }> }
     expect(JSON.parse(language.contents[0].text)).toEqual({
       contract: JSON.parse(JSON.stringify(OPENSCAD_2021_01_CONTRACT)),
     })
-    const resources = await request('resources/list') as { resources: Array<{ uri: string }> }
-    expect(resources.resources).toContainEqual(expect.objectContaining({
-      uri: 'openscad://language/openscad-2021.01',
-    }))
+    const resources = (await request('resources/list')) as { resources: Array<{ uri: string }> }
+    expect(resources.resources).toContainEqual(
+      expect.objectContaining({
+        uri: 'openscad://language/openscad-2021.01',
+      }),
+    )
   })
 
   it('returns content-addressed session resources and validates export output on the wire', async () => {
     const runtime = new FakeOfficialRuntime()
     const { request } = await connectedServer(runtime)
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{ name: string; outputSchema: Record<string, unknown> }>
     }
     const exportTool = listed.tools.find(tool => tool.name === 'openscad_official_export')!
-    const first = await request('tools/call', {
+    const first = (await request('tools/call', {
       name: 'openscad_official_export',
       arguments: { source: 'minkowski() { cube(1); sphere(1); }', format: 'stl' },
-    }) as {
+    })) as {
       content: Array<Record<string, unknown>>
       structuredContent: {
         export: { provider_role: string; language_contract: { id: string } }
         artifact: { id: string; resource_uri: string; sha256: string }
       }
     }
-    expect(await fromJsonSchema(exportTool.outputSchema)['~standard']
-      .validate(first.structuredContent)).not.toHaveProperty('issues')
-    expect(first.content).toContainEqual(expect.objectContaining({
-      type: 'resource_link',
-      uri: first.structuredContent.artifact.resource_uri,
-      mimeType: 'model/stl',
-    }))
+    expect(
+      await fromJsonSchema(exportTool.outputSchema)['~standard'].validate(first.structuredContent),
+    ).not.toHaveProperty('issues')
+    expect(first.content).toContainEqual(
+      expect.objectContaining({
+        type: 'resource_link',
+        uri: first.structuredContent.artifact.resource_uri,
+        mimeType: 'model/stl',
+      }),
+    )
     expect(first.structuredContent.artifact).toMatchObject({
       id: expect.stringMatching(/^[a-f0-9]{64}$/),
       sha256: digest(runtime.exportedData),
@@ -427,30 +427,36 @@ describe('official OpenSCAD MCP facade', () => {
     expect(first.structuredContent.export.language_contract.id).toBe(OPENSCAD_2021_01_CONTRACT.id)
     expect(first.structuredContent.export.provider_role).toBe('qualification-oracle')
 
-    const artifact = await request('resources/read', {
+    const artifact = (await request('resources/read', {
       uri: first.structuredContent.artifact.resource_uri,
-    }) as { contents: Array<{ blob: string; mimeType: string }> }
-    expect(artifact.contents).toEqual([expect.objectContaining({
-      blob: Buffer.from(runtime.exportedData).toString('base64'),
-      mimeType: 'model/stl',
-    })])
+    })) as { contents: Array<{ blob: string; mimeType: string }> }
+    expect(artifact.contents).toEqual([
+      expect.objectContaining({
+        blob: Buffer.from(runtime.exportedData).toString('base64'),
+        mimeType: 'model/stl',
+      }),
+    ])
 
-    const second = await request('tools/call', {
+    const second = (await request('tools/call', {
       name: 'openscad_official_export',
       arguments: { source: 'minkowski() { cube(1); sphere(1); }', format: 'stl' },
-    }) as { structuredContent: { artifact: { id: string } } }
+    })) as { structuredContent: { artifact: { id: string } } }
     expect(second.structuredContent.artifact.id).toBe(first.structuredContent.artifact.id)
 
-    const resources = await request('resources/list') as { resources: Array<{ uri: string }> }
-    expect(resources.resources).toContainEqual(expect.objectContaining({
-      uri: first.structuredContent.artifact.resource_uri,
-    }))
-    const templates = await request('resources/templates/list') as {
+    const resources = (await request('resources/list')) as { resources: Array<{ uri: string }> }
+    expect(resources.resources).toContainEqual(
+      expect.objectContaining({
+        uri: first.structuredContent.artifact.resource_uri,
+      }),
+    )
+    const templates = (await request('resources/templates/list')) as {
       resourceTemplates: Array<{ uriTemplate: string }>
     }
-    expect(templates.resourceTemplates).toContainEqual(expect.objectContaining({
-      uriTemplate: 'openscad://official-artifacts/{id}',
-    }))
+    expect(templates.resourceTemplates).toContainEqual(
+      expect.objectContaining({
+        uriTemplate: 'openscad://official-artifacts/{id}',
+      }),
+    )
   })
 
   it('rejects unsafe project inputs before invoking the runtime', async () => {
@@ -462,19 +468,25 @@ describe('official OpenSCAD MCP facade', () => {
       { source: 'cube(1);', files: [{ path: 'part.dat', data_base64: 'not-base64' }] },
       {
         source: 'cube(1);',
-        files: [{ path: 'same.scad', text: '' }, { path: 'same.scad', text: '' }],
+        files: [
+          { path: 'same.scad', text: '' },
+          { path: 'same.scad', text: '' },
+        ],
       },
       {
         source: 'cube(1);',
-        files: [{ path: 'lib', text: '' }, { path: 'lib/part.scad', text: 'cube(1);' }],
+        files: [
+          { path: 'lib', text: '' },
+          { path: 'lib/part.scad', text: 'cube(1);' },
+        ],
       },
       { source: 'cube(1);', files: [{ path: 'home/cache.dat', text: '' }] },
       { source: 'cube(1);', unexpected: true },
     ]) {
-      const rejected = await request('tools/call', {
+      const rejected = (await request('tools/call', {
         name: 'openscad_official_check',
         arguments: argumentsValue,
-      }) as { isError: boolean; content: Array<{ text?: string }> }
+      })) as { isError: boolean; content: Array<{ text?: string }> }
       expect(rejected.isError).toBe(true)
       expect(rejected.content[0]?.text).toMatch(/invalid|validation|arguments/i)
     }
@@ -493,10 +505,10 @@ describe('official OpenSCAD MCP facade', () => {
       { fileName: 'untrusted.stl' },
     ]) {
       runtime.nextExportOverrides = overrides
-      const rejected = await request('tools/call', {
+      const rejected = (await request('tools/call', {
         name: 'openscad_official_export',
         arguments: { source: 'cube(1);', format: 'stl' },
-      }) as { isError: boolean; structuredContent: Record<string, unknown> }
+      })) as { isError: boolean; structuredContent: Record<string, unknown> }
       expect(rejected).toMatchObject({
         isError: true,
         structuredContent: { error: { code: 'internal_error' } },
@@ -508,7 +520,7 @@ describe('official OpenSCAD MCP facade', () => {
   it('maps expected runtime failures to public codes and redacts internal details', async () => {
     const runtime = new FakeOfficialRuntime()
     const { request } = await connectedServer(runtime)
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{ name: string; outputSchema: Record<string, unknown> }>
     }
     const checkSchema = listed.tools.find(tool => tool.name === 'openscad_official_check')!.outputSchema
@@ -519,17 +531,16 @@ describe('official OpenSCAD MCP facade', () => {
       '/private/runtime SECRET_BUSY',
       1,
     )
-    const busy = await request('tools/call', {
+    const busy = (await request('tools/call', {
       name: 'openscad_official_check',
       arguments: { source: 'cube(1);' },
-    }) as { isError: boolean; structuredContent: { error: Record<string, unknown> } }
+    })) as { isError: boolean; structuredContent: { error: Record<string, unknown> } }
     expect(busy).toMatchObject({
       isError: true,
       structuredContent: { error: { code: 'server_busy', retryable: true } },
     })
     expect(JSON.stringify(busy)).not.toContain('SECRET_BUSY')
-    expect(await fromJsonSchema(checkSchema)['~standard'].validate(busy.structuredContent))
-      .not.toHaveProperty('issues')
+    expect(await fromJsonSchema(checkSchema)['~standard'].validate(busy.structuredContent)).not.toHaveProperty('issues')
 
     runtime.nextCheckError = new OfficialOpenScadRemoteError(
       'E_OPENSCAD_COMPILE',
@@ -538,10 +549,10 @@ describe('official OpenSCAD MCP facade', () => {
       { stdout: [], stderr: ['ERROR: parser failed'], truncated: false },
       1,
     )
-    const compile = await request('tools/call', {
+    const compile = (await request('tools/call', {
       name: 'openscad_official_check',
       arguments: { source: 'broken(' },
-    }) as { isError: boolean; structuredContent: { error: Record<string, unknown> } }
+    })) as { isError: boolean; structuredContent: { error: Record<string, unknown> } }
     expect(compile).toMatchObject({
       isError: true,
       structuredContent: {
@@ -551,8 +562,9 @@ describe('official OpenSCAD MCP facade', () => {
       },
     })
     expect(JSON.stringify(compile)).not.toContain('SECRET_COMPILE')
-    expect(await fromJsonSchema(checkSchema)['~standard'].validate(compile.structuredContent))
-      .not.toHaveProperty('issues')
+    expect(await fromJsonSchema(checkSchema)['~standard'].validate(compile.structuredContent)).not.toHaveProperty(
+      'issues',
+    )
 
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     runtime.nextExportError = new OfficialOpenScadSupervisorError(
@@ -560,10 +572,10 @@ describe('official OpenSCAD MCP facade', () => {
       '/private/runtime SECRET_PROTOCOL',
       3,
     )
-    const protocol = await request('tools/call', {
+    const protocol = (await request('tools/call', {
       name: 'openscad_official_export',
       arguments: { source: 'cube(1);', format: 'stl' },
-    }) as { isError: boolean; structuredContent: { error: Record<string, unknown> } }
+    })) as { isError: boolean; structuredContent: { error: Record<string, unknown> } }
     expect(protocol).toMatchObject({
       isError: true,
       structuredContent: {
@@ -575,8 +587,9 @@ describe('official OpenSCAD MCP facade', () => {
       },
     })
     expect(JSON.stringify(protocol)).not.toContain('SECRET_PROTOCOL')
-    expect(await fromJsonSchema(exportSchema)['~standard'].validate(protocol.structuredContent))
-      .not.toHaveProperty('issues')
+    expect(await fromJsonSchema(exportSchema)['~standard'].validate(protocol.structuredContent)).not.toHaveProperty(
+      'issues',
+    )
 
     runtime.nextExportError = new OfficialOpenScadRemoteError(
       'E_OFFICIAL_RUNNER',
@@ -585,10 +598,10 @@ describe('official OpenSCAD MCP facade', () => {
       { stdout: [], stderr: ['SECRET_REMOTE_LOG'], truncated: false },
       2,
     )
-    const remote = await request('tools/call', {
+    const remote = (await request('tools/call', {
       name: 'openscad_official_export',
       arguments: { source: 'cube(1);', format: 'stl' },
-    }) as { isError: boolean; structuredContent: Record<string, unknown> }
+    })) as { isError: boolean; structuredContent: Record<string, unknown> }
     expect(remote).toMatchObject({
       isError: true,
       structuredContent: {
@@ -602,8 +615,9 @@ describe('official OpenSCAD MCP facade', () => {
     expect(remote.structuredContent).not.toHaveProperty('official_logs')
     expect(remote.structuredContent).not.toHaveProperty('duration_ms')
     expect(JSON.stringify(remote)).not.toContain('SECRET_REMOTE')
-    expect(await fromJsonSchema(exportSchema)['~standard'].validate(remote.structuredContent))
-      .not.toHaveProperty('issues')
+    expect(await fromJsonSchema(exportSchema)['~standard'].validate(remote.structuredContent)).not.toHaveProperty(
+      'issues',
+    )
     expect(log).toHaveBeenCalledTimes(2)
   })
 })

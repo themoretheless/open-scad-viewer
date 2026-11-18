@@ -1,0 +1,15 @@
+{
+  "distinct_tests_passed": 71,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/brep-core/src/ss_trimmed_face.rs": "0446873040c00e1c6e2befb4e7d3cc7d31892d5bdbc04c2292f3187ff6ce1370",
+    "crates/brep-core/src/ss_trimmed_face/events.rs": "43b2ed76229740557c3ba4f03208c8845f60beb5a57a74f7e89bb22c629c1920",
+    "crates/brep-core/src/ss_trimmed_face/events/partition.rs": "a33e25283fa65ef4a4a755f7d2565f8004222bb34bb288f282e91146b406c656",
+    "crates/brep-core/tests/ss_event_edge_partition.rs": "4516076c248ccfcc6538907a97c3fdb736cd1c5baec856a6b1b4f05c1a4d4a2a",
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "096245883db6a5da3bed630cad5ad507de314b006d263d8458b673d344c64601",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "7529b69cae330e57682cb024e04d566f558bf7dddb90040170da2a5e5e86234d",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/partition.rs": "416ad0295cbe64d3e3f3417ef8ca0b6af5c8fb555aa4a2f70a6d70ec42a9131c"
+  },
+  "scope": "Exact original SS edge restriction partitions from face events, endpoint/duplicate lineage, reverse/subrange selection and closed-wire/paired-BRep reconstruction",
+  "remaining": "Stronger projected-endpoint ordering, periodic/lifted edges, cross-source physical junctions, actual surface/face splitting and material Boolean/healing, global lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

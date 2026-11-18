@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0317",
+  "testedBase": "754ada0a1cc3743eceaff8a7fc8739783e9047ff",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_shared_planar_projection_contracts",
+    "--test",
+    "exact_planar_surface_projection_contracts",
+    "--test",
+    "exact_planar_surface_lift_contracts",
+    "--test",
+    "exact_surface_affine_hull_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 9,
+  "scope": [
+    "Project a group into one exact planar coordinate system derived from the affine hull of all active surface images.",
+    "A two-dimensional combined active affine hull, up to 256 surfaces and one shared budget. Every member retains its own parameter basis."
+  ],
+  "logSha256": "ea332637e6460b9f7fc5162a33e667a5d50b5c17e548b9aeac8b369db0fffb33",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "b3ba9e5bdb336207749540a5078807b5071095f556207aa11d20c403a39c4c0f",
+    "crates/nurbs-core/tests/exact_shared_planar_projection_contracts.rs": "c7edd771091cec480f9168330cacf31f9bd89015d8f757779e2818e73b32a081"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "nativeTests": 29,
+  "bridgeTests": 13,
+  "jointInverseTests": 1,
+  "clientTests": 71,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "fc4e8c61838ae819822958adef6a1fac89d36037b2a4f440a7b36eb654242b6a",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/membership.rs": "4a226542a584b2b725e1b6eecb14bd043027e1fe63c30b93c9cc24169312aeca",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/coupled.rs": "9fc98215302af381ba29b15cd8010e5585a1e7b3e2d1dd17aee9e0fb0ed10d86",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock/spline.rs": "f002675d44715cdbc4425d5c0a3349a19c64ae0db77731200cdaa6fbaee98c72",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "f34ffea95575162dbf51f8fd22177c4dfc9e79142cff00b35646bb15b3eb3b25",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "5a4fed5b710a429ac8093dff0108afaefd5901edd9066f446076284cf4e85754",
+    "crates/geometry-bridge/src/intersections/quadric_graph.rs": "5f803286e86504a1d6d00ff5353552459a5080c133d7718c1dcdb64ac84db6ef",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "89ab0eba355c8de5eb673c95aaaf7ad4f96ee23acfb28271313969dd6c6d36fa"
+  },
+  "scope": "Positive nonseparable rational bilinear planar targets with exact parallelogram projection; original plane quadric tensor membership and unique sheet proof remain required. Joint UV inverse via exact probability odds equation and corner-monotonic interval enclosure.",
+  "inverseOracle": "Independent rational bilinear forward map, both signs of coupling and zero coupling, 9x9 parameter grids and projected rectangles.",
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for coupled planar bilinear targets",
+    "Nonplanar coupled weights and higher-degree or multispan coupled targets",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "status": "passed-native-transport-and-client",
+  "baseCommit": "38777d16a4f23e0e74a7f43f7a58aa90b905e599",
+  "bridgeTests": 16,
+  "clientTests": 114,
+  "vueTsc": "passed",
+  "operation": "nurbs_original_quadric_carrier_roots",
+  "schema": "nurbs-original-quadric-carrier-roots/1",
+  "workerRequest": "original-quadric-carrier-roots/1",
+  "rawWasmQualified": false,
+  "chromiumWorkerQualified": false,
+  "finiteSurfaceUvAdmission": false,
+  "bodyAdmission": false,
+  "verified": [
+    "carrier-only schema and natural source parameter",
+    "original constant products and coincidence",
+    "multiplicity 50 survives native serialization and client validation",
+    "zero and over-limit work, malformed Q/products, forged admission fields",
+    "client proof-span/order/work accounting",
+    "busy guard, cancellation, budget correlation, worker termination and native-refusal recovery"
+  ],
+  "pending": [
+    "14 new actual raw-WASM/Worker carrier scenarios",
+    "original finite target surface identity and UV admission",
+    "general freeform and complete surface branches"
+  ],
+  "sourceSha256": {
+    "crates/geometry-bridge/src/dispatch/intersections.rs": "7dab6d2f6b77faec20887302fed82a4ad02240cedb8e5ce36715d7e59d407712",
+    "crates/geometry-bridge/src/intersections.rs": "c1bea82034973c762bfff0071e5bee5b39bfbc1f885818a016f6d358cb6d2be4",
+    "crates/geometry-bridge/src/intersections/quadric_carrier.rs": "d9b5d965ed239d4266f776d356e95246ac3038b2aadadbc217ba602b33e088b7",
+    "crates/geometry-bridge/tests/original_quadric_carrier.rs": "8cf35c5d6d8f708794f8f95d8fb18e87674d84ff41551ea08188aba925833bdb",
+    "src/services/originalQuadricCarrierProtocol.ts": "93b453603aad994429c1a39ada6643fd51b765ef53d4b17ddc6050b5a0a7fd69",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "1be4852f9ae5c617d5d9022214934e109b769df20463d53f9f6b33bbe0d4db3c",
+    "src/workers/surfaceSelfIntersection.worker.ts": "66c3c6a9284a919c081b64537443d8ecfc1d4371ee56c94a69ba280491ed5d7a",
+    "tests/fixtures/quadricCarrier.ts": "8e648d1c94b01485453eb689ba4b4cca8282a08c5878e427a7cf4d3ae388c3e3",
+    "tests/originalQuadricCarrierBrowser.test.ts": "e07ba1de371481f0d37de4ec71e4bdd31e79b5ffc80fdcbdbe069ae6a582189c",
+    "tests/originalQuadricCarrierProtocol.test.ts": "634eedbac08dafbacebb8783b71e887e8c57909829818d6126b8bfab6d3f10a7",
+    "scripts/check-surface-self-intersection-wasm.mts": "d69ef71673b44df9f211a705872d9ae4ef3f8afac1d2751e30bdeb4fd171fa53",
+    "tools/browser-qualification/quadric-carrier-fixtures.ts": "799b266909f18932bbc3dff360943dbbd7e710227b0b791da13c710e647d0ae8",
+    "tools/browser-qualification/surface-self-intersection.ts": "7bd634f16b01c33f972e5a670dc7c91a6dca01ba19ed1df6d8f455b03908fc7b",
+    "tools/browser-qualification/surface-self-intersection.mjs": "7980c0129680dc1f1c381e3cd92afae3c4d031c2fc1a1060fdad399c6ace9091"
+  }
+}

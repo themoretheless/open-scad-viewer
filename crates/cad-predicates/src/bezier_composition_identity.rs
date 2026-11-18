@@ -162,9 +162,28 @@ fn spline_homogeneous<const N:usize>(points:&[[Expansion;N]],knots:&[Expansion],
 fn fraction_cmp(a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)->Result<Sign,Reason>{
     Ok(a[0].mul(&b[1],ctx)?.sub(&b[0].mul(&a[1],ctx)?,ctx)?.sign())
 }
-fn piecewise_composition(c:&[[Expansion;4]],knots:&[Expansion],degree:usize,mapping:&[Expansion],
-    p:&[[Expansion;3]],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,constant_axes:[bool;3],
+/// The spline side of a composition: homogeneous controls, knots, degree and the parameter map.
+#[derive(Clone, Copy)]
+struct SplineSide<'a> {
+    controls: &'a [[Expansion; 4]],
+    knots: &'a [Expansion],
+    degree: usize,
+    mapping: &'a [Expansion],
+}
+/// The composed side: pcurve controls `p`, surface controls `s` with denominators `d`, and the
+/// surface pole grid size `nu` x `nv`.
+#[derive(Clone, Copy)]
+struct ComposedSide<'a> {
+    p: &'a [[Expansion; 3]],
+    s: &'a [[Expansion; 4]],
+    d: &'a [Expansion],
+    nu: usize,
+    nv: usize,
+}
+fn piecewise_composition(spline:SplineSide<'_>,composed:ComposedSide<'_>,constant_axes:[bool;3],
     ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason>{
+    let SplineSide{controls:c,knots,degree,mapping}=spline;
+    let ComposedSide{p,s,d,nu,nv}=composed;
     let a=[mapping[0].clone(),mapping[1].clone()];let b=[mapping[2].clone(),mapping[3].clone()];
     for endpoint in [&a,&b] {
         if endpoint[1].sign()!=Sign::Positive || endpoint[0].sign()==Sign::Negative
@@ -201,14 +220,19 @@ fn piecewise_composition(c:&[[Expansion;4]],knots:&[Expansion],degree:usize,mapp
         let pullback=ends.into_iter().flatten().collect::<Vec<_>>();
         let Some(curve)=spline_homogeneous(c,knots,degree,span,&pullback,ctx)? else {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));};
         let Some(pcurve)=affine_homogeneous(p,&local,ctx)? else {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));};
-        match compare_composition(&curve,&pcurve,s,d,nu,nv,constant_axes,ctx)? {
+        match compare_composition(&curve,&pcurve,SurfacePatch{s,d,nu,nv},constant_axes,ctx)? {
             BezierIdentity::Equal=>{},other=>return Ok(other),
         }
     }
     Ok(if covered {BezierIdentity::Equal}else{BezierIdentity::Indeterminate(Reason::MissingProof)})
 }
-fn composition_polynomials(p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+/// Bézier surface patch on its domain: homogeneous controls, domain bounds
+/// `[u0, u1, v0, v1]` and the control counts in u and v.
+#[derive(Clone,Copy)]
+struct SurfacePatch<'a> {s:&'a [[Expansion;4]],d:&'a [Expansion],nu:usize,nv:usize}
+fn composition_polynomials(p:&[Poly],patch:SurfacePatch<'_>,
     constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<Vec<Poly>,Reason> {
+        let SurfacePatch{s,d,nu,nv}=patch;
         let mut basis=Vec::new();
         for axis in 0..2 {
             let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
@@ -252,27 +276,38 @@ fn compare_polynomial_rows(c:&[Poly],composed:&[Poly],constant_axes:[bool;3],
         }
         Ok(BezierIdentity::Equal)
 }
-fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+fn compare_composition(c:&[Poly],p:&[Poly],patch:SurfacePatch<'_>,
     constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
-    let composed=composition_polynomials(p,s,d,nu,nv,constant_axes,ctx)?;
+    let composed=composition_polynomials(p,patch,constant_axes,ctx)?;
     compare_polynomial_rows(c,&composed,constant_axes,ctx)
 }
 
 /// Exact affine pullback of a canonical B-spline on one selected knot span.
 /// The predicate verifies both mapped endpoints are in that span exactly.
 pub fn rational_bspline_composition_affine_identity(
-    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,span:usize,
-    pcurve:&[[LeafRef;3]],surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
-)->Result<BezierIdentityDecision,InputError>{
+    ctx: &mut PredicateContext<'_>,
+    spline: SplineLeafRefs<'_, 4>,
+    span: usize,
+    pcurve: &[[LeafRef; 3]],
+    surface: &[Vec<[LeafRef; 4]>],
+    domain: [[LeafRef; 2]; 2],
+    range: [[LeafRef; 2]; 2],
+) -> Result<BezierIdentityDecision, InputError> {
+    let SplineLeafRefs { controls: curve, knots, degree } = spline;
     if !(1..=32).contains(&degree) || curve.len()<=degree || knots.len()!=curve.len()+degree+1
         || span<degree || span>=curve.len() {return Err(InputError::InvalidInput("Invalid spline span layout"));}
     composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range),Some((knots,degree,Some(span))))
 }
 /// Exact piecewise affine composition across all intersected canonical spans.
 pub fn rational_bspline_composition_piecewise_identity(
-    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,
-    pcurve:&[[LeafRef;3]],surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+    ctx: &mut PredicateContext<'_>,
+    curve: SplineLeafRefs<'_, 4>,
+    pcurve: &[[LeafRef; 3]],
+    surface: &[Vec<[LeafRef; 4]>],
+    domain: [[LeafRef; 2]; 2],
+    range: [[LeafRef; 2]; 2],
 )->Result<BezierIdentityDecision,InputError>{
+    let SplineLeafRefs { controls: curve, knots, degree } = curve;
     if !(1..=32).contains(&degree) || curve.len()<=degree || knots.len()!=curve.len()+degree+1 {
         return Err(InputError::InvalidInput("Invalid piecewise spline layout"));
     }
@@ -330,7 +365,7 @@ pub fn rational_bezier_composition_projective_identity(
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
         };
         let p=homogeneous(&p,ctx)?;
-        compare_composition(&c,&p,&s,d,nu,nv,[false;3],ctx)
+        compare_composition(&c,&p,SurfacePatch{s:&s,d,nu,nv},[false;3],ctx)
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
@@ -418,7 +453,7 @@ fn composition_identity_impl(
             }
             let mapping=mapping.unwrap();
             if span.is_none() {
-                return piecewise_composition(&c,knots,degree,mapping,&p,&s,d,nu,nv,constant_axes,ctx);
+                return piecewise_composition(SplineSide{controls:&c,knots,degree,mapping},ComposedSide{p:&p,s:&s,d,nu,nv},constant_axes,ctx);
             }
             match spline_homogeneous(&c,knots,degree,span.unwrap(),mapping,ctx)? {
                 Some(c)=>c,None=>return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)),
@@ -430,7 +465,7 @@ fn composition_identity_impl(
             }
         } else {homogeneous(&c,ctx)?};
         let p=homogeneous(&p,ctx)?;
-        compare_composition(&c,&p,&s,d,nu,nv,constant_axes,ctx)
+        compare_composition(&c,&p,SurfacePatch{s:&s,d,nu,nv},constant_axes,ctx)
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
@@ -675,98 +710,7 @@ fn plane_point_impl(
     Ok(BezierIdentityDecision {outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
 
-fn affine_fraction(q:&[Expansion;2],a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)
-    ->Result<[Expansion;2],Reason> {
-    let delta=b[0].mul(&a[1],ctx)?.sub(&a[0].mul(&b[1],ctx)?,ctx)?;
-    Ok([a[0].mul(&b[1],ctx)?.mul(&q[1],ctx)?.add(&delta.mul(&q[0],ctx)?,ctx)?,
-        a[1].mul(&b[1],ctx)?.mul(&q[1],ctx)?])
-}
-fn inverse_fraction(q:&[Expansion;2],a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)
-    ->Result<[Expansion;2],Reason> {
-    let delta=b[0].mul(&a[1],ctx)?.sub(&a[0].mul(&b[1],ctx)?,ctx)?;
-    let mut n=q[0].mul(&a[1],ctx)?.sub(&a[0].mul(&q[1],ctx)?,ctx)?.mul(&b[1],ctx)?;
-    let mut d=q[1].mul(&delta,ctx)?;
-    if d.sign()==Sign::Negative {n=Expansion::scalar(0.).sub(&n,ctx)?;d=Expansion::scalar(0.).sub(&d,ctx)?;}
-    Ok([n,d])
-}
-/// Exact composition of an affine canonical restriction and a piecewise UV
-/// B-spline. Every intersected span pair must agree under one work budget.
-pub fn rational_bspline_pair_composition_piecewise_identity(
-    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,
-    pcurve:&[[LeafRef;3]],pknots:&[LeafRef],pdegree:usize,
-    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
-)->Result<BezierIdentityDecision,InputError> {
-    if !(1..=32).contains(&degree) || !(1..=8).contains(&pdegree)
-        || curve.len()<=degree || curve.len()>4096 || knots.len()!=curve.len()+degree+1
-        || pcurve.len()<=pdegree || pcurve.len()>4096 || pknots.len()!=pcurve.len()+pdegree+1
-        || !(2..=9).contains(&surface.len()) || surface.first().is_none_or(|row|!(2..=9).contains(&row.len()))
-        || surface.iter().any(|row|row.len()!=surface[0].len()) {
-        return Err(InputError::InvalidInput("Invalid piecewise spline composition layout"));
-    }
-    let refs:Vec<_>=curve.iter().flatten().chain(pcurve.iter().flatten())
-        .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten())
-        .chain(range.iter().flatten()).chain(knots).chain(pknots).copied().collect();
-    let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
-    let result=(||->Result<BezierIdentity,Reason>{
-        ctx.charge(values.len() as u64)?;
-        let values=exact_inputs(&values,ctx)?;
-        let (nc,np,nu,nv)=(curve.len(),pcurve.len(),surface.len(),surface[0].len());
-        let c:Vec<[Expansion;4]>=values[..4*nc].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
-        let p:Vec<[Expansion;3]>=values[4*nc..4*nc+3*np].chunks_exact(3).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
-        let offset=4*nc+3*np;
-        let s:Vec<[Expansion;4]>=values[offset..offset+4*nu*nv].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
-        let offset=offset+4*nu*nv;let d=&values[offset..offset+4];
-        let a=[values[offset+4].clone(),values[offset+5].clone()];
-        let b=[values[offset+6].clone(),values[offset+7].clone()];
-        let ck=&values[offset+8..offset+8+knots.len()];let pk=&values[offset+8+knots.len()..];
-        let missing=BezierIdentity::Indeterminate(Reason::MissingProof);
-        if c.iter().chain(&s).any(|x|x[3].sign()!=Sign::Positive) || p.iter().any(|x|x[2].sign()!=Sign::Positive)
-            || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {return Ok(missing);}
-        for k in [ck,pk] {for pair in k.windows(2) {
-            if pair[1].sub(&pair[0],ctx)?.sign()==Sign::Negative {return Ok(missing);}
-        }}
-        for q in [&a,&b] {if q[1].sign()!=Sign::Positive || q[0].sign()==Sign::Negative
-            || q[1].sub(&q[0],ctx)?.sign()==Sign::Negative {return Ok(missing);}}
-        let direction=fraction_cmp(&b,&a,ctx)?;
-        if direction==Sign::Zero {return Ok(missing);}
-        let (lo,hi)=if direction==Sign::Positive {(&a,&b)}else{(&b,&a)};
-        let cw=ck[nc].sub(&ck[degree],ctx)?;let pw=pk[np].sub(&pk[pdegree],ctx)?;
-        if cw.sign()!=Sign::Positive || pw.sign()!=Sign::Positive {return Ok(missing);}
-        let mut covered=false;
-        for cs in degree..nc {
-            ctx.charge(1)?;
-            if ck[cs+1].sub(&ck[cs],ctx)?.sign()!=Sign::Positive {continue;}
-            let l=[ck[cs].sub(&ck[degree],ctx)?,cw.clone()];
-            let r=[ck[cs+1].sub(&ck[degree],ctx)?,cw.clone()];
-            let l=if fraction_cmp(&l,lo,ctx)?==Sign::Negative {lo.clone()}else{l};
-            let r=if fraction_cmp(&r,hi,ctx)?==Sign::Positive {hi.clone()}else{r};
-            if fraction_cmp(&r,&l,ctx)?!=Sign::Positive {continue;}
-            let ends=if direction==Sign::Positive {[l,r]}else{[r,l]};
-            let low=inverse_fraction(&ends[0],&a,&b,ctx)?;
-            let high=inverse_fraction(&ends[1],&a,&b,ctx)?;
-            for ps in pdegree..np {
-                ctx.charge(1)?;
-                if pk[ps+1].sub(&pk[ps],ctx)?.sign()!=Sign::Positive {continue;}
-                let l=[pk[ps].sub(&pk[pdegree],ctx)?,pw.clone()];
-                let r=[pk[ps+1].sub(&pk[pdegree],ctx)?,pw.clone()];
-                let l=if fraction_cmp(&l,&low,ctx)?==Sign::Negative {low.clone()}else{l};
-                let r=if fraction_cmp(&r,&high,ctx)?==Sign::Positive {high.clone()}else{r};
-                if fraction_cmp(&r,&l,ctx)?!=Sign::Positive {continue;}
-                covered=true;
-                let canonical=[affine_fraction(&l,&a,&b,ctx)?,affine_fraction(&r,&a,&b,ctx)?];
-                let cr=canonical.into_iter().flatten().collect::<Vec<_>>();
-                let pr=[l,r].into_iter().flatten().collect::<Vec<_>>();
-                let Some(cc)=spline_homogeneous(&c,ck,degree,cs,&cr,ctx)? else {return Ok(missing);};
-                let Some(pp)=spline_homogeneous(&p,pk,pdegree,ps,&pr,ctx)? else {return Ok(missing);};
-                match compare_composition(&cc,&pp,&s,d,nu,nv,[false;3],ctx)? {
-                    BezierIdentity::Equal=>{},other=>return Ok(other),
-                }
-            }
-        }
-        Ok(if covered {BezierIdentity::Equal}else{missing})
-    })().and_then(|value|ctx.charge(0).map(|_|value));
-    Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
-}
-
+mod piecewise_spline;
 mod projective_image;
+pub use piecewise_spline::{SplineLeafRefs, rational_bspline_pair_composition_piecewise_identity};
 pub use projective_image::{ProjectiveImageDecision, ProjectiveImageOutcome, rational_bezier_projective_image};

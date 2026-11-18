@@ -105,23 +105,12 @@ fn original_rational_wall_g2_and_mixed_sharp_g1_classes_belong_to_the_complete_m
         .unwrap();
         let before = (profiles.clone(), c.surface.clone(), c.trims.clone());
         let make = |order| {
-            construct_with_original_smooth_volume(
-                &sweep,
-                &[profiles.len()],
-                5,
-                [&c, &c],
-                [&c, &end],
-                1e-8,
-                0.01,
-                limits(),
-                [[1., 0., 0.], [0., 1., 0.], [0., 0., 1. / 64.]],
-                OriginalSmoothVolumeLimits {
+            construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[profiles.len()], sections: 5, source_caps: [&c, &c] }, [&c, &end], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), [[1., 0., 0.], [0., 1., 0.], [0., 0., 1. / 64.]], OriginalSmoothVolumeLimits {
                     order,
                     cells: 1000000,
                     exact_work: 1000000,
                     products: 1000000,
-                },
-            )
+                })
             .unwrap()
         };
         let body = match make(2) {
@@ -309,49 +298,27 @@ fn longitudinal_g2_is_bound_to_the_actual_moving_tilted_frame_and_nonplanar_fill
         result.trims = c.trims.clone();
         result
     });
-    let strict = construct_with_original_smooth_volume(
-        &sweep,
-        &[5],
-        5,
-        [&c, &c],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
-        limits(),
-        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
-        OriginalSmoothVolumeLimits {
+    let strict = construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[5], sections: 5, source_caps: [&c, &c] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]], OriginalSmoothVolumeLimits {
             order: 2,
             cells: 100000,
             exact_work: 1000000,
             products: 1000000,
-        },
-    )
+        })
     .err()
     .expect("independently rounded retained cap must not get exact admission");
     assert_eq!(strict.code, "BREP_RATIONAL_SWEEP_REFUSED");
     assert!(strict.message.contains("whole-boundary agreement"));
-    let attempt = construct_affine_with_original_smooth_volume(
-        &sweep,
-        &[5],
-        5,
-        [&c, &c],
-        1e-8,
-        0.05,
-        limits(),
-        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
-        OriginalSmoothVolumeLimits {
+    let attempt = construct_affine_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[5], sections: 5, source_caps: [&c, &c] }, SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]], OriginalSmoothVolumeLimits {
             order: 2,
             cells: 100000,
             exact_work: 1000000,
             products: 1000000,
-        },
-        crate::AffineStationLimits {
+        }, crate::AffineStationLimits {
             quantum: 1. / 1048576.,
             tolerance: 0.001,
             work: 1000000,
             matrix_cells: 10000,
-        },
-    )
+        })
     .unwrap();
     let body = match attempt {
         OriginalSmoothBodyAttempt::Certified(b) => b,

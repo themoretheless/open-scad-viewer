@@ -15,12 +15,22 @@ on:
       - 'tests/fixtures/step-v*/**'
       - 'tools/step-semantic-validator-manifest.json'
       - 'tools/stepcode-ap242-ed4-manifest.json'
+      - '.github/workflows/step-interchange-v8.yml'
 
 jobs:
   qualify:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    # Keep the hosted builder within its disk budget without reducing coverage.
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
     steps:
+      - name: Free hosted runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -33,7 +43,7 @@ jobs:
       - name: Verify kernel and bridge certificates
         run: cargo test --locked --manifest-path crates/Cargo.toml -p brep-core -p cad-step -p geometry-bridge v8
       - name: Verify product adapters
-        run: npm run typecheck && npm run build
+        run: npm run typecheck && node --import tsx scripts/prepare-dev-runtime.mts && node node_modules/vite/bin/vite.js build && node scripts/verify-dist.mjs
       - name: Upload raw validator evidence
         uses: actions/upload-artifact@v4
         with:

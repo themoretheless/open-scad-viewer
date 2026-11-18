@@ -7,7 +7,7 @@ type V = [I; 3];
 mod fixed_path_values;
 mod fixed_normal_path;
 mod planar_principal_phase;
-pub(crate) use planar_principal_phase::{certify_initial_planar_principal_phase,certify_planar_principal_values,certify_planar_principal_control_values,certify_planar_principal_control_trajectories,certify_planar_principal_relative_values};
+pub(crate) use planar_principal_phase::{certify_initial_planar_principal_phase,certify_planar_principal_values,certify_planar_principal_control_values,certify_planar_principal_control_trajectories,certify_planar_principal_relative_values,PrincipalPlane};
 mod frenet_path_values;
 pub(crate) use frenet_path_values::certify_frenet_span;
 pub use frenet_path_values::{certify_frenet_cover,certify_frenet_path_values,certify_frenet_control_values,certify_frenet_planar_control_trajectories,certify_frenet_path,certify_frenet_control_trajectories};
@@ -20,6 +20,26 @@ pub(crate) use trajectory::{translated_constant_values_with_source,translated_co
 pub(crate) use trajectory::{control_trajectories_with_fit,control_trajectories_with_phase};
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
+/// Laws of an authored-frame sweep: path, scale, twist, the longitudinal and transverse frame laws,
+/// and optional affine laws.
+#[derive(Clone, Copy)]
+pub struct AuthoredFrameLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub longitudinal: &'a Curve,
+    pub transverse: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// The path and scale laws, with optional affine laws, that place control coordinates on a frame.
+#[derive(Clone, Copy)]
+pub(crate) struct ControlLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// Path, scale and twist laws of a sweep, with optional affine laws.
+pub(crate) use crate::sweeps::progressive_sweep::SweepLaws as ProfileLaws;
 mod guided_path_values;
 pub(crate) use guided_path_values::certify_path_guide_from_offset;
 mod paired_path_values;
@@ -602,7 +622,8 @@ mod tests;
 pub(crate) use frenet_path_values::certify_frenet_relative_values;
 pub(crate) use frenet_path_values::certify_frenet_relative_values_with_binormal_identity;
 
-pub(crate) use guided_path_values::{certify_path_guide_relative_values,certify_contact_relative_values};
+pub use guided_path_values::ContactLaws;
+pub(crate) use guided_path_values::{ContactTraversal, PathGuideTraversal, certify_path_guide_relative_values, certify_contact_relative_values};
 
 pub(crate) use guided_path_values::certify_independent_guided_cover;
 
@@ -615,19 +636,36 @@ pub(crate) fn relative_control_values_from_frame(
  // This freshly constructed source is identically zero. Its exact value is
  // available by construction; do not reprove three scalar zero restrictions
  // on every relative-frame query.
- trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,station,max_cells,frame,None,Some([[0.;2];3]))
+ trajectory::control_values_with_prepared_path(
+     ControlLaws { path: &zero, scale, affine },
+     qs,
+     station,
+     max_cells,
+     frame,
+     None,
+     Some([[0.;2];3]),
+ )
 }
 
-pub(crate) use frenet_path_values::certify_c4_frenet_arc_relative_trajectories;
+pub(crate) use frenet_path_values::{ArcTraversal, certify_c4_frenet_arc_relative_trajectories};
 
 /// Compose original source points with a frame proved by the owning sweep.
 /// All supplied frame work remains charged to the same request.
 pub(crate) fn control_values_from_owned_frame(
-    path: &Curve, scale: &Curve, affine: Option<(&Curve, &Curve)>,
-    coordinates: &[[[f64; 2]; 3]], fraction: [f64; 2], max_cells: usize,
-    frame: ValuesReport, transverse_fit: Option<crate::distance_bounds::Interval>,
+    laws: ControlLaws<'_>,
+    coordinates: &[[[f64; 2]; 3]],
+    fraction: [f64; 2],
+    max_cells: usize,
+    frame: ValuesReport,
+    transverse_fit: Option<crate::distance_bounds::Interval>,
 ) -> Result<ControlValuesReport> {
     trajectory::control_values_with_prepared_path(
-        path, scale, affine, coordinates, fraction, max_cells, frame, transverse_fit, None,
+        laws,
+        coordinates,
+        fraction,
+        max_cells,
+        frame,
+        transverse_fit,
+        None,
     )
 }

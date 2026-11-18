@@ -152,10 +152,12 @@ pub fn build() -> Result<Fixture, Box<dyn std::error::Error>> {
         [&first.restriction, &last.restriction],
         skin,
         [(&first_cut, f), (&last_cut, l)],
-        last.source.tolerance_mm,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: last.source.tolerance_mm,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )?;
 
     let mapping = [
@@ -234,13 +236,8 @@ pub fn inspect_saved(
             })
             .ok_or("Missing original support edge use")?;
         let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &out.model.edges[edge].curve,
-            [&support_use.pcurve, &skin_use.pcurve],
-            [&support.surface, &skin.surface],
-            [support_use.reversed, skin_use.reversed],
-            1e-7,
-            1e-5,
-            1e-4,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &out.model.edges[edge].curve, pcurves: [&support_use.pcurve, &skin_use.pcurve], surfaces: [&support.surface, &skin.surface], reversed: [support_use.reversed, skin_use.reversed] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000 - cells,
             1000000 - exact,
         )?;
@@ -248,20 +245,10 @@ pub fn inspect_saved(
         exact += proof.positions.exact_work;
         seams.push(proof);
     }
-    let radius = brep_core::fillet_radius::inspect_model(
-        &out.model,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &RadiusLaw::Linear {
+    let radius = brep_core::fillet_radius::inspect_model(&out.model, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], f.law_domain, brep_core::fillet_radius::RadiusCheck { law: &RadiusLaw::Linear {
             start: 1.,
             end: 1.5,
-        },
-        f.law_domain,
-        f.sides,
-        1e-6,
-        100000 - cells,
-        1000000 - exact,
-    )?;
+        }, sides: f.sides, tolerance_mm: 1e-6, max_cells: 100000 - cells, max_exact: 1000000 - exact })?;
     cells += radius.cells;
     exact += radius.exact_work;
     Ok(SavedChecks {

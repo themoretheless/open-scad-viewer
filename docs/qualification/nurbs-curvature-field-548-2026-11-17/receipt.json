@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0548",
+  "testedBase": "e0da878c12501fe5a411b8d32d6642c6d00ea9c6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 153,
+  "scope": [
+    "Check disjointness of two lifted UV boundaries across all overlapping periodic translates.",
+    "Bound translated contour copies by exact rational extents and report a certified edge pair at the first contact."
+  ],
+  "logSha256": "438fd291680cbb2425951e3bd74130af120e92280c47e42783bc56984455cdaa",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "64442748c89c8481252a1af4690cc8ace51a9da27fc4046450e57e0ca160e41d",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "3d1fa1d86ee640b9351627795bb62a35cb891ec281dd0e377323e4fff035f424"
+  }
+}

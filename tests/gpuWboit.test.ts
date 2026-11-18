@@ -1,38 +1,42 @@
+import { wboitWeight } from '../src/render/wboitReference'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  GpuWboitRenderer,
-  toWboitShader,
-  WBOIT_ACCUM_FORMAT,
-  WBOIT_REVEAL_FORMAT,
-  WBOIT_COMPOSITE_WGSL,
-} from '../src/services/gpuWboit'
-import { MESH_WGSL } from '../src/services/shaders'
+import { GpuWboitRenderer, toWboitShader, WBOIT_ACCUM_FORMAT, WBOIT_REVEAL_FORMAT } from '../src/render/gpuWboit'
+import { MESH_WGSL } from '../src/render/shaders'
+
+interface FakeTexture {
+  desc: GPUTextureDescriptor
+  destroyed: boolean
+  createView: () => unknown
+  destroy: () => void
+}
 
 function createFakeDevice() {
-  const textures: any[] = []
-  const pipelines: any[] = []
-  const bindGroups: any[] = []
+  const textures: FakeTexture[] = []
+  const pipelines: { desc: GPURenderPipelineDescriptor }[] = []
+  const bindGroups: { desc: GPUBindGroupDescriptor }[] = []
 
   const device = {
-    createTexture: vi.fn((desc: any) => {
-      const tex = {
+    createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+      const tex: FakeTexture = {
         desc,
         destroyed: false,
         createView: vi.fn(() => ({ texture: tex, desc })),
-        destroy: vi.fn(() => { tex.destroyed = true }),
+        destroy: vi.fn(() => {
+          tex.destroyed = true
+        }),
       }
       textures.push(tex)
       return tex
     }),
-    createBindGroupLayout: vi.fn((desc: any) => ({ desc })),
-    createBindGroup: vi.fn((desc: any) => {
+    createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => ({ desc })),
+    createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
       const bg = { desc }
       bindGroups.push(bg)
       return bg
     }),
-    createPipelineLayout: vi.fn((desc: any) => ({ desc })),
-    createShaderModule: vi.fn((desc: any) => ({ desc, code: desc.code })),
-    createRenderPipeline: vi.fn((desc: any) => {
+    createPipelineLayout: vi.fn((desc: GPUPipelineLayoutDescriptor) => ({ desc })),
+    createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => ({ desc, code: desc.code })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       const p = { desc }
       pipelines.push(p)
       return p
@@ -144,9 +148,9 @@ describe('GpuWboitRenderer', () => {
     const wboit = new GpuWboitRenderer()
     wboit.ensureTextures(device, 500, 500)
 
-    let passDesc: any = null
+    let passDesc: GPURenderPassDescriptor | null = null
     const encoder = {
-      beginRenderPass: vi.fn((desc: any) => {
+      beginRenderPass: vi.fn((desc: GPURenderPassDescriptor) => {
         passDesc = desc
         return { setPipeline: vi.fn(), end: vi.fn() }
       }),
@@ -173,8 +177,12 @@ describe('GpuWboitRenderer', () => {
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
-      draw: vi.fn((count: number) => { drawCount = count }),
-      end: vi.fn(() => { ended = true }),
+      draw: vi.fn((count: number) => {
+        drawCount = count
+      }),
+      end: vi.fn(() => {
+        ended = true
+      }),
     }
     const encoder = {
       beginRenderPass: vi.fn(() => pass),
@@ -193,36 +201,30 @@ describe('GpuWboitRenderer', () => {
     const fragA = { r: 1.0, g: 0.2, b: 0.2, a: 0.6, z: 0.3 }
     const fragB = { r: 0.2, g: 0.4, b: 1.0, a: 0.4, z: 0.7 }
 
-    function wboitWeight(z: number, a: number) {
-      const aClamped = Math.min(1.0, a) * 8.0 + 0.01
-      const b = 1.0 - z * 0.95
-      return Math.min(Math.max(Math.pow(aClamped, 3) * 1e8 * Math.pow(b, 3), 1e-2), 3e3)
-    }
-
     const wA = wboitWeight(fragA.z, fragA.a)
     const wB = wboitWeight(fragB.z, fragB.a)
 
     // Order 1: A then B
     const accum1 = {
-      r: (fragA.r * fragA.a) * wA + (fragB.r * fragB.a) * wB,
-      g: (fragA.g * fragA.a) * wA + (fragB.g * fragB.a) * wB,
-      b: (fragA.b * fragA.a) * wA + (fragB.b * fragB.a) * wB,
+      r: fragA.r * fragA.a * wA + fragB.r * fragB.a * wB,
+      g: fragA.g * fragA.a * wA + fragB.g * fragB.a * wB,
+      b: fragA.b * fragA.a * wA + fragB.b * fragB.a * wB,
       a: fragA.a * wA + fragB.a * wB,
     }
     let reveal1 = 1.0
-    reveal1 *= (1.0 - fragA.a)
-    reveal1 *= (1.0 - fragB.a)
+    reveal1 *= 1.0 - fragA.a
+    reveal1 *= 1.0 - fragB.a
 
     // Order 2: B then A
     const accum2 = {
-      r: (fragB.r * fragB.a) * wB + (fragA.r * fragA.a) * wA,
-      g: (fragB.g * fragB.a) * wB + (fragA.g * fragA.a) * wA,
-      b: (fragB.b * fragB.a) * wB + (fragA.b * fragA.a) * wA,
+      r: fragB.r * fragB.a * wB + fragA.r * fragA.a * wA,
+      g: fragB.g * fragB.a * wB + fragA.g * fragA.a * wA,
+      b: fragB.b * fragB.a * wB + fragA.b * fragA.a * wA,
       a: fragB.a * wB + fragA.a * wA,
     }
     let reveal2 = 1.0
-    reveal2 *= (1.0 - fragB.a)
-    reveal2 *= (1.0 - fragA.a)
+    reveal2 *= 1.0 - fragB.a
+    reveal2 *= 1.0 - fragA.a
 
     expect(accum1.r).toBeCloseTo(accum2.r, 8)
     expect(accum1.g).toBeCloseTo(accum2.g, 8)
@@ -248,8 +250,8 @@ describe('GpuWboitRenderer', () => {
   })
 
   it('integrates with WebGPURenderer transparencyMode and teardown', async () => {
-    const { WebGPURenderer } = await import('../src/services/webgpuRenderer')
-    const { device } = createFakeDevice()
+    const { WebGPURenderer } = await import('../src/render/webgpuRenderer')
+    createFakeDevice()
     const renderer = new WebGPURenderer()
 
     expect(renderer.getTransparencyMode()).toBe('sorted')

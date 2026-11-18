@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "gpu")]
+use crate::dense::plane::{DepthGrid, ReferenceView};
 
 /// Builds depth maps from host-computed score rows (indexed by image, aligned
 /// with `prepare_host_views` output). Scores are f32 from the GPU shader and
@@ -65,15 +67,9 @@ pub fn finish_host_views(
         diagnostics.evaluated_source_patches += pixels * options.depth_hypotheses * sources.len();
         diagnostics.sampled_source_pixels +=
             (pixels * options.depth_hypotheses * sources.len() * patch_side * patch_side) as u64;
-        let inverse_span = 1. / prep.near - 1. / prep.far;
         let (depth, confidence) = select_from_scores(
             view_scores,
-            prep.width,
-            prep.height,
-            prep.ranges.as_ref(),
-            prep.near,
-            prep.far,
-            inverse_span,
+            prep,
             options,
             &mut |row| {
                 cancelled(
@@ -101,6 +97,16 @@ pub fn finish_host_views(
 /// Per-pixel sweep range as `(near, far)` map arrays; zeroed entries mean the
 /// pixel keeps the global range.
 pub(super) type SweepRanges = (Vec<f64>, Vec<f64>);
+/// Inverse-depth hypotheses of a sweep with their optional per-pixel ranges, the near depth and
+/// the inverse-depth span `1/near - 1/far` that maps a depth to its bin.
+#[cfg(feature = "gpu")]
+#[derive(Clone, Copy)]
+pub(super) struct InverseDepthBins<'a> {
+    pub hypotheses: &'a [f64],
+    pub ranges: Option<&'a SweepRanges>,
+    pub near: f64,
+    pub inverse_span: f64,
+}
 
 /// Window radius in map pixels for sparse-anchor aggregation; six covers the
 /// typical sparse grid spacing without blending distant surfaces.
@@ -110,20 +116,30 @@ const PRIOR_WINDOW: usize = 6;
 /// reference view (COLMAP-style geometric prior). Anchors are splatted to the
 /// map grid, then each pixel takes the padded min/max depth of anchors within
 /// a fixed square window. Returns None when the view has no usable anchors.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "projection scalar inputs are kept explicit for the dense kernel; group into a context object in the next API pass"
-)]
+/// The reference camera, depth-map size and pixel step, and the depth range
+/// of one sparse-prior sweep.
+#[derive(Clone, Copy)]
+pub(super) struct SweepGrid<'a> {
+    pub reference: &'a Camera,
+    pub width: usize,
+    pub height: usize,
+    pub step: f64,
+    pub near: f64,
+    pub far: f64,
+}
 pub(super) fn sparse_intervals(
     sparse: &Reconstruction,
     image: usize,
-    reference: &Camera,
-    width: usize,
-    height: usize,
-    step: f64,
-    near: f64,
-    far: f64,
+    grid: SweepGrid<'_>,
 ) -> Option<SweepRanges> {
+    let SweepGrid {
+        reference,
+        width,
+        height,
+        step,
+        near,
+        far,
+    } = grid;
     let mut cell_lo = vec![f64::INFINITY; width * height];
     let mut cell_hi = vec![0f64; width * height];
     let mut any = false;
@@ -215,18 +231,22 @@ pub(super) fn coarse_intervals(
 
 /// Per-pixel selection over a host/GPU-computed score map (f32 widened to f64,
 /// exact widening), shared by the native GPU sweep and the browser host path.
-#[allow(clippy::too_many_arguments)]
 fn select_from_scores(
     scores_map: &[f32],
-    width: usize,
-    height: usize,
-    ranges: Option<&SweepRanges>,
-    near: f64,
-    far: f64,
-    inverse_span: f64,
+    prep: &PreparedView,
     options: &DenseOptions,
     row_progress: &mut impl FnMut(usize) -> Result<()>,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
+    let &PreparedView {
+        width,
+        height,
+        near,
+        far,
+        ref ranges,
+        ..
+    } = prep;
+    let ranges = ranges.as_ref();
+    let inverse_span = 1. / near - 1. / far;
     let mut depth = vec![0.; width * height];
     let mut confidence = vec![0.; width * height];
     for y in 3..height - 3 {
@@ -357,20 +377,16 @@ fn ceil_f32(x: f64) -> f32 {
 /// Packs one view for the GPU sweep-and-select shader. Per-pixel hypothesis
 /// bins come from the same `bin_range` the CPU selection uses.
 #[cfg(feature = "gpu")]
-#[allow(clippy::too_many_arguments)]
 pub(super) fn gpu_job(
     ref_index: usize,
     reference: &Camera,
     sources: &[Source],
-    width: usize,
-    height: usize,
-    step: f64,
-    hypotheses: &[f64],
-    ranges: Option<&SweepRanges>,
-    near: f64,
-    inverse_span: f64,
+    grid: DepthGrid,
+    bins: InverseDepthBins<'_>,
     options: &DenseOptions,
 ) -> crate::gpu::sweep::SweepJob {
+    let DepthGrid { width, height, step } = grid;
+    let InverseDepthBins { hypotheses, ranges, near, inverse_span } = bins;
     let mut bins = Vec::with_capacity(width * height * 2);
     for pixel in 0..width * height {
         let (lo, hi) = bin_range(ranges, pixel, near, inverse_span, options);
@@ -448,21 +464,17 @@ pub(super) fn count_gpu_work(
 /// Single-view GPU sweep (coarse-to-fine passes, which depend on each other,
 /// cannot join the per-pass batch). Uploads only the rasters this view needs.
 #[cfg(feature = "gpu")]
-#[allow(clippy::too_many_arguments)]
 pub(super) fn gpu_sweep_single(
-    gray: &GrayImage,
-    reference: &Camera,
+    view: ReferenceView<'_>,
     sources: &[Source],
-    width: usize,
-    height: usize,
-    step: f64,
-    hypotheses: &[f64],
-    ranges: Option<&SweepRanges>,
-    near: f64,
+    grid: DepthGrid,
+    bins: InverseDepthBins<'_>,
     far: f64,
-    inverse_span: f64,
     options: &DenseOptions,
 ) -> Option<(Vec<f64>, Vec<f32>)> {
+    let ReferenceView { gray, camera: reference } = view;
+    let DepthGrid { width, height, step } = grid;
+    let InverseDepthBins { hypotheses, ranges, near, inverse_span } = bins;
     // Backend choice first: without any device the payload is never built.
     #[cfg(feature = "cuda")]
     let cuda_sweep = (options.acceleration == crate::Acceleration::Cuda)
@@ -499,13 +511,8 @@ pub(super) fn gpu_sweep_single(
         0,
         reference,
         &renumbered,
-        width,
-        height,
-        step,
-        hypotheses,
-        ranges,
-        near,
-        inverse_span,
+        DepthGrid { width, height, step },
+        InverseDepthBins { hypotheses, ranges, near, inverse_span },
         options,
     );
     // Native CUDA first for Acceleration::Cuda, then the wgpu sweep; both

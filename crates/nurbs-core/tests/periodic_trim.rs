@@ -148,7 +148,19 @@ fn original_curve_admission_includes_translation_and_rejects_damage() {
 fn automatic_verified_split_owns_authored_seam_and_preserves_order() {
     use nurbs_core::periodic_trim::{SplitStatus, split_verified};
     let c = Curve::from_polyline(vec![vec![0.5, 0.25], vec![1., 0.5], vec![1.5, 0.75]]).unwrap();
-    let r = split_verified(&c, [[0., 1.]; 2], 1e-8, 0.01, 8, 32, 2000, 10000).unwrap();
+    let r = split_verified(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::VerifiedUvPartition, "{r:?}");
     let partition = r.partition.unwrap();
     assert_eq!(partition.pieces.len(), 2);
@@ -164,13 +176,49 @@ fn automatic_verified_split_owns_authored_seam_and_preserves_order() {
 fn automatic_split_never_publishes_unsupported_or_unproved_partition() {
     use nurbs_core::periodic_trim::{SplitStatus, split_verified};
     let c = Curve::from_polyline(vec![vec![0.5, 0.25], vec![1., 0.5], vec![1.5, 0.75]]).unwrap();
-    let low = split_verified(&c, [[0., 1.]; 2], 1e-8, 1e-12, 8, 32, 2000, 1).unwrap();
+    let low = split_verified(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 1e-12,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 1,
+        },
+    )
+    .unwrap();
     assert_eq!(low.status, SplitStatus::DeviationUnresolved);
     assert!(low.partition.is_none());
-    let small = split_verified(&c, [[0., 1.]; 2], 1e-8, 0.01, 1, 32, 2000, 10000).unwrap();
+    let small = split_verified(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 1,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(small.status, SplitStatus::PieceLimit);
     assert!(small.partition.is_none());
-    let lattice = split_verified(&c, [[0., 0.3]; 2], 1e-8, 0.01, 8, 32, 2000, 10000).unwrap();
+    let lattice = split_verified(
+        &c,
+        [[0., 0.3]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(lattice.status, SplitStatus::LatticeRoundingUnresolved);
     assert!(lattice.partition.is_none());
 }
@@ -180,7 +228,19 @@ fn shifted_non_power_of_two_lattice_uses_chart_origin_for_tile_ownership() {
     use nurbs_core::periodic_trim::{SplitStatus, split_verified};
     let c = Curve::from_polyline(vec![vec![3.5, 4.25], vec![5., 4.5], vec![6.5, 4.75]]).unwrap();
     // Period U=3, nonzero origins on both axes, crossing exactly at x=5.
-    let r = split_verified(&c, [[2., 5.], [4., 5.]], 1e-8, 0.01, 8, 32, 2000, 20000).unwrap();
+    let r = split_verified(
+        &c,
+        [[2., 5.], [4., 5.]],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 20000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::VerifiedUvPartition, "{r:?}");
     let p = r.partition.unwrap();
     assert_eq!(p.pieces.len(), 2);
@@ -207,7 +267,19 @@ fn rational_interval_event_is_resolved_only_by_exact_original_residual() {
         weights: vec![1., 3.],
         periodic: false,
     };
-    let r = split_verified(&c, [[0., 1.]; 2], 1e-8, 0.01, 8, 32, 2000, 10000).unwrap();
+    let r = split_verified(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::VerifiedUvPartition, "{r:?}");
     let p = r.partition.unwrap();
     assert_eq!(p.pieces.len(), 2);
@@ -221,7 +293,19 @@ fn nonrepresentable_root_is_not_snapped_into_a_verified_partition() {
     use nurbs_core::periodic_trim::{SplitStatus, split_verified};
     // The first seam x=1 is at t=1/3, not a binary64 parameter.
     let c = Curve::from_polyline(vec![vec![0., 0.25], vec![3., 0.75]]).unwrap();
-    let r = split_verified(&c, [[0., 1.]; 2], 1e-8, 0.01, 8, 32, 2000, 10000).unwrap();
+    let r = split_verified(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::IntervalRootNeedsConstruction);
     assert!(r.partition.is_none());
     assert!(r.parameter_attempts <= 3);
@@ -238,7 +322,19 @@ fn original_quadratic_basis_proves_noncentral_seam_root() {
         weights: vec![1.; 3],
         periodic: false,
     };
-    let r = split_verified(&c, [[0., 1.]; 2], 1e-8, 0.01, 8, 32, 10000, 20000).unwrap();
+    let r = split_verified(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 20000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::VerifiedUvPartition, "{r:?}");
     let p = r.partition.unwrap();
     assert_eq!(p.pieces.len(), 2);
@@ -297,7 +393,19 @@ fn exact_partition_identity_covers_original_curve_without_a_tolerance() {
 fn nonrepresentable_root_candidates_require_continuous_uv_admission() {
     use nurbs_core::periodic_trim::{LinkStatus, SplitStatus, split_approximated, verify_identity};
     let c = Curve::from_polyline(vec![vec![0., 0.25], vec![3., 0.75]]).unwrap();
-    let r = split_approximated(&c, [[0., 1.]; 2], 1e-8, 0.005, 8, 32, 2000, 30000).unwrap();
+    let r = split_approximated(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.005,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 30000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::VerifiedUvPartition, "{r:?}");
     assert_eq!(r.approximated_events.len(), 2);
     assert_eq!(r.connectivity.unwrap().status, LinkStatus::Exact);
@@ -312,7 +420,19 @@ fn nonrepresentable_root_candidates_require_continuous_uv_admission() {
         assert_eq!(left.curve.control_points.last().unwrap()[0], 1.);
         assert_eq!(right.curve.control_points[0][0], 0.);
     }
-    let low = split_approximated(&c, [[0., 1.]; 2], 1e-8, 0.005, 8, 32, 2000, 1).unwrap();
+    let low = split_approximated(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.005,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 1,
+        },
+    )
+    .unwrap();
     assert_eq!(low.status, SplitStatus::DeviationUnresolved);
     assert!(low.partition.is_none());
 }
@@ -320,7 +440,19 @@ fn nonrepresentable_root_candidates_require_continuous_uv_admission() {
 fn overlapping_interval_events_are_not_assumed_to_share_a_corner() {
     use nurbs_core::periodic_trim::{SplitStatus, split_approximated};
     let c = Curve::from_polyline(vec![vec![0., 0.], vec![3., 3.]]).unwrap();
-    let r = split_approximated(&c, [[0., 1.]; 2], 1e-8, 0.005, 8, 32, 2000, 30000).unwrap();
+    let r = split_approximated(
+        &c,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.005,
+            max_pieces: 8,
+            max_seams: 32,
+            search_work: 2000,
+            admission_work: 30000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::EventOrderUnresolved);
     assert!(r.partition.is_none());
 }
@@ -434,7 +566,19 @@ fn rational_circle_full_knot_cuts_preserve_authored_controls_and_region() {
     }
     let before = circle.clone();
     let chart = [[0., 2.5], [0., 4.]];
-    let r = split_verified(&circle, chart, 1e-7, 0.02, 16, 32, 20000, 30000).unwrap();
+    let r = split_verified(
+        &circle,
+        chart,
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-7,
+            uv_tolerance: 0.02,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 20000,
+            admission_work: 30000,
+        },
+    )
+    .unwrap();
     assert_eq!(r.status, SplitStatus::VerifiedUvPartition, "{r:?}");
     let partition = r.partition.unwrap();
     assert_eq!(partition.pieces.len(), 3);
@@ -611,7 +755,18 @@ fn single_seam_chart_assembly_retains_rational_circle_edges() {
         p.truncate(2);
     }
     let chart = [[0., 2.5], [0., 4.]];
-    let partition = split_verified(&circle, chart, 1e-7, 0.02, 16, 32, 20000, 30000)
+    let partition = split_verified(
+        &circle,
+        chart,
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-7,
+            uv_tolerance: 0.02,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 20000,
+            admission_work: 30000,
+        },
+    )
         .unwrap()
         .partition
         .unwrap();
@@ -734,12 +889,14 @@ fn two_seam_circle(radius: f64, reverse: bool) -> (Curve, nurbs_core::periodic_t
     let p = nurbs_core::periodic_trim::split_verified(
         &c,
         [[0., 1.]; 2],
-        1e-7,
-        0.02,
-        32,
-        64,
-        50000,
-        50000,
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-7,
+            uv_tolerance: 0.02,
+            max_pieces: 32,
+            max_seams: 64,
+            search_work: 50000,
+            admission_work: 50000,
+        },
     )
     .unwrap()
     .partition
@@ -968,7 +1125,18 @@ fn two_seam_chart_resolves_unique_simultaneous_corner_transition() {
     assert!(signed.chart_winding_preserved);
     assert_eq!(signed.graph.unwrap().loops, graph.loops);
     let reversed = c.reverse().unwrap();
-    let rp = split_verified(&reversed, [[0., 1.]; 2], 1e-7, 0.02, 32, 64, 50000, 50000)
+    let rp = split_verified(
+        &reversed,
+        [[0., 1.]; 2],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-7,
+            uv_tolerance: 0.02,
+            max_pieces: 32,
+            max_seams: 64,
+            search_work: 50000,
+            admission_work: 50000,
+        },
+    )
         .unwrap()
         .partition
         .unwrap();
@@ -1036,12 +1204,14 @@ fn approximated_loop(c: &Curve) -> nurbs_core::periodic_trim::Report {
     nurbs_core::periodic_trim::split_approximated(
         c,
         [[0., 1.]; 2],
-        1e-8,
-        0.01,
-        32,
-        64,
-        10000,
-        30000,
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 32,
+            max_seams: 64,
+            search_work: 10000,
+            admission_work: 30000,
+        },
     )
     .unwrap()
     .partition
@@ -1427,8 +1597,19 @@ fn seam_search_retains_arbitrary_rational_tangency_without_snapping_its_root() {
     let events = seam.roots.root_events();
     let event = &events[0];
     assert!(event.parameter_bounds[0] <= 11. / 3. && 11. / 3. <= event.parameter_bounds[1]);
-    let split =
-        split_verified(&c, [[0., 2.], [-1., 2.]], 1e-7, 0.01, 16, 32, 10000, 10000).unwrap();
+    let split = split_verified(
+        &c,
+        [[0., 2.], [-1., 2.]],
+        nurbs_core::periodic_trim::SeamSplitLimits {
+            parameter_tolerance: 1e-7,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 10000,
+        },
+    )
+    .unwrap();
     assert_eq!(split.status, SplitStatus::IntervalRootNeedsConstruction);
     assert!(split.partition.is_none());
 }

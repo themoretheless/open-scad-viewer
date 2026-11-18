@@ -8,9 +8,9 @@ import {
   type GeometryExecutionDescriptor,
 } from '../src/core/geometryExecution'
 import { sha256Hex } from '../src/core/sha256'
-import { geometryExecutionForError } from '../src/services/geometryBuildEngine'
-import { GEOMETRY_WORKER_PAYLOAD_LIMITS } from '../src/services/geometryWorkerProtocol'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+import { geometryExecutionForError } from '../src/kernel/geometryBuildEngine'
+import { GEOMETRY_WORKER_PAYLOAD_LIMITS } from '../src/kernel/geometryWorkerProtocol'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 import {
   DIRECT_GEOMETRY_IDENTITY,
   DIRECT_GEOMETRY_PROTOCOL_VERSION,
@@ -160,34 +160,46 @@ describe('direct production geometry protocol', () => {
     const terminal = buildSuccess(request)
     expect(isDirectGeometryNodeTerminal(terminal, request)).toBe(true)
     expect(isDirectGeometryNodeTerminal({ ...terminal, jobId: request.jobId + 1 }, request)).toBe(false)
-    const success = terminal as Extract<
-      DirectGeometryTerminal,
-      { kind: 'build'; status: 'succeeded' }
-    >
-    expect(isDirectGeometryNodeTerminal({
-      ...success,
-      built: { ...success.built, execution: { ...success.built.execution, purpose: 'export' } },
-    }, request)).toBe(false)
-    expect(isDirectGeometryNodeTerminal({
-      ...success,
-      built: {
-        ...success.built,
-        execution: {
-          ...success.built.execution,
-          requiredCapabilities: Array.from({ length: 257 }, (_, index) => `cap.${index}`),
+    const success = terminal as Extract<DirectGeometryTerminal, { kind: 'build'; status: 'succeeded' }>
+    expect(
+      isDirectGeometryNodeTerminal(
+        {
+          ...success,
+          built: { ...success.built, execution: { ...success.built.execution, purpose: 'export' } },
         },
-      },
-    }, request)).toBe(false)
-    expect(isDirectGeometryNodeTerminal({
-      ...success,
-      built: {
-        ...success.built,
-        execution: {
-          ...success.built.execution,
-          effectiveLimits: { ...success.built.execution.effectiveLimits, injected: 1 },
+        request,
+      ),
+    ).toBe(false)
+    expect(
+      isDirectGeometryNodeTerminal(
+        {
+          ...success,
+          built: {
+            ...success.built,
+            execution: {
+              ...success.built.execution,
+              requiredCapabilities: Array.from({ length: 257 }, (_, index) => `cap.${index}`),
+            },
+          },
         },
-      },
-    }, request)).toBe(false)
+        request,
+      ),
+    ).toBe(false)
+    expect(
+      isDirectGeometryNodeTerminal(
+        {
+          ...success,
+          built: {
+            ...success.built,
+            execution: {
+              ...success.built.execution,
+              effectiveLimits: { ...success.built.execution.effectiveLimits, injected: 1 },
+            },
+          },
+        },
+        request,
+      ),
+    ).toBe(false)
   })
 
   it('identifies the frozen production legacy-direct path without qualification claims', () => {
@@ -207,48 +219,53 @@ describe('direct production geometry protocol', () => {
     const request = capabilitiesRequest()
     const snapshot = capabilities()
     expect(isDirectGeometryCapabilities(snapshot)).toBe(true)
-    expect(isDirectGeometryNodeTerminal({
-      protocolVersion: DIRECT_GEOMETRY_PROTOCOL_VERSION,
-      workerEpoch: request.workerEpoch,
-      jobId: request.jobId,
-      sourceSha256: null,
-      quality: null,
-      purpose: null,
-      identity: DIRECT_GEOMETRY_IDENTITY,
-      status: 'succeeded',
-      kind: 'capabilities',
-      capabilities: snapshot,
-    }, request)).toBe(true)
-    expect(isDirectGeometryCapabilities({
-      ...snapshot,
-      engines: snapshot.engines.map((engine, index) => index === 0
-        ? { ...engine, manifestDigest: '0'.repeat(64) }
-        : engine),
-    })).toBe(false)
+    expect(
+      isDirectGeometryNodeTerminal(
+        {
+          protocolVersion: DIRECT_GEOMETRY_PROTOCOL_VERSION,
+          workerEpoch: request.workerEpoch,
+          jobId: request.jobId,
+          sourceSha256: null,
+          quality: null,
+          purpose: null,
+          identity: DIRECT_GEOMETRY_IDENTITY,
+          status: 'succeeded',
+          kind: 'capabilities',
+          capabilities: snapshot,
+        },
+        request,
+      ),
+    ).toBe(true)
+    expect(
+      isDirectGeometryCapabilities({
+        ...snapshot,
+        engines: snapshot.engines.map((engine, index) =>
+          index === 0 ? { ...engine, manifestDigest: '0'.repeat(64) } : engine,
+        ),
+      }),
+    ).toBe(false)
   })
 
   it('bounds build payloads and sends parse details without source excerpts', () => {
     const request = buildRequest()
-    const success = buildSuccess(request) as Extract<
-      DirectGeometryTerminal,
-      { kind: 'build'; status: 'succeeded' }
-    >
-    expect(isDirectGeometryNodeTerminal({
-      ...success,
-      built: {
-        ...success.built,
-        result: {
-          ...success.built.result,
-          warnings: ['x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters + 1)],
+    const success = buildSuccess(request) as Extract<DirectGeometryTerminal, { kind: 'build'; status: 'succeeded' }>
+    expect(
+      isDirectGeometryNodeTerminal(
+        {
+          ...success,
+          built: {
+            ...success.built,
+            result: {
+              ...success.built.result,
+              warnings: ['x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters + 1)],
+            },
+          },
         },
-      },
-    }, request)).toBe(false)
+        request,
+      ),
+    ).toBe(false)
 
-    const parseError = new OpenSCADParseError(
-      'secret_model_name();',
-      0,
-      'Unsupported operation',
-    )
+    const parseError = new OpenSCADParseError('secret_model_name();', 0, 'Unsupported operation')
     const serialized = serializeDirectGeometryError(parseError)
     expect(serialized).toMatchObject({
       category: 'openscad-parse',
@@ -275,14 +292,19 @@ describe('direct production geometry protocol', () => {
       error: serialized,
     }
     expect(isDirectGeometryNodeTerminal(failure, request)).toBe(true)
-    expect(isDirectGeometryNodeTerminal({
-      ...failure,
-      error: {
-        ...serialized,
-        start: request.source.length + 1,
-        end: request.source.length + 2,
-      },
-    }, request)).toBe(false)
+    expect(
+      isDirectGeometryNodeTerminal(
+        {
+          ...failure,
+          error: {
+            ...serialized,
+            start: request.source.length + 1,
+            end: request.source.length + 2,
+          },
+        },
+        request,
+      ),
+    ).toBe(false)
     const reconstructed = reconstructDirectGeometryRemoteError(serialized, request.source, execution)
     expect(reconstructed).toBeInstanceOf(OpenSCADParseError)
     expect(geometryExecutionForError(reconstructed)).toEqual(execution)

@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0524",
+  "testedBase": "8bdc3e5ef768fb9f096d6ad54a4d50b83f205094",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 105,
+  "scope": [
+    "Refine clamped transverse bases to their exact multiplicity union before periodic strip assembly.",
+    "Insert the missing transverse knots under one work budget and assemble the refined strips with exact weight scaling."
+  ],
+  "logSha256": "6bd542ef08f0b6a120ea59df47bc480f5c6e21634c38fb0d7ceb87dc6bd83fec",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a663c531342980b61d872e22bb7412e211e30165432453a51492bddd558f3e1d",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "4ed06215f666c014beaf6b723167e82fd5f9a583130fe58f4c78fac3ec180bb8"
+  }
+}

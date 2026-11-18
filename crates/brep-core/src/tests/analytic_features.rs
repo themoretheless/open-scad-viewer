@@ -1052,20 +1052,6 @@ fn solid_loft_section_match() {
     assert!(!out.faces.is_empty());
 }
 
-#[test]
-fn step_roundtrip_not_faceted() {
-    let model = cuboid([0., 0., 0.], [3., 2., 1.]).unwrap();
-    let (text, cert) = crate::export_step(&model).unwrap();
-    assert!(cert.complete);
-    assert!(text.contains("ADVANCED_FACE"));
-    assert!(text.contains("PLANE"));
-    assert!(text.contains("VERTEX_POINT"));
-    assert!(text.contains("EDGE_CURVE"));
-    assert!(text.contains("AP242"));
-    assert!(!text.contains("FACETED_BREP"));
-    let (back, _) = crate::import_step(&text).unwrap();
-    back.validate().unwrap();
-}
 
 #[test]
 fn analytic_chamfer_af01_cuboid_edge() {
@@ -1409,23 +1395,6 @@ fn solid_loft_refuses_nonrectangular_section_carriers() {
             .code,
         "BREP_ANALYTIC_LOFT_REFUSED"
     );
-}
-
-#[test]
-fn iges_roundtrip_entity_subset() {
-    let model = cuboid([0., 0., 0.], [2., 3., 4.]).unwrap();
-    let (text, cert) = export_iges(&model).unwrap();
-    assert!(cert.complete);
-    assert!(text.contains("116,") || text.contains("110,") || text.contains("190,"));
-    assert!(text.contains("186,") && text.contains("514,"));
-    let (back, _) = import_iges(&text).unwrap();
-    back.validate().unwrap();
-}
-
-#[test]
-fn iges_refuses_stl_payload() {
-    let stl = "solid cube\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nendloop\nendfacet\nendsolid cube\n";
-    assert_eq!(import_iges(stl).unwrap_err().code, "BREP_IGES_REFUSED");
 }
 
 #[test]

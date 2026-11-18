@@ -1,36 +1,270 @@
-import {describe,it,expect} from 'vitest'
-import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol'
-function report():any{return{schema:'nurbs-original-affine-patch-contacts/1',status:'present',presenceProven:true,patchAbsenceProven:false,curvePatchCoverageComplete:true,parameterCoordinates:['curve-natural-t','patch-natural-u','patch-natural-v'],contacts:[{method:'original-patch-plane-polynomial',parameterBox:[[.49,.51],[-.01,.01],[11.99,12.01]],positionBounds:[[.59,.61],[.49,.51],[.049,.051]],sourceSpans:[2],multiplicities:[2]}],scalarProofs:[{span:2,status:'roots',normalizedOriginalSpanRoots:[{interval:[.5,.5],multiplicity:2}],reason:null,workUsed:30}],proofContextSerialized:false,unresolvedSpans:[],ambiguousParameters:[],spans:1,maxSpans:10,exactWork:30,maxExactWork:100000,allSurfaceBranchesEnumerated:false,trimAdmission:false,bodyAdmission:false}}
-describe('original patch contacts protocol',()=>{
- it('accepts an isolated even contact without claiming a crossing sign',()=>expect(isOriginalPatchContactsReport(report())).toBe(true))
- it('retains two distinct one-sided orders on a shared knot',()=>{const r=report();const p=structuredClone(r.scalarProofs[0]);p.span=4;p.normalizedOriginalSpanRoots[0].multiplicity=1;r.scalarProofs.push(p);r.spans=2;r.exactWork=60;r.contacts[0].sourceSpans=[2,4];r.contacts[0].multiplicities=[2,1];expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('accepts a plane root excluded from the finite patch',()=>{const r=report();Object.assign(r,{status:'absent-on-patch',presenceProven:false,patchAbsenceProven:true,contacts:[]});expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('accepts zero exact work with explicit missing span coverage',()=>{const r=report();Object.assign(r,{status:'unresolved',presenceProven:false,curvePatchCoverageComplete:false,contacts:[],scalarProofs:[],spans:0,exactWork:0,maxExactWork:0,unresolvedSpans:[2]});expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it.each(['proofContextSerialized','allSurfaceBranchesEnumerated','trimAdmission','bodyAdmission'])('rejects forged %s',key=>{const r=report();r[key]=true;expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects an invented transverse sign',()=>{const r=report();r.contacts[0].crossingSign=1;expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects contact orders with no matching source proof',()=>{const r=report();r.contacts[0].multiplicities=[4];expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects an unrelated source span',()=>{const r=report();r.contacts[0].sourceSpans=[4];expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects inconsistent charged work',()=>{const r=report();r.exactWork=31;expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects completeness with boundary ambiguity',()=>{const r=report();r.ambiguousParameters=[[.49,.51]];expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects an indeterminate span without unresolved evidence',()=>{const r=report();r.scalarProofs[0].status='indeterminate';r.scalarProofs[0].reason='ResourceLimit';r.scalarProofs[0].normalizedOriginalSpanRoots=[];expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects normalized scalar roots outside their source span',()=>{const r=report();r.scalarProofs[0].normalizedOriginalSpanRoots[0].interval=[-1,2];expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('accepts unresolved finite-patch boundary membership',()=>{const r=report();Object.assign(r,{status:'unresolved',presenceProven:false,curvePatchCoverageComplete:false,contacts:[],ambiguousParameters:[[.5,.5]]});expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('accepts an explicit exhausted scalar proof without contacts',()=>{const r=report();Object.assign(r,{status:'unresolved',presenceProven:false,curvePatchCoverageComplete:false,contacts:[],unresolvedSpans:[2]});Object.assign(r.scalarProofs[0],{status:'indeterminate',normalizedOriginalSpanRoots:[],reason:'ResourceLimit'});expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('rejects complete absence with no queried source spans',()=>{const r=report();Object.assign(r,{status:'absent-on-patch',presenceProven:false,patchAbsenceProven:true,contacts:[],spans:0,scalarProofs:[],exactWork:0});expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects duplicate scalar span proofs',()=>{const r=report();r.scalarProofs.push(structuredClone(r.scalarProofs[0]));r.spans=2;r.exactWork=60;expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects mismatched one-sided order arrays',()=>{const r=report();r.contacts[0].multiplicities=[];expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects sparse root evidence',()=>{const r=report();r.contacts[0].parameterBox=Array(3);expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('accepts coupled UV only with global injectivity and interval proof metadata',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='injective-bilinear-krawczyk';expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('rejects coupled contacts without global UV injectivity',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=false;r.contacts[0].uvMethod='injective-bilinear-krawczyk';expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('rejects a separable shortcut attached to coupled weights',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='separable-projective';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+import { describe, it, expect } from 'vitest'
+import { isOriginalPatchContactsReport } from '../src/kernel/originalPatchContactsProtocol'
+function report() {
+  return {
+    schema: 'nurbs-original-affine-patch-contacts/1',
+    status: 'present',
+    presenceProven: true,
+    patchAbsenceProven: false,
+    curvePatchCoverageComplete: true,
+    parameterCoordinates: ['curve-natural-t', 'patch-natural-u', 'patch-natural-v'],
+    contacts: [
+      {
+        method: 'original-patch-plane-polynomial',
+        parameterBox: [
+          [0.49, 0.51],
+          [-0.01, 0.01],
+          [11.99, 12.01],
+        ],
+        positionBounds: [
+          [0.59, 0.61],
+          [0.49, 0.51],
+          [0.049, 0.051],
+        ],
+        sourceSpans: [2],
+        multiplicities: [2],
+      },
+    ],
+    scalarProofs: [
+      {
+        span: 2,
+        status: 'roots',
+        normalizedOriginalSpanRoots: [{ interval: [0.5, 0.5], multiplicity: 2 }],
+        reason: null,
+        workUsed: 30,
+      },
+    ],
+    proofContextSerialized: false,
+    unresolvedSpans: [],
+    ambiguousParameters: [],
+    spans: 1,
+    maxSpans: 10,
+    exactWork: 30,
+    maxExactWork: 100000,
+    allSurfaceBranchesEnumerated: false,
+    trimAdmission: false,
+    bodyAdmission: false,
+  }
+}
+describe('original patch contacts protocol', () => {
+  it('accepts an isolated even contact without claiming a crossing sign', () =>
+    expect(isOriginalPatchContactsReport(report())).toBe(true))
+  it('retains two distinct one-sided orders on a shared knot', () => {
+    const r = report()
+    const p = structuredClone(r.scalarProofs[0])
+    p.span = 4
+    p.normalizedOriginalSpanRoots[0].multiplicity = 1
+    r.scalarProofs.push(p)
+    r.spans = 2
+    r.exactWork = 60
+    r.contacts[0].sourceSpans = [2, 4]
+    r.contacts[0].multiplicities = [2, 1]
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('accepts a plane root excluded from the finite patch', () => {
+    const r = report()
+    Object.assign(r, { status: 'absent-on-patch', presenceProven: false, patchAbsenceProven: true, contacts: [] })
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('accepts zero exact work with explicit missing span coverage', () => {
+    const r = report()
+    Object.assign(r, {
+      status: 'unresolved',
+      presenceProven: false,
+      curvePatchCoverageComplete: false,
+      contacts: [],
+      scalarProofs: [],
+      spans: 0,
+      exactWork: 0,
+      maxExactWork: 0,
+      unresolvedSpans: [2],
+    })
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it.each(['proofContextSerialized', 'allSurfaceBranchesEnumerated', 'trimAdmission', 'bodyAdmission'])(
+    'rejects forged %s',
+    key => {
+      const r = report()
+      r[key] = true
+      expect(isOriginalPatchContactsReport(r)).toBe(false)
+    },
+  )
+  it('rejects an invented transverse sign', () => {
+    const r = report()
+    r.contacts[0].crossingSign = 1
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects contact orders with no matching source proof', () => {
+    const r = report()
+    r.contacts[0].multiplicities = [4]
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects an unrelated source span', () => {
+    const r = report()
+    r.contacts[0].sourceSpans = [4]
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects inconsistent charged work', () => {
+    const r = report()
+    r.exactWork = 31
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects completeness with boundary ambiguity', () => {
+    const r = report()
+    r.ambiguousParameters = [[0.49, 0.51]]
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects an indeterminate span without unresolved evidence', () => {
+    const r = report()
+    r.scalarProofs[0].status = 'indeterminate'
+    r.scalarProofs[0].reason = 'ResourceLimit'
+    r.scalarProofs[0].normalizedOriginalSpanRoots = []
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects normalized scalar roots outside their source span', () => {
+    const r = report()
+    r.scalarProofs[0].normalizedOriginalSpanRoots[0].interval = [-1, 2]
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('accepts unresolved finite-patch boundary membership', () => {
+    const r = report()
+    Object.assign(r, {
+      status: 'unresolved',
+      presenceProven: false,
+      curvePatchCoverageComplete: false,
+      contacts: [],
+      ambiguousParameters: [[0.5, 0.5]],
+    })
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('accepts an explicit exhausted scalar proof without contacts', () => {
+    const r = report()
+    Object.assign(r, {
+      status: 'unresolved',
+      presenceProven: false,
+      curvePatchCoverageComplete: false,
+      contacts: [],
+      unresolvedSpans: [2],
+    })
+    Object.assign(r.scalarProofs[0], {
+      status: 'indeterminate',
+      normalizedOriginalSpanRoots: [],
+      reason: 'ResourceLimit',
+    })
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('rejects complete absence with no queried source spans', () => {
+    const r = report()
+    Object.assign(r, {
+      status: 'absent-on-patch',
+      presenceProven: false,
+      patchAbsenceProven: true,
+      contacts: [],
+      spans: 0,
+      scalarProofs: [],
+      exactWork: 0,
+    })
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects duplicate scalar span proofs', () => {
+    const r = report()
+    r.scalarProofs.push(structuredClone(r.scalarProofs[0]))
+    r.spans = 2
+    r.exactWork = 60
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects mismatched one-sided order arrays', () => {
+    const r = report()
+    r.contacts[0].multiplicities = []
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects sparse root evidence', () => {
+    const r = report()
+    r.contacts[0].parameterBox = Array(3)
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('accepts coupled UV only with global injectivity and interval proof metadata', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'injective-bilinear-krawczyk'
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('rejects coupled contacts without global UV injectivity', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = false
+    r.contacts[0].uvMethod = 'injective-bilinear-krawczyk'
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('rejects a separable shortcut attached to coupled weights', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'separable-projective'
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
 
- it('accepts an explicitly broad UV box with a global bijection proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='positive-bilinear-global-inverse';r.contacts[0].parameterBox[1]=[-2,2];r.contacts[0].parameterBox[2]=[10,14];expect(isOriginalPatchContactsReport(r)).toBe(true)})
+  it('accepts an explicitly broad UV box with a global bijection proof', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'positive-bilinear-global-inverse'
+    r.contacts[0].parameterBox[1] = [-2, 2]
+    r.contacts[0].parameterBox[2] = [10, 14]
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
 
- it('accepts an exact boundary-projective contact with target proof metadata',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='exact-boundary-projective';r.contacts[0].parameterBox[1]=[-2,-2];expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('rejects a boundary proof tag without target proof metadata',()=>{const r=report();r.contacts[0].uvMethod='exact-boundary-projective';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+  it('accepts an exact boundary-projective contact with target proof metadata', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'exact-boundary-projective'
+    r.contacts[0].parameterBox[1] = [-2, -2]
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('rejects a boundary proof tag without target proof metadata', () => {
+    const r = report()
+    r.contacts[0].uvMethod = 'exact-boundary-projective'
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
 
- it('accepts original-coordinate evidence for an interval root',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-affine-coordinate-bounds';r.contacts[0].parameterBox[1]=[-2,-2];r.scalarProofs[0].normalizedOriginalSpanRoots[0].interval=[.49,.51];expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('rejects original-coordinate evidence without a target bijection',()=>{const r=report();r.contacts[0].uvMethod='original-affine-coordinate-bounds';expect(isOriginalPatchContactsReport(r)).toBe(false)})
- it('accepts exact polynomial common-root evidence with target proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(true)})
- it('rejects polynomial common-root evidence without target proof',()=>{const r=report();r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+  it('accepts original-coordinate evidence for an interval root', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'original-affine-coordinate-bounds'
+    r.contacts[0].parameterBox[1] = [-2, -2]
+    r.scalarProofs[0].normalizedOriginalSpanRoots[0].interval = [0.49, 0.51]
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('rejects original-coordinate evidence without a target bijection', () => {
+    const r = report()
+    r.contacts[0].uvMethod = 'original-affine-coordinate-bounds'
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('accepts exact polynomial common-root evidence with target proof', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'original-polynomial-common-root'
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('rejects polynomial common-root evidence without target proof', () => {
+    const r = report()
+    r.contacts[0].uvMethod = 'original-polynomial-common-root'
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
+  it('accepts polynomial coordinate-sign evidence with a target bijection', () => {
+    const r = report()
+    r.targetWeightsSeparable = false
+    r.targetUvInjectivityProven = true
+    r.contacts[0].uvMethod = 'original-polynomial-coordinate-sign'
+    expect(isOriginalPatchContactsReport(r)).toBe(true)
+  })
+  it('rejects coordinate-sign evidence without target proof metadata', () => {
+    const r = report()
+    r.contacts[0].uvMethod = 'original-polynomial-coordinate-sign'
+    expect(isOriginalPatchContactsReport(r)).toBe(false)
+  })
 })

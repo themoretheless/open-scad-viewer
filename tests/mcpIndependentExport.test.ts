@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  fromJsonSchema,
-  InMemoryTransport,
-  type JSONRPCMessage,
-} from '@modelcontextprotocol/server'
+import { fromJsonSchema, InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { createOpenScadMcpServer } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
 import { executeIndependentOpenScad } from '../src/mcp/independentOpenScadExecution'
@@ -22,18 +18,26 @@ afterEach(async () => {
   await Promise.all(connections.splice(0).map(connection => connection.close()))
 })
 
-async function connect(): Promise<Connection & {
-  upstream: {
-    capabilities: ReturnType<typeof vi.fn>
-    check: ReturnType<typeof vi.fn>
-    export: ReturnType<typeof vi.fn>
+async function connect(): Promise<
+  Connection & {
+    upstream: {
+      capabilities: ReturnType<typeof vi.fn>
+      check: ReturnType<typeof vi.fn>
+      export: ReturnType<typeof vi.fn>
+    }
   }
-}> {
+> {
   const store = await DuckDbModelStore.open(':memory:')
   const upstream = {
-    capabilities: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    check: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    export: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
+    capabilities: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    check: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    export: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
     close: vi.fn(async () => undefined),
   }
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
@@ -44,8 +48,8 @@ async function connect(): Promise<Connection & {
   const pending = new Map<number, (value: Record<string, unknown>) => void>()
   let nextId = 1
   clientTransport.onmessage = message => {
-    if (!('id' in message) || typeof message.id !== 'number'
-      || (!('result' in message) && !('error' in message))) return
+    if (!('id' in message) || typeof message.id !== 'number' || (!('result' in message) && !('error' in message)))
+      return
     pending.get(message.id)?.(message as Record<string, unknown>)
     pending.delete(message.id)
   }
@@ -91,13 +95,13 @@ async function connect(): Promise<Connection & {
 describe('independent OpenSCAD export through MCP', () => {
   it('lists, exports and serves exact full-quality STL bytes without upstream or DuckDB writes', async () => {
     const { request, upstream, store } = await connect()
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{ name: string; outputSchema: Record<string, unknown> }>
     }
     const tool = listed.tools.find(candidate => candidate.name === 'openscad_independent_export')
     expect(tool).toBeDefined()
 
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_export',
       arguments: {
         source: 'include <size.scad> cube(edge);',
@@ -106,7 +110,7 @@ describe('independent OpenSCAD export through MCP', () => {
         file_name: 'bounded-part',
         max_bytes: 4096,
       },
-    }) as {
+    })) as {
       isError?: boolean
       content: Array<Record<string, unknown>>
       structuredContent: {
@@ -128,8 +132,9 @@ describe('independent OpenSCAD export through MCP', () => {
       }
     }
     expect(called.isError).not.toBe(true)
-    expect(await fromJsonSchema(tool!.outputSchema)['~standard']
-      .validate(called.structuredContent)).not.toHaveProperty('issues')
+    expect(await fromJsonSchema(tool!.outputSchema)['~standard'].validate(called.structuredContent)).not.toHaveProperty(
+      'issues',
+    )
     expect(called.structuredContent.export).toMatchObject({
       engine: {
         id: 'open-scad-viewer/independent-2021.01-dev.1',
@@ -153,16 +158,18 @@ describe('independent OpenSCAD export through MCP', () => {
       sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       byte_length: 684,
     })
-    expect(called.content).toContainEqual(expect.objectContaining({
-      type: 'resource_link',
-      uri: called.structuredContent.artifact.resource_uri,
-      name: 'bounded-part.stl',
-      mimeType: 'model/stl',
-    }))
+    expect(called.content).toContainEqual(
+      expect.objectContaining({
+        type: 'resource_link',
+        uri: called.structuredContent.artifact.resource_uri,
+        name: 'bounded-part.stl',
+        mimeType: 'model/stl',
+      }),
+    )
 
-    const resource = await request('resources/read', {
+    const resource = (await request('resources/read', {
       uri: called.structuredContent.artifact.resource_uri,
-    }) as { contents: Array<{ blob: string; mimeType: string }> }
+    })) as { contents: Array<{ blob: string; mimeType: string }> }
     const bytes = Buffer.from(resource.contents[0].blob, 'base64')
     const byteDigest = createHash('sha256').update(bytes).digest('hex')
     expect(resource.contents[0].mimeType).toBe('model/stl')
@@ -170,16 +177,20 @@ describe('independent OpenSCAD export through MCP', () => {
     expect(byteDigest).toBe(called.structuredContent.artifact.sha256)
     expect(byteDigest).toBe(called.structuredContent.artifact.id)
 
-    const resources = await request('resources/list') as { resources: Array<{ uri: string }> }
-    expect(resources.resources).toContainEqual(expect.objectContaining({
-      uri: called.structuredContent.artifact.resource_uri,
-    }))
-    const templates = await request('resources/templates/list') as {
+    const resources = (await request('resources/list')) as { resources: Array<{ uri: string }> }
+    expect(resources.resources).toContainEqual(
+      expect.objectContaining({
+        uri: called.structuredContent.artifact.resource_uri,
+      }),
+    )
+    const templates = (await request('resources/templates/list')) as {
       resourceTemplates: Array<{ uriTemplate: string }>
     }
-    expect(templates.resourceTemplates).toContainEqual(expect.objectContaining({
-      uriTemplate: 'openscad://independent-artifacts/{sha256}',
-    }))
+    expect(templates.resourceTemplates).toContainEqual(
+      expect.objectContaining({
+        uriTemplate: 'openscad://independent-artifacts/{sha256}',
+      }),
+    )
 
     const stats = await store.getCatalogStats()
     expect(stats.buildCount).toBe(0)
@@ -191,25 +202,25 @@ describe('independent OpenSCAD export through MCP', () => {
 
   it('serves exact OBJ text and rejects max_bytes before publishing another artifact', async () => {
     const { request } = await connect()
-    const exported = await request('tools/call', {
+    const exported = (await request('tools/call', {
       name: 'openscad_independent_export',
       arguments: { source: 'cube(1);', format: 'obj', file_name: 'cube.obj' },
-    }) as {
+    })) as {
       structuredContent: { artifact: { resource_uri: string; id: string; sha256: string; byte_length: number } }
     }
-    const resource = await request('resources/read', {
+    const resource = (await request('resources/read', {
       uri: exported.structuredContent.artifact.resource_uri,
-    }) as { contents: Array<{ text: string; mimeType: string }> }
+    })) as { contents: Array<{ text: string; mimeType: string }> }
     const bytes = new TextEncoder().encode(resource.contents[0].text)
     expect(resource.contents[0].mimeType).toBe('model/obj')
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(exported.structuredContent.artifact.id)
     expect(exported.structuredContent.artifact.sha256).toBe(exported.structuredContent.artifact.id)
     expect(bytes.byteLength).toBe(exported.structuredContent.artifact.byte_length)
 
-    const rejected = await request('tools/call', {
+    const rejected = (await request('tools/call', {
       name: 'openscad_independent_export',
       arguments: { source: 'cube(1);', format: 'stl', max_bytes: 100 },
-    }) as { isError?: boolean; structuredContent?: { error?: { code?: string } } }
+    })) as { isError?: boolean; structuredContent?: { error?: { code?: string } } }
     expect(rejected).toMatchObject({
       isError: true,
       structuredContent: { error: { code: 'artifact_too_large' } },
@@ -219,12 +230,14 @@ describe('independent OpenSCAD export through MCP', () => {
   it('honors an already-aborted signal before entering the parser', async () => {
     const controller = new AbortController()
     controller.abort()
-    await expect(executeIndependentOpenScad({
-      source: 'cube(1);',
-      files: [],
-      quality: 'full',
-      time: 0,
-      signal: controller.signal,
-    })).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(
+      executeIndependentOpenScad({
+        source: 'cube(1);',
+        files: [],
+        quality: 'full',
+        time: 0,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
   })
 })

@@ -10,7 +10,7 @@
 use crate::analysis::primitive_fit::{
     fit_cone, fit_cylinder, fit_sphere,
 };
-use crate::foundation::guards::{Budget, require_finite_f64, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_f64, require_finite_point};
 use crate::{Result, check, numeric, numeric_err};
 use math_core::{Acceleration, point_fit_plane};
 

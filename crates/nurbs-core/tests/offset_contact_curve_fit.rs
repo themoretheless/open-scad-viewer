@@ -2,21 +2,9 @@ use nurbs_core::{
     offset_contact_pcurve::{self as uv, FitLimits as L, FitStop as Stop},
     surface::Surface,
 };
-fn plane() -> Surface {
-    Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
-            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
-        ],
-        weights: vec![vec![1.; 2]; 2],
-        periodic_u: false,
-        periodic_v: false,
-    }
-}
+#[path = "common/unit_plane.rs"]
+mod unit_plane;
+use unit_plane::plane;
 #[test]
 fn independent_nonunit_source_parameters_get_both_fresh_whole_interval_proofs() {
     let mut a = plane();
@@ -30,8 +18,10 @@ fn independent_nonunit_source_parameters_get_both_fresh_whole_interval_proofs() 
     let saved = (a.clone(), b.clone());
     let work = L::default();
     let r = uv::fit_branch(
-        [&a, &b],
-        [0.2, -0.2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2, -0.2],
+        },
         0,
         [3., 6.],
         [0.1, 0.3],
@@ -87,8 +77,10 @@ fn curved() -> [Surface; 2] {
 fn nonlinear_original_offset_contact_refines_curves_without_world_point_authority() {
     let s = curved();
     let r = uv::fit_branch(
-        s.each_ref(),
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: s.each_ref(),
+            distances: [0.1; 2],
+        },
         1,
         [0.35, 0.55],
         [0.88, 0.96],
@@ -101,21 +93,7 @@ fn nonlinear_original_offset_contact_refines_curves_without_world_point_authorit
     let curves = r.curves.as_ref().unwrap();
     assert!(curves[0].degree > 1);
     for side in 0..2 {
-        let proof = uv::certify_refined(
-            &curves[side],
-            side,
-            s.each_ref(),
-            [0.1; 2],
-            1,
-            [0.35, 0.55],
-            [0.88, 0.96],
-            [[0.07, 0.22], [0.3, 0.6]],
-            128,
-            1e-7,
-            100000,
-            8,
-            8,
-        )
+        let proof = uv::certify_refined(&curves[side], side, uv::OffsetFaces { surfaces: s.each_ref(), distances: [0.1; 2] }, uv::ContactParameters { axis: 1, drive: [0.35, 0.55], free: [0.88, 0.96], second: [[0.07, 0.22], [0.3, 0.6]], spans: 128 }, 1e-7, uv::PcurveWork { max_cells: 100000, refinements: 8, band_refinements: 8 })
         .unwrap();
         assert!(proof.correspondence_proven, "{}", proof.reason);
         assert!(proof.band_queries > proof.visited);
@@ -156,8 +134,10 @@ fn budget_and_degree_stops_never_publish_one_successful_curve() {
         ),
     ] {
         let r = uv::fit_branch(
-            s.each_ref(),
-            [0.1; 2],
+            uv::OffsetFaces {
+                surfaces: s.each_ref(),
+                distances: [0.1; 2],
+            },
             1,
             [0.35, 0.55],
             [0.88, 0.96],
@@ -190,8 +170,10 @@ fn the_wrong_uv_sheet_refuses_even_when_its_world_points_coincide() {
     b.weights.push(vec![1.; 2]);
     b.knots_u = vec![0., 0., 1., 2., 3., 3.];
     let r = uv::fit_branch(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.35, 0.39],
         [0.25, 0.35],
@@ -222,20 +204,7 @@ fn the_wrong_uv_sheet_refuses_even_when_its_world_points_coincide() {
             .point;
         assert!(p.iter().zip(q).all(|(a, b)| (*a - b).abs() < 1e-13));
     }
-    let proof = uv::certify(
-        &wrong,
-        1,
-        [&a, &b],
-        [0.2; 2],
-        0,
-        [0.35, 0.39],
-        [0.25, 0.35],
-        [[0.30, 0.44], [0.15, 0.25]],
-        128,
-        1e-8,
-        100000,
-        8,
-    )
+    let proof = uv::certify(&wrong, 1, uv::OffsetFaces { surfaces: [&a, &b], distances: [0.2; 2] }, uv::ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 128 }, 1e-8, 100000, 8)
     .unwrap();
     assert!(!proof.correspondence_proven);
     assert_eq!(proof.band_queries, proof.visited);
@@ -248,8 +217,10 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
         p[2] = 3.;
     }
     let absent = uv::fit_branch(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -262,8 +233,10 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
     assert!(absent.curves.is_none());
     assert_eq!(absent.root_queries, 0);
     let same = uv::fit_branch(
-        [&a, &a],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &a],
+            distances: [0.2; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -276,8 +249,10 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
     assert!(same.curves.is_none());
     assert!(
         uv::fit_branch(
-            [&a, &b],
-            [0.2; 2],
+            uv::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2; 2],
+            },
             0,
             [0.2, 0.8],
             [0.1, 0.9],
@@ -286,7 +261,7 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
             L {
                 max_degree: 0,
                 ..L::default()
-            }
+            },
         )
         .is_err()
     );

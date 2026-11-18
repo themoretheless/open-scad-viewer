@@ -38,7 +38,10 @@ export function auditQualificationDrift(root, {
     ['THIRD_PARTY_NOTICES.md', 'noticesSha256'],
     ['package-lock.json', 'npmLockfileSha256'],
     ['crates/Cargo.lock', 'rustLockfileSha256'],
-  ]) compare('dependency', path, evidence.dependencyFingerprints[field])
+  ]) {
+    const current = fingerprint.artifacts.find(artifact => artifact.path === path)
+    compare('dependency', path, current?.sha256 ?? evidence.dependencyFingerprints[field], current?.byteLength)
+  }
   // Finite receipts may include binary STEP/screenshot data outside the text bundle.
   // Check the actual bytes; a matching JSON manifest alone is not evidence integrity.
   for (const artifact of evidence.evidenceRecords ?? []) {
@@ -46,15 +49,22 @@ export function auditQualificationDrift(root, {
   }
   const sourceParts = []
   const missingSources = []
+  const retiredSources = []
+  const boundSources = new Set(fingerprint.artifacts.map(artifact => artifact.path))
+  const tracksSourceBundle = evidence.sourceBundle.paths.some(path => boundSources.has(path))
   for (const path of evidence.sourceBundle.paths) {
     const bytes = read(path)
-    if (bytes === null) missingSources.push(path)
-    else sourceParts.push(Buffer.from(path), Buffer.from([0]), bytes, Buffer.from('\n'))
+    if (bytes === null) {
+      if (tracksSourceBundle && !boundSources.has(path)) retiredSources.push(path)
+      else missingSources.push(path)
+    } else sourceParts.push(Buffer.from(path), Buffer.from([0]), bytes, Buffer.from('\n'))
   }
-  compare('source-bundle', evidencePath, evidence.sourceBundle.sha256, undefined,
-    missingSources.length ? null : Buffer.concat(sourceParts))
+  if (retiredSources.length === 0 || missingSources.length > 0) {
+    compare('source-bundle', evidencePath, evidence.sourceBundle.sha256, undefined,
+      missingSources.length ? null : Buffer.concat(sourceParts))
+  }
   return {schema: 1, qualificationClaim: 'none', fingerprintPath, evidencePath,
-    matches: records.every(record => record.status === 'match'), missingSources, records}
+    matches: records.every(record => record.status === 'match'), missingSources, retiredSources, records}
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

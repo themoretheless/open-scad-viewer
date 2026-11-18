@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0584",
+  "testedBase": "9e095d9ea79d8cffeb70607c237e8b880ab44b0c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 169,
+  "scope": [
+    "Expose certified rational range length and both resource limits through the geometry ABI.",
+    "Verify bounds against a rational seam-crossing length, reject invalid rational pairs, and report insufficient integration cells."
+  ],
+  "logSha256": "6e77ab3129574815e0cfe4ea3eaa01a3ac4c92247912c7b6a00354968b886bf7",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "c4ec94c41080b8605bced2392b038355fbc40333b2f071190e107459fffecb06",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "8c2edb7f141ffcc2a8b9d4c307d980e1f8a094eca2fd336130dbdee03d66cb4e",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "886ef9198dc85e45c9ba014bcb79056d8f3054feabda3bd22811602f10af4d95",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "86b17b2c8328f60e96ad0479ada1396944967a93c28ea048aecbfadf345ac133"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

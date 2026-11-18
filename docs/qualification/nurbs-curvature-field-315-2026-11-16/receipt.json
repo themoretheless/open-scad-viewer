@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0315",
+  "testedBase": "3e9f1765e3985df5bdba814a1ed97d777e247f17",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_surface_projection_contracts",
+    "--test",
+    "exact_surface_affine_hull_contracts",
+    "--test",
+    "exact_surface_derivative_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "Project a certified planar rational tensor surface into two Cartesian coordinates without changing its basis, with an exact rational inverse on the support plane.",
+    "Exact two-dimensional active affine hull. Inverse coefficients remain rational even when not binary64; inactive poles need not lie on the plane."
+  ],
+  "logSha256": "113745051de642548ff0b3ddf10d1e3d429f2cabe45873f90a61f2fa51b5d67d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "48f7331a45c86e75652c7497f91e3ec2e67f380243e0fa7ea590e20b54e4662f",
+    "crates/nurbs-core/tests/exact_planar_surface_projection_contracts.rs": "315ef09c814aa9a5942c4d4a7874219422959ec00f778ba155921f1d2c06e6ca"
+  }
+}

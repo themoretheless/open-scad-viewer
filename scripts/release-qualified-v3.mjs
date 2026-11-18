@@ -47,7 +47,7 @@ const successors = [
       'crates/brep-core/src/transactions.rs',
       'crates/geometry-bridge/src/lib.rs',
       'crates/geometry-bridge/src/tests.rs',
-      'src/services/geometry/brep.ts',
+      'src/kernel/geometry/brep.ts',
       'tests/brepAuthorizedHealV2.test.ts',
     ],
     oracles: [
@@ -104,7 +104,7 @@ const successors = [
       'crates/brep-core/src/solid_audit.rs',
       'crates/geometry-bridge/src/lib.rs',
       'crates/geometry-bridge/src/tests.rs',
-      'src/services/geometry/brep.ts',
+      'src/kernel/geometry/brep.ts',
       'tests/brepCurvedGraphBooleanV3.test.ts',
     ],
     oracles: [
@@ -155,7 +155,7 @@ const successors = [
       'crates/brep-core/src/imprint_pipeline.rs',
       'crates/geometry-bridge/src/lib.rs',
       'crates/geometry-bridge/src/tests.rs',
-      'src/services/geometry/brep.ts',
+      'src/kernel/geometry/brep.ts',
       'tests/brepNurbsSuccessorCellsV3.test.ts',
     ],
     oracles: [
@@ -206,7 +206,7 @@ const successors = [
       'crates/brep-core/src/solid_audit.rs',
       'crates/geometry-bridge/src/lib.rs',
       'crates/geometry-bridge/src/tests.rs',
-      'src/services/geometry/brep.ts',
+      'src/kernel/geometry/brep.ts',
       'tests/brepNurbsSuccessorCellsV3.test.ts',
     ],
     oracles: [
@@ -256,7 +256,7 @@ const successors = [
       'crates/brep-topology/src/lib.rs',
       'crates/geometry-bridge/src/lib.rs',
       'crates/geometry-bridge/src/tests.rs',
-      'src/services/cadNurbsStep.ts',
+      'src/kernel/cadNurbsStep.ts',
       'tests/brepDirectStepV3.test.ts',
     ],
     oracles: [
@@ -323,7 +323,7 @@ for (const capability of successors) {
     })),
     bindings: {
       implementation: capability.implementation,
-      registry: 'src/services/geometry/brepCapability.ts',
+      registry: 'src/kernel/geometry/brepCapability.ts',
       evidenceJson: evidencePath,
     },
     evidence: {
@@ -417,7 +417,7 @@ write('docs/qualification/brep-capability-registry-release-full-v3.json', {
   planId: 'brep-capability-registry-release-full-v3',
   lifecycle: 'frozen-pending-execution',
   successorOf: v2ReleasePath,
-  registry: 'src/services/geometry/brepCapability.ts',
+  registry: 'src/kernel/geometry/brepCapability.ts',
   closedMatrix: 'docs/qualification/brep-full-closed-matrix-v3.json',
   g8Index: 'docs/qualification/plans/g8-full-matrix-index-v3.json',
   capabilities: shipped,

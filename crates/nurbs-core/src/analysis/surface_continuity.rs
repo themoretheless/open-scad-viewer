@@ -19,6 +19,8 @@ pub struct Report<'s> {
     pub certificate: Option<Certificate<'s>>,
     pub cells: usize,
     pub exact_work: u64,
+    /// Original raw-parameter Ck only; Different does not refute geometric Gk.
+    pub outcome: cad_predicates::BezierIdentity,
 }
 /// Fresh original homogeneous coefficients and raw knot widths prove complete
 /// one-sided tensor jets, including mixed derivatives. Basis multiplicity is
@@ -42,12 +44,19 @@ pub fn qualify(
         cells: 0,
         exact_work: 0,
     };
-    let proven =
-        surface_tensor_identity::query(&[source], Some(order), &mut work, cells, exact_work);
+    let outcome = surface_tensor_identity::query_outcome(
+        &[source],
+        Some(order),
+        &mut work,
+        cells,
+        exact_work,
+    );
+    let proven = outcome == cad_predicates::BezierIdentity::Equal;
     Ok(Report {
         certificate: proven.then_some(Certificate { source, order }),
         cells: work.cells,
         exact_work: work.exact_work,
+        outcome,
     })
 }
 
@@ -84,6 +93,7 @@ mod tests {
                 .interior_basis_c1
         );
         let r = qualify(&source, 2, 100000, 1000000).unwrap();
+        assert_eq!(r.outcome, cad_predicates::BezierIdentity::Equal);
         let proof = r.certificate.expect("Exact unchanged rational saddle jets");
         assert!(std::ptr::eq(proof.source(), &source));
         assert_eq!(proof.order(), 2);
@@ -110,23 +120,22 @@ mod tests {
         ] {
             let short = qualify(&source, 2, cells, work).unwrap();
             assert!(short.certificate.is_none());
+            assert_eq!(
+                short.outcome,
+                cad_predicates::BezierIdentity::Indeterminate(
+                    cad_predicates::Reason::ResourceLimit
+                )
+            );
             assert!(short.cells <= cells && short.exact_work <= work);
         }
         assert_eq!(source, before);
         let mut crease = source.clone();
         crease.control_points[1][0][2] += 0.125;
-        assert!(
-            qualify(&crease, 1, 100000, 1000000)
-                .unwrap()
-                .certificate
-                .is_none()
-        );
-        assert!(
-            qualify(&crease, 2, 100000, 1000000)
-                .unwrap()
-                .certificate
-                .is_none()
-        );
+        for order in [1, 2] {
+            let mismatch = qualify(&crease, order, 100000, 1000000).unwrap();
+            assert!(mismatch.certificate.is_none());
+            assert_eq!(mismatch.outcome, cad_predicates::BezierIdentity::Different);
+        }
         crease.weights[0][0] = -1.;
         assert!(qualify(&crease, 2, 0, 0).is_err());
     }

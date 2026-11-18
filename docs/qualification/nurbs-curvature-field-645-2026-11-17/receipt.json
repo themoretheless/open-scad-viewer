@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0645",
+  "testedBase": "cdd07f34ac231fbd0e074b04c193348fbf5d0538",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 240,
+  "scope": [
+    "Add signed component first mass moments about an oriented world plane before normalization.",
+    "Check signed cancellation with bounded masses, reversal of plane orientation, a weighted nested island and incomplete coverage."
+  ],
+  "logSha256": "4087a8f1cf023e0b75d05ac1865dccca3264590c1aaa998ee7207bac8042c032",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "98306f1636c5c1f9d6d155be63b8e6b30eeee0af1bbb60212032fe6ff9dc3805",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "216c4f9dda23a9d1eb41b5f0613000dd2898a1178dcbbaea43b5baa5bc253273"
+  }
+}

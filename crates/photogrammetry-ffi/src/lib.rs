@@ -1,14 +1,5 @@
 //! Shared photogrammetry host ABI core, consumed by the `photogrammetry-wasm`
 //! shell, which adds the `extern "C"` export surface.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 mod response;
 mod session;
 use photogrammetry_core::{Result, error as input};
@@ -114,12 +105,7 @@ pub fn photo_alloc(len: usize) -> usize {
     // before photo_add/photo_add_calibrated may read them, and u8 has no
     // invalid bit patterns, so the zero-fill would be dead work. No Rust code
     // reads the allocation before that overwrite (closed ABI of this module).
-    let mut buffer: Vec<u8> = Vec::with_capacity(len);
-    #[allow(clippy::uninit_vec)]
-    unsafe {
-        buffer.set_len(len);
-    }
-    Box::into_raw(buffer.into_boxed_slice()) as *mut u8 as usize
+    Box::into_raw(Box::<[u8]>::new_uninit_slice(len)) as *mut u8 as usize
 }
 /// # Safety
 /// ptr/len must be a live allocation returned by this module; consumed once.

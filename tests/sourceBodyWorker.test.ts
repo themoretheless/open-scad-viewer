@@ -1,816 +1,2102 @@
-import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
-import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {afterEach,expect,it} from 'vitest'
-import {readFileSync,writeFileSync,appendFileSync} from 'node:fs'
-import {createHash} from 'node:crypto'
-import {gunzipSync} from 'node:zlib'
+import { createSourceBodyRecord, sourceBodyRecordOptions } from '../src/kernel/sourceBodyArchive'
+import {
+  DirectHistory,
+  emptyDirectDocument,
+  parseDirectDocument,
+  serializeDirectDocument,
+} from '../src/app/directModeling'
+import { warmGeometryKernel } from '../src/kernel/geometry/kernel'
+import { afterEach, expect, it } from 'vitest'
+import { readFileSync, writeFileSync, appendFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { gunzipSync } from 'node:zlib'
 import artifactIdentity from '../src/generated/geometry-kernels/identity'
-const wasmSha256=createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex')
+const wasmSha256 = createHash('sha256')
+  .update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm', import.meta.url)))
+  .digest('hex')
 expect(artifactIdentity.sha256).toBe(wasmSha256)
-if(process.env.CAD_EXPECTED_WASM_SHA256)expect(wasmSha256).toBe(process.env.CAD_EXPECTED_WASM_SHA256)
-import {Worker} from 'node:worker_threads'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
-import {sourceBodyExpectation,validSourceBody,restoreSourceBody,type SourceBodyOptions,type SourceBodyResult} from '../src/services/sourceBody'
-const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',import.meta.url))).toString())
-const options=():SourceBodyOptions=>{const {op:_op,...value}=structuredClone(request);return value}
+if (process.env.CAD_EXPECTED_WASM_SHA256) expect(wasmSha256).toBe(process.env.CAD_EXPECTED_WASM_SHA256)
+import { Worker } from 'node:worker_threads'
+import { MainSolidWorkerClient, type MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+import type { MainSolidRequest } from '../src/kernel/mainSolidProtocol'
+import {
+  sourceBodyExpectation,
+  validSourceBody,
+  restoreSourceBody,
+  type SourceBodyOptions,
+  type SourceBodyResult,
+} from '../src/kernel/sourceBody'
+const request = JSON.parse(
+  gunzipSync(
+    readFileSync(
+      new URL(
+        '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',
+        import.meta.url,
+      ),
+    ),
+  ).toString(),
+)
+const options = (): SourceBodyOptions => {
+  const { op: _op, ...value } = structuredClone(request)
+  return value
+}
 class Port implements MainSolidPort {
- onmessage:MainSolidPort['onmessage']=null;onerror:MainSolidPort['onerror']=null;onmessageerror:MainSolidPort['onmessageerror']=null
- requests:MainSolidRequest[]=[];terminated=false
- postMessage(request:MainSolidRequest){this.requests.push(structuredClone(request))}
- terminate(){this.terminated=true}
+  onmessage: MainSolidPort['onmessage'] = null
+  onerror: MainSolidPort['onerror'] = null
+  onmessageerror: MainSolidPort['onmessageerror'] = null
+  requests: MainSolidRequest[] = []
+  terminated = false
+  postMessage(request: MainSolidRequest) {
+    this.requests.push(structuredClone(request))
+  }
+  terminate() {
+    this.terminated = true
+  }
 }
-const timings:unknown[]=[]
+const timings: unknown[] = []
 class NodePort implements MainSolidPort {
- onmessage:MainSolidPort['onmessage']=null;onerror:MainSolidPort['onerror']=null;onmessageerror:MainSolidPort['onmessageerror']=null
- constructor(readonly worker:Worker){
-  worker.on('message',data=>{if(data?.__webWorkerHarness==='artifact'){expect(data.identity).toEqual(artifactIdentity);return}if(data.kind==='sourceBodyRestore'&&process.env.CAD_SOURCE_WORKER_RAW)writeFileSync(process.env.CAD_SOURCE_WORKER_RAW,JSON.stringify(data,null,2)+'\n');if(data.kind==='sourceBodyRestore'&&data.timing)timings.push({id:data.id,ok:data.ok,admitted:data.result?.admitted,...data.timing});this.onmessage?.({data} as MessageEvent)})
-  worker.on('error',e=>this.onerror?.({message:e.message} as ErrorEvent))
-  worker.on('messageerror',()=>this.onmessageerror?.({} as MessageEvent))
- }
- postMessage(value:MainSolidRequest){this.worker.postMessage({...value,traceTiming:true})}
- terminate(){void this.worker.terminate()}
+  onmessage: MainSolidPort['onmessage'] = null
+  onerror: MainSolidPort['onerror'] = null
+  onmessageerror: MainSolidPort['onmessageerror'] = null
+  constructor(readonly worker: Worker) {
+    worker.on('message', data => {
+      if (data?.__webWorkerHarness === 'artifact') {
+        expect(data.identity).toEqual(artifactIdentity)
+        return
+      }
+      if (data.kind === 'sourceBodyRestore' && process.env.CAD_SOURCE_WORKER_RAW)
+        writeFileSync(process.env.CAD_SOURCE_WORKER_RAW, JSON.stringify(data, null, 2) + '\n')
+      if (data.kind === 'sourceBodyRestore' && data.timing)
+        timings.push({ id: data.id, ok: data.ok, admitted: data.result?.admitted, ...data.timing })
+      this.onmessage?.({ data } as MessageEvent)
+    })
+    worker.on('error', e => this.onerror?.({ message: e.message } as ErrorEvent))
+    worker.on('messageerror', () => this.onmessageerror?.({} as MessageEvent))
+  }
+  postMessage(value: MainSolidRequest) {
+    this.worker.postMessage({ ...value, traceTiming: true })
+  }
+  terminate() {
+    void this.worker.terminate()
+  }
 }
-const clients:MainSolidWorkerClient[]=[],workers:Worker[]=[]
-afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()))})
-function realClient(){
- const client=new MainSolidWorkerClient(()=>{
-  const worker=new Worker(new URL('./fixtures/web-worker-node-harness.mjs',import.meta.url),{
-   workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false,expectedArtifact:artifactIdentity}})
-  workers.push(worker);return new NodePort(worker)
- });clients.push(client);return client
+const clients: MainSolidWorkerClient[] = [],
+  workers: Worker[] = []
+afterEach(async () => {
+  clients.splice(0).forEach(c => c.dispose())
+  await Promise.all(workers.splice(0).map(w => w.terminate()))
+})
+function realClient() {
+  const client = new MainSolidWorkerClient(() => {
+    const worker = new Worker(new URL('./fixtures/web-worker-node-harness.mjs', import.meta.url), {
+      workerData: {
+        entryUrl: new URL('../src/workers/mainSolid.worker.ts', import.meta.url).href,
+        announceReady: false,
+        expectedArtifact: artifactIdentity,
+      },
+    })
+    workers.push(worker)
+    return new NodePort(worker)
+  })
+  clients.push(client)
+  return client
 }
-const denied:SourceBodyResult={admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'source-volume-initial-work-limit',incidence:{},embedding:{},volume:{}}}
-function reply(port:Port,result:SourceBodyResult){port.onmessage?.({data:{version:1,id:port.requests.at(-1)!.id,kind:'sourceBodyRestore',ok:true,result}} as MessageEvent)}
-it('accepts native mapped-edge refusals without accepting geometry or success labels',()=>{
- const expected=sourceBodyExpectation(options())
- for(const reason of ['mapped-source-endpoints-unproven','mapped-source-composition-unproven','mapped-source-uses-not-opposite']){
-  const result={...structuredClone(denied),diagnostics:{...denied.diagnostics,reason}}
-  expect(validSourceBody(expected,result)).toBe(true)
-  expect(validSourceBody(expected,{...result,sourceBody:options().definition})).toBe(false)
-  expect(validSourceBody(expected,{...result,stepExchange:{prepared:true}})).toBe(false)
- }
- for(const reason of ['mapped-source-shared-edge-qualified','source-volume-and-orientation-qualified','unexpected']){
-  expect(validSourceBody(expected,{...structuredClone(denied),diagnostics:{...denied.diagnostics,reason}})).toBe(false)
- }
+const denied: SourceBodyResult = {
+  admitted: false,
+  sourceBody: null,
+  edges: [],
+  diagnostics: { reason: 'source-volume-initial-work-limit', incidence: {}, embedding: {}, volume: {} },
+}
+function reply(port: Port, result: SourceBodyResult) {
+  port.onmessage?.({
+    data: { version: 1, id: port.requests.at(-1)!.id, kind: 'sourceBodyRestore', ok: true, result },
+  } as MessageEvent)
+}
+it('accepts native mapped-edge refusals without accepting geometry or success labels', () => {
+  const expected = sourceBodyExpectation(options())
+  for (const reason of [
+    'mapped-source-endpoints-unproven',
+    'mapped-source-composition-unproven',
+    'mapped-source-uses-not-opposite',
+  ]) {
+    const result = { ...structuredClone(denied), diagnostics: { ...denied.diagnostics, reason } }
+    expect(validSourceBody(expected, result)).toBe(true)
+    expect(validSourceBody(expected, { ...result, sourceBody: options().definition })).toBe(false)
+    expect(validSourceBody(expected, { ...result, stepExchange: { prepared: true } })).toBe(false)
+  }
+  for (const reason of [
+    'mapped-source-shared-edge-qualified',
+    'source-volume-and-orientation-qualified',
+    'unexpected',
+  ]) {
+    expect(
+      validSourceBody(expected, { ...structuredClone(denied), diagnostics: { ...denied.diagnostics, reason } }),
+    ).toBe(false)
+  }
 })
 
-it('restores original source definitions through the real WASM CAD worker',async()=>{
- const o={...options(),displaySegments:8,faceDisplay:{divisions:4,toleranceUv:1e-8,domainCellsPerFace:10000}},before=JSON.stringify(o),client=realClient()
- const start=performance.now()
- const r=await client.run({kind:'sourceBodyRestore',options:o})
- const restoreElapsedMs=performance.now()-start
- expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
- // Transport-only fixtures: the packaged WASM does not yet expose seam qualification.
- const seamRequest={edge:0,limits:{maxSineSquared:1e-6,cells:100,curveSpans:100,normalSpans:100}}
- const seamOptions={...o,seamQualification:seamRequest},seamExpected=sourceBodyExpectation(seamOptions)
- const checked:SourceBodyResult={...r,seamQualification:{request:seamRequest,qualified:false,sineSquaredBounds:null,
-  reason:'source-seam-endpoint-normal-unresolved',cells:1,curveSpans:2,normalSpans:2,acceptedCells:0,uncertainCanonical:[0,0]}}
- expect(validSourceBody(seamExpected,checked)).toBe(true)
- expect(validSourceBody(sourceBodyExpectation(o),checked)).toBe(false)
- expect(validSourceBody(seamExpected,r)).toBe(false)
- for(const patch of [{request:{...seamRequest,edge:1}},{cells:101},{uncertainCanonical:[-1,0]},
-  {qualified:true},{sineSquaredBounds:[0,1e-7]},{reason:'source-seam-tangent-planes-qualified'}]){
-  expect(validSourceBody(seamExpected,{...checked,seamQualification:{...checked.seamQualification,...patch}})).toBe(false)
- }
- const qualified={...checked,seamQualification:{...checked.seamQualification!,qualified:true,
-  reason:'source-seam-tangent-planes-qualified',sineSquaredBounds:[0,1e-7],uncertainCanonical:null}}
- expect(validSourceBody(seamExpected,qualified)).toBe(true)
- expect(validSourceBody(seamExpected,{...qualified,seamQualification:{...qualified.seamQualification,sineSquaredBounds:[0,1e-5]}})).toBe(false)
- expect(r.sourceBody!.shell).toEqual(o.definition.shell)
- expect(r.edges.map(e=>e.definition)).toEqual(o.definition.shell.pairs.map(p=>p.edge))
- expect(r.edges.every(edge=>edge.displaySegments?.length===8)).toBe(true)
- expect(r.displayFaces).toHaveLength(r.faceCount!)
- expect(r.displayFaces!.every(face=>face.tiles.length===16&&face.unresolved.length===0&&face.unresolvedBoxes.length===0)).toBe(true)
- const incomplete=structuredClone(r);incomplete.displayFaces![0]!.tiles.pop()
- expect(validSourceBody(sourceBodyExpectation(o),incomplete)).toBe(false)
+it('restores original source definitions through the real WASM CAD worker', async () => {
+  const o = {
+      ...options(),
+      displaySegments: 8,
+      faceDisplay: { divisions: 4, toleranceUv: 1e-8, domainCellsPerFace: 10000 },
+    },
+    before = JSON.stringify(o),
+    client = realClient()
+  const start = performance.now()
+  const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+  const restoreElapsedMs = performance.now() - start
+  expect(r.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+  // Transport-only fixtures: the packaged WASM does not yet expose seam qualification.
+  const seamRequest = { edge: 0, limits: { maxSineSquared: 1e-6, cells: 100, curveSpans: 100, normalSpans: 100 } }
+  const seamOptions = { ...o, seamQualification: seamRequest },
+    seamExpected = sourceBodyExpectation(seamOptions)
+  const checked: SourceBodyResult = {
+    ...r,
+    seamQualification: {
+      request: seamRequest,
+      qualified: false,
+      sineSquaredBounds: null,
+      reason: 'source-seam-endpoint-normal-unresolved',
+      cells: 1,
+      curveSpans: 2,
+      normalSpans: 2,
+      acceptedCells: 0,
+      uncertainCanonical: [0, 0],
+    },
+  }
+  expect(validSourceBody(seamExpected, checked)).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o), checked)).toBe(false)
+  expect(validSourceBody(seamExpected, r)).toBe(false)
+  for (const patch of [
+    { request: { ...seamRequest, edge: 1 } },
+    { cells: 101 },
+    { uncertainCanonical: [-1, 0] },
+    { qualified: true },
+    { sineSquaredBounds: [0, 1e-7] },
+    { reason: 'source-seam-tangent-planes-qualified' },
+  ]) {
+    expect(
+      validSourceBody(seamExpected, { ...checked, seamQualification: { ...checked.seamQualification, ...patch } }),
+    ).toBe(false)
+  }
+  const qualified = {
+    ...checked,
+    seamQualification: {
+      ...checked.seamQualification!,
+      qualified: true,
+      reason: 'source-seam-tangent-planes-qualified',
+      sineSquaredBounds: [0, 1e-7],
+      uncertainCanonical: null,
+    },
+  }
+  expect(validSourceBody(seamExpected, qualified)).toBe(true)
+  expect(
+    validSourceBody(seamExpected, {
+      ...qualified,
+      seamQualification: { ...qualified.seamQualification, sineSquaredBounds: [0, 1e-5] },
+    }),
+  ).toBe(false)
+  expect(r.sourceBody!.shell).toEqual(o.definition.shell)
+  expect(r.edges.map(e => e.definition)).toEqual(o.definition.shell.pairs.map(p => p.edge))
+  expect(r.edges.every(edge => edge.displaySegments?.length === 8)).toBe(true)
+  expect(r.displayFaces).toHaveLength(r.faceCount!)
+  expect(
+    r.displayFaces!.every(
+      face => face.tiles.length === 16 && face.unresolved.length === 0 && face.unresolvedBoxes.length === 0,
+    ),
+  ).toBe(true)
+  const incomplete = structuredClone(r)
+  incomplete.displayFaces![0]!.tiles.pop()
+  expect(validSourceBody(sourceBodyExpectation(o), incomplete)).toBe(false)
 
- const broken=structuredClone(r);broken.edges[0]!.displaySegments![0]![0][0]+=1
- expect(validSourceBody(sourceBodyExpectation(o),broken)).toBe(false)
- const anchors=new Map<number,number[]>()
- for(const edge of r.edges)for(const end of [0,1] as const){
-  const point=edge.displaySegments![end===0?0:7]![1][end],id=edge.vertices[end]
-  if(anchors.has(id))expect(point).toEqual(anchors.get(id))
-  anchors.set(id,point)
- }
- const falseIdentity=structuredClone(r)
- expect(falseIdentity.edges[0]!.vertices[0]).not.toBe(falseIdentity.edges[0]!.vertices[1])
- falseIdentity.edges[0]!.vertices[0]=falseIdentity.edges[0]!.vertices[1]
- expect(validSourceBody(sourceBodyExpectation(o),falseIdentity)).toBe(false)
- const disconnected=structuredClone(r)
- disconnected.edges[0]!.displaySegments![0]![1][0][0]+=0.001
- expect(validSourceBody(sourceBodyExpectation(o),disconnected)).toBe(false)
- const unbounded=structuredClone(r)
- unbounded.edges[0]!.displaySegments![0]![2][0]=[1e6,1e6]
- expect(validSourceBody(sourceBodyExpectation(o),unbounded)).toBe(false)
- const missing=structuredClone(r);delete missing.edges[0]!.displaySegments
- expect(validSourceBody(sourceBodyExpectation(o),missing)).toBe(false)
- expect(()=>sourceBodyExpectation({...o,displaySegments:4097})).toThrow()
+  const broken = structuredClone(r)
+  broken.edges[0]!.displaySegments![0]![0][0] += 1
+  expect(validSourceBody(sourceBodyExpectation(o), broken)).toBe(false)
+  const anchors = new Map<number, number[]>()
+  for (const edge of r.edges)
+    for (const end of [0, 1] as const) {
+      const point = edge.displaySegments![end === 0 ? 0 : 7]![1][end],
+        id = edge.vertices[end]
+      if (anchors.has(id)) expect(point).toEqual(anchors.get(id))
+      anchors.set(id, point)
+    }
+  const falseIdentity = structuredClone(r)
+  expect(falseIdentity.edges[0]!.vertices[0]).not.toBe(falseIdentity.edges[0]!.vertices[1])
+  falseIdentity.edges[0]!.vertices[0] = falseIdentity.edges[0]!.vertices[1]
+  expect(validSourceBody(sourceBodyExpectation(o), falseIdentity)).toBe(false)
+  const disconnected = structuredClone(r)
+  disconnected.edges[0]!.displaySegments![0]![1][0][0] += 0.001
+  expect(validSourceBody(sourceBodyExpectation(o), disconnected)).toBe(false)
+  const unbounded = structuredClone(r)
+  unbounded.edges[0]!.displaySegments![0]![2][0] = [1e6, 1e6]
+  expect(validSourceBody(sourceBodyExpectation(o), unbounded)).toBe(false)
+  const missing = structuredClone(r)
+  delete missing.edges[0]!.displaySegments
+  expect(validSourceBody(sourceBodyExpectation(o), missing)).toBe(false)
+  expect(() => sourceBodyExpectation({ ...o, displaySegments: 4097 })).toThrow()
 
- const oracle=2*Math.PI/3;expect(r.volume![0]).toBeLessThanOrEqual(oracle);expect(r.volume![1]).toBeGreaterThanOrEqual(oracle)
- const changed=structuredClone(r);changed.edges[0]!.definition={changed:true}
- expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)
- const signedZero=structuredClone(r),points=(signedZero.edges[0]!.definition as {world:{controlPoints:number[][]}}).world.controlPoints
- let changedZero=false
- for(const point of points){const axis=point.findIndex(n=>Object.is(n,0));if(axis>=0){point[axis]=-0;changedZero=true;break}}
- expect(changedZero).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),signedZero)).toBe(false)
- const low=options();low.limits.volume.cells=1
- const refusal=await client.run({kind:'sourceBodyRestore',options:low})
- expect(refusal.admitted).toBe(false);expect(refusal.sourceBody).toBeNull();expect(refusal.edges).toEqual([])
- expect(JSON.stringify(o)).toBe(before)
- expect(timings).toHaveLength(2)
- if(process.env.CAD_SOURCE_BODY_WORKER_REPORT){
-  const wasm=readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))
-  writeFileSync(process.env.CAD_SOURCE_BODY_WORKER_REPORT,JSON.stringify({schema:'source-body-worker/1',passed:true,wasmBytes:wasm.length,wasmSha256:createHash('sha256').update(wasm).digest('hex'),restoreElapsedMs,timings,volume:r.volume,edgeCount:r.edges.length,faceCount:r.faceCount,scope:'Native-authored equal-radius capped canal through the shipped worker and WASM; executeMs includes the adapter and native gates, and does not isolate Rust or rendered UI latency.'},null,2)+'\n')
- }
-},120000)
-it('supersedes a source restore and ignores its late response',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const first=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:0,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}}).catch(e=>e.code)
- const late=ports[0]!.onmessage!
- const second=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:1,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}})
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- late({data:{version:1,id:1,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
- reply(ports[1]!,denied);expect(await second).toEqual(denied)
+  const oracle = (2 * Math.PI) / 3
+  expect(r.volume![0]).toBeLessThanOrEqual(oracle)
+  expect(r.volume![1]).toBeGreaterThanOrEqual(oracle)
+  const changed = structuredClone(r)
+  changed.edges[0]!.definition = { changed: true }
+  expect(validSourceBody(sourceBodyExpectation(o), changed)).toBe(false)
+  const signedZero = structuredClone(r),
+    points = (signedZero.edges[0]!.definition as { world: { controlPoints: number[][] } }).world.controlPoints
+  let changedZero = false
+  for (const point of points) {
+    const axis = point.findIndex(n => Object.is(n, 0))
+    if (axis >= 0) {
+      point[axis] = -0
+      changedZero = true
+      break
+    }
+  }
+  expect(changedZero).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o), signedZero)).toBe(false)
+  const low = options()
+  low.limits.volume.cells = 1
+  const refusal = await client.run({ kind: 'sourceBodyRestore', options: low })
+  expect(refusal.admitted).toBe(false)
+  expect(refusal.sourceBody).toBeNull()
+  expect(refusal.edges).toEqual([])
+  expect(JSON.stringify(o)).toBe(before)
+  expect(timings).toHaveLength(2)
+  if (process.env.CAD_SOURCE_BODY_WORKER_REPORT) {
+    const wasm = readFileSync(new URL('../public/wasm/geometry-kernel.wasm', import.meta.url))
+    writeFileSync(
+      process.env.CAD_SOURCE_BODY_WORKER_REPORT,
+      JSON.stringify(
+        {
+          schema: 'source-body-worker/1',
+          passed: true,
+          wasmBytes: wasm.length,
+          wasmSha256: createHash('sha256').update(wasm).digest('hex'),
+          restoreElapsedMs,
+          timings,
+          volume: r.volume,
+          edgeCount: r.edges.length,
+          faceCount: r.faceCount,
+          scope:
+            'Native-authored equal-radius capped canal through the shipped worker and WASM; executeMs includes the adapter and native gates, and does not isolate Rust or rendered UI latency.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+  }
+}, 120000)
+it('supersedes a source restore and ignores its late response', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const first = client
+    .run({
+      kind: 'sourceBodyRestore',
+      options: {
+        ...options(),
+        seamQualification: {
+          edge: 0,
+          endpointLimitsExactWork: 100000000,
+          limits: { maxSineSquared: 1e-6, cells: 128, curveSpans: 256, normalSpans: 256 },
+        },
+      },
+    })
+    .catch(e => e.code)
+  const late = ports[0]!.onmessage!
+  const second = client.run({
+    kind: 'sourceBodyRestore',
+    options: {
+      ...options(),
+      seamQualification: {
+        edge: 1,
+        endpointLimitsExactWork: 100000000,
+        limits: { maxSineSquared: 1e-6, cells: 128, curveSpans: 256, normalSpans: 256 },
+      },
+    },
+  })
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  late({ data: { version: 1, id: 1, kind: 'sourceBodyRestore', ok: true, result: denied } } as MessageEvent)
+  reply(ports[1]!, denied)
+  expect(await second).toEqual(denied)
 })
-it('aborts a source restore and permits retry in a fresh worker',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const controller=new AbortController(),first=client.run({kind:'sourceBodyRestore',options:options()},{signal:controller.signal}).catch(e=>e.code)
- controller.abort();expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- const retried=client.run({kind:'sourceBodyRestore',options:options()});reply(ports[1]!,denied);expect(await retried).toEqual(denied)
+it('aborts a source restore and permits retry in a fresh worker', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const controller = new AbortController(),
+    first = client
+      .run({ kind: 'sourceBodyRestore', options: options() }, { signal: controller.signal })
+      .catch(e => e.code)
+  controller.abort()
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  const retried = client.run({ kind: 'sourceBodyRestore', options: options() })
+  reply(ports[1]!, denied)
+  expect(await retried).toEqual(denied)
 })
 
-it('loads a source archive through the real document worker and rejects saved false admission',async()=>{
- const record=createSourceBodyRecord('source-archive','Source archive',options())
- const document={...emptyDirectDocument(),sourceBodies:[record]},client=realClient()
- const loaded=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
- expect(loaded.sourceBodies).toEqual([record])
- const low=options();low.limits.volume.cells=1
- const invalid={...emptyDirectDocument(),sourceBodies:[{...createSourceBodyRecord('bad-source','Bad source',low),admitted:true}]}
- await expect(client.run({kind:'restoreDocument',text:serializeDirectDocument(invalid)})).rejects.toMatchObject({code:'CAD_SOURCE_BODY_RESTORE',message:expect.stringContaining('bad-source')})
-},30000)
+it('loads a source archive through the real document worker and rejects saved false admission', async () => {
+  const record = createSourceBodyRecord('source-archive', 'Source archive', options())
+  const document = { ...emptyDirectDocument(), sourceBodies: [record] },
+    client = realClient()
+  const loaded = await client.run({ kind: 'restoreDocument', text: serializeDirectDocument(document) })
+  expect(loaded.sourceBodies).toEqual([record])
+  const low = options()
+  low.limits.volume.cells = 1
+  const invalid = {
+    ...emptyDirectDocument(),
+    sourceBodies: [{ ...createSourceBodyRecord('bad-source', 'Bad source', low), admitted: true }],
+  }
+  await expect(client.run({ kind: 'restoreDocument', text: serializeDirectDocument(invalid) })).rejects.toMatchObject({
+    code: 'CAD_SOURCE_BODY_RESTORE',
+    message: expect.stringContaining('bad-source'),
+  })
+}, 30000)
 
-it('discards a late inverse proof after changing only the shear recipe',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const port=new Port();ports.push(port);return port});clients.push(client)
- const a=options();a.definition.inverseShear={axes:[0,2],coefficient:0.25}
- const first=client.run({kind:'sourceBodyRestore',options:a}).catch(error=>error.code)
- const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
- const b=structuredClone(a);b.definition.inverseShear!.coefficient=0.5
- const second=client.run({kind:'sourceBodyRestore',options:b})
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- expect(ports[0]!.requests[0]).toMatchObject({job:{options:{definition:{inverseShear:{coefficient:0.25}}}}})
- expect(ports[1]!.requests[0]).toMatchObject({job:{options:{definition:{inverseShear:{coefficient:0.5}}}}})
- late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
- reply(ports[1]!,denied);expect(await second).toEqual(denied)
+it('discards a late inverse proof after changing only the shear recipe', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const port = new Port()
+      ports.push(port)
+      return port
+    })
+  clients.push(client)
+  const a = options()
+  a.definition.inverseShear = { axes: [0, 2], coefficient: 0.25 }
+  const first = client.run({ kind: 'sourceBodyRestore', options: a }).catch(error => error.code)
+  const late = ports[0]!.onmessage!,
+    id = ports[0]!.requests[0]!.id
+  const b = structuredClone(a)
+  b.definition.inverseShear!.coefficient = 0.5
+  const second = client.run({ kind: 'sourceBodyRestore', options: b })
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  expect(ports[0]!.requests[0]).toMatchObject({
+    job: { options: { definition: { inverseShear: { coefficient: 0.25 } } } },
+  })
+  expect(ports[1]!.requests[0]).toMatchObject({
+    job: { options: { definition: { inverseShear: { coefficient: 0.5 } } } },
+  })
+  late({ data: { version: 1, id, kind: 'sourceBodyRestore', ok: true, result: denied } } as MessageEvent)
+  reply(ports[1]!, denied)
+  expect(await second).toEqual(denied)
 })
 
-it('binds inverse shear axes and coefficient into the source request identity',()=>{
- const o=options();o.definition.inverseShear={axes:[0,2],coefficient:0.25}
- const expected=sourceBodyExpectation(o)
- const changed=structuredClone(o);changed.definition.inverseShear!.coefficient=0.5
- expect(sourceBodyExpectation(changed).definition).not.toEqual(expected.definition)
- changed.definition.inverseShear!.axes=[1,2]
- expect(sourceBodyExpectation(changed).definition).not.toEqual(expected.definition)
- changed.definition.inverseShear!.axes=[0,0]
- expect(()=>sourceBodyExpectation(changed)).toThrow('Invalid inverse shear recipe')
- changed.definition.inverseShear!.axes=[0,2];changed.definition.inverseShear!.coefficient=NaN
- expect(()=>sourceBodyExpectation(changed)).toThrow('Invalid inverse shear recipe')
+it('binds inverse shear axes and coefficient into the source request identity', () => {
+  const o = options()
+  o.definition.inverseShear = { axes: [0, 2], coefficient: 0.25 }
+  const expected = sourceBodyExpectation(o)
+  const changed = structuredClone(o)
+  changed.definition.inverseShear!.coefficient = 0.5
+  expect(sourceBodyExpectation(changed).definition).not.toEqual(expected.definition)
+  changed.definition.inverseShear!.axes = [1, 2]
+  expect(sourceBodyExpectation(changed).definition).not.toEqual(expected.definition)
+  changed.definition.inverseShear!.axes = [0, 0]
+  expect(() => sourceBodyExpectation(changed)).toThrow('Invalid inverse shear recipe')
+  changed.definition.inverseShear!.axes = [0, 2]
+  changed.definition.inverseShear!.coefficient = NaN
+  expect(() => sourceBodyExpectation(changed)).toThrow('Invalid inverse shear recipe')
 })
 
 it.each([
- ['source-irrational-body-request','Irrational root tetrahedron','Irrational split on a straight shared carrier of a planar tetrahedral Body; no geometric editing or closed mesh proof.','CAD_IRRATIONAL_BODY_WORKER_REPORT','CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT'],
- ['source-curved-shear-body-request','Curved root tetrahedron','Curved polynomial shear Body with original irrational root restrictions and fresh inverse contact proof; no geometric editing or closed mesh proof.','CAD_CURVED_SHEAR_BODY_WORKER_REPORT','CAD_CURVED_SHEAR_BODY_DOCUMENT_OUTPUT'],
-])('restores %s through WASM, preview and archive history',async(fixture,name,scope,reportEnv,documentEnv)=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL(`../docs/qualification/rolling-ball-offset-foundation-2026-10-05/${fixture}.json.gz`,import.meta.url))).toString())
- const {op:_op,...base}=request as SourceBodyOptions & {op:string}
- const options={...base,displaySegments:8,faceDisplay:{divisions:8,toleranceUv:1e-8,domainCellsPerFace:10000}},client=realClient()
- const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options}),restoreElapsedMs=performance.now()-started
- expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
- if(base.definition.inverseShear){
-  expect(r.sourceBody!.inverseShear).toEqual(base.definition.inverseShear)
-  const changed=structuredClone(r);changed.sourceBody!.inverseShear!.coefficient=0.5
-  expect(validSourceBody(sourceBodyExpectation(options),changed)).toBe(false)
-  const wrong=structuredClone(options);wrong.definition.inverseShear!.coefficient=0.5
-  const refusal=await client.run({kind:'sourceBodyRestore',options:wrong})
-  expect(refusal.admitted).toBe(false);expect(validSourceBody(sourceBodyExpectation(wrong),refusal)).toBe(true)
- }
- expect(r.edges).toHaveLength(7);expect(r.faceCount).toBe(4)
- expect(r.volume![0]).toBeLessThanOrEqual(1/6);expect(r.volume![1]).toBeGreaterThanOrEqual(1/6)
- const ends=new Map<number,[number,0|1][]>()
- for(const edge of r.edges)for(const end of [0,1] as const){const id=edge.vertices[end];ends.set(id,[...(ends.get(id)??[]),[edge.index,end]])}
- expect(ends.size).toBe(5)
- const split=[...ends.values()].filter(list=>list.length===2);expect(split).toHaveLength(1)
- let anchor:number[]|undefined
- for(const [index,end] of split[0]!){
-  const edge=r.edges[index]!,range=edge.parameterBounds[end]
-  expect(range[0]).toBeGreaterThan(0);expect(range[1]).toBeLessThan(1);expect(range[0]).toBeLessThan(range[1])
-  expect(range[0]).toBeLessThanOrEqual(Math.SQRT1_2);expect(range[1]).toBeGreaterThanOrEqual(Math.SQRT1_2)
-  const point=edge.displaySegments![end===0?0:7]![1][end]
-  if(anchor)expect(point).toEqual(anchor);anchor=point
- }
- expect(r.displayFaces!.some(face=>face.tiles.length>0)).toBe(true)
- expect(r.displayFaces!.some(face=>face.unresolved.length>0)).toBe(true)
- const record=createSourceBodyRecord('source-irrational-root',name,base)
- const document={...emptyDirectDocument(),sourceBodies:[record]}
- const loaded=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
- expect(loaded.sourceBodies).toEqual([record])
- await warmGeometryKernel()
- const history=new DirectHistory(document),renamed=history.document
- renamed.sourceBodies![0]!.name='Renamed irrational root';history.commit(renamed)
- expect(history.undo().sourceBodies).toEqual([record])
- expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
- expect(parseDirectDocument(serializeDirectDocument(history.document)).sourceBodies![0]!.source).toEqual(record.source)
- const documentOutput=process.env[documentEnv],reportOutput=process.env[reportEnv]
- if(documentOutput)writeFileSync(documentOutput,serializeDirectDocument(document))
- if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:wasmSha256,restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
-},120000)
+  [
+    'source-irrational-body-request',
+    'Irrational root tetrahedron',
+    'Irrational split on a straight shared carrier of a planar tetrahedral Body; no geometric editing or closed mesh proof.',
+    'CAD_IRRATIONAL_BODY_WORKER_REPORT',
+    'CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT',
+  ],
+  [
+    'source-curved-shear-body-request',
+    'Curved root tetrahedron',
+    'Curved polynomial shear Body with original irrational root restrictions and fresh inverse contact proof; no geometric editing or closed mesh proof.',
+    'CAD_CURVED_SHEAR_BODY_WORKER_REPORT',
+    'CAD_CURVED_SHEAR_BODY_DOCUMENT_OUTPUT',
+  ],
+])(
+  'restores %s through WASM, preview and archive history',
+  async (fixture, name, scope, reportEnv, documentEnv) => {
+    const request = JSON.parse(
+      gunzipSync(
+        readFileSync(
+          new URL(
+            `../docs/qualification/rolling-ball-offset-foundation-2026-10-05/${fixture}.json.gz`,
+            import.meta.url,
+          ),
+        ),
+      ).toString(),
+    )
+    const { op: _op, ...base } = request as SourceBodyOptions & { op: string }
+    const options = {
+        ...base,
+        displaySegments: 8,
+        faceDisplay: { divisions: 8, toleranceUv: 1e-8, domainCellsPerFace: 10000 },
+      },
+      client = realClient()
+    const started = performance.now(),
+      r = await client.run({ kind: 'sourceBodyRestore', options }),
+      restoreElapsedMs = performance.now() - started
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(options), r)).toBe(true)
+    if (base.definition.inverseShear) {
+      expect(r.sourceBody!.inverseShear).toEqual(base.definition.inverseShear)
+      const changed = structuredClone(r)
+      changed.sourceBody!.inverseShear!.coefficient = 0.5
+      expect(validSourceBody(sourceBodyExpectation(options), changed)).toBe(false)
+      const wrong = structuredClone(options)
+      wrong.definition.inverseShear!.coefficient = 0.5
+      const refusal = await client.run({ kind: 'sourceBodyRestore', options: wrong })
+      expect(refusal.admitted).toBe(false)
+      expect(validSourceBody(sourceBodyExpectation(wrong), refusal)).toBe(true)
+    }
+    expect(r.edges).toHaveLength(7)
+    expect(r.faceCount).toBe(4)
+    expect(r.volume![0]).toBeLessThanOrEqual(1 / 6)
+    expect(r.volume![1]).toBeGreaterThanOrEqual(1 / 6)
+    const ends = new Map<number, [number, 0 | 1][]>()
+    for (const edge of r.edges)
+      for (const end of [0, 1] as const) {
+        const id = edge.vertices[end]
+        ends.set(id, [...(ends.get(id) ?? []), [edge.index, end]])
+      }
+    expect(ends.size).toBe(5)
+    const split = [...ends.values()].filter(list => list.length === 2)
+    expect(split).toHaveLength(1)
+    let anchor: number[] | undefined
+    for (const [index, end] of split[0]!) {
+      const edge = r.edges[index]!,
+        range = edge.parameterBounds[end]
+      expect(range[0]).toBeGreaterThan(0)
+      expect(range[1]).toBeLessThan(1)
+      expect(range[0]).toBeLessThan(range[1])
+      expect(range[0]).toBeLessThanOrEqual(Math.SQRT1_2)
+      expect(range[1]).toBeGreaterThanOrEqual(Math.SQRT1_2)
+      const point = edge.displaySegments![end === 0 ? 0 : 7]![1][end]
+      if (anchor) expect(point).toEqual(anchor)
+      anchor = point
+    }
+    expect(r.displayFaces!.some(face => face.tiles.length > 0)).toBe(true)
+    expect(r.displayFaces!.some(face => face.unresolved.length > 0)).toBe(true)
+    const record = createSourceBodyRecord('source-irrational-root', name, base)
+    const document = { ...emptyDirectDocument(), sourceBodies: [record] }
+    const loaded = await client.run({ kind: 'restoreDocument', text: serializeDirectDocument(document) })
+    expect(loaded.sourceBodies).toEqual([record])
+    await warmGeometryKernel()
+    const history = new DirectHistory(document),
+      renamed = history.document
+    renamed.sourceBodies![0]!.name = 'Renamed irrational root'
+    history.commit(renamed)
+    expect(history.undo().sourceBodies).toEqual([record])
+    expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
+    expect(parseDirectDocument(serializeDirectDocument(history.document)).sourceBodies![0]!.source).toEqual(
+      record.source,
+    )
+    const documentOutput = process.env[documentEnv],
+      reportOutput = process.env[reportEnv]
+    if (documentOutput) writeFileSync(documentOutput, serializeDirectDocument(document))
+    if (reportOutput)
+      writeFileSync(
+        reportOutput,
+        JSON.stringify(
+          {
+            passed: true,
+            wasmSha256: wasmSha256,
+            restoreElapsedMs,
+            scenarioElapsedMs: performance.now() - started,
+            edgeCount: r.edges.length,
+            faceCount: r.faceCount,
+            vertexCount: ends.size,
+            volume: r.volume,
+            rootEnds: split[0],
+            displayUnresolved: r.displayFaces!.reduce((n, f) => n + f.unresolved.length, 0),
+            metadataUndoRedo: true,
+            scope,
+          },
+          null,
+          2,
+        ) + '\n',
+      )
+  },
+  120000,
+)
 
-it('exchanges original curved root carriers through real WASM and worker STEP gates',async()=>{
- const fixture=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-curved-shear-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...source}=fixture
- const o:SourceBodyOptions={...source,displaySegments:0,faceDisplay:undefined,stepExchange:{toleranceMm:1e-7,trimWork:100000,
-  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:14,endpoints:14}}}
- const before=JSON.stringify(o),client=realClient(),start=performance.now()
- const r=await client.run({kind:'sourceBodyRestore',options:o})
- expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
- const step=r.stepExchange
- expect(step?.prepared).toBe(true)
- if(!step?.prepared)throw new Error('Missing native STEP candidate')
- expect([step.vertices,step.edges,step.faces]).toEqual([5,7,4])
- expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
- expect(step.text).toContain('TRIMMED_CURVE');expect(step.text).toContain('MANIFOLD_SOLID_BREP')
- if(process.env.CAD_SOURCE_WORKER_STEP_OUTPUT)writeFileSync(process.env.CAD_SOURCE_WORKER_STEP_OUTPUT,step.text)
- const wrong=structuredClone(r);wrong.stepExchange!.request.toleranceMm=1e-5
- expect(validSourceBody(sourceBodyExpectation(o),wrong)).toBe(false)
- expect(validSourceBody(sourceBodyExpectation({...o,stepExchange:undefined}),r)).toBe(false)
- const missing=structuredClone(r);delete missing.stepExchange
- expect(validSourceBody(sourceBodyExpectation(o),missing)).toBe(false)
- const low=structuredClone(o);low.stepExchange!.limits.exactWork=1
- const refusal=await client.run({kind:'sourceBodyRestore',options:low})
- expect(refusal.admitted).toBe(true);expect(refusal.stepExchange?.prepared).toBe(false)
- expect(validSourceBody(sourceBodyExpectation(low),refusal)).toBe(true)
- expect(JSON.stringify(o)).toBe(before)
- if(process.env.CAD_SOURCE_WORKER_STEP_REPORT){
-  const wasm=readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))
-  writeFileSync(process.env.CAD_SOURCE_WORKER_STEP_REPORT,JSON.stringify({passed:true,wasmBytes:wasm.length,wasmSha256:createHash('sha256').update(wasm).digest('hex'),scenarioElapsedMs:performance.now()-start,endpointErrorUpper:step.endpointErrorUpper,counts:{vertices:step.vertices,edges:step.edges,faces:step.faces},scope:'Fresh native Body restore and original carrier STEP through real worker; one quadratic-shear control body, no general editing or UI export admission.'},null,2)+'\n')
- }
-},120000)
-
-it('cancels a changed STEP request and rejects the late worker response',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const o:SourceBodyOptions={...options(),stepExchange:{toleranceMm:1e-7,trimWork:100000,
-  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:1000,endpoints:1000}}}
- const first=client.run({kind:'sourceBodyRestore',options:o}).catch(e=>e.code),late=ports[0]!.onmessage!
- const changed=structuredClone(o);changed.stepExchange!.toleranceMm=1e-6
- const second=client.run({kind:'sourceBodyRestore',options:changed})
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- changed.stepExchange!.toleranceMm=1
- expect((ports[1]!.requests[0]!.job as {options:SourceBodyOptions}).options.stepExchange!.toleranceMm).toBe(1e-6)
- late({data:{version:1,id:ports[0]!.requests[0]!.id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
- reply(ports[1]!,denied);expect(await second).toEqual(denied)
-})
-
-it('qualifies a selected original seam through the rebuilt WASM worker',async()=>{
- const o:SourceBodyOptions={...options(),displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
-  seamQualification:{edge:0,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}
- const r=await realClient().run({kind:'sourceBodyRestore',options:o})
- expect(r.admitted).toBe(true)
- expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
- expect(r.seamQualification?.request).toEqual(o.seamQualification)
- expect(r.seamQualification?.reason).toMatch(/^source-seam-/)
- expect(r.seamQualification?.cells).toBeLessThanOrEqual(128)
-},60000)
-
-it('qualifies the annular middle rail and localizes its collapsed endpoint through WASM',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient()
- for(const edge of [6,0]){
-  const o:SourceBodyOptions={...base,seamQualification:{edge,limits:{maxSineSquared:1e-6,cells:1024,curveSpans:2048,normalSpans:2048}}}
-  const r=await client.run({kind:'sourceBodyRestore',options:o})
+it('exchanges original curved root carriers through real WASM and worker STEP gates', async () => {
+  const fixture = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-curved-shear-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...source } = fixture
+  const o: SourceBodyOptions = {
+    ...source,
+    displaySegments: 0,
+    faceDisplay: undefined,
+    stepExchange: {
+      toleranceMm: 1e-7,
+      trimWork: 100000,
+      limits: {
+        rootChecks: 1000,
+        mappingCells: 10000,
+        replayMappingPerUse: 10000,
+        exactWork: 100_000_000,
+        driverCells: 10000,
+        spans: 14,
+        endpoints: 14,
+      },
+    },
+  }
+  const before = JSON.stringify(o),
+    client = realClient(),
+    start = performance.now()
+  const r = await client.run({ kind: 'sourceBodyRestore', options: o })
   expect(r.admitted).toBe(true)
-  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  expect(r.faceCount).toBe(27);expect(r.poleCount).toBe(2)
-  expect(r.seamQualification?.qualified).toBe(edge===6)
-  if(edge===0){
-   expect(r.seamQualification?.reason).toBe('source-seam-endpoint-normal-unresolved')
-   expect(r.seamQualification?.uncertainCanonical).toEqual([0,0])
-   expect(r.seamQualification?.cells).toBe(1)
-  }
- }
-},240000)
-
-it('certifies automatically searched annular wall thickness through real WASM worker',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request
- const client=realClient(),started=performance.now(),results=[]
- for(const gapCells of [1000,1]){
-  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallQualification:{
-   groups:[[4,9,14,18,22,26],[1,6,11,15,19,23]],minimumMm:5.99,toleranceMm:0.02,toleranceUv:1e-7,
-   grid:3,maxAttempts:54,limits:{gapCells,gapSpans:2000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}
-  const before=JSON.stringify(o),r=await client.run({kind:'sourceBodyRestore',options:o})
-  expect(JSON.stringify(o)).toBe(before);expect(r.admitted).toBe(true)
-  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  const wall=r.wallQualification!;expect(wall.request).toEqual(o.wallQualification)
-  expect(wall.search.attempts).toBe(54);expect(wall.search.refused).toBeLessThan(54)
-  if(gapCells===1000){
-   expect(wall.qualified).toBe(true);expect(wall.converged).toBe(true)
-   expect(wall.intervalMm![0]).toBeLessThanOrEqual(6);expect(wall.intervalMm![1]).toBeGreaterThanOrEqual(6)
-   expect(wall.intervalMm![1]-wall.intervalMm![0]).toBeLessThan(1e-5)
-  }else{
-   expect(wall.qualified).toBe(false);expect(wall.converged).toBe(false);expect(wall.intervalMm).toBeNull()
-   expect(wall.reason).toBe('source-wall-clearance-unproven')
-  }
-  const changed=structuredClone(r);changed.wallQualification!.request.groups[0][0]=3
-  expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)
-  results.push(wall)
- }
- if(process.env.CAD_SOURCE_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_WORKER_REPORT,JSON.stringify({
-  wasmSha256:wasmSha256,
-  elapsedMs:performance.now()-started,results,scope:'Selected annular flat face groups only; no full body wall coverage or UI proof.'},null,2)+'\n')
-},120000)
-
-it('discards late wall results when opposing groups change and permits retry',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const wall={groups:[[0],[1]] as [number[],number[]],minimumMm:0.1,toleranceMm:0.02,toleranceUv:1e-7,
-  grid:3,maxAttempts:9,limits:{gapCells:1000,gapSpans:2000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}
- const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}}).catch(e=>e.code)
- const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
- const second=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:{...wall,groups:[[0],[2]]}}})
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
- reply(ports[1]!,denied);expect(await second).toEqual(denied)
- const controller=new AbortController()
- const aborted=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}},{signal:controller.signal}).catch(e=>e.code)
- controller.abort();expect(await aborted).toBe('CAD_CANCELLED');expect(ports[1]!.terminated).toBe(true)
- const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}})
- reply(ports[2]!,denied);expect(await retry).toEqual(denied)
-})
-
-it('qualifies curved annular cavity walls through original WASM worker',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request
- const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallQualification:{
-  groups:[[2,7,12,16,20,24],[3,8,13,17,21,25]],minimumMm:14.5,toleranceMm:0.02,toleranceUv:1e-7,
-  grid:3,maxAttempts:54,limits:{gapCells:10000,gapSpans:20000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}
- const client=realClient(),started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options})
- expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
- const wall=r.wallQualification!;expect(wall.qualified).toBe(true);expect(wall.converged).toBe(true)
- expect(wall.intervalMm![0]).toBeLessThanOrEqual(15);expect(wall.intervalMm![1]).toBeGreaterThanOrEqual(15)
- expect(wall.intervalMm![1]-wall.intervalMm![0]).toBeLessThan(1e-5)
- expect(wall.search.attempts).toBe(54);expect(wall.search.refused).toBe(0)
- expect(wall.clearance.cells).toBe(36);expect(wall.clearance.spans).toBe(72)
- expect(wall.witness).toBeTruthy();expect(wall.witness!.lengthMm[1]).toBe(wall.intervalMm![1])
- expect(wall.witness!.endpoints).toHaveLength(2)
- expect(wall.witness!.endpoints.every(e=>e.worldMm.length===3&&e.worldMm.every(q=>q.every(Number.isFinite)))).toBe(true)
- const corrupted=structuredClone(r);corrupted.wallQualification!.witness!.endpoints[0].face=0
- expect(validSourceBody(sourceBodyExpectation(options),corrupted)).toBe(false)
- const tooThick:SourceBodyOptions={...options,wallQualification:{...options.wallQualification!,minimumMm:16}}
- const refused=await client.run({kind:'sourceBodyRestore',options:tooThick})
- expect(refused.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(tooThick),refused)).toBe(true)
- expect(refused.wallQualification!.qualified).toBe(false);expect(refused.wallQualification!.converged).toBe(false)
- expect(refused.wallQualification!.intervalMm).toBeNull();expect(refused.wallQualification!.reason).toBe('source-wall-clearance-unproven')
- expect(refused.wallQualification!.witness).toBeNull()
- const staleWitness=structuredClone(refused);staleWitness.wallQualification!.witness=structuredClone(wall.witness!)
- expect(validSourceBody(sourceBodyExpectation(tooThick),staleWitness)).toBe(false)
- expect(refused.wallQualification!.search.attempts).toBe(54);expect(refused.wallQualification!.search.refused).toBe(0)
- if(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT,JSON.stringify({
-  wasmSha256:wasmSha256,
-  elapsedMs:performance.now()-started,wall,refusedWall:refused.wallQualification,scope:'Original selected outer/inner cylinder unions with cavity, not whole body wall coverage.'},null,2)+'\n')
-},120000)
-
-it('discovers an original thin wall without selected groups through real WASM worker',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const maxAttempts of [243,1]){
-  const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallScan:{minimumMm:7,toleranceUv:1e-7,grid:3,maxAttempts,
-   limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}
-  const r=await client.run({kind:'sourceBodyRestore',options})
-  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
-  const scan=r.wallScan!;expect(scan.request).toEqual(options.wallScan);expect(scan.wholeWallQualified).toBe(false)
-  expect(scan.attempts).toBe(maxAttempts);expect(scan.facesTotal).toBe(27)
-  if(maxAttempts===243){
-   expect(scan.thinFound).toBe(true);expect(scan.facesVisited).toBe(27);expect(scan.proposalsExhausted).toBe(true)
-   expect(scan.witness!.lengthMm[0]).toBeLessThanOrEqual(6);expect(scan.witness!.lengthMm[1]).toBeGreaterThanOrEqual(6)
-   expect(scan.witness!.lengthMm[1]-scan.witness!.lengthMm[0]).toBeLessThan(1e-5)
-  }else{expect(scan.facesVisited).toBe(1);expect(scan.proposalsExhausted).toBe(false)}
-  const forged=structuredClone(r);(forged.wallScan as unknown as {wholeWallQualified:boolean}).wholeWallQualified=true
-  expect(validSourceBody(sourceBodyExpectation(options),forged)).toBe(false)
-  results.push(scan)
- }
- if(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT,JSON.stringify({
-  wasmSha256:wasmSha256,
-  elapsedMs:performance.now()-started,results,scope:'Finite all-face original normal proposals; discovered local thin wall, no whole-wall safety certificate.'},null,2)+'\n')
-},180000)
-
-it('cancels automatic scan when its threshold changes and ignores the late reply',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const scan={minimumMm:7,toleranceUv:1e-7,grid:3,maxAttempts:243,limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}
- const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}}).catch(e=>e.code)
- const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
- const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:{...scan,minimumMm:1}}})
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
- reply(ports[1]!,denied);expect(await next).toEqual(denied)
- const controller=new AbortController()
- const pending=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}},{signal:controller.signal}).catch(e=>e.code)
- controller.abort();expect(await pending).toBe('CAD_CANCELLED');expect(ports[1]!.terminated).toBe(true)
- const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}})
- reply(ports[2]!,denied);expect(await retry).toEqual(denied)
-})
-
-it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const [pairs,adaptive,products,factored,pole,expanded,refinement] of [[1,false,0,false,false,false,false],[378,false,0,false,false,false,false],[378,true,0,false,false,false,false],[378,false,1,false,false,false,false],[378,false,50000,false,false,false,false],[378,true,50000,false,false,false,false],[378,true,50000,true,false,false,false],[378,true,50000,true,true,false,false],[378,true,50000,true,true,true,false],[378,true,50000,true,true,true,true]] as const){
-  const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
-   ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:expanded?50000:10000,spans:100000,cellsPerFace:expanded?8192:512,spansPerFace:expanded?10000:4096,...(refinement?{refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}}:{}),...(pole?{pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}}:{})}}:{}),
-   ...(factored?{factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128}}:{}),
-   ...(products?{normalProducts:{cells:products,cellsPerPair:128}}:{}),
-   limits:{pairs,planeControls:10000,normalSpans:products?20000:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
-  const caseStarted=performance.now(),caseIndex=results.length
-  const trace=(event:unknown)=>{if(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT)appendFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT,JSON.stringify(event)+'\n')}
-  trace({phase:'started',caseIndex,options:options.wallCoverage,wasmSha256})
-  const r=await client.run({kind:'sourceBodyRestore',options},{onTiming:timing=>trace({phase:'timing',caseIndex,timing})})
-  trace({phase:'completed',caseIndex,elapsedMs:performance.now()-caseStarted,pending:r.wallCoverage?.pairs.filter(p=>!p.proven).length})
-  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
-  const coverage=r.wallCoverage!;expect(coverage.request).toEqual(options.wallCoverage)
-  expect(coverage.totalPairs).toBe(378);expect(coverage.pairs).toHaveLength(pairs)
-  expect(coverage.enumerationComplete).toBe(pairs===378)
-  expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
-  if(pairs===378){
-   if(products){
-    if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(refinement?160:expanded?161:pole?167:factored?169:adaptive?173:177)
-    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(255)
-    expect(coverage.normalProductCells).toBeGreaterThan(0)
-    expect(coverage.normalProductCells).toBeLessThanOrEqual(products)
-    const missing=structuredClone(r);delete missing.wallCoverage!.normalProductCells
-    expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
-    const over=structuredClone(r);over.wallCoverage!.normalProductCells=products+1
-    expect(validSourceBody(sourceBodyExpectation(options),over)).toBe(false)
-    const prior=results[1]!
-    for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
-   }else if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
-   else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(255)
-   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(factored?20000:products===50000?(adaptive?3916:3922):adaptive?36:42)
-   expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(!refinement)
-  }
-  if(factored){
-   expect(coverage.factoredExactWork).toBeGreaterThan(0);expect(coverage.factoredExactWork).toBeLessThanOrEqual(100000000)
-   expect(coverage.factoredQueries).toBeGreaterThan(0);expect(coverage.factoredQueries).toBeLessThanOrEqual(10000)
-   expect(coverage.factoredProductCells).toBeGreaterThan(0);expect(coverage.factoredProductCells).toBeLessThanOrEqual(10000)
-   const prior=results.at(-1)!
-   for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
-   expect(coverage.pairs.filter(p=>p.reason==='source-wall-factored-normal-pair-excluded').map(p=>p.faces)).toEqual([[0,12],[0,13],[2,10],[3,10]])
-   for(const field of ['factoredExactWork','factoredQueries','factoredProductCells'] as const){
-    const missing=structuredClone(r);delete missing.wallCoverage![field]
-    expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
-   }
-  }
-  if(adaptive){
-   const a=coverage.adaptiveSelf!;expect(a.faces).toHaveLength(27)
-   const qualifiedFaces=a.faces.filter(f=>f.qualified).map(f=>f.face)
-   // Previously certified original face identities must survive stronger bounds.
-   for(const face of [1,2,3,4,6,9,11,12,13,14,15,18,19,22,23,26])expect(qualifiedFaces).toContain(face)
-   expect(a.cells).toBeLessThanOrEqual((expanded?50000:10000)+(pole?100000:0)+(refinement?100000:0));expect(a.spans).toBeLessThanOrEqual((pole?200000:100000)+(refinement?100000:0))
-   if(pole){
-    for(const face of [0,10])expect(qualifiedFaces).toContain(face)
-    const prior=results.at(-1)!
-    for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
-    for(const [counter,max] of [['poleExactWork',100000000],['poleCells',100000],['poleSpans',100000]] as const){
-     expect(a[counter]).toBeGreaterThan(0);expect(a[counter]).toBeLessThanOrEqual(max)
-     const missing=structuredClone(r);delete missing.wallCoverage!.adaptiveSelf![counter]
-     expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
-    }
-   }
-   if(expanded&&!refinement){expect(qualifiedFaces).toHaveLength(26);expect(a.faces.filter(f=>!f.qualified).map(f=>f.face)).toEqual([5])}
-   expect(a.allSelfPairsQualified).toBe(refinement)
-   expect(coverage.pairs.filter(p=>p.reason==='source-wall-self-certified').map(p=>p.faces[0])).toEqual(qualifiedFaces)
-   for(const face of a.faces){
-    expect(face.endpointExchangeSymmetric).toBe(true)
-    expect(face.unresolvedPairs).toHaveLength(face.pending)
-    expect(face.uncertain).toEqual(face.unresolvedPairs!.at(-1)??null)
-   }
-   if(!refinement){
-   const pendingFace=a.faces.find(f=>!f.qualified)!
-   expect(pendingFace.unresolvedPairs!.length).toBeGreaterThan(0)
-   const missing=structuredClone(r);missing.wallCoverage!.adaptiveSelf!.faces[pendingFace.face].unresolvedPairs=[]
-   expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
-   }
-   if(refinement){
-    expect(qualifiedFaces).toHaveLength(27)
-    for(const counter of ['refinementCells','refinementSpans'] as const){
-     expect(a[counter]).toBeGreaterThan(0);expect(a[counter]).toBeLessThanOrEqual(100000)
-     const missing=structuredClone(r);delete missing.wallCoverage!.adaptiveSelf![counter]
-     expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
-    }
-   }
-   const wrong=structuredClone(r);wrong.wallCoverage!.adaptiveSelf!.faces[0].face=99
-   expect(validSourceBody(sourceBodyExpectation(options),wrong)).toBe(false)
-  }
-  const forged=structuredClone(r);forged.wallCoverage!.wholeWallQualified=true;forged.wallCoverage!.lowerMm=5.99
-  expect(validSourceBody(sourceBodyExpectation(options),forged)).toBe(false)
-  const late={...options,wallCoverage:{...options.wallCoverage!,minimumMm:6.01}}
-  expect(validSourceBody(sourceBodyExpectation(late),r)).toBe(false)
-  results.push(coverage)
- }
- if(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT,JSON.stringify({
-  wasmSha256:wasmSha256,
-  elapsedMs:performance.now()-started,results,scope:'Continuous original all-pair coverage with explicit curved self-pair refusals.'},null,2)+'\n')
-},180000)
-
-it('cancels continuous coverage on threshold changes and ignores its late reply',async()=>{
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const wallCoverage={minimumMm:5.99,retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
- const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}}).catch(e=>e.code)
- const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
- const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage:{...wallCoverage,minimumMm:6.01}}})
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
- reply(ports[1]!,denied);expect(await next).toEqual(denied)
- const controller=new AbortController()
- const pending=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}},{signal:controller.signal}).catch(e=>e.code)
- controller.abort();expect(await pending).toBe('CAD_CANCELLED');expect(ports[1]!.terminated).toBe(true)
- const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}})
- reply(ports[2]!,denied);expect(await retry).toEqual(denied)
-})
-
-it('qualifies the original cuboid whole-wall threshold through real WASM worker',async()=>{
- const definition=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-wall-cuboid-body.json.gz',import.meta.url))).toString())
- const client=realClient(),results=[],started=performance.now()
- for(const [minimumMm,pairs,normalSpans,qualified] of [[9.99,21,10000,true],[10.01,21,10000,false],[9.99,20,10000,false],[9.99,21,6,true],[9.99,21,1,false]] as const){
-  const o:SourceBodyOptions={...options(),definition,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm,adaptiveSelf:{planeControls:10000,cells:1,spans:1,cellsPerFace:1,spansPerFace:1},
-   limits:{pairs,planeControls:10000,normalSpans,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
-  const r=await client.run({kind:'sourceBodyRestore',options:o})
-  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  expect(r.wallCoverage!.adaptiveSelf!.allSelfPairsQualified).toBe(true)
-  const coverage=r.wallCoverage!;expect(coverage.wholeWallQualified).toBe(qualified)
-  expect(coverage.totalPairs).toBe(21);expect(coverage.pairs).toHaveLength(pairs)
-  expect(coverage.lowerMm).toBe(qualified?minimumMm:null)
-  expect(coverage.enumerationComplete).toBe(pairs===21)
-  expect(coverage.normalSpans).toBeLessThanOrEqual(Math.min(normalSpans,6))
-  if(qualified){expect(coverage.pairs.every(p=>p.proven)).toBe(true);expect(coverage.cells).toBe(3)}
-  results.push(coverage)
- }
- if(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT,JSON.stringify({
-  wasmSha256:wasmSha256,
-  elapsedMs:performance.now()-started,results,scope:'Original admitted 10 x 20 x 30 mm cuboid, complete aligned wall lower threshold.'},null,2)+'\n')
-},120000)
-
-it('preserves original pair proofs when close-chart refusals release gap work through real WASM',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),results=[]
- for(const expanded of [false,true]){
-  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
-   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
-   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
-    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
-    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
-   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:expanded?100000:1000,gapSpans:expanded?100000:2000,maxSineSquared:1e-6}}}
-  const r=await client.run({kind:'sourceBodyRestore',options:o})
-  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  const coverage=r.wallCoverage!;expect(coverage.adaptiveSelf!.allSelfPairsQualified).toBe(true)
-  expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
-  if(expanded){
-   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(61)
-   expect(coverage.pairs.some(p=>p.reason==='source-face-gap-chart-close'&&!p.proven)).toBe(true)
-   for(const prior of results[0]!.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===prior.faces[0]&&p.faces[1]===prior.faces[1])?.proven).toBe(true)
-  }
-  results.push(coverage)
- }
- if(process.env.CAD_SOURCE_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_GAP_WORKER_REPORT,JSON.stringify({
-  wasmSha256:wasmSha256,
-  results,scope:'Real-worker near-normal wall coverage; close chart points are refusals, not material witnesses.'},null,2)+'\n')
-},180000)
-
-it('qualifies bounded retained face products without losing prior proofs through real WASM',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),results=[],elapsedMs:number[]=[]
- for(const retained of [false,true]){
-  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
-   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
-   ...(retained?{retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8}}:{}),
-   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
-    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
-    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
-   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
-  const started=performance.now()
-  const r=await client.run({kind:'sourceBodyRestore',options:o});elapsedMs.push(performance.now()-started);expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull();expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
-  expect(c.pairs.filter(p=>!p.proven)).toHaveLength(retained?45:61)
-  if(retained){
-   const d=c.retainedGap!;expect(d.pairs).toHaveLength(61);expect(d.pairs.filter(p=>p.qualified)).toHaveLength(16)
-   for(const old of results[0]!.pairs.filter(p=>p.proven))expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
-   for(const mutate of [
-    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.domainCells++,
-    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.pairs[0].faces=[0,0],
-    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.pairs.find(p=>!p.qualified)!.unresolvedProducts=[],
-    (r:SourceBodyResult)=>r.wallCoverage!.wholeWallQualified=true,
-   ]){const changed=structuredClone(r);mutate(changed);expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)}
-  }
-  results.push(c)
- }
- if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,results,elapsedMs,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
-},180000)
-
-it('qualifies mixed retained wall products through real WASM and preserves every earlier proof',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),results=[]
- if(process.env.CAD_MIXED_WALL_UI_DOCUMENT){
-  await warmGeometryKernel()
-  const record=createSourceBodyRecord('annular-mixed-wall','Кольцевая деталь — контроль толщины',{...base,displaySegments:8})
-  writeFileSync(process.env.CAD_MIXED_WALL_UI_DOCUMENT,serializeDirectDocument({...emptyDirectDocument(),sourceBodies:[record]}))
- }
- try{for(const mixed of [false,true]){
-  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
-   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
-   ...{retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8}},
-   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
-    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
-    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
-   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
-  if(mixed)o.wallCoverage!.mixedProducts={cells:100000,spans:100000,domainCells:1000000,cellsPerPair:1024,spansPerPair:4096,
-   domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000}
-  const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options:o})
-  results.push({elapsedMs:performance.now()-started,result:r})
-  if(process.env.CAD_MIXED_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_MIXED_WALL_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,results},null,2)+'\n')
-  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull()
-  expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
-  expect(c.pairs.filter(p=>!p.proven)).toHaveLength(mixed?28:45)
-  if(mixed){
-   expect(c.mixedProducts!.pairs).toHaveLength(45)
-   expect(c.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(17)
-   // Compare continuous UV/direction qualification against the native original-body replay.
-   const native=JSON.parse(readFileSync(new URL('../docs/qualification/projective-editor-2026-10-13/mixed-wall-native-baseline.json',import.meta.url),'utf8')).automatic
-   // Replay the exact current artifact in an independent host realm. Work
-   // counters belong to that algorithm version, not the historical release.
-   expect(c).toEqual(restoreSourceBody(o).wallCoverage)
-   expect(c.factoredQueries).toBe(native.factoredQueries)
-   expect(c.mixedProducts!.pairs.map(p=>[p.faces,p.qualified]))
-    .toEqual(native.pairs.map((p:{faces:number[];qualified:boolean})=>[p.faces,p.qualified]))
-
-   for(const old of results[0]!.result.wallCoverage!.pairs.filter(p=>p.proven))
-    expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
-   for(const mutate of [
-    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.normalSpans++,
-    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.pairs.find(p=>!p.qualified)!.unresolvedProducts=[],
-    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.pairs.find(p=>p.qualified)!.faces=[0,0],
-    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts=null,
-    (r:SourceBodyResult)=>r.wallCoverage!.wholeWallQualified=true,
-   ]){const forged=structuredClone(r);mutate(forged);expect(validSourceBody(sourceBodyExpectation(o),forged)).toBe(false)}
-  }
- }}finally{client.dispose()}
-},180000)
-
-it('admits an exact mapped root chain without promoting its separate retained halves through real WASM',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...o}=request,client=realClient(),r=await client.run({kind:'sourceBodyRestore',options:o})
- if(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT)writeFileSync(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,result:r,scope:'Closed mapped root chain admission, original definitions and native endpoint ownership.'},null,2)+'\n')
- expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
- expect(r.faceCount).toBe(4);expect(r.edges).toHaveLength(7)
- expect(r.sourceBody).toEqual(o.definition)
- expect(r.volume![0]).toBeLessThanOrEqual(1/6);expect(r.volume![1]).toBeGreaterThanOrEqual(1/6)
- const counts=new Map<number,number>();r.edges.flatMap(e=>e.vertices).forEach(v=>counts.set(v,(counts.get(v)??0)+1))
- expect(counts.size).toBe(5)
- const root=[...counts].find(([,count])=>count===2)![0]
- const halves=r.edges.filter(e=>e.vertices.includes(root));expect(halves).toHaveLength(2)
- for(let axis=0;axis<3;axis++){
-  const a=halves[0]!.endpointBoxes[halves[0]!.vertices.indexOf(root)]![axis]!,b=halves[1]!.endpointBoxes[halves[1]!.vertices.indexOf(root)]![axis]!
-  expect(Math.max(a[0],b[0])).toBeLessThanOrEqual(Math.min(a[1],b[1]))
- }
- client.dispose()
-},180000)
-
-it('restores independently partitioned knot-root curves through STEP, refusal and history',async()=>{
- const request=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json',import.meta.url),'utf8'))
- const historical=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-native-2026-10-10.json',import.meta.url),'utf8')).result
- const {op:_op,...options}=request,client=realClient()
- const native=restoreSourceBody(options)
- expect(native.sourceBody).toEqual(historical.sourceBody)
- expect(native.edges).toEqual(historical.edges)
- expect(native.stepExchange).toEqual(historical.stepExchange)
- try{
-  const result=await client.run({kind:'sourceBodyRestore',options})
-  expect(result.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),result)).toBe(true)
-  expect(result).toEqual(native)
-  expect(result.sourceBody).toEqual(options.definition)
-  expect(result.stepExchange?.prepared).toBe(true)
-  const record=createSourceBodyRecord('knot-root-chain','Knot root chain',options)
-  const history=new DirectHistory({...emptyDirectDocument(),sourceBodies:[record]})
-  const changed=history.document;changed.sourceBodies![0]!.name='Renamed knot root chain';history.commit(changed)
-  expect(history.undo().sourceBodies).toEqual([record]);history.redo()
-  const reloaded=parseDirectDocument(serializeDirectDocument(history.document))
-  const replay=await client.run({kind:'sourceBodyRestore',options:sourceBodyRecordOptions(reloaded.sourceBodies![0]!)})
-  expect(replay.admitted).toBe(true);expect(replay.sourceBody).toEqual(result.sourceBody)
-  expect(replay.edges.map(e=>e.vertices)).toEqual(result.edges.map(e=>e.vertices))
-  const wrong=structuredClone(options)
-  wrong.definition.shell.pairs[5].edge.recipe.candidates[0][1][0]+=1e-12
-  const refused=await client.run({kind:'sourceBodyRestore',options:wrong})
-  expect(refused.admitted).toBe(false);expect(validSourceBody(sourceBodyExpectation(wrong),refused)).toBe(true)
-  const pending=client.run({kind:'sourceBodyRestore',options})
-  const canceled=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED',name:'AbortError'})
-  client.cancel();await canceled
-  const retry=await client.run({kind:'sourceBodyRestore',options})
-  expect(retry).toEqual(native)
-  if(process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT)writeFileSync(process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT,
-   JSON.stringify({wasmSha256,result,replay,refused,retry,cancellationObserved:true,scope:'One complete independently partitioned knot-root body, native parity, STEP, history, altered-candidate refusal and replacement-worker Retry.'},null,2)+'\n')
- }finally{client.dispose()}
-},180000)
-
-it('preserves mapped root carriers through STEP preparation and document history',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...source}=request
- const options:SourceBodyOptions={...source,displaySegments:0,stepExchange:{toleranceMm:1e-7,trimWork:100000,
-  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:14,endpoints:14}}}
- const client=realClient()
- try{
-  const result=await client.run({kind:'sourceBodyRestore',options})
-  expect(result.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),result)).toBe(true)
-  expect(result.stepExchange?.prepared).toBe(true)
-  const step=result.stepExchange!
-  expect([step.vertices,step.edges,step.faces]).toEqual([5,7,4])
+  expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+  const step = r.stepExchange
+  expect(step?.prepared).toBe(true)
+  if (!step?.prepared) throw new Error('Missing native STEP candidate')
+  expect([step.vertices, step.edges, step.faces]).toEqual([5, 7, 4])
   expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
+  expect(step.text).toContain('TRIMMED_CURVE')
   expect(step.text).toContain('MANIFOLD_SOLID_BREP')
-  if(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT)writeFileSync(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT,step.text)
-  const record=createSourceBodyRecord('mapped-root-chain','Mapped root chain',source)
-  const document={...emptyDirectDocument(),sourceBodies:[record]}
-  const restored=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
-  expect(restored.sourceBodies).toEqual([record])
-  await warmGeometryKernel()
-  const history=new DirectHistory(document),renamed=history.document
-  renamed.sourceBodies![0]!.name='Renamed mapped root chain';history.commit(renamed)
-  expect(history.undo().sourceBodies).toEqual([record])
-  expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
-  const reloaded=parseDirectDocument(serializeDirectDocument(history.document))
-  const replay=await client.run({kind:'sourceBodyRestore',options:sourceBodyRecordOptions(reloaded.sourceBodies![0]!)})
-  expect(replay.admitted).toBe(true);expect(replay.sourceBody).toEqual(source.definition)
-  expect(replay.edges.map(e=>e.vertices)).toEqual(result.edges.map(e=>e.vertices))
- }finally{client.dispose()}
-},180000)
+  if (process.env.CAD_SOURCE_WORKER_STEP_OUTPUT) writeFileSync(process.env.CAD_SOURCE_WORKER_STEP_OUTPUT, step.text)
+  const wrong = structuredClone(r)
+  wrong.stepExchange!.request.toleranceMm = 1e-5
+  expect(validSourceBody(sourceBodyExpectation(o), wrong)).toBe(false)
+  expect(validSourceBody(sourceBodyExpectation({ ...o, stepExchange: undefined }), r)).toBe(false)
+  const missing = structuredClone(r)
+  delete missing.stepExchange
+  expect(validSourceBody(sourceBodyExpectation(o), missing)).toBe(false)
+  const low = structuredClone(o)
+  low.stepExchange!.limits.exactWork = 1
+  const refusal = await client.run({ kind: 'sourceBodyRestore', options: low })
+  expect(refusal.admitted).toBe(true)
+  expect(refusal.stepExchange?.prepared).toBe(false)
+  expect(validSourceBody(sourceBodyExpectation(low), refusal)).toBe(true)
+  expect(JSON.stringify(o)).toBe(before)
+  if (process.env.CAD_SOURCE_WORKER_STEP_REPORT) {
+    const wasm = readFileSync(new URL('../public/wasm/geometry-kernel.wasm', import.meta.url))
+    writeFileSync(
+      process.env.CAD_SOURCE_WORKER_STEP_REPORT,
+      JSON.stringify(
+        {
+          passed: true,
+          wasmBytes: wasm.length,
+          wasmSha256: createHash('sha256').update(wasm).digest('hex'),
+          scenarioElapsedMs: performance.now() - start,
+          endpointErrorUpper: step.endpointErrorUpper,
+          counts: { vertices: step.vertices, edges: step.edges, faces: step.faces },
+          scope:
+            'Fresh native Body restore and original carrier STEP through real worker; one quadratic-shear control body, no general editing or UI export admission.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+  }
+}, 120000)
 
-it('diagnoses owned sharp endpoints while preserving regular seam refusals through real WASM',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),results=[]
- const limited:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge:0,endpointLimitsExactWork:1,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
- const stopped=await client.run({kind:'sourceBodyRestore',options:limited})
- expect(validSourceBody(sourceBodyExpectation(limited),stopped)).toBe(true)
- expect(stopped.seamQualification!.qualified).toBe(false)
- expect(stopped.seamQualification!.endpointLimits!.reason).toBe('source-seam-endpoint-limits-work-limit')
- expect(stopped.seamQualification!.endpointLimits!.exactWork).toBeLessThanOrEqual(1)
- expect(stopped.seamQualification!.endpointLimits!.sides).toEqual([])
- for(const edge of [0,1,16,18]){
-  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
-  const r=await client.run({kind:'sourceBodyRestore',options:o})
-  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  const seam=r.seamQualification!,d=seam.endpointLimits!
-  expect(seam.qualified).toBe(false);expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved')
-  expect(d.reason).toBe('source-seam-endpoint-distinct-tangent-limits')
-  expect(d.exactWork).toBeLessThanOrEqual(100000000)
-  const pole=d.sides.find(s=>s.distinctTangentLimits)!
-  expect(pole.collapsedPoint).toEqual(edge<2?[20,0,6]:[0,20,6])
-  expect(pole.sineSquaredBounds![0]).toBeGreaterThan(0.999999999999)
-  for(const mutate of [
-   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits=null},
-   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.canonical=1-d.canonical},
-   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.exactWork=100000001},
-   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint=null},
-   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint![0]+=1000},
-  ]){const x=structuredClone(r);mutate(x);expect(validSourceBody(sourceBodyExpectation(o),x)).toBe(false)}
-  results.push({edge,seam})
- }
- client.dispose()
- if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,limited:stopped.seamQualification,results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
-},180000)
+it('cancels a changed STEP request and rejects the late worker response', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const o: SourceBodyOptions = {
+    ...options(),
+    stepExchange: {
+      toleranceMm: 1e-7,
+      trimWork: 100000,
+      limits: {
+        rootChecks: 1000,
+        mappingCells: 10000,
+        replayMappingPerUse: 10000,
+        exactWork: 100_000_000,
+        driverCells: 10000,
+        spans: 1000,
+        endpoints: 1000,
+      },
+    },
+  }
+  const first = client.run({ kind: 'sourceBodyRestore', options: o }).catch(e => e.code),
+    late = ports[0]!.onmessage!
+  const changed = structuredClone(o)
+  changed.stepExchange!.toleranceMm = 1e-6
+  const second = client.run({ kind: 'sourceBodyRestore', options: changed })
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  changed.stepExchange!.toleranceMm = 1
+  expect((ports[1]!.requests[0]!.job as { options: SourceBodyOptions }).options.stepExchange!.toleranceMm).toBe(1e-6)
+  late({
+    data: { version: 1, id: ports[0]!.requests[0]!.id, kind: 'sourceBodyRestore', ok: true, result: denied },
+  } as MessageEvent)
+  reply(ports[1]!, denied)
+  expect(await second).toEqual(denied)
+})
 
-it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),results=[],started=performance.now()
- for(const edge of [0,1,5,9,43,10,48,6,8,15,19,20,16,18,27,28,35,36,45,46]){
-  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
-  const r=await client.run({kind:'sourceBodyRestore',options:o});expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
-  const seam=r.seamQualification!,regular=[5,9,43,10,48,6,8,15,19,20,27,28,35,36,45,46].includes(edge)
-  expect(seam.qualified).toBe(regular)
-  if(regular){expect(seam.reason).toBe('source-seam-tangent-planes-qualified');expect(seam.sineSquaredBounds![1]).toBeLessThanOrEqual(1e-6);expect(seam.uncertainCanonical).toBeNull()}
-  else{expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved');expect(seam.sineSquaredBounds).toBeNull();expect(seam.uncertainCanonical).not.toBeNull()}
-  const rebound=structuredClone(r);rebound.seamQualification!.request.edge=(edge+1)%r.edges.length;expect(validSourceBody(sourceBodyExpectation(o),rebound)).toBe(false)
-  results.push(seam)
- }
- if(process.env.CAD_REFINED_SEAM_WORKER_REPORT)writeFileSync(process.env.CAD_REFINED_SEAM_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,elapsedMs:performance.now()-started,results,scope:'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.'},null,2)+'\n')
-},180000)
+it('qualifies a selected original seam through the rebuilt WASM worker', async () => {
+  const o: SourceBodyOptions = {
+    ...options(),
+    displaySegments: 0,
+    faceDisplay: undefined,
+    stepExchange: undefined,
+    seamQualification: { edge: 0, limits: { maxSineSquared: 1e-6, cells: 128, curveSpans: 256, normalSpans: 256 } },
+  }
+  const r = await realClient().run({ kind: 'sourceBodyRestore', options: o })
+  expect(r.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+  expect(r.seamQualification?.request).toEqual(o.seamQualification)
+  expect(r.seamQualification?.reason).toMatch(/^source-seam-/)
+  expect(r.seamQualification?.cells).toBeLessThanOrEqual(128)
+}, 60000)
 
-it('cancels a changed mixed request, ignores its late proof and retries the original snapshot',async()=>{
- const {op:_op,...o}=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-request.json.gz',import.meta.url))).toString()) as {op:string}&SourceBodyOptions
- const native=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-native.json.gz',import.meta.url))).toString()).result as SourceBodyResult
- const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const first=client.run({kind:'sourceBodyRestore',options:o}).catch(e=>e.code),late=ports[0]!.onmessage!
- const changed=structuredClone(o);changed.wallCoverage!.mixedProducts!.normalSpans=99999
- const second=client.run({kind:'sourceBodyRestore',options:changed}).catch(e=>e.code)
- expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
- late({data:{version:1,id:ports[0]!.requests[0]!.id,kind:'sourceBodyRestore',ok:true,result:native}} as MessageEvent)
- client.cancel();expect(await second).toBe('CAD_CANCELLED')
- const retry=client.run({kind:'sourceBodyRestore',options:o})
- o.wallCoverage!.mixedProducts!.normalSpans=1
- expect((ports[2]!.requests[0]!.job as {options:SourceBodyOptions}).options.wallCoverage!.mixedProducts!.normalSpans).toBe(100000)
- reply(ports[2]!,native);expect((await retry).wallCoverage!.pairs.filter(p=>!p.proven)).toHaveLength(32)
+it('qualifies the annular middle rail and localizes its collapsed endpoint through WASM', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient()
+  for (const edge of [6, 0]) {
+    const o: SourceBodyOptions = {
+      ...base,
+      seamQualification: { edge, limits: { maxSineSquared: 1e-6, cells: 1024, curveSpans: 2048, normalSpans: 2048 } },
+    }
+    const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    expect(r.faceCount).toBe(27)
+    expect(r.poleCount).toBe(2)
+    expect(r.seamQualification?.qualified).toBe(edge === 6)
+    if (edge === 0) {
+      expect(r.seamQualification?.reason).toBe('source-seam-endpoint-normal-unresolved')
+      expect(r.seamQualification?.uncertainCanonical).toEqual([0, 0])
+      expect(r.seamQualification?.cells).toBe(1)
+    }
+  }
+}, 240000)
+
+it('certifies automatically searched annular wall thickness through real WASM worker', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request
+  const client = realClient(),
+    started = performance.now(),
+    results = []
+  for (const gapCells of [1000, 1]) {
+    const o: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      wallQualification: {
+        groups: [
+          [4, 9, 14, 18, 22, 26],
+          [1, 6, 11, 15, 19, 23],
+        ],
+        minimumMm: 5.99,
+        toleranceMm: 0.02,
+        toleranceUv: 1e-7,
+        grid: 3,
+        maxAttempts: 54,
+        limits: { gapCells, gapSpans: 2000, cells: 10000, domainCells: 10000, normalSpans: 1000, maxSineSquared: 1e-6 },
+      },
+    }
+    const before = JSON.stringify(o),
+      r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    expect(JSON.stringify(o)).toBe(before)
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    const wall = r.wallQualification!
+    expect(wall.request).toEqual(o.wallQualification)
+    expect(wall.search.attempts).toBe(54)
+    expect(wall.search.refused).toBeLessThan(54)
+    if (gapCells === 1000) {
+      expect(wall.qualified).toBe(true)
+      expect(wall.converged).toBe(true)
+      expect(wall.intervalMm![0]).toBeLessThanOrEqual(6)
+      expect(wall.intervalMm![1]).toBeGreaterThanOrEqual(6)
+      expect(wall.intervalMm![1] - wall.intervalMm![0]).toBeLessThan(1e-5)
+    } else {
+      expect(wall.qualified).toBe(false)
+      expect(wall.converged).toBe(false)
+      expect(wall.intervalMm).toBeNull()
+      expect(wall.reason).toBe('source-wall-clearance-unproven')
+    }
+    const changed = structuredClone(r)
+    changed.wallQualification!.request.groups[0][0] = 3
+    expect(validSourceBody(sourceBodyExpectation(o), changed)).toBe(false)
+    results.push(wall)
+  }
+  if (process.env.CAD_SOURCE_WALL_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_SOURCE_WALL_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          elapsedMs: performance.now() - started,
+          results,
+          scope: 'Selected annular flat face groups only; no full body wall coverage or UI proof.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 120000)
+
+it('discards late wall results when opposing groups change and permits retry', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const wall = {
+    groups: [[0], [1]] as [number[], number[]],
+    minimumMm: 0.1,
+    toleranceMm: 0.02,
+    toleranceUv: 1e-7,
+    grid: 3,
+    maxAttempts: 9,
+    limits: {
+      gapCells: 1000,
+      gapSpans: 2000,
+      cells: 10000,
+      domainCells: 10000,
+      normalSpans: 1000,
+      maxSineSquared: 1e-6,
+    },
+  }
+  const first = client
+    .run({ kind: 'sourceBodyRestore', options: { ...options(), wallQualification: wall } })
+    .catch(e => e.code)
+  const late = ports[0]!.onmessage!,
+    id = ports[0]!.requests[0]!.id
+  const second = client.run({
+    kind: 'sourceBodyRestore',
+    options: { ...options(), wallQualification: { ...wall, groups: [[0], [2]] } },
+  })
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  late({ data: { version: 1, id, kind: 'sourceBodyRestore', ok: true, result: denied } } as MessageEvent)
+  reply(ports[1]!, denied)
+  expect(await second).toEqual(denied)
+  const controller = new AbortController()
+  const aborted = client
+    .run(
+      { kind: 'sourceBodyRestore', options: { ...options(), wallQualification: wall } },
+      { signal: controller.signal },
+    )
+    .catch(e => e.code)
+  controller.abort()
+  expect(await aborted).toBe('CAD_CANCELLED')
+  expect(ports[1]!.terminated).toBe(true)
+  const retry = client.run({ kind: 'sourceBodyRestore', options: { ...options(), wallQualification: wall } })
+  reply(ports[2]!, denied)
+  expect(await retry).toEqual(denied)
+})
+
+it('qualifies curved annular cavity walls through original WASM worker', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request
+  const options: SourceBodyOptions = {
+    ...base,
+    displaySegments: 0,
+    faceDisplay: undefined,
+    wallQualification: {
+      groups: [
+        [2, 7, 12, 16, 20, 24],
+        [3, 8, 13, 17, 21, 25],
+      ],
+      minimumMm: 14.5,
+      toleranceMm: 0.02,
+      toleranceUv: 1e-7,
+      grid: 3,
+      maxAttempts: 54,
+      limits: {
+        gapCells: 10000,
+        gapSpans: 20000,
+        cells: 10000,
+        domainCells: 10000,
+        normalSpans: 1000,
+        maxSineSquared: 1e-6,
+      },
+    },
+  }
+  const client = realClient(),
+    started = performance.now(),
+    r = await client.run({ kind: 'sourceBodyRestore', options })
+  expect(r.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(options), r)).toBe(true)
+  const wall = r.wallQualification!
+  expect(wall.qualified).toBe(true)
+  expect(wall.converged).toBe(true)
+  expect(wall.intervalMm![0]).toBeLessThanOrEqual(15)
+  expect(wall.intervalMm![1]).toBeGreaterThanOrEqual(15)
+  expect(wall.intervalMm![1] - wall.intervalMm![0]).toBeLessThan(1e-5)
+  expect(wall.search.attempts).toBe(54)
+  expect(wall.search.refused).toBe(0)
+  expect(wall.clearance.cells).toBe(36)
+  expect(wall.clearance.spans).toBe(72)
+  expect(wall.witness).toBeTruthy()
+  expect(wall.witness!.lengthMm[1]).toBe(wall.intervalMm![1])
+  expect(wall.witness!.endpoints).toHaveLength(2)
+  expect(
+    wall.witness!.endpoints.every(e => e.worldMm.length === 3 && e.worldMm.every(q => q.every(Number.isFinite))),
+  ).toBe(true)
+  const corrupted = structuredClone(r)
+  corrupted.wallQualification!.witness!.endpoints[0].face = 0
+  expect(validSourceBody(sourceBodyExpectation(options), corrupted)).toBe(false)
+  const tooThick: SourceBodyOptions = {
+    ...options,
+    wallQualification: { ...options.wallQualification!, minimumMm: 16 },
+  }
+  const refused = await client.run({ kind: 'sourceBodyRestore', options: tooThick })
+  expect(refused.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(tooThick), refused)).toBe(true)
+  expect(refused.wallQualification!.qualified).toBe(false)
+  expect(refused.wallQualification!.converged).toBe(false)
+  expect(refused.wallQualification!.intervalMm).toBeNull()
+  expect(refused.wallQualification!.reason).toBe('source-wall-clearance-unproven')
+  expect(refused.wallQualification!.witness).toBeNull()
+  const staleWitness = structuredClone(refused)
+  staleWitness.wallQualification!.witness = structuredClone(wall.witness!)
+  expect(validSourceBody(sourceBodyExpectation(tooThick), staleWitness)).toBe(false)
+  expect(refused.wallQualification!.search.attempts).toBe(54)
+  expect(refused.wallQualification!.search.refused).toBe(0)
+  if (process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          elapsedMs: performance.now() - started,
+          wall,
+          refusedWall: refused.wallQualification,
+          scope: 'Original selected outer/inner cylinder unions with cavity, not whole body wall coverage.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 120000)
+
+it('discovers an original thin wall without selected groups through real WASM worker', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    started = performance.now(),
+    results = []
+  for (const maxAttempts of [243, 1]) {
+    const options: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      wallScan: {
+        minimumMm: 7,
+        toleranceUv: 1e-7,
+        grid: 3,
+        maxAttempts,
+        limits: { cells: 10000, domainCells: 10000, normalSpans: 1000, maxSineSquared: 1e-6 },
+      },
+    }
+    const r = await client.run({ kind: 'sourceBodyRestore', options })
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(options), r)).toBe(true)
+    const scan = r.wallScan!
+    expect(scan.request).toEqual(options.wallScan)
+    expect(scan.wholeWallQualified).toBe(false)
+    expect(scan.attempts).toBe(maxAttempts)
+    expect(scan.facesTotal).toBe(27)
+    if (maxAttempts === 243) {
+      expect(scan.thinFound).toBe(true)
+      expect(scan.facesVisited).toBe(27)
+      expect(scan.proposalsExhausted).toBe(true)
+      expect(scan.witness!.lengthMm[0]).toBeLessThanOrEqual(6)
+      expect(scan.witness!.lengthMm[1]).toBeGreaterThanOrEqual(6)
+      expect(scan.witness!.lengthMm[1] - scan.witness!.lengthMm[0]).toBeLessThan(1e-5)
+    } else {
+      expect(scan.facesVisited).toBe(1)
+      expect(scan.proposalsExhausted).toBe(false)
+    }
+    const forged = structuredClone(r)
+    ;(forged.wallScan as unknown as { wholeWallQualified: boolean }).wholeWallQualified = true
+    expect(validSourceBody(sourceBodyExpectation(options), forged)).toBe(false)
+    results.push(scan)
+  }
+  if (process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          elapsedMs: performance.now() - started,
+          results,
+          scope:
+            'Finite all-face original normal proposals; discovered local thin wall, no whole-wall safety certificate.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 180000)
+
+it('cancels automatic scan when its threshold changes and ignores the late reply', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const scan = {
+    minimumMm: 7,
+    toleranceUv: 1e-7,
+    grid: 3,
+    maxAttempts: 243,
+    limits: { cells: 10000, domainCells: 10000, normalSpans: 1000, maxSineSquared: 1e-6 },
+  }
+  const first = client.run({ kind: 'sourceBodyRestore', options: { ...options(), wallScan: scan } }).catch(e => e.code)
+  const late = ports[0]!.onmessage!,
+    id = ports[0]!.requests[0]!.id
+  const next = client.run({ kind: 'sourceBodyRestore', options: { ...options(), wallScan: { ...scan, minimumMm: 1 } } })
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  late({ data: { version: 1, id, kind: 'sourceBodyRestore', ok: true, result: denied } } as MessageEvent)
+  reply(ports[1]!, denied)
+  expect(await next).toEqual(denied)
+  const controller = new AbortController()
+  const pending = client
+    .run({ kind: 'sourceBodyRestore', options: { ...options(), wallScan: scan } }, { signal: controller.signal })
+    .catch(e => e.code)
+  controller.abort()
+  expect(await pending).toBe('CAD_CANCELLED')
+  expect(ports[1]!.terminated).toBe(true)
+  const retry = client.run({ kind: 'sourceBodyRestore', options: { ...options(), wallScan: scan } })
+  reply(ports[2]!, denied)
+  expect(await retry).toEqual(denied)
+})
+
+it('reports continuous original whole-wall coverage through the real WASM worker', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    started = performance.now(),
+    results = []
+  for (const [pairs, adaptive, products, factored, pole, expanded, refinement] of [
+    [1, false, 0, false, false, false, false],
+    [378, false, 0, false, false, false, false],
+    [378, true, 0, false, false, false, false],
+    [378, false, 1, false, false, false, false],
+    [378, false, 50000, false, false, false, false],
+    [378, true, 50000, false, false, false, false],
+    [378, true, 50000, true, false, false, false],
+    [378, true, 50000, true, true, false, false],
+    [378, true, 50000, true, true, true, false],
+    [378, true, 50000, true, true, true, true],
+  ] as const) {
+    const options: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      wallCoverage: {
+        minimumMm: 5.99,
+        ...(adaptive
+          ? {
+              adaptiveSelf: {
+                planeControls: 10000,
+                cells: expanded ? 50000 : 10000,
+                spans: 100000,
+                cellsPerFace: expanded ? 8192 : 512,
+                spansPerFace: expanded ? 10000 : 4096,
+                ...(refinement
+                  ? { refinement: { cells: 100000, spans: 100000, cellsPerFace: 100000, spansPerFace: 100000 } }
+                  : {}),
+                ...(pole
+                  ? {
+                      pole: {
+                        exactWork: 100000000,
+                        cells: 100000,
+                        spans: 100000,
+                        cellsPerFace: 4096,
+                        spansPerFace: 100000,
+                      },
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(factored
+          ? { factoredNormals: { exactWork: 100000000, queries: 10000, cells: 10000, cellsPerPair: 128 } }
+          : {}),
+        ...(products ? { normalProducts: { cells: products, cellsPerPair: 128 } } : {}),
+        limits: {
+          pairs,
+          planeControls: 10000,
+          normalSpans: products ? 20000 : 1000,
+          gapCells: 1000,
+          gapSpans: 2000,
+          maxSineSquared: 1e-6,
+        },
+      },
+    }
+    const caseStarted = performance.now(),
+      caseIndex = results.length
+    const trace = (event: unknown) => {
+      if (process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT)
+        appendFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT, JSON.stringify(event) + '\n')
+    }
+    trace({ phase: 'started', caseIndex, options: options.wallCoverage, wasmSha256 })
+    const r = await client.run(
+      { kind: 'sourceBodyRestore', options },
+      { onTiming: timing => trace({ phase: 'timing', caseIndex, timing }) },
+    )
+    trace({
+      phase: 'completed',
+      caseIndex,
+      elapsedMs: performance.now() - caseStarted,
+      pending: r.wallCoverage?.pairs.filter(p => !p.proven).length,
+    })
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(options), r)).toBe(true)
+    const coverage = r.wallCoverage!
+    expect(coverage.request).toEqual(options.wallCoverage)
+    expect(coverage.totalPairs).toBe(378)
+    expect(coverage.pairs).toHaveLength(pairs)
+    expect(coverage.enumerationComplete).toBe(pairs === 378)
+    expect(coverage.wholeWallQualified).toBe(false)
+    expect(coverage.lowerMm).toBeNull()
+    if (pairs === 378) {
+      if (products) {
+        if (products === 50000)
+          expect(coverage.pairs.filter(p => !p.proven).length).toBeLessThanOrEqual(
+            refinement ? 160 : expanded ? 161 : pole ? 167 : factored ? 169 : adaptive ? 173 : 177,
+          )
+        else expect(coverage.pairs.filter(p => !p.proven)).toHaveLength(255)
+        expect(coverage.normalProductCells).toBeGreaterThan(0)
+        expect(coverage.normalProductCells).toBeLessThanOrEqual(products)
+        const missing = structuredClone(r)
+        delete missing.wallCoverage!.normalProductCells
+        expect(validSourceBody(sourceBodyExpectation(options), missing)).toBe(false)
+        const over = structuredClone(r)
+        over.wallCoverage!.normalProductCells = products + 1
+        expect(validSourceBody(sourceBodyExpectation(options), over)).toBe(false)
+        const prior = results[1]!
+        for (const pair of prior.pairs.filter(p => p.proven))
+          expect(coverage.pairs.find(p => p.faces[0] === pair.faces[0] && p.faces[1] === pair.faces[1])?.proven).toBe(
+            true,
+          )
+      } else if (adaptive) expect(coverage.pairs.filter(p => !p.proven).length).toBeLessThanOrEqual(255)
+      else expect(coverage.pairs.filter(p => !p.proven)).toHaveLength(255)
+      expect(coverage.cells).toBeLessThanOrEqual(1000)
+      expect(coverage.normalSpans).toBeLessThanOrEqual(
+        factored ? 20000 : products === 50000 ? (adaptive ? 3916 : 3922) : adaptive ? 36 : 42,
+      )
+      expect(coverage.pairs.some(p => p.faces[0] === p.faces[1] && !p.proven)).toBe(!refinement)
+    }
+    if (factored) {
+      expect(coverage.factoredExactWork).toBeGreaterThan(0)
+      expect(coverage.factoredExactWork).toBeLessThanOrEqual(100000000)
+      expect(coverage.factoredQueries).toBeGreaterThan(0)
+      expect(coverage.factoredQueries).toBeLessThanOrEqual(10000)
+      expect(coverage.factoredProductCells).toBeGreaterThan(0)
+      expect(coverage.factoredProductCells).toBeLessThanOrEqual(10000)
+      const prior = results.at(-1)!
+      for (const pair of prior.pairs.filter(p => p.proven))
+        expect(coverage.pairs.find(p => p.faces[0] === pair.faces[0] && p.faces[1] === pair.faces[1])?.proven).toBe(
+          true,
+        )
+      expect(
+        coverage.pairs.filter(p => p.reason === 'source-wall-factored-normal-pair-excluded').map(p => p.faces),
+      ).toEqual([
+        [0, 12],
+        [0, 13],
+        [2, 10],
+        [3, 10],
+      ])
+      for (const field of ['factoredExactWork', 'factoredQueries', 'factoredProductCells'] as const) {
+        const missing = structuredClone(r)
+        delete missing.wallCoverage![field]
+        expect(validSourceBody(sourceBodyExpectation(options), missing)).toBe(false)
+      }
+    }
+    if (adaptive) {
+      const a = coverage.adaptiveSelf!
+      expect(a.faces).toHaveLength(27)
+      const qualifiedFaces = a.faces.filter(f => f.qualified).map(f => f.face)
+      // Previously certified original face identities must survive stronger bounds.
+      for (const face of [1, 2, 3, 4, 6, 9, 11, 12, 13, 14, 15, 18, 19, 22, 23, 26])
+        expect(qualifiedFaces).toContain(face)
+      expect(a.cells).toBeLessThanOrEqual((expanded ? 50000 : 10000) + (pole ? 100000 : 0) + (refinement ? 100000 : 0))
+      expect(a.spans).toBeLessThanOrEqual((pole ? 200000 : 100000) + (refinement ? 100000 : 0))
+      if (pole) {
+        for (const face of [0, 10]) expect(qualifiedFaces).toContain(face)
+        const prior = results.at(-1)!
+        for (const pair of prior.pairs.filter(p => p.proven))
+          expect(coverage.pairs.find(p => p.faces[0] === pair.faces[0] && p.faces[1] === pair.faces[1])?.proven).toBe(
+            true,
+          )
+        for (const [counter, max] of [
+          ['poleExactWork', 100000000],
+          ['poleCells', 100000],
+          ['poleSpans', 100000],
+        ] as const) {
+          expect(a[counter]).toBeGreaterThan(0)
+          expect(a[counter]).toBeLessThanOrEqual(max)
+          const missing = structuredClone(r)
+          delete missing.wallCoverage!.adaptiveSelf![counter]
+          expect(validSourceBody(sourceBodyExpectation(options), missing)).toBe(false)
+        }
+      }
+      if (expanded && !refinement) {
+        expect(qualifiedFaces).toHaveLength(26)
+        expect(a.faces.filter(f => !f.qualified).map(f => f.face)).toEqual([5])
+      }
+      expect(a.allSelfPairsQualified).toBe(refinement)
+      expect(coverage.pairs.filter(p => p.reason === 'source-wall-self-certified').map(p => p.faces[0])).toEqual(
+        qualifiedFaces,
+      )
+      for (const face of a.faces) {
+        expect(face.endpointExchangeSymmetric).toBe(true)
+        expect(face.unresolvedPairs).toHaveLength(face.pending)
+        expect(face.uncertain).toEqual(face.unresolvedPairs!.at(-1) ?? null)
+      }
+      if (!refinement) {
+        const pendingFace = a.faces.find(f => !f.qualified)!
+        expect(pendingFace.unresolvedPairs!.length).toBeGreaterThan(0)
+        const missing = structuredClone(r)
+        missing.wallCoverage!.adaptiveSelf!.faces[pendingFace.face].unresolvedPairs = []
+        expect(validSourceBody(sourceBodyExpectation(options), missing)).toBe(false)
+      }
+      if (refinement) {
+        expect(qualifiedFaces).toHaveLength(27)
+        for (const counter of ['refinementCells', 'refinementSpans'] as const) {
+          expect(a[counter]).toBeGreaterThan(0)
+          expect(a[counter]).toBeLessThanOrEqual(100000)
+          const missing = structuredClone(r)
+          delete missing.wallCoverage!.adaptiveSelf![counter]
+          expect(validSourceBody(sourceBodyExpectation(options), missing)).toBe(false)
+        }
+      }
+      const wrong = structuredClone(r)
+      wrong.wallCoverage!.adaptiveSelf!.faces[0].face = 99
+      expect(validSourceBody(sourceBodyExpectation(options), wrong)).toBe(false)
+    }
+    const forged = structuredClone(r)
+    forged.wallCoverage!.wholeWallQualified = true
+    forged.wallCoverage!.lowerMm = 5.99
+    expect(validSourceBody(sourceBodyExpectation(options), forged)).toBe(false)
+    const late = { ...options, wallCoverage: { ...options.wallCoverage!, minimumMm: 6.01 } }
+    expect(validSourceBody(sourceBodyExpectation(late), r)).toBe(false)
+    results.push(coverage)
+  }
+  if (process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          elapsedMs: performance.now() - started,
+          results,
+          scope: 'Continuous original all-pair coverage with explicit curved self-pair refusals.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 180000)
+
+it('cancels continuous coverage on threshold changes and ignores its late reply', async () => {
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const wallCoverage = {
+    minimumMm: 5.99,
+    retainedGap: {
+      cells: 100000,
+      spans: 100000,
+      domainCells: 1000000,
+      cellsPerPair: 256,
+      spansPerPair: 512,
+      domainCellsPerPair: 10000,
+      domainCellsPerQuery: 256,
+      toleranceUv: 1e-8,
+    },
+    adaptiveSelf: {
+      planeControls: 10000,
+      cells: 10000,
+      spans: 100000,
+      cellsPerFace: 512,
+      spansPerFace: 4096,
+      refinement: { cells: 100000, spans: 100000, cellsPerFace: 100000, spansPerFace: 100000 },
+      pole: { exactWork: 100000000, cells: 100000, spans: 100000, cellsPerFace: 4096, spansPerFace: 100000 },
+    },
+    limits: {
+      pairs: 378,
+      planeControls: 10000,
+      normalSpans: 1000,
+      gapCells: 1000,
+      gapSpans: 2000,
+      maxSineSquared: 1e-6,
+    },
+  }
+  const first = client.run({ kind: 'sourceBodyRestore', options: { ...options(), wallCoverage } }).catch(e => e.code)
+  const late = ports[0]!.onmessage!,
+    id = ports[0]!.requests[0]!.id
+  const next = client.run({
+    kind: 'sourceBodyRestore',
+    options: { ...options(), wallCoverage: { ...wallCoverage, minimumMm: 6.01 } },
+  })
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  late({ data: { version: 1, id, kind: 'sourceBodyRestore', ok: true, result: denied } } as MessageEvent)
+  reply(ports[1]!, denied)
+  expect(await next).toEqual(denied)
+  const controller = new AbortController()
+  const pending = client
+    .run({ kind: 'sourceBodyRestore', options: { ...options(), wallCoverage } }, { signal: controller.signal })
+    .catch(e => e.code)
+  controller.abort()
+  expect(await pending).toBe('CAD_CANCELLED')
+  expect(ports[1]!.terminated).toBe(true)
+  const retry = client.run({ kind: 'sourceBodyRestore', options: { ...options(), wallCoverage } })
+  reply(ports[2]!, denied)
+  expect(await retry).toEqual(denied)
+})
+
+it('qualifies the original cuboid whole-wall threshold through real WASM worker', async () => {
+  const definition = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-wall-cuboid-body.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const client = realClient(),
+    results = [],
+    started = performance.now()
+  for (const [minimumMm, pairs, normalSpans, qualified] of [
+    [9.99, 21, 10000, true],
+    [10.01, 21, 10000, false],
+    [9.99, 20, 10000, false],
+    [9.99, 21, 6, true],
+    [9.99, 21, 1, false],
+  ] as const) {
+    const o: SourceBodyOptions = {
+      ...options(),
+      definition,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      wallCoverage: {
+        minimumMm,
+        adaptiveSelf: { planeControls: 10000, cells: 1, spans: 1, cellsPerFace: 1, spansPerFace: 1 },
+        limits: { pairs, planeControls: 10000, normalSpans, gapCells: 10000, gapSpans: 20000, maxSineSquared: 1e-6 },
+      },
+    }
+    const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    expect(r.wallCoverage!.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+    const coverage = r.wallCoverage!
+    expect(coverage.wholeWallQualified).toBe(qualified)
+    expect(coverage.totalPairs).toBe(21)
+    expect(coverage.pairs).toHaveLength(pairs)
+    expect(coverage.lowerMm).toBe(qualified ? minimumMm : null)
+    expect(coverage.enumerationComplete).toBe(pairs === 21)
+    expect(coverage.normalSpans).toBeLessThanOrEqual(Math.min(normalSpans, 6))
+    if (qualified) {
+      expect(coverage.pairs.every(p => p.proven)).toBe(true)
+      expect(coverage.cells).toBe(3)
+    }
+    results.push(coverage)
+  }
+  if (process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          elapsedMs: performance.now() - started,
+          results,
+          scope: 'Original admitted 10 x 20 x 30 mm cuboid, complete aligned wall lower threshold.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 120000)
+
+it('preserves original pair proofs when close-chart refusals release gap work through real WASM', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    results = []
+  for (const expanded of [false, true]) {
+    const o: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      wallCoverage: {
+        minimumMm: 5.99,
+        normalProducts: { cells: 50000, cellsPerPair: 128 },
+        factoredNormals: { exactWork: 100000000, queries: 10000, cells: 10000, cellsPerPair: 128 },
+        adaptiveSelf: {
+          planeControls: 10000,
+          cells: 50000,
+          spans: 100000,
+          cellsPerFace: 8192,
+          spansPerFace: 10000,
+          pole: { exactWork: 100000000, cells: 100000, spans: 100000, cellsPerFace: 4096, spansPerFace: 100000 },
+          refinement: { cells: 100000, spans: 100000, cellsPerFace: 100000, spansPerFace: 100000 },
+        },
+        limits: {
+          pairs: 378,
+          planeControls: 10000,
+          normalSpans: 20000,
+          gapCells: expanded ? 100000 : 1000,
+          gapSpans: expanded ? 100000 : 2000,
+          maxSineSquared: 1e-6,
+        },
+      },
+    }
+    const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    const coverage = r.wallCoverage!
+    expect(coverage.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+    expect(coverage.wholeWallQualified).toBe(false)
+    expect(coverage.lowerMm).toBeNull()
+    if (expanded) {
+      expect(coverage.pairs.filter(p => !p.proven)).toHaveLength(61)
+      expect(coverage.pairs.some(p => p.reason === 'source-face-gap-chart-close' && !p.proven)).toBe(true)
+      for (const prior of results[0]!.pairs.filter(p => p.proven))
+        expect(coverage.pairs.find(p => p.faces[0] === prior.faces[0] && p.faces[1] === prior.faces[1])?.proven).toBe(
+          true,
+        )
+    }
+    results.push(coverage)
+  }
+  if (process.env.CAD_SOURCE_GAP_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_SOURCE_GAP_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          results,
+          scope: 'Real-worker near-normal wall coverage; close chart points are refusals, not material witnesses.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 180000)
+
+it('qualifies bounded retained face products without losing prior proofs through real WASM', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    results = [],
+    elapsedMs: number[] = []
+  for (const retained of [false, true]) {
+    const o: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      wallCoverage: {
+        minimumMm: 5.99,
+        normalProducts: { cells: 50000, cellsPerPair: 128 },
+        factoredNormals: { exactWork: 100000000, queries: 10000, cells: 10000, cellsPerPair: 128 },
+        ...(retained
+          ? {
+              retainedGap: {
+                cells: 100000,
+                spans: 100000,
+                domainCells: 1000000,
+                cellsPerPair: 256,
+                spansPerPair: 512,
+                domainCellsPerPair: 10000,
+                domainCellsPerQuery: 256,
+                toleranceUv: 1e-8,
+              },
+            }
+          : {}),
+        adaptiveSelf: {
+          planeControls: 10000,
+          cells: 50000,
+          spans: 100000,
+          cellsPerFace: 8192,
+          spansPerFace: 10000,
+          pole: { exactWork: 100000000, cells: 100000, spans: 100000, cellsPerFace: 4096, spansPerFace: 100000 },
+          refinement: { cells: 100000, spans: 100000, cellsPerFace: 100000, spansPerFace: 100000 },
+        },
+        limits: {
+          pairs: 378,
+          planeControls: 10000,
+          normalSpans: 20000,
+          gapCells: 100000,
+          gapSpans: 100000,
+          maxSineSquared: 1e-6,
+        },
+      },
+    }
+    const started = performance.now()
+    const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    elapsedMs.push(performance.now() - started)
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    const c = r.wallCoverage!
+    expect(c.wholeWallQualified).toBe(false)
+    expect(c.lowerMm).toBeNull()
+    expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+    expect(c.pairs.filter(p => !p.proven)).toHaveLength(retained ? 45 : 61)
+    if (retained) {
+      const d = c.retainedGap!
+      expect(d.pairs).toHaveLength(61)
+      expect(d.pairs.filter(p => p.qualified)).toHaveLength(16)
+      for (const old of results[0]!.pairs.filter(p => p.proven))
+        expect(c.pairs.find(p => p.faces[0] === old.faces[0] && p.faces[1] === old.faces[1])?.proven).toBe(true)
+      for (const mutate of [
+        (r: SourceBodyResult) => r.wallCoverage!.retainedGap!.domainCells++,
+        (r: SourceBodyResult) => (r.wallCoverage!.retainedGap!.pairs[0].faces = [0, 0]),
+        (r: SourceBodyResult) => (r.wallCoverage!.retainedGap!.pairs.find(p => !p.qualified)!.unresolvedProducts = []),
+        (r: SourceBodyResult) => (r.wallCoverage!.wholeWallQualified = true),
+      ]) {
+        const changed = structuredClone(r)
+        mutate(changed)
+        expect(validSourceBody(sourceBodyExpectation(o), changed)).toBe(false)
+      }
+    }
+    results.push(c)
+  }
+  if (process.env.CAD_RETAINED_GAP_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_RETAINED_GAP_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          results,
+          elapsedMs,
+          scope:
+            'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 180000)
+
+it('qualifies mixed retained wall products through real WASM and preserves every earlier proof', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    results = []
+  if (process.env.CAD_MIXED_WALL_UI_DOCUMENT) {
+    await warmGeometryKernel()
+    const record = createSourceBodyRecord('annular-mixed-wall', 'Кольцевая деталь — контроль толщины', {
+      ...base,
+      displaySegments: 8,
+    })
+    writeFileSync(
+      process.env.CAD_MIXED_WALL_UI_DOCUMENT,
+      serializeDirectDocument({ ...emptyDirectDocument(), sourceBodies: [record] }),
+    )
+  }
+  try {
+    for (const mixed of [false, true]) {
+      const o: SourceBodyOptions = {
+        ...base,
+        displaySegments: 0,
+        faceDisplay: undefined,
+        wallCoverage: {
+          minimumMm: 5.99,
+          normalProducts: { cells: 50000, cellsPerPair: 128 },
+          factoredNormals: { exactWork: 100000000, queries: 10000, cells: 10000, cellsPerPair: 128 },
+          ...{
+            retainedGap: {
+              cells: 100000,
+              spans: 100000,
+              domainCells: 1000000,
+              cellsPerPair: 256,
+              spansPerPair: 512,
+              domainCellsPerPair: 10000,
+              domainCellsPerQuery: 256,
+              toleranceUv: 1e-8,
+            },
+          },
+          adaptiveSelf: {
+            planeControls: 10000,
+            cells: 50000,
+            spans: 100000,
+            cellsPerFace: 8192,
+            spansPerFace: 10000,
+            pole: { exactWork: 100000000, cells: 100000, spans: 100000, cellsPerFace: 4096, spansPerFace: 100000 },
+            refinement: { cells: 100000, spans: 100000, cellsPerFace: 100000, spansPerFace: 100000 },
+          },
+          limits: {
+            pairs: 378,
+            planeControls: 10000,
+            normalSpans: 20000,
+            gapCells: 100000,
+            gapSpans: 100000,
+            maxSineSquared: 1e-6,
+          },
+        },
+      }
+      if (mixed)
+        o.wallCoverage!.mixedProducts = {
+          cells: 100000,
+          spans: 100000,
+          domainCells: 1000000,
+          cellsPerPair: 1024,
+          spansPerPair: 4096,
+          domainCellsPerPair: 10000,
+          domainCellsPerQuery: 256,
+          toleranceUv: 1e-8,
+          normalSpans: 100000,
+          normalSpansPerPair: 10000,
+        }
+      const started = performance.now(),
+        r = await client.run({ kind: 'sourceBodyRestore', options: o })
+      results.push({ elapsedMs: performance.now() - started, result: r })
+      if (process.env.CAD_MIXED_WALL_WORKER_REPORT)
+        writeFileSync(
+          process.env.CAD_MIXED_WALL_WORKER_REPORT,
+          JSON.stringify({ wasmSha256: wasmSha256, results }, null, 2) + '\n',
+        )
+      expect(r.admitted).toBe(true)
+      expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+      const c = r.wallCoverage!
+      expect(c.wholeWallQualified).toBe(false)
+      expect(c.lowerMm).toBeNull()
+      expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+      expect(c.pairs.filter(p => !p.proven)).toHaveLength(mixed ? 28 : 45)
+      if (mixed) {
+        expect(c.mixedProducts!.pairs).toHaveLength(45)
+        expect(c.mixedProducts!.pairs.filter(p => p.qualified)).toHaveLength(17)
+        // Compare continuous UV/direction qualification against the native original-body replay.
+        const native = JSON.parse(
+          readFileSync(
+            new URL(
+              '../docs/qualification/projective-editor-2026-10-13/mixed-wall-native-baseline.json',
+              import.meta.url,
+            ),
+            'utf8',
+          ),
+        ).automatic
+        // Replay the exact current artifact in an independent host realm. Work
+        // counters belong to that algorithm version, not the historical release.
+        expect(c).toEqual(restoreSourceBody(o).wallCoverage)
+        expect(c.factoredQueries).toBe(native.factoredQueries)
+        expect(c.mixedProducts!.pairs.map(p => [p.faces, p.qualified])).toEqual(
+          native.pairs.map((p: { faces: number[]; qualified: boolean }) => [p.faces, p.qualified]),
+        )
+
+        for (const old of results[0]!.result.wallCoverage!.pairs.filter(p => p.proven))
+          expect(c.pairs.find(p => p.faces[0] === old.faces[0] && p.faces[1] === old.faces[1])?.proven).toBe(true)
+        for (const mutate of [
+          (r: SourceBodyResult) => r.wallCoverage!.mixedProducts!.normalSpans++,
+          (r: SourceBodyResult) =>
+            (r.wallCoverage!.mixedProducts!.pairs.find(p => !p.qualified)!.unresolvedProducts = []),
+          (r: SourceBodyResult) => (r.wallCoverage!.mixedProducts!.pairs.find(p => p.qualified)!.faces = [0, 0]),
+          (r: SourceBodyResult) => (r.wallCoverage!.mixedProducts = null),
+          (r: SourceBodyResult) => (r.wallCoverage!.wholeWallQualified = true),
+        ]) {
+          const forged = structuredClone(r)
+          mutate(forged)
+          expect(validSourceBody(sourceBodyExpectation(o), forged)).toBe(false)
+        }
+      }
+    }
+  } finally {
+    client.dispose()
+  }
+}, 180000)
+
+it('admits an exact mapped root chain without promoting its separate retained halves through real WASM', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...o } = request,
+    client = realClient(),
+    r = await client.run({ kind: 'sourceBodyRestore', options: o })
+  if (process.env.CAD_MAPPED_CHAIN_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_MAPPED_CHAIN_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          result: r,
+          scope: 'Closed mapped root chain admission, original definitions and native endpoint ownership.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+  expect(r.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+  expect(r.faceCount).toBe(4)
+  expect(r.edges).toHaveLength(7)
+  expect(r.sourceBody).toEqual(o.definition)
+  expect(r.volume![0]).toBeLessThanOrEqual(1 / 6)
+  expect(r.volume![1]).toBeGreaterThanOrEqual(1 / 6)
+  const counts = new Map<number, number>()
+  r.edges.flatMap(e => e.vertices).forEach(v => counts.set(v, (counts.get(v) ?? 0) + 1))
+  expect(counts.size).toBe(5)
+  const root = [...counts].find(([, count]) => count === 2)![0]
+  const halves = r.edges.filter(e => e.vertices.includes(root))
+  expect(halves).toHaveLength(2)
+  for (let axis = 0; axis < 3; axis++) {
+    const a = halves[0]!.endpointBoxes[halves[0]!.vertices.indexOf(root)]![axis]!,
+      b = halves[1]!.endpointBoxes[halves[1]!.vertices.indexOf(root)]![axis]!
+    expect(Math.max(a[0], b[0])).toBeLessThanOrEqual(Math.min(a[1], b[1]))
+  }
+  client.dispose()
+}, 180000)
+
+it('restores independently partitioned knot-root curves through STEP, refusal and history', async () => {
+  const request = JSON.parse(
+    readFileSync(
+      new URL(
+        '../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  )
+  const historical = JSON.parse(
+    readFileSync(
+      new URL(
+        '../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-native-2026-10-10.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  ).result
+  const { op: _op, ...options } = request,
+    client = realClient()
+  const native = restoreSourceBody(options)
+  expect(native.sourceBody).toEqual(historical.sourceBody)
+  expect(native.edges).toEqual(historical.edges)
+  expect(native.stepExchange).toEqual(historical.stepExchange)
+  try {
+    const result = await client.run({ kind: 'sourceBodyRestore', options })
+    expect(result.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(options), result)).toBe(true)
+    expect(result).toEqual(native)
+    expect(result.sourceBody).toEqual(options.definition)
+    expect(result.stepExchange?.prepared).toBe(true)
+    const record = createSourceBodyRecord('knot-root-chain', 'Knot root chain', options)
+    const history = new DirectHistory({ ...emptyDirectDocument(), sourceBodies: [record] })
+    const changed = history.document
+    changed.sourceBodies![0]!.name = 'Renamed knot root chain'
+    history.commit(changed)
+    expect(history.undo().sourceBodies).toEqual([record])
+    history.redo()
+    const reloaded = parseDirectDocument(serializeDirectDocument(history.document))
+    const replay = await client.run({
+      kind: 'sourceBodyRestore',
+      options: sourceBodyRecordOptions(reloaded.sourceBodies![0]!),
+    })
+    expect(replay.admitted).toBe(true)
+    expect(replay.sourceBody).toEqual(result.sourceBody)
+    expect(replay.edges.map(e => e.vertices)).toEqual(result.edges.map(e => e.vertices))
+    const wrong = structuredClone(options)
+    wrong.definition.shell.pairs[5].edge.recipe.candidates[0][1][0] += 1e-12
+    const refused = await client.run({ kind: 'sourceBodyRestore', options: wrong })
+    expect(refused.admitted).toBe(false)
+    expect(validSourceBody(sourceBodyExpectation(wrong), refused)).toBe(true)
+    const pending = client.run({ kind: 'sourceBodyRestore', options })
+    const canceled = expect(pending).rejects.toMatchObject({ code: 'CAD_CANCELLED', name: 'AbortError' })
+    client.cancel()
+    await canceled
+    const retry = await client.run({ kind: 'sourceBodyRestore', options })
+    expect(retry).toEqual(native)
+    if (process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT)
+      writeFileSync(
+        process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT,
+        JSON.stringify(
+          {
+            wasmSha256,
+            result,
+            replay,
+            refused,
+            retry,
+            cancellationObserved: true,
+            scope:
+              'One complete independently partitioned knot-root body, native parity, STEP, history, altered-candidate refusal and replacement-worker Retry.',
+          },
+          null,
+          2,
+        ) + '\n',
+      )
+  } finally {
+    client.dispose()
+  }
+}, 180000)
+
+it('preserves mapped root carriers through STEP preparation and document history', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...source } = request
+  const options: SourceBodyOptions = {
+    ...source,
+    displaySegments: 0,
+    stepExchange: {
+      toleranceMm: 1e-7,
+      trimWork: 100000,
+      limits: {
+        rootChecks: 1000,
+        mappingCells: 10000,
+        replayMappingPerUse: 10000,
+        exactWork: 100_000_000,
+        driverCells: 10000,
+        spans: 14,
+        endpoints: 14,
+      },
+    },
+  }
+  const client = realClient()
+  try {
+    const result = await client.run({ kind: 'sourceBodyRestore', options })
+    expect(result.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(options), result)).toBe(true)
+    expect(result.stepExchange?.prepared).toBe(true)
+    const step = result.stepExchange!
+    expect([step.vertices, step.edges, step.faces]).toEqual([5, 7, 4])
+    expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
+    expect(step.text).toContain('MANIFOLD_SOLID_BREP')
+    if (process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT) writeFileSync(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT, step.text)
+    const record = createSourceBodyRecord('mapped-root-chain', 'Mapped root chain', source)
+    const document = { ...emptyDirectDocument(), sourceBodies: [record] }
+    const restored = await client.run({ kind: 'restoreDocument', text: serializeDirectDocument(document) })
+    expect(restored.sourceBodies).toEqual([record])
+    await warmGeometryKernel()
+    const history = new DirectHistory(document),
+      renamed = history.document
+    renamed.sourceBodies![0]!.name = 'Renamed mapped root chain'
+    history.commit(renamed)
+    expect(history.undo().sourceBodies).toEqual([record])
+    expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
+    const reloaded = parseDirectDocument(serializeDirectDocument(history.document))
+    const replay = await client.run({
+      kind: 'sourceBodyRestore',
+      options: sourceBodyRecordOptions(reloaded.sourceBodies![0]!),
+    })
+    expect(replay.admitted).toBe(true)
+    expect(replay.sourceBody).toEqual(source.definition)
+    expect(replay.edges.map(e => e.vertices)).toEqual(result.edges.map(e => e.vertices))
+  } finally {
+    client.dispose()
+  }
+}, 180000)
+
+it('diagnoses owned sharp endpoints while preserving regular seam refusals through real WASM', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    results = []
+  const limited: SourceBodyOptions = {
+    ...base,
+    displaySegments: 0,
+    faceDisplay: undefined,
+    seamQualification: {
+      edge: 0,
+      endpointLimitsExactWork: 1,
+      limits: { maxSineSquared: 1e-6, cells: 100000, curveSpans: 100000, normalSpans: 100000 },
+    },
+  }
+  const stopped = await client.run({ kind: 'sourceBodyRestore', options: limited })
+  expect(validSourceBody(sourceBodyExpectation(limited), stopped)).toBe(true)
+  expect(stopped.seamQualification!.qualified).toBe(false)
+  expect(stopped.seamQualification!.endpointLimits!.reason).toBe('source-seam-endpoint-limits-work-limit')
+  expect(stopped.seamQualification!.endpointLimits!.exactWork).toBeLessThanOrEqual(1)
+  expect(stopped.seamQualification!.endpointLimits!.sides).toEqual([])
+  for (const edge of [0, 1, 16, 18]) {
+    const o: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      seamQualification: {
+        edge,
+        endpointLimitsExactWork: 100000000,
+        limits: { maxSineSquared: 1e-6, cells: 100000, curveSpans: 100000, normalSpans: 100000 },
+      },
+    }
+    const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    const seam = r.seamQualification!,
+      d = seam.endpointLimits!
+    expect(seam.qualified).toBe(false)
+    expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved')
+    expect(d.reason).toBe('source-seam-endpoint-distinct-tangent-limits')
+    expect(d.exactWork).toBeLessThanOrEqual(100000000)
+    const pole = d.sides.find(s => s.distinctTangentLimits)!
+    expect(pole.collapsedPoint).toEqual(edge < 2 ? [20, 0, 6] : [0, 20, 6])
+    expect(pole.sineSquaredBounds![0]).toBeGreaterThan(0.999999999999)
+    for (const mutate of [
+      (x: SourceBodyResult) => {
+        x.seamQualification!.endpointLimits = null
+      },
+      (x: SourceBodyResult) => {
+        x.seamQualification!.endpointLimits!.canonical = 1 - d.canonical
+      },
+      (x: SourceBodyResult) => {
+        x.seamQualification!.endpointLimits!.exactWork = 100000001
+      },
+      (x: SourceBodyResult) => {
+        x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint = null
+      },
+      (x: SourceBodyResult) => {
+        x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint![0] += 1000
+      },
+    ]) {
+      const x = structuredClone(r)
+      mutate(x)
+      expect(validSourceBody(sourceBodyExpectation(o), x)).toBe(false)
+    }
+    results.push({ edge, seam })
+  }
+  client.dispose()
+  if (process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          limited: stopped.seamQualification,
+          results,
+          scope: 'Owned singular endpoint diagnostics; regular G1 remains refused.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 180000)
+
+it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM', async () => {
+  const request = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  )
+  const { op: _op, ...base } = request,
+    client = realClient(),
+    results = [],
+    started = performance.now()
+  for (const edge of [0, 1, 5, 9, 43, 10, 48, 6, 8, 15, 19, 20, 16, 18, 27, 28, 35, 36, 45, 46]) {
+    const o: SourceBodyOptions = {
+      ...base,
+      displaySegments: 0,
+      faceDisplay: undefined,
+      seamQualification: {
+        edge,
+        limits: { maxSineSquared: 1e-6, cells: 100000, curveSpans: 100000, normalSpans: 100000 },
+      },
+    }
+    const r = await client.run({ kind: 'sourceBodyRestore', options: o })
+    expect(r.admitted).toBe(true)
+    expect(validSourceBody(sourceBodyExpectation(o), r)).toBe(true)
+    const seam = r.seamQualification!,
+      regular = [5, 9, 43, 10, 48, 6, 8, 15, 19, 20, 27, 28, 35, 36, 45, 46].includes(edge)
+    expect(seam.qualified).toBe(regular)
+    if (regular) {
+      expect(seam.reason).toBe('source-seam-tangent-planes-qualified')
+      expect(seam.sineSquaredBounds![1]).toBeLessThanOrEqual(1e-6)
+      expect(seam.uncertainCanonical).toBeNull()
+    } else {
+      expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved')
+      expect(seam.sineSquaredBounds).toBeNull()
+      expect(seam.uncertainCanonical).not.toBeNull()
+    }
+    const rebound = structuredClone(r)
+    rebound.seamQualification!.request.edge = (edge + 1) % r.edges.length
+    expect(validSourceBody(sourceBodyExpectation(o), rebound)).toBe(false)
+    results.push(seam)
+  }
+  if (process.env.CAD_REFINED_SEAM_WORKER_REPORT)
+    writeFileSync(
+      process.env.CAD_REFINED_SEAM_WORKER_REPORT,
+      JSON.stringify(
+        {
+          wasmSha256: wasmSha256,
+          elapsedMs: performance.now() - started,
+          results,
+          scope:
+            'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.',
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+}, 180000)
+
+it('cancels a changed mixed request, ignores its late proof and retries the original snapshot', async () => {
+  const { op: _op, ...o } = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-request.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  ) as { op: string } & SourceBodyOptions
+  const native = JSON.parse(
+    gunzipSync(
+      readFileSync(
+        new URL(
+          '../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-native.json.gz',
+          import.meta.url,
+        ),
+      ),
+    ).toString(),
+  ).result as SourceBodyResult
+  const ports: Port[] = [],
+    client = new MainSolidWorkerClient(() => {
+      const p = new Port()
+      ports.push(p)
+      return p
+    })
+  clients.push(client)
+  const first = client.run({ kind: 'sourceBodyRestore', options: o }).catch(e => e.code),
+    late = ports[0]!.onmessage!
+  const changed = structuredClone(o)
+  changed.wallCoverage!.mixedProducts!.normalSpans = 99999
+  const second = client.run({ kind: 'sourceBodyRestore', options: changed }).catch(e => e.code)
+  expect(await first).toBe('CAD_CANCELLED')
+  expect(ports[0]!.terminated).toBe(true)
+  late({
+    data: { version: 1, id: ports[0]!.requests[0]!.id, kind: 'sourceBodyRestore', ok: true, result: native },
+  } as MessageEvent)
+  client.cancel()
+  expect(await second).toBe('CAD_CANCELLED')
+  const retry = client.run({ kind: 'sourceBodyRestore', options: o })
+  o.wallCoverage!.mixedProducts!.normalSpans = 1
+  expect(
+    (ports[2]!.requests[0]!.job as { options: SourceBodyOptions }).options.wallCoverage!.mixedProducts!.normalSpans,
+  ).toBe(100000)
+  reply(ports[2]!, native)
+  expect((await retry).wallCoverage!.pairs.filter(p => !p.proven)).toHaveLength(32)
 })

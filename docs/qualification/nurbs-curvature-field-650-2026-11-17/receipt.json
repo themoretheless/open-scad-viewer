@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0650",
+  "testedBase": "2301c5704f9baab6cf6e59b06820cad78991a795",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 248,
+  "scope": [
+    "Generate candidate directions from row cross products of the shifted midpoint tensor and certify them against full intervals.",
+    "Automatically certify all three rotated axes and preserve only the isolated axis when two moments coincide."
+  ],
+  "logSha256": "e8690cd554f47e0ce7574c8391b3902c8168fbdb236d8cbcdae14ee76f99a699",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "9b761b94e537f91f3840d6cb7fe2340d03f72edf302f451cccfbd738cb73db7d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "52eb64aa621a4d0fdd03807bceca0b5949629ce238f1a0f270c93b19bdb4b1ea"
+  }
+}

@@ -1,5 +1,6 @@
 //! Exact native source packet: rational G2 rings on a bilinear graph carrier.
 //! Source construction is algebraic; sampled lifts do not define these curves.
+#![allow(dead_code)] // shared by several test targets; each one uses a subset
 use super::nurbs;
 use nurbs::{curve::Curve,surface::Surface};
 #[path="arc_bishop_source.rs"] mod arc;

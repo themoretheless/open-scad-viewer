@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0530",
+  "testedBase": "ab987bc42ce9836bdba568b2c46a0550735e4aa8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 117,
+  "scope": [
+    "Reduce redundant knots on both periodic axes and retain both parameter domains atomically.",
+    "Reduce U and V under one budget, report the net control reduction per axis, and publish only after both cyclic passes succeed."
+  ],
+  "logSha256": "70291ce95f4b8cc268e3e4b160a9d2eb6de3a4c7baf61873bbc1f691e765600f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a02bda6e2e6af0e5263f092f40b147e831d7cade39acb791c3aada201e7d73d2",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "8967240bd97a5ffd3f7aac13bf1f269359fb82a530bbda535ed0e568fe93c381"
+  }
+}

@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { sha256Hex } from '../src/core/sha256'
 import { utf8ByteLength, utf8Compare } from '../src/core/utf8Order'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
-import { encodeSemanticProgram } from '../src/services/semanticProgramCodec'
-import { normalizeSemanticProgram } from '../src/services/semanticProgramValidator'
-import { warmGeometryKernel } from '../src/services/geometry/kernel'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import { encodeSemanticProgram } from '../src/language/semantic/semanticProgramCodec'
+import { normalizeSemanticProgram } from '../src/language/semantic/semanticProgramValidator'
+import { warmGeometryKernel } from '../src/kernel/geometry/kernel'
 
 // The semantic lowering fast paths must be observationally identical to the encode-based
 // implementations they replace; these references are those implementations.
@@ -20,7 +20,14 @@ function referenceCompare(left: string, right: string): number {
 
 let seed = 0x5eed
 const random = () => (seed = (seed * 1_103_515_245 + 12_345) >>> 0) / 2 ** 32
-const ranges: Array<[number, number]> = [[0x20, 0x7f], [0x80, 0x7ff], [0x800, 0xd7ff], [0xd800, 0xdbff], [0xdc00, 0xdfff], [0xe000, 0xffff]]
+const ranges: Array<[number, number]> = [
+  [0x20, 0x7f],
+  [0x80, 0x7ff],
+  [0x800, 0xd7ff],
+  [0xd800, 0xdbff],
+  [0xdc00, 0xdfff],
+  [0xe000, 0xffff],
+]
 function randomUnit(): string {
   const roll = random()
   if (roll < 0.6) return String.fromCharCode(0x61 + Math.floor(random() * 4))
@@ -75,12 +82,16 @@ describe('semantic lowering fast paths', () => {
     const originalHas = WeakSet.prototype.has
     const originalGet = WeakMap.prototype.get
     let forgedError: unknown = null
-    let encodedLength = 0
+    let encodedLength: number
     // Only the calls under test run while the prototypes are patched: vitest itself uses them.
     try {
       WeakSet.prototype.has = () => true
       WeakMap.prototype.get = () => new Uint8Array([1, 2, 3])
-      try { normalizeSemanticProgram(forged) } catch (error) { forgedError = error }
+      try {
+        normalizeSemanticProgram(forged)
+      } catch (error) {
+        forgedError = error
+      }
       encodedLength = encodeSemanticProgram(program).length
     } finally {
       WeakSet.prototype.has = originalHas

@@ -1,0 +1,41 @@
+{
+  "id": "NURBS-0394",
+  "testedBase": "a288ea4d35b841fa13d661164c9a8e377ea77155",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 113,
+  "scope": [
+    "Prefer compact exact cap lattice candidates to reduce support overhang at large coordinate offsets.",
+    "A bounded dyadic refinement sequence prefers smaller rim overhang while retaining coarser candidates for exact storage. Each lift attempt consumes the caller\u2019s work budget."
+  ],
+  "logSha256": "d56bbafce3451e34d9b1ce5a222ac6631252c69ee84c863d876fc9582fa53fca",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "06dc78b30e56e1d1934c93a803c4e3969052722107bb255a8d819dae7ca0be76",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "a8e31b03caeea67e0bf6202278950ab1433e4900ab12959a9a8d681473304278",
+    "crates/brep-core/tests/section_cap_sheets.rs": "77f0a231d48dad27c7ead458a20601029f1e0475d491fff331aebe4966fe0f6c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "c2621e69d0c302dd2ac3fd3df405770e8a2e5a5ffa9f309bac84b9adc2ff33aa",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "a4d0e821ecf52cc2696d7194e81d4d72dbed9309803e342fde6379ffb49a1e66",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "1ee32de89a9ce420fc4a4d2236cc3b991f477391341e01b6c0996fcd9898ab71",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "b354b108e78cefd988c066490de00a364e317183d0c93db402bcf0931f84d77f",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a"
+  }
+}

@@ -1,5 +1,5 @@
 //! Conservative self-intersection audit: global monotonicity and exact chord witnesses.
-use crate::foundation::guards::Budget;
+use crate::numerics::guards::Budget;
 use crate::{Result, check, chord_intersection, curve::Curve, curve_jets};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {

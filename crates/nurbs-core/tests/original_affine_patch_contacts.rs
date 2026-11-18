@@ -706,7 +706,87 @@ fn nearby_distinct_edge_root_never_admits_an_exterior_plane_contact() {
     let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
     assert!(r.contacts.is_empty(), "{r:?}");
     assert!(
-        !r.complete,
-        "Near but distinct roots require a sign proof to classify exterior"
+        r.complete,
+        "Exact coordinate sign must classify the exterior root: {r:?}"
     );
+}
+
+#[test]
+fn algebraic_coordinate_sign_classifies_both_sides_of_every_edge() {
+    use nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof;
+    let delta = 2f64.powi(-40);
+    for reflected in [false, true] {
+        let mut s = flat_patch();
+        if reflected {
+            for row in &mut s.control_points {
+                for p in row {
+                    p[1] = -p[1];
+                }
+            }
+        }
+        for edge in 0..4 {
+            for inward in [false, true] {
+                let d = if inward { delta } else { -delta };
+                let c = Curve {
+                    degree: 3,
+                    knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+                    control_points: [1., -1., 0., 4.]
+                        .into_iter()
+                        .zip([1., 0., -1., -2.])
+                        .map(|(x, y)| {
+                            let coordinate = if edge % 2 == 0 { y + d } else { 1. + y - d };
+                            let (a, b) = if edge < 2 {
+                                (coordinate, 0.5)
+                            } else {
+                                (0.5, coordinate)
+                            };
+                            vec![x, if reflected { -a } else { a }, b]
+                        })
+                        .collect(),
+                    weights: vec![1.; 4],
+                    periodic: false,
+                };
+                let r = original_affine_patch_contacts(&c, &s, 1e-9, 10, 100000).unwrap();
+                assert!(
+                    r.complete,
+                    "edge {edge}, inward {inward}, reflected {reflected}: {r:?}"
+                );
+                assert_eq!(r.contacts.len(), usize::from(inward));
+                assert!(r.ambiguous_parameters.is_empty());
+                assert_eq!(
+                    r.exact_work,
+                    r.scalar_proofs.iter().map(|(_, p)| p.work_used).sum()
+                );
+                if inward {
+                    assert_eq!(
+                        r.contacts[0].uv_proof,
+                        OriginalPatchUvProof::OriginalPolynomialCoordinateSign
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn nonproportional_irrational_near_edge_sign_classifies_interior_and_exterior() {
+    for delta in [-2f64.powi(-40), 2f64.powi(-40)] {
+        let c = Curve {
+            degree: 4,
+            knots: vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
+            control_points: [3., 3., 1., -3., 3.]
+                .into_iter()
+                .zip([-3., -3., -2., 0., 3.])
+                .map(|(x, y)| vec![x, y + delta, 0.5])
+                .collect(),
+            weights: vec![1.; 5],
+            periodic: false,
+        };
+        let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+        assert!(r.complete, "{r:?}");
+        assert_eq!(r.contacts.len(), usize::from(delta > 0.));
+        if delta > 0. {
+            assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalPolynomialCoordinateSign);
+        }
+    }
 }

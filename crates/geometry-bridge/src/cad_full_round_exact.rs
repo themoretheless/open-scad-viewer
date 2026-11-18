@@ -1,10 +1,6 @@
 //! Lossless exact Full Round through the shared native/WASM operation router.
 use crate::{Result, Value, field, input};
-use brep_core::{
-    Model,
-    feature_ops::{full_round_curved::admitted::transport, full_round_exact},
-    profile_certificate::original_restriction::wire::material::Limits,
-};
+use brep_core::{Model, feature_ops::{full_round_curved::admitted::transport, full_round_exact}, profile_certificate::original_restriction::wire::material::Limits};
 fn allowed(v: &Value, keys: &[&str]) -> Result<()> {
     let object = v
         .as_object()

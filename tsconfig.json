@@ -3,7 +3,15 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "jsx": "preserve",
     "importHelpers": false,
@@ -13,8 +21,13 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": ["@webgpu/types"]
+    "types": ["@webgpu/types"],
+    "paths": {
+      "vue": ["./src/forma/svet-runtime.ts"],
+      "@vue/server-renderer": ["./src/forma/svet-runtime.ts"],
+      "svet": ["./src/forma/svet-runtime.ts"]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.svt", "env.d.ts"],
   "exclude": ["src/mcp/**"]
 }

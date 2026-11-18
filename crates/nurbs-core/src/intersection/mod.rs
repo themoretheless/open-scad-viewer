@@ -28,6 +28,7 @@ pub use curve_curve::*;
 #[path = "../intersection/bezier_clip.rs"]
 pub(crate) mod bezier_clip;
 /// Curve self-intersection audit (formerly `crate::curve_self_intersection`).
+pub mod surface_flux;
 pub mod self_curve;
 /// Surface self-intersection audit (formerly `crate::surface_self_intersection`).
 pub mod self_surface;
@@ -35,6 +36,7 @@ pub mod self_surface;
 pub mod ss_intersection;
 /// Contact certificates for surface/surface sections (formerly `crate::surface_contact`).
 pub mod surface_contact;
+pub mod surface_contact_class;
 /// Conservative contact search over two surface domains (formerly `crate::surface_contact_search`).
 pub mod surface_contact_search;
 /// Adaptive octree isosurface extraction from SDFs: dual contouring with QEF,

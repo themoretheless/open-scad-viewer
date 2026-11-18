@@ -7,14 +7,48 @@ use super::*;
 /// coefficient or root-midpoint comparison enters this proof.
 pub fn rational_bspline_affine_patch_edge_root(
     ctx: &mut PredicateContext<'_>,
-    controls: &[[LeafRef; 4]],
-    knots: &[LeafRef],
-    degree: usize,
-    span: usize,
+    curve: super::quadric_edge::RationalSpanRefs<'_>,
     patch: [[LeafRef; 3]; 4],
     edge: usize,
     interval: [f64; 2],
 ) -> Result<OriginalPlaneCommonRootDecision, InputError> {
+    let d = query(ctx, curve, patch, edge, interval, false)?;
+    Ok(OriginalPlaneCommonRootDecision {
+        outcome: match d.sign {
+            Ok(Sign::Zero) => Outcome::Common,
+            Ok(_) => Outcome::Distinct,
+            Err(r) => Outcome::Indeterminate(r),
+        },
+        work_used: d.work_used,
+        context: d.context,
+    })
+}
+/// Sign of affine-u-side (edges 0/1), or affine-v-side (edges 2/3),
+/// at the unique original-plane root. The determinant orientation is included;
+/// this is the coordinate sign, not the unoriented plane numerator sign.
+pub fn rational_bspline_affine_patch_edge_sign(
+    ctx: &mut PredicateContext<'_>,
+    curve: super::quadric_edge::RationalSpanRefs<'_>,
+    patch: [[LeafRef; 3]; 4],
+    edge: usize,
+    interval: [f64; 2],
+) -> Result<super::sign::OriginalPlaneRootSignDecision, InputError> {
+    query(ctx, curve, patch, edge, interval, true)
+}
+fn query(
+    ctx: &mut PredicateContext<'_>,
+    curve: super::quadric_edge::RationalSpanRefs<'_>,
+    patch: [[LeafRef; 3]; 4],
+    edge: usize,
+    interval: [f64; 2],
+    signed: bool,
+) -> Result<super::sign::OriginalPlaneRootSignDecision, InputError> {
+    let super::quadric_edge::RationalSpanRefs {
+        controls,
+        knots,
+        degree,
+        span,
+    } = curve;
     if edge > 3
         || !interval.iter().all(|v| v.is_finite())
         || interval[0] < 0.
@@ -68,6 +102,7 @@ pub fn rational_bspline_affine_patch_edge_root(
             plane[3] = plane[3].add(&plane[k].mul(&x[tail + k], ctx)?, ctx)?;
         }
         let mut coordinate = None;
+        let mut orientation = Sign::Positive;
         for (i, j) in [(0, 1), (0, 2), (1, 2)] {
             let det = u[i].mul(&v[j], ctx)?.sub(&u[j].mul(&v[i], ctx)?, ctx)?;
             if det.sign() == Sign::Zero {
@@ -87,33 +122,43 @@ pub fn rational_bspline_affine_patch_edge_root(
             if edge % 2 == 1 {
                 c[3] = c[3].add(&det, ctx)?;
             }
+            orientation = det.sign();
             coordinate = Some(c);
             break;
         }
         let coordinate = coordinate.ok_or(Reason::MissingProof)?;
         let uv = &values[n * 4..tail];
-        let first =
-            super::polynomial::original_polynomial(ctx, &x[..tail], uv, n, degree, span, &plane)?;
-        let second = super::polynomial::original_polynomial(
-            ctx,
-            &x[..tail],
+        let spline = ExactSpan {
+            x: &x[..tail],
             uv,
             n,
             degree,
             span,
-            &coordinate,
-        )?;
-        let common =
-            crate::planar_bezier_roots::unique_common_root(&first, &second, interval, ctx)?;
-        ctx.charge(0)?;
-        Ok(if common {
-            Outcome::Common
+        };
+        let first = super::polynomial::original_polynomial(ctx, spline, &plane)?;
+        let second = super::polynomial::original_polynomial(ctx, spline, &coordinate)?;
+        let sign = if signed {
+            let sign =
+                crate::planar_bezier_roots::unique_root_sign(&first, &second, interval, ctx)?;
+            if orientation == Sign::Negative {
+                match sign {
+                    Sign::Positive => Sign::Negative,
+                    Sign::Negative => Sign::Positive,
+                    Sign::Zero => Sign::Zero,
+                }
+            } else {
+                sign
+            }
+        } else if crate::planar_bezier_roots::unique_common_root(&first, &second, interval, ctx)? {
+            Sign::Zero
         } else {
-            Outcome::Distinct
-        })
+            Sign::Positive
+        };
+        ctx.charge(0)?;
+        Ok(sign)
     })();
-    Ok(OriginalPlaneCommonRootDecision {
-        outcome: computed.unwrap_or_else(Outcome::Indeterminate),
+    Ok(super::sign::OriginalPlaneRootSignDecision {
+        sign: computed,
         work_used: ctx.work_used(),
         context: ctx.identity(),
     })

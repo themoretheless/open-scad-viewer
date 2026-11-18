@@ -32,6 +32,12 @@ fn essential_mixed_axis_bridge_covers_every_original_root_and_closed_product_cel
     }
 
     assert!(c.report().excluded_cells > 0);
+    // The two carriers have different X spans. Replay above independently
+    // checks the exclusion in their common physical coordinates.
+    assert!(c.nodes().iter().any(|node| {
+        matches!(node.kind(), Some(ss::MixedCoverageKind::AffineGraphExcluded))
+            && node.probes().is_empty()
+    }));
     assert!(c.nodes().iter().any(|n| matches!(
         n.kind(),
         Some(

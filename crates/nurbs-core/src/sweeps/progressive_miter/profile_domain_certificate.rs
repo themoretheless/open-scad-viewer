@@ -24,18 +24,29 @@ impl Sweep<'_> {
         let axis = if transport.status == Status::Certified {
             Some(transport.tangents.as_ref().unwrap()[0])
         } else { None };
+        let limits = ProfileDomainLimits { tolerance, max_pairs, max_cells, max_exact_work };
         certify_original_profile_projection_domain(self.profiles, loop_sizes, axis,
-            transport.cells, tolerance, max_pairs, max_cells, max_exact_work)
+            transport.cells, limits)
     }
 }
 
 /// Constructor-owned original profiles and independently proved initial axis.
 /// This shared proof does not certify endpoint caps or retained body error.
+/// Projection tolerance and the pair, cell and exact-work budgets of one
+/// profile projection-domain proof.
+#[derive(Clone, Copy)]
+pub(crate) struct ProfileDomainLimits {
+    pub tolerance: f64,
+    pub max_pairs: usize,
+    pub max_cells: usize,
+    pub max_exact_work: u64,
+}
 pub(crate) fn certify_original_profile_projection_domain(
     profiles: &[crate::curve::Curve], loop_sizes: &[usize],
     initial_axis: Option<[[f64;2];3]>, frame_cells: usize,
-    tolerance: f64, max_pairs: usize, max_cells: usize, max_exact_work: u64,
+    limits: ProfileDomainLimits,
 ) -> Result<Report> {
+    let ProfileDomainLimits{tolerance,max_pairs,max_cells,max_exact_work}=limits;
         check(
             !loop_sizes.is_empty()
                 && loop_sizes.len() <= 16

@@ -3,13 +3,7 @@
  * Imports no Worker protocol codec or production scene modules.
  */
 
-export type Json =
-  | null
-  | boolean
-  | number
-  | string
-  | Json[]
-  | { readonly [key: string]: Json }
+export type Json = null | boolean | number | string | Json[] | { readonly [key: string]: Json }
 
 const HEX64 = /^[0-9a-f]{64}$/
 const HEX32 = /^[0-9a-f]{32}$/
@@ -63,7 +57,7 @@ export function sceneReject(scene: SceneV2): string | null {
     if (!Number.isInteger(token.token) || token.token < 0) return 'packet-token'
     if (!HEX32.test(token.topoId)) return 'packet-topo-id'
   }
-  const assetIds = new Set(scene.assets.map((a) => a.meshAssetId))
+  const assetIds = new Set(scene.assets.map(a => a.meshAssetId))
   for (const occ of scene.occurrences) {
     if (!assetIds.has(occ.meshAssetId)) return 'occurrence-asset-missing'
     if (occ.transform.length !== 16) return 'transform'

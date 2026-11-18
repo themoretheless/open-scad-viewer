@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks'
 import { cpus } from 'node:os'
 import { isDeepStrictEqual } from 'node:util'
 import { rushGraphSchema as before } from './rushGraph-runtime-reference'
-import { rushGraphSchema as after } from '../../src/services/rushGraph'
+import { rushGraphSchema as after } from '../../src/language/rushGraph'
 const document = JSON.parse(readFileSync('output/rush-schema-profile-skadis.json', 'utf8'))
 if (!isDeepStrictEqual(before.parse(document), after.parse(document))) throw new Error('Normalized document differs')
 const runs = [['recursive_union', before], ['discriminant_dispatch', after]] as const

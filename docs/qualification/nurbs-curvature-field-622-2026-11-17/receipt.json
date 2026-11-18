@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0622",
+  "testedBase": "5988d6a7163f071d274ec62c4afffea7ea1c258d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 215,
+  "scope": [
+    "Enclose the Rayleigh quotient for an arbitrary nonzero axis through the tensor reference point, including the common centroid of trimmed patches.",
+    "Check signed off-diagonal terms, extreme axis scales, and an oblique axis through the common centroid of a patch set with a nested island."
+  ],
+  "logSha256": "7898107344a262c057704342de8533fef436b9f4d300b9d8f3ef63b26d9f6492",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "ec6168299ffa01083d3a3bdc479cc8786c4bb6fa0f666b45567a4a476ce2893a",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "867488a474b887725283761bf08af8fb35d6ea970e094707c81aa10ffb4fa298"
+  }
+}

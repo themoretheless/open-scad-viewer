@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0367",
+  "testedBase": "56830e5775331d7bb79d8cf889ff222649e1cd32",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 62,
+  "scope": [
+    "Build complementary counterclockwise trim loops along a certified per-cell surface-plane section.",
+    "A monotone shared UV trace splits the original knot rectangle. Opposite trace directions and exact perimeter joins form complementary counterclockwise loops, with side labels derived from the certified graph orientation."
+  ],
+  "logSha256": "efc0b600e9644ccc79ca53e7156b96d132b2072ae4167448d43062f7ac3d6bc6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "d37bef77c5c59be6e2e0dfddf5057ef153bf64f7a789fc94dc40b3ce1ec15095",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "d0e76e5a5105168e5e8e2a368972b328269d29ee7b4ae193ac87ba225d83d1ef",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "af0596a3e0384bbf54fa7e4649cddfb84db024838144cf9c387de733894292bb",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_pair.rs": "85407258baea9ef095ffe8a5d5dc3049e468c6ab3160d5f1d801e1b66215cd98",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_trim.rs": "505e24541bf87176c0c9ef76c33ba2e83b374d0da5f36c7ebba1965c0dccc8d2",
+    "crates/nurbs-core/src/trim/trim_domain.rs": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f"
+  }
+}

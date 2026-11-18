@@ -18,7 +18,8 @@ mod serialization;
 /// Exact endpoint closure of an authored UV loop. This does not prove that
 /// the loop is simple, oriented correctly, or disjoint from other loops.
 /// Clamped endpoints equal their authored controls even with rational weights.
-/// None means an unclamped/periodic endpoint has no exact proof here.
+/// None means an endpoint has no exact proof here. A periodic singleton
+/// can close through the exact cyclic source identity.
 pub fn exact_loop_joins(curves: &[Curve]) -> Result<Option<bool>> {
     check((1..=256).contains(&curves.len()), "Exact UV closure needs 1..256 curves")?;
     for c in curves {
@@ -27,6 +28,11 @@ pub fn exact_loop_joins(curves: &[Curve]) -> Result<Option<bool>> {
             c.control_points[0].len() == 2,
             "Exact UV closure needs 2D curves",
         )?;
+    }
+    if let [curve] = curves {
+        if curve.periodic && crate::curve_partition_agreement::verify_periodic_source_closure(curve)? {
+            return Ok(Some(true));
+        }
     }
     let endpoint = |c: &Curve, end: bool| -> Option<[f64; 2]> {
         if c.periodic {

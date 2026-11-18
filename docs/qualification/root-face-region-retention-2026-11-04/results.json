@@ -1,0 +1,10 @@
+{
+  "passed": 9,
+  "tests": [
+    "root_uv_closure",
+    "root_model"
+  ],
+  "whole_box_outer_minus_holes": true,
+  "explicit_retained_topology": true,
+  "automatic_boolean_material": false
+}

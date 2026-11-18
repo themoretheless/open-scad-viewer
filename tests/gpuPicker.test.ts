@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createPickMatrix, GpuPicker, type GpuPickerMesh } from '../src/services/gpuPicker'
-import { identityMat4 } from '../src/services/gpuCsgPreview'
+import { createPickMatrix, GpuPicker, type GpuPickerMesh } from '../src/render/gpuPicker'
+import { identityMat4 } from '../src/render/gpuCsgPreview'
 
 describe('gpuPicker Pick Matrix Math', () => {
   it('maps center of target pixel directly to NDC origin (0, 0)', () => {
@@ -59,46 +59,46 @@ describe('GpuPicker Hardware Picking Pass', () => {
     vi.stubGlobal('GPUMapMode', { READ: 1 })
 
     let mappedData = new Uint32Array([readbackRawId, 0, 0, 0])
-    let unmapped = false
+    const copiedCommands: { src: unknown; dst: unknown; size: unknown }[] = []
+    const passes: { desc: unknown; draws: number }[] = []
 
-    const copiedCommands: any[] = []
-    const passes: any[] = []
-
-    const dev: any = {
-      createTexture: (desc: any) => ({
+    const dev = {
+      createTexture: (desc: unknown) => ({
         desc,
         createView: () => ({ textureDesc: desc }),
         destroy: vi.fn(),
       }),
-      createBuffer: (desc: any) => ({
+      createBuffer: (desc: unknown) => ({
         desc,
         getMappedRange: () => mappedData.buffer,
-        mapAsync: vi.fn(async () => { unmapped = false }),
-        unmap: vi.fn(() => { unmapped = true }),
+        mapAsync: vi.fn(async () => {}),
+        unmap: vi.fn(),
         destroy: vi.fn(),
       }),
-      createBindGroupLayout: (desc: any) => ({ desc }),
-      createPipelineLayout: (desc: any) => ({ desc }),
-      createShaderModule: (desc: any) => ({ desc }),
-      createRenderPipeline: (desc: any) => ({ desc }),
-      createBindGroup: (desc: any) => ({ desc }),
+      createBindGroupLayout: (desc: unknown) => ({ desc }),
+      createPipelineLayout: (desc: unknown) => ({ desc }),
+      createShaderModule: (desc: unknown) => ({ desc }),
+      createRenderPipeline: (desc: unknown) => ({ desc }),
+      createBindGroup: (desc: unknown) => ({ desc }),
       createCommandEncoder: () => {
-        const enc: any = {
-          beginRenderPass: (desc: any) => {
-            const pass: any = {
+        const enc = {
+          beginRenderPass: (desc: unknown) => {
+            const pass = {
               desc,
               draws: 0,
               setPipeline: vi.fn(),
               setBindGroup: vi.fn(),
               setVertexBuffer: vi.fn(),
               setIndexBuffer: vi.fn(),
-              drawIndexed: vi.fn(() => { pass.draws++ }),
+              drawIndexed: vi.fn(() => {
+                pass.draws++
+              }),
               end: vi.fn(),
             }
             passes.push(pass)
             return pass
           },
-          copyTextureToBuffer: (src: any, dst: any, size: any) => {
+          copyTextureToBuffer: (src: unknown, dst: unknown, size: unknown) => {
             copiedCommands.push({ src, dst, size })
           },
           finish: () => ({ finish: true }),
@@ -109,15 +109,22 @@ describe('GpuPicker Hardware Picking Pass', () => {
         writeBuffer: vi.fn(),
         submit: vi.fn(),
       },
-    }
+    } as unknown as GPUDevice
 
-    return { dev, passes, copiedCommands, setReadbackId: (id: number) => { mappedData = new Uint32Array([id, 0, 0, 0]) } }
+    return {
+      dev,
+      passes,
+      copiedCommands,
+      setReadbackId: (id: number) => {
+        mappedData = new Uint32Array([id, 0, 0, 0])
+      },
+    }
   }
 
   function fakeMesh(visible = true): GpuPickerMesh {
     return {
-      vb: {} as any,
-      ib: {} as any,
+      vb: {} as GPUBuffer,
+      ib: {} as GPUBuffer,
       ic: 36,
       transform: identityMat4(),
       visible,
@@ -127,11 +134,17 @@ describe('GpuPicker Hardware Picking Pass', () => {
   it('returns null immediately when meshes list is empty', async () => {
     const { dev } = makeMockDevice(0)
     const picker = new GpuPicker()
-    const result = await picker.pick(dev, [], {
-      cameraViewProjection: identityMat4(),
-      viewportWidth: 800,
-      viewportHeight: 600,
-    }, 100, 100)
+    const result = await picker.pick(
+      dev,
+      [],
+      {
+        cameraViewProjection: identityMat4(),
+        viewportWidth: 800,
+        viewportHeight: 600,
+      },
+      100,
+      100,
+    )
 
     expect(result).toBeNull()
     picker.destroy()
@@ -142,11 +155,17 @@ describe('GpuPicker Hardware Picking Pass', () => {
     const picker = new GpuPicker()
     const meshes = [fakeMesh(true), fakeMesh(true)]
 
-    const result = await picker.pick(dev, meshes, {
-      cameraViewProjection: identityMat4(),
-      viewportWidth: 800,
-      viewportHeight: 600,
-    }, 400, 300)
+    const result = await picker.pick(
+      dev,
+      meshes,
+      {
+        cameraViewProjection: identityMat4(),
+        viewportWidth: 800,
+        viewportHeight: 600,
+      },
+      400,
+      300,
+    )
 
     expect(result).toBeNull()
     expect(passes.length).toBe(1)
@@ -164,21 +183,33 @@ describe('GpuPicker Hardware Picking Pass', () => {
     const picker = new GpuPicker()
     const meshes = [fakeMesh(true), fakeMesh(true), fakeMesh(true)]
 
-    const hit = await picker.pick(dev, meshes, {
-      cameraViewProjection: identityMat4(),
-      viewportWidth: 800,
-      viewportHeight: 600,
-    }, 150, 250)
+    const hit = await picker.pick(
+      dev,
+      meshes,
+      {
+        cameraViewProjection: identityMat4(),
+        viewportWidth: 800,
+        viewportHeight: 600,
+      },
+      150,
+      250,
+    )
 
     expect(hit).toBe(1)
 
     // Test hit on mesh 0 (rawId 1)
     setReadbackId(1)
-    const hit0 = await picker.pick(dev, meshes, {
-      cameraViewProjection: identityMat4(),
-      viewportWidth: 800,
-      viewportHeight: 600,
-    }, 150, 250)
+    const hit0 = await picker.pick(
+      dev,
+      meshes,
+      {
+        cameraViewProjection: identityMat4(),
+        viewportWidth: 800,
+        viewportHeight: 600,
+      },
+      150,
+      250,
+    )
     expect(hit0).toBe(0)
 
     picker.destroy()
@@ -193,11 +224,17 @@ describe('GpuPicker Hardware Picking Pass', () => {
       fakeMesh(true),
     ]
 
-    await picker.pick(dev, meshes, {
-      cameraViewProjection: identityMat4(),
-      viewportWidth: 800,
-      viewportHeight: 600,
-    }, 100, 100)
+    await picker.pick(
+      dev,
+      meshes,
+      {
+        cameraViewProjection: identityMat4(),
+        viewportWidth: 800,
+        viewportHeight: 600,
+      },
+      100,
+      100,
+    )
 
     expect(passes[0].draws).toBe(2)
     picker.destroy()
@@ -206,17 +243,23 @@ describe('GpuPicker Hardware Picking Pass', () => {
   it('destroys all allocated GPU textures and buffers cleanly', async () => {
     const { dev } = makeMockDevice(0)
     const picker = new GpuPicker()
-    await picker.pick(dev, [fakeMesh(true)], {
-      cameraViewProjection: identityMat4(),
-      viewportWidth: 800,
-      viewportHeight: 600,
-    }, 100, 100)
+    await picker.pick(
+      dev,
+      [fakeMesh(true)],
+      {
+        cameraViewProjection: identityMat4(),
+        viewportWidth: 800,
+        viewportHeight: 600,
+      },
+      100,
+      100,
+    )
 
     expect(() => picker.destroy()).not.toThrow()
   })
 
   it('integrates with WebGPURenderer.gpuPickAt safely', async () => {
-    const { WebGPURenderer } = await import('../src/services/webgpuRenderer')
+    const { WebGPURenderer } = await import('../src/render/webgpuRenderer')
     const renderer = new WebGPURenderer()
     const uninit = await renderer.gpuPickAt(100, 100)
     expect(uninit).toBeNull()

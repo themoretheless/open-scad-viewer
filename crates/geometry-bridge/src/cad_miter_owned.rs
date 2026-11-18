@@ -766,7 +766,9 @@ pub fn place(v: Value) -> Result<Value> {
             charts = Some(super::cad_sweep_smoothness::charts_value(&wall));
             volume = Some(proof);
             if !certified {
-                report.placement.as_mut().unwrap().model = None;
+                if let Some(placement) = report.placement.as_mut() {
+                    placement.model = None;
+                }
                 report.reason = "affine-solid-geometry-unproved";
             }
         }

@@ -1,10 +1,7 @@
 import { isWellFormedUnicode } from './unicode'
-export const GEOMETRY_LANGUAGE_CONTRACTS = Object.freeze([
-  'legacy/current',
-  'openscad-viewer/brep-1',
-] as const)
+export const GEOMETRY_LANGUAGE_CONTRACTS = Object.freeze(['legacy/current', 'openscad-viewer/brep-1'] as const)
 
-export type GeometryLanguageContract = typeof GEOMETRY_LANGUAGE_CONTRACTS[number]
+export type GeometryLanguageContract = (typeof GEOMETRY_LANGUAGE_CONTRACTS)[number]
 
 export const MAX_GEOMETRY_SOURCE_CHARACTERS = 250_000
 const MAX_REQUIRED_CAPABILITIES = 32
@@ -77,11 +74,7 @@ function sourceOutsideBlockComments(
 /** Parses only the bounded source header; it deliberately has no engine-manifest dependency. */
 export function parseGeometrySourceRoutingHeader(source: string): GeometrySourceRoutingHeader {
   if (!isWellFormedUnicode(source)) {
-    throw new GeometryLanguageContractError(
-      'Geometry source must contain well-formed Unicode.',
-      null,
-      null,
-    )
+    throw new GeometryLanguageContractError('Geometry source must contain well-formed Unicode.', null, null)
   }
   if (source.length > MAX_GEOMETRY_SOURCE_CHARACTERS) {
     throw new GeometryLanguageContractError(
@@ -108,35 +101,35 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
     escaped = visible.escaped
     const lineCommentStart = line.indexOf('//')
     const directiveLine = lineCommentStart >= 0 ? line.slice(lineCommentStart) : line
-    const codeBeforeDirective = lineCommentStart > 0
-      && line.slice(0, lineCommentStart).trim() !== ''
+    const codeBeforeDirective = lineCommentStart > 0 && line.slice(0, lineCommentStart).trim() !== ''
     const languageMatch = /^\s*\/\/\s*@language\s+(\S+)\s*$/.exec(directiveLine)
     const requiresMatch = /^\s*\/\/\s*@requires\s+(.+?)\s*$/.exec(directiveLine)
     const engineMatch = /^\s*\/\/\s*@engine(?:\s+.*)?$/.exec(directiveLine)
 
-    if (languageMatch) {
+    const declaredLanguage = languageMatch?.[1]
+    if (languageMatch && declaredLanguage !== undefined) {
       if (bodyStarted || codeBeforeDirective) {
         throw new GeometryLanguageContractError(
           'The @language directive must be in the leading source header.',
-          languageMatch[1],
+          declaredLanguage,
           lineNumber,
         )
       }
       if (languageDirectiveLine !== null) {
         throw new GeometryLanguageContractError(
           `The @language directive is duplicated (first declared on line ${languageDirectiveLine}).`,
-          languageMatch[1],
+          declaredLanguage,
           lineNumber,
         )
       }
-      if (languageMatch[1] !== 'legacy/current' && languageMatch[1] !== 'openscad-viewer/brep-1') {
+      if (declaredLanguage !== 'legacy/current' && declaredLanguage !== 'openscad-viewer/brep-1') {
         throw new GeometryLanguageContractError(
-          `Unsupported geometry language contract ${languageMatch[1]}.`,
-          languageMatch[1],
+          `Unsupported geometry language contract ${declaredLanguage}.`,
+          declaredLanguage,
           lineNumber,
         )
       }
-      languageContract = languageMatch[1]
+      languageContract = declaredLanguage
       languageDirectiveLine = lineNumber
       continue
     }
@@ -149,7 +142,7 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
           lineNumber,
         )
       }
-      const identifiers = requiresMatch[1].split(/[\s,]+/).filter(Boolean)
+      const identifiers = (requiresMatch[1] ?? '').split(/[\s,]+/).filter(Boolean)
       if (!identifiers.length || identifiers.some(identifier => !CAPABILITY_ID.test(identifier))) {
         throw new GeometryLanguageContractError(
           'The @requires directive contains an invalid capability identifier.',
@@ -181,7 +174,7 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
     const malformedReservedDirective = /^\s*\/\/\s*@(language|requires|engine)\b/i.exec(directiveLine)
     if (malformedReservedDirective) {
       throw new GeometryLanguageContractError(
-        `Malformed @${malformedReservedDirective[1].toLowerCase()} directive.`,
+        `Malformed @${(malformedReservedDirective[1] ?? '').toLowerCase()} directive.`,
         languageContract,
         lineNumber,
       )

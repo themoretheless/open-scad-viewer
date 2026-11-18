@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const stableProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 
@@ -20,24 +20,16 @@ describe('independent OpenSCAD 2021.01 expression semantics', () => {
     `)
 
     expect(result.terminalError).toBeNull()
-    expect(result.warnings).toEqual([
-      'ECHO: "inner"',
-      'ECHO: 2, 7, 9',
-    ])
+    expect(result.warnings).toEqual(['ECHO: "inner"', 'ECHO: 2, 7, 9'])
     expect(result.program.core.nodes.map(node => node.kind)).toEqual(['box'])
   })
 
   it('returns undef for body-less assert/echo expressions and fails a false assertion', () => {
     const result = lower('echo(assert(true), echo("side")); cube(1);')
 
-    expect(result.warnings).toEqual([
-      'ECHO: "side"',
-      'ECHO: undef, undef',
-    ])
-    expect(() => lower('echo(assert(false, "boom") 7); cube(1);'))
-      .toThrow(OpenSCADParseError)
-    expect(() => lower('echo(assert(false, "boom") 7); cube(1);'))
-      .toThrow(/Assertion .* failed: "boom"/)
+    expect(result.warnings).toEqual(['ECHO: "side"', 'ECHO: undef, undef'])
+    expect(() => lower('echo(assert(false, "boom") 7); cube(1);')).toThrow(OpenSCADParseError)
+    expect(() => lower('echo(assert(false, "boom") 7); cube(1);')).toThrow(/Assertion .* failed: "boom"/)
   })
 
   it('flattens all five list-comprehension forms with nested iterator scope', () => {
@@ -87,10 +79,7 @@ describe('independent OpenSCAD 2021.01 expression semantics', () => {
   it('preserves descending two-value range endpoints and iterates the empty direction', () => {
     const result = lower('echo([3:1]); for (i = [3:1]) cube(i);')
 
-    expect(result.warnings).toEqual([
-      'begin is greater than the end, but step is positive',
-      'ECHO: [3 : 1 : 1]',
-    ])
+    expect(result.warnings).toEqual(['begin is greater than the end, but step is positive', 'ECHO: [3 : 1 : 1]'])
     expect(result.program.core.nodes).toEqual([])
     expect(result.program.core.result).toEqual({ tag: 'empty', type: 'never' })
   })
@@ -103,8 +92,9 @@ describe('independent OpenSCAD 2021.01 expression semantics', () => {
       "Ignoring unknown variable 'missing'",
       'ECHO: undef, undef',
     ])
-    expect(() => lowerOpenSCADToSemanticProgram('cube([1, 2] + 1);'))
-      .toThrow(/arithmetic operand must be a finite number/)
+    expect(() => lowerOpenSCADToSemanticProgram('cube([1, 2] + 1);')).toThrow(
+      /arithmetic operand must be a finite number/,
+    )
   })
 
   it('materializes a tagged range only for statement iteration', () => {
@@ -124,10 +114,7 @@ describe('independent OpenSCAD 2021.01 expression semantics', () => {
       m(b = 2, 1, 3);
     `)
 
-    expect(result.warnings).toEqual([
-      'Argument a was specified more than once',
-      'ECHO: [1, 2, 3], [2, 3, undef]',
-    ])
+    expect(result.warnings).toEqual(['Argument a was specified more than once', 'ECHO: [1, 2, 3], [2, 3, undef]'])
     expect(result.program.core.nodes).toHaveLength(1)
     expect(result.program.core.nodes[0]).toMatchObject({ kind: 'box', size: [1, 2, 3] })
   })
@@ -144,9 +131,12 @@ describe('independent OpenSCAD 2021.01 expression semantics', () => {
       'ECHO: "second"',
       'ECHO: 2, 3',
     ])
-    expect(result.program.core.nodes).toContainEqual(expect.objectContaining({
-      kind: 'box', size: [2, 3, 1],
-    }))
+    expect(result.program.core.nodes).toContainEqual(
+      expect.objectContaining({
+        kind: 'box',
+        size: [2, 3, 1],
+      }),
+    )
   })
 
   it('soft-fails invalid built-ins and preserves mixed argument source order', () => {
@@ -177,11 +167,7 @@ describe('independent OpenSCAD 2021.01 expression semantics', () => {
       r();
     `)
 
-    expect(result.warnings).toEqual([
-      "Ignoring unknown variable 'y'",
-      'ECHO: undef',
-      'ECHO: 3, undef',
-    ])
+    expect(result.warnings).toEqual(["Ignoring unknown variable 'y'", 'ECHO: undef', 'ECHO: 3, undef'])
     expect(result.program.core.nodes).toHaveLength(1)
   })
 })

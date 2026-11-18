@@ -1,0 +1,39 @@
+{
+  "source_base": "28d4ceb97",
+  "main_equivalent_tree": "acfe7c27a",
+  "scope": "isolated native source",
+  "passed": 19,
+  "failed": 0,
+  "suite_counts": {
+    "closed_solid": 7,
+    "material_boxes": 4,
+    "mixed_cut_regions": 3,
+    "mixed_root_cut": 3,
+    "root_model": 2
+  },
+  "architecture": "passed",
+  "whole_candidate_geometry_admitted": false,
+  "whole_candidate_material_classified": false,
+  "general_boolean_complete": false,
+  "full_ss_complete": false,
+  "wasm_updated": false,
+  "plan": "docs/design/ss-cut-region-material-progress-2026-11-04.md",
+  "source_sha256": {
+    "crates/brep-core/src/closed_solid.rs": "104609d0b77ae2f7c8f638a93ae9da26a3449409dfba9fa599f321634cdd186a",
+    "crates/brep-core/src/closed_solid/boolean_box.rs": "62488ff463e46a428e54e706c151886673a1c250933e8543efd0a20a2bf24414",
+    "crates/brep-core/src/closed_solid/material_box.rs": "99f3c1d7454546a8277eae4191b0c2709a24a4b6eac0b2a93e3b4744cdf8f9d2",
+    "crates/brep-core/src/closed_solid/material_seed.rs": "abcbe5e42d783a9ab4b5ae97764405d5ae65c9ebf82a118535369ac639559590",
+    "crates/brep-core/src/closed_solid/separation.rs": "bb703ebb262984eeb0cfe0e9e413e12db85e9fa8acc7ccf6ea24d229e451543b",
+    "crates/brep-core/src/closed_solid/separation/trimmed.rs": "678f76ad8e265ea00cb09b23af99630fba4ce4b91e6146da7b832096282332b7",
+    "crates/brep-core/src/mixed_root_model.rs": "66482aadbbc65594642abb2a6bc14e205ee16a54c10d65c9e27717235ea7a4f2",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "22ea60c6c4ee576e2f0e9c3edfcaada6489f2e1a2d7a511458cb484622dcda9a",
+    "crates/brep-core/src/mixed_root_model/closed_cut/classification.rs": "72323f481ef2b2d03c9a9ab50f83cb7a50a4a1cf6ca5c7b1c3b83c7603a2e2b4",
+    "crates/brep-core/src/mixed_root_model/closed_cut/material.rs": "7433b14012808f6d1b448241e08c8ec66ef8ef0eeed12043a72f04aea2d25763",
+    "crates/brep-core/tests/material_boxes.rs": "f0d09690857efc10c5e2072f9aca962c37399dbf475419221bc117031082cc5b",
+    "crates/brep-core/tests/mixed_cut_regions.rs": "4d8563bedc94aa54d1f229f441dfd851f689155bb025314b031e29c7ac1d5ef5",
+    "crates/brep-core/tests/support/quadratic_graph_body.rs": "5333c3085b38b7c23173ae6445442b48ed7be4b8c25dc20ccfadd0c128eb163d",
+    "docs/design/ss-cut-region-material-progress-2026-11-04.md": "31d1debea8c4726a7262cb7db19c1ba4205f80988d369db61dd74756ac3e3a7a",
+    "docs/design/ss-mixed-finite-trim-progress-2026-11-04.md": "77ef8ef4fc7358c9043792b2ea285d7ce466a9308497a72d2faea60883971a0d",
+    "docs/design/ss-singular-material-progress-2026-11-04.md": "616e0dfe88bb0bda9ea22ccfed344c3ee1ed8c859d4bfea0916c95b97bf6b574"
+  }
+}

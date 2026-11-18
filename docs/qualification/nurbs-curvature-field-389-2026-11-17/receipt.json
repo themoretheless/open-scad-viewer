@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0389",
+  "testedBase": "b930fe5b6b850677b7c35657c4183a9f7ef3e160",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 103,
+  "scope": [
+    "Infer the cap planes from a standalone shell, bound support rounding, and prove the stored solid and its positive volume.",
+    "The original free cycles determine exact section planes. Only a continuously qualified outward closed solid with a positive volume enclosure is returned; exact rational per-cap support errors accompany the result."
+  ],
+  "logSha256": "0749899a2e858889106bd638e26d6e21476ae5e98544316bdbcb09b14536951e",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "4863837d6654086e2a7a9ff8269198fedbf5ded1b75897542d85568dc43997e4",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "b3a210ad173ddbaec34338459f23c207908715b26f2e729518f5e2e3e8935f73",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "ff77b9b3f3956fce17fa3735da48b8637361283f49962c18f267a3c7b0a172d2",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "895dc6a6e94ea518c99db2d8ce302a30fc546fb3a38d82b209869f08c0929dba",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "75dcab079f409396cb7da041df6d1de165b9051f3cb7d5ec34fd159f5c8d20eb",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1",
+    "crates/brep-core/tests/support/closed_solid_policy.rs": "b48784952be7e19ab14bba29e675e839fc126d6437bc589d472c8032fa4e0efb",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs": "77cb264370c548778e518b0470e05ae8d244fe21796b6a64cd5252316d729a70",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "ca352d481c2f10b053e8da4f888d9dd043e74032446bb2ea0a260af1913f2087"
+  }
+}

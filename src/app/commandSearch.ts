@@ -1,0 +1,445 @@
+export interface PaletteCommand {
+  id: string
+  label: string
+  detail?: string | undefined
+  shortcut?: string | undefined
+  keywords?: string | readonly string[]
+  /** Alternative localized names, for example both Russian and English. */
+  aliases?: readonly string[]
+  /** Omit or set to true when the command can be executed in the current context. */
+  enabled?: boolean
+  /** Human-readable explanation shown for a command that is currently unavailable. */
+  disabledReason?: string | undefined
+  /** Lower values are more recent. Used only to resolve otherwise equal ranks. */
+  mruRank?: number
+}
+
+interface SearchField {
+  value: string
+  bias: number
+}
+
+interface ScoredCommand {
+  command: PaletteCommand
+  score: number
+  order: number
+}
+
+const NO_MATCH = Number.POSITIVE_INFINITY
+
+/**
+ * Rank commands without letting usage history override textual relevance.
+ * Match tiers, in order, are exact, phrase prefix, token, substring,
+ * subsequence and bounded edit-distance typo matching.
+ */
+/**
+ * Maps a string typed on one of the QWERTY / ЙЦУКЕН layouts onto the other, key for key.
+ * Characters outside either layout pass through unchanged.
+ */
+const LATIN_KEYS = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`"
+const CYRILLIC_KEYS = 'йцукенгшщзхъфывапролджэячсмитьбюё'
+const LAYOUT_SWAP = new Map<string, string>()
+for (let i = 0; i < LATIN_KEYS.length; i++) {
+  LAYOUT_SWAP.set(LATIN_KEYS[i]!, CYRILLIC_KEYS[i]!)
+  LAYOUT_SWAP.set(CYRILLIC_KEYS[i]!, LATIN_KEYS[i]!)
+}
+export function swapKeyboardLayout(text: string): string {
+  let out = ''
+  for (const char of text) {
+    const lower = char.toLowerCase()
+    const mapped = LAYOUT_SWAP.get(lower)
+    out += mapped === undefined ? char : char === lower ? mapped : mapped.toUpperCase()
+  }
+  return out
+}
+
+const CYRILLIC_TO_LATIN_PHONETIC: Readonly<Record<string, string>> = {
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'g',
+  д: 'd',
+  е: 'e',
+  ё: 'yo',
+  ж: 'zh',
+  з: 'z',
+  и: 'i',
+  й: 'y',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'kh',
+  ц: 'ts',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'shch',
+  ъ: '',
+  ы: 'y',
+  ь: '',
+  э: 'e',
+  ю: 'yu',
+  я: 'ya',
+}
+
+const CAD_BILINGUAL_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
+  фаска: ['chamfer', 'bevel'],
+  chamfer: ['фаска', 'bevel'],
+  сфера: ['sphere'],
+  sphere: ['сфера'],
+  куб: ['cube', 'box'],
+  cube: ['куб', 'box'],
+  цилиндр: ['cylinder'],
+  cylinder: ['цилиндр'],
+  выдавить: ['extrude'],
+  экструзия: ['extrude'],
+  extrude: ['выдавить', 'экструзия'],
+  вращение: ['revolve', 'rotate'],
+  revolve: ['вращение'],
+  скругление: ['fillet', 'round'],
+  fillet: ['скругление'],
+  оболочка: ['shell'],
+  shell: ['оболочка'],
+  зеркало: ['mirror'],
+  mirror: ['зеркало'],
+  сечение: ['section', 'slice'],
+  section: ['сечение'],
+  измерить: ['measure', 'distance'],
+  measure: ['измерить'],
+  сетка: ['grid', 'mesh'],
+  grid: ['сетка'],
+  объединить: ['union'],
+  union: ['объединить'],
+  вычесть: ['subtract', 'difference'],
+  subtract: ['вычесть'],
+}
+
+/**
+ * Transliterates between Cyrillic and Latin phonetically (RU <-> EN) so users
+ * typing phonetic transliterations (e.g. "faska" / "фаска", "sfera" / "сфера")
+ * match across scripts.
+ */
+export function transliterateCommandText(text: string): string {
+  const lower = text.toLowerCase()
+  if (/[а-яё]/i.test(lower)) {
+    let out = ''
+    for (const ch of lower) {
+      out += CYRILLIC_TO_LATIN_PHONETIC[ch] ?? ch
+    }
+    return out
+  }
+  return lower
+    .replace(/shch/g, 'щ')
+    .replace(/yo/g, 'ё')
+    .replace(/zh/g, 'ж')
+    .replace(/kh/g, 'х')
+    .replace(/ts/g, 'ц')
+    .replace(/ch/g, 'ч')
+    .replace(/sh/g, 'ш')
+    .replace(/yu/g, 'ю')
+    .replace(/ya/g, 'я')
+    .replace(/ph/g, 'ф')
+    .replace(
+      /[a-z]/g,
+      ch =>
+        ({
+          a: 'а',
+          b: 'б',
+          c: 'к',
+          d: 'д',
+          e: 'е',
+          f: 'ф',
+          g: 'г',
+          h: 'х',
+          i: 'и',
+          j: 'й',
+          k: 'к',
+          l: 'л',
+          m: 'м',
+          n: 'н',
+          o: 'о',
+          p: 'п',
+          q: 'к',
+          r: 'р',
+          s: 'с',
+          t: 'т',
+          u: 'у',
+          v: 'в',
+          w: 'в',
+          x: 'кс',
+          y: 'ы',
+          z: 'з',
+        })[ch] ?? ch,
+    )
+}
+
+export function rankPaletteCommands(commands: readonly PaletteCommand[], rawQuery: string): PaletteCommand[] {
+  const query = normalizeCommandText(rawQuery)
+  // The same keys on the other layout: "dsxtcnm" typed on Latin is "вычесть" on Cyrillic.
+  // The swapped spelling competes with the typed one and ranks a hair lower on a tie.
+  const swapped = normalizeCommandText(swapKeyboardLayout(rawQuery))
+  const alternate = swapped && swapped !== query ? swapped : null
+  const transliterated = normalizeCommandText(transliterateCommandText(rawQuery))
+  const phoneticAlternate =
+    transliterated && transliterated !== query && transliterated !== alternate ? transliterated : null
+  const synonymCandidates = new Set<string>()
+  for (const q of [query, alternate, phoneticAlternate]) {
+    if (!q) continue
+    for (const syn of CAD_BILINGUAL_SYNONYMS[q] ?? []) {
+      const normSyn = normalizeCommandText(syn)
+      if (normSyn && normSyn !== query) synonymCandidates.add(normSyn)
+    }
+  }
+  if (!query) {
+    return commands
+      .map((command, order) => ({ command, order }))
+      .sort((a, b) => {
+        const availability = Number(!isPaletteCommandEnabled(a.command)) - Number(!isPaletteCommandEnabled(b.command))
+        return availability || compareMru(a.command, b.command) || a.order - b.order
+      })
+      .map(({ command }) => command)
+  }
+
+  return commands
+    .map((command, order): ScoredCommand => {
+      let best = scoreCommand(command, query)
+      if (alternate) best = Math.min(best, scoreCommand(command, alternate) + 1)
+      if (phoneticAlternate) best = Math.min(best, scoreCommand(command, phoneticAlternate) + 2)
+      for (const syn of synonymCandidates) {
+        best = Math.min(best, scoreCommand(command, syn) + 3)
+      }
+      return {
+        command,
+        order,
+        score: best,
+      }
+    })
+    .filter(item => Number.isFinite(item.score))
+    .sort((a, b) => a.score - b.score || compareMru(a.command, b.command) || a.order - b.order)
+    .map(({ command }) => command)
+}
+
+export function isPaletteCommandEnabled(command: PaletteCommand | undefined): boolean {
+  return command !== undefined && command.enabled !== false
+}
+
+/**
+ * Find the next executable option, wrapping around the list. Disabled options
+ * remain visible in the listbox but keyboard navigation deliberately skips them.
+ */
+export function nextEnabledCommandIndex(
+  commands: readonly PaletteCommand[],
+  currentIndex: number,
+  direction: 1 | -1,
+): number {
+  if (!commands.length) return -1
+  const start = currentIndex >= 0 && currentIndex < commands.length ? currentIndex : direction === 1 ? -1 : 0
+
+  for (let step = 1; step <= commands.length; step += 1) {
+    const index = (start + direction * step + commands.length) % commands.length
+    if (isPaletteCommandEnabled(commands[index])) return index
+  }
+  return -1
+}
+
+/** Move through every visible option so keyboard users can inspect disabled reasons. */
+export function nextPaletteCommandIndex(
+  commands: readonly PaletteCommand[],
+  currentIndex: number,
+  direction: 1 | -1,
+): number {
+  if (!commands.length) return -1
+  const start = currentIndex >= 0 && currentIndex < commands.length ? currentIndex : direction === 1 ? -1 : 0
+  return (start + direction + commands.length) % commands.length
+}
+
+export function normalizeCommandText(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu, '')
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+interface PreparedSearchField {
+  value: string
+  tokens: readonly string[]
+  compact: string
+  bias: number
+}
+
+const COMMAND_FIELDS_CACHE = new WeakMap<PaletteCommand, readonly PreparedSearchField[]>()
+
+function getPreparedFields(command: PaletteCommand): readonly PreparedSearchField[] {
+  const cached = COMMAND_FIELDS_CACHE.get(command)
+  if (cached !== undefined) return cached
+
+  const keywordFields = typeof command.keywords === 'string' ? [command.keywords] : (command.keywords ?? [])
+  const rawFields: SearchField[] = [
+    { value: command.label, bias: 0 },
+    ...(command.aliases ?? []).map(value => ({ value, bias: 4 })),
+    ...keywordFields.map(value => ({ value, bias: 8 })),
+    ...(command.detail ? [{ value: command.detail, bias: 12 }] : []),
+  ]
+
+  const prepared: PreparedSearchField[] = []
+  for (const field of rawFields) {
+    const value = normalizeCommandText(field.value)
+    if (!value) continue
+    prepared.push({
+      value,
+      tokens: value.split(' '),
+      compact: value.replaceAll(' ', ''),
+      bias: field.bias,
+    })
+  }
+  COMMAND_FIELDS_CACHE.set(command, prepared)
+  return prepared
+}
+
+function scoreCommand(command: PaletteCommand, query: string): number {
+  const fields = getPreparedFields(command)
+  let best = NO_MATCH
+  for (const field of fields) {
+    best = Math.min(best, scorePreparedField(field, query) + field.bias)
+  }
+  return best
+}
+
+function scorePreparedField(field: PreparedSearchField, query: string): number {
+  const { value, tokens: valueTokens, compact: compactValue } = field
+  if (value === query) return 0
+  if (value.startsWith(query)) return 100 + lengthPenalty(value, query)
+
+  const queryTokens = query.split(' ')
+  const exactTokenIndex = valueTokens.indexOf(query)
+  if (exactTokenIndex >= 0) return 200 + exactTokenIndex
+
+  const tokenScore = scoreQueryTokens(valueTokens, queryTokens)
+  if (Number.isFinite(tokenScore)) return 240 + tokenScore
+
+  const substringIndex = value.indexOf(query)
+  if (substringIndex >= 0) return 320 + Math.min(40, substringIndex)
+
+  const compactQuery = query.replaceAll(' ', '')
+  const subsequencePenalty = scoreSubsequence(compactValue, compactQuery)
+  if (Number.isFinite(subsequencePenalty)) return 400 + subsequencePenalty
+
+  const fuzzyScore = scoreFuzzyTokens(valueTokens, queryTokens)
+  return Number.isFinite(fuzzyScore) ? 520 + fuzzyScore : NO_MATCH
+}
+
+function scoreQueryTokens(valueTokens: readonly string[], queryTokens: readonly string[]): number {
+  let score = 0
+  let searchFrom = 0
+  for (const queryToken of queryTokens) {
+    let bestIndex = -1
+    let bestPenalty = NO_MATCH
+    for (let index = searchFrom; index < valueTokens.length; index += 1) {
+      const token = valueTokens[index] ?? ''
+      const penalty =
+        token === queryToken ? 0 : token.startsWith(queryToken) ? 8 + lengthPenalty(token, queryToken) : NO_MATCH
+      if (penalty < bestPenalty) {
+        bestIndex = index
+        bestPenalty = penalty
+      }
+    }
+    if (bestIndex < 0) return NO_MATCH
+    score += bestPenalty + (bestIndex - searchFrom)
+    searchFrom = bestIndex + 1
+  }
+  return score
+}
+
+function scoreSubsequence(value: string, query: string): number {
+  if (!query || query.length > value.length) return NO_MATCH
+  let queryIndex = 0
+  let firstIndex = -1
+  let previousIndex = -1
+  let gaps = 0
+  let consecutiveBonus = 0
+  for (let index = 0; index < value.length && queryIndex < query.length; index += 1) {
+    if (value[index] !== query[queryIndex]) continue
+    if (firstIndex < 0) firstIndex = index
+    if (previousIndex >= 0) {
+      const gap = index - previousIndex - 1
+      gaps += gap
+      if (gap === 0) consecutiveBonus += 1
+    }
+    previousIndex = index
+    queryIndex += 1
+  }
+  if (queryIndex !== query.length) return NO_MATCH
+  const rawPenalty = (firstIndex < 0 ? 0 : firstIndex) + gaps - Math.min(gaps, consecutiveBonus)
+  return Math.min(99, Math.max(0, rawPenalty))
+}
+
+function scoreFuzzyTokens(valueTokens: readonly string[], queryTokens: readonly string[]): number {
+  let score = 0
+  for (const queryToken of queryTokens) {
+    const threshold = typoThreshold(queryToken.length)
+    if (!threshold) return NO_MATCH
+    let best = NO_MATCH
+    for (const valueToken of valueTokens) {
+      if (Math.abs(valueToken.length - queryToken.length) > threshold) continue
+      best = Math.min(best, damerauLevenshtein(valueToken, queryToken, threshold))
+    }
+    if (!Number.isFinite(best)) return NO_MATCH
+    score += best * 12
+  }
+  return score
+}
+
+function typoThreshold(length: number): number {
+  if (length < 4) return 0
+  return length < 7 ? 1 : 2
+}
+
+/** Bounded optimal-string-alignment distance, including adjacent transpositions. */
+function damerauLevenshtein(a: string, b: string, maximum: number): number {
+  const left = Array.from(a)
+  const right = Array.from(b)
+  if (Math.abs(left.length - right.length) > maximum) return NO_MATCH
+
+  const matrix = Array.from({ length: left.length + 1 }, () => new Array<number>(right.length + 1).fill(0))
+  for (let i = 0; i <= left.length; i += 1) matrix[i]![0] = i
+  for (let j = 0; j <= right.length; j += 1) matrix[0]![j] = j
+
+  for (let i = 1; i <= left.length; i += 1) {
+    let rowMinimum = NO_MATCH
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitution = left[i - 1] === right[j - 1] ? 0 : 1
+      let distance = Math.min(matrix[i - 1]![j]! + 1, matrix[i]![j - 1]! + 1, matrix[i - 1]![j - 1]! + substitution)
+      if (i > 1 && j > 1 && left[i - 1] === right[j - 2] && left[i - 2] === right[j - 1]) {
+        distance = Math.min(distance, matrix[i - 2]![j - 2]! + 1)
+      }
+      matrix[i]![j] = distance
+      rowMinimum = Math.min(rowMinimum, distance)
+    }
+    if (rowMinimum > maximum) return NO_MATCH
+  }
+
+  const result = matrix[left.length]![right.length]!
+  return result <= maximum ? result : NO_MATCH
+}
+
+function lengthPenalty(value: string, query: string): number {
+  return Math.min(49, Math.max(0, value.length - query.length))
+}
+
+function compareMru(a: PaletteCommand, b: PaletteCommand): number {
+  return normalizedMru(a.mruRank) - normalizedMru(b.mruRank)
+}
+
+function normalizedMru(value: number | undefined): number {
+  return value !== undefined && Number.isFinite(value) ? Math.max(0, value) : Number.MAX_SAFE_INTEGER
+}

@@ -59,9 +59,9 @@ function fakeQualificationPackage(playwright: object, version = EXPECTED_PLAYWRI
 
 describe('actual-browser qualification runner', () => {
   it('admits exactly one named Playwright engine and bounded orchestration options', () => {
-    expect(parseBrowserQualificationArguments([
-      '--browser', 'firefox', '--clean-runs', '1', '--timeout-ms', '90000',
-    ])).toEqual({
+    expect(
+      parseBrowserQualificationArguments(['--browser', 'firefox', '--clean-runs', '1', '--timeout-ms', '90000']),
+    ).toEqual({
       browser: 'firefox',
       cleanRuns: 1,
       engineTimeoutMs: 90_000,
@@ -85,11 +85,8 @@ describe('actual-browser qualification runner', () => {
 
   it('allows only exact loopback HTTP, same-origin blob/data, and exact loopback WS', async () => {
     const origin = 'http://127.0.0.1:43123'
-    for (const allowed of [
-      `${origin}/entry`,
-      `blob:${origin}/worker-id`,
-      'data:text/plain,qualification-local',
-    ]) expect(isQualificationNetworkUrlAllowed(allowed, origin)).toBe(true)
+    for (const allowed of [`${origin}/entry`, `blob:${origin}/worker-id`, 'data:text/plain,qualification-local'])
+      expect(isQualificationNetworkUrlAllowed(allowed, origin)).toBe(true)
     for (const blocked of [
       'https://127.0.0.1:43123/entry',
       'http://localhost:43123/entry',
@@ -98,7 +95,8 @@ describe('actual-browser qualification runner', () => {
       'file:///tmp/qualification',
       'javascript:alert(1)',
       'ws://127.0.0.1:43123/socket',
-    ]) expect(isQualificationNetworkUrlAllowed(blocked, origin)).toBe(false)
+    ])
+      expect(isQualificationNetworkUrlAllowed(blocked, origin)).toBe(false)
     expect(isQualificationWebSocketUrlAllowed('ws://127.0.0.1:43123/hmr', origin)).toBe(true)
     expect(isQualificationWebSocketUrlAllowed('wss://127.0.0.1:43123/hmr', origin)).toBe(false)
     expect(isQualificationWebSocketUrlAllowed('ws://localhost:43123/hmr', origin)).toBe(false)
@@ -106,8 +104,12 @@ describe('actual-browser qualification runner', () => {
     let requestHandler: ((route: any) => Promise<void>) | undefined
     let webSocketHandler: ((route: any) => Promise<void>) | undefined
     const context = {
-      route: vi.fn(async (_pattern, handler) => { requestHandler = handler }),
-      routeWebSocket: vi.fn(async (_pattern, handler) => { webSocketHandler = handler }),
+      route: vi.fn(async (_pattern, handler) => {
+        requestHandler = handler
+      }),
+      routeWebSocket: vi.fn(async (_pattern, handler) => {
+        webSocketHandler = handler
+      }),
     }
     const policy = await installQualificationNetworkIsolation(context, origin)
     const abort = vi.fn(async () => {})
@@ -132,7 +134,7 @@ describe('actual-browser qualification runner', () => {
 
   it('quarantines and cleans a resource that settles after acquisition timeout', async () => {
     let resolveAcquisition!: (value: { close: () => Promise<void> }) => void
-    const acquisition = new Promise<{ close: () => Promise<void> }>((resolvePromise) => {
+    const acquisition = new Promise<{ close: () => Promise<void> }>(resolvePromise => {
       resolveAcquisition = resolvePromise
     })
     const timeout = new BrowserQualificationRunnerError(
@@ -141,16 +143,22 @@ describe('actual-browser qualification runner', () => {
       'fixture timeout',
       { timeoutMs: 10 },
     )
-    const fakeDeadline = { run: async () => { throw timeout } }
+    const fakeDeadline = {
+      run: async () => {
+        throw timeout
+      },
+    }
     const quarantine = new BrowserLateSettlementQuarantine()
     const close = vi.fn(async () => {})
-    await expect(acquireBrowserResource(
-      fakeDeadline,
-      'browser-launch',
-      () => acquisition,
-      quarantine,
-      (resource) => resource.close(),
-    )).rejects.toMatchObject({
+    await expect(
+      acquireBrowserResource(
+        fakeDeadline,
+        'browser-launch',
+        () => acquisition,
+        quarantine,
+        resource => resource.close(),
+      ),
+    ).rejects.toMatchObject({
       code: 'E_BROWSER_ENGINE_TIMEOUT',
       details: {
         lateSettlementCleanupArmed: true,
@@ -176,24 +184,35 @@ describe('actual-browser qualification runner', () => {
   })
 
   it('fails preflight with typed dependency, version, and managed-binary errors', async () => {
-    await expect(preflightPlaywright('chromium', {
-      loadQualificationPackage: async () => { throw new Error('missing') },
-    })).rejects.toMatchObject({
+    await expect(
+      preflightPlaywright('chromium', {
+        loadQualificationPackage: async () => {
+          throw new Error('missing')
+        },
+      }),
+    ).rejects.toMatchObject({
       name: 'BrowserQualificationRunnerError',
       code: 'E_PLAYWRIGHT_PREFLIGHT_MISSING',
       phase: 'preflight',
       details: {
         requiredDependency: REQUIRED_PLAYWRIGHT_DEPENDENCY,
         qualificationPackage: 'tools/browser-qualification',
-        installCommand: 'npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false',
+        installCommand:
+          'npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false',
       },
     })
 
-    await expect(preflightPlaywright('chromium', {
-      loadQualificationPackage: async () => fakeQualificationPackage({
-        chromium: fakeBrowserType(),
-      }, '1.61.0'),
-    })).rejects.toMatchObject({
+    await expect(
+      preflightPlaywright('chromium', {
+        loadQualificationPackage: async () =>
+          fakeQualificationPackage(
+            {
+              chromium: fakeBrowserType(),
+            },
+            '1.61.0',
+          ),
+      }),
+    ).rejects.toMatchObject({
       code: 'E_PLAYWRIGHT_PREFLIGHT_VERSION',
       details: {
         requiredDependency: 'playwright@1.62.1',
@@ -201,12 +220,17 @@ describe('actual-browser qualification runner', () => {
       },
     })
 
-    await expect(preflightPlaywright('chromium', {
-      loadQualificationPackage: async () => fakeQualificationPackage({
-        chromium: fakeBrowserType(),
+    await expect(
+      preflightPlaywright('chromium', {
+        loadQualificationPackage: async () =>
+          fakeQualificationPackage({
+            chromium: fakeBrowserType(),
+          }),
+        accessExecutable: async () => {
+          throw new Error('ENOENT')
+        },
       }),
-      accessExecutable: async () => { throw new Error('ENOENT') },
-    })).rejects.toMatchObject({
+    ).rejects.toMatchObject({
       code: 'E_PLAYWRIGHT_BROWSER_BINARY_MISSING',
       phase: 'preflight',
       details: {
@@ -250,16 +274,17 @@ describe('actual-browser qualification runner', () => {
       licenseManifestSha256: 'ca6b12d581fdb7added7c5b7e144a8b5b20ae946417ec6e663a8bda348df1b6a',
       playwrightVersion: '1.62.1',
     })
-    await expect(assertIsolatedPlaywrightResolution(resolve(
-      repositoryRoot,
-      'node_modules/playwright/index.js',
-    ))).rejects.toMatchObject({
+    await expect(
+      assertIsolatedPlaywrightResolution(resolve(repositoryRoot, 'node_modules/playwright/index.js')),
+    ).rejects.toMatchObject({
       code: 'E_QUALIFICATION_PLAYWRIGHT_RESOLUTION_ESCAPE',
     })
-    await expect(assertIsolatedPackageResolution('playwright-core', resolve(
-      repositoryRoot,
-      'node_modules/playwright-core/index.js',
-    ))).rejects.toMatchObject({
+    await expect(
+      assertIsolatedPackageResolution(
+        'playwright-core',
+        resolve(repositoryRoot, 'node_modules/playwright-core/index.js'),
+      ),
+    ).rejects.toMatchObject({
       code: 'E_QUALIFICATION_PLAYWRIGHT_RESOLUTION_ESCAPE',
     })
   })
@@ -279,71 +304,89 @@ describe('actual-browser qualification runner', () => {
       if (normalized === lexicalEntry) return join(escapedDependencyRoot, 'index.js')
       throw new Error(`Unexpected canonicalization path: ${path}`)
     }
-    await expect(assertIsolatedPackageResolution('playwright', lexicalEntry, {
-      realpath: canonical,
-    })).rejects.toMatchObject({
+    await expect(
+      assertIsolatedPackageResolution('playwright', lexicalEntry, {
+        realpath: canonical,
+      }),
+    ).rejects.toMatchObject({
       code: 'E_QUALIFICATION_PLAYWRIGHT_RESOLUTION_ESCAPE',
       details: { packageName: 'playwright' },
     })
   })
 
   it('requires the exact frozen check names, order, uniqueness, and pass state', () => {
-    const exactChecks = EXPECTED_BROWSER_QUALIFICATION_CHECK_NAMES.map((name) => ({
+    const exactChecks = EXPECTED_BROWSER_QUALIFICATION_CHECK_NAMES.map(name => ({
       name,
       passed: true,
     }))
-    expect(validateQualificationPayload('passed', {
-      status: 'passed',
-      checks: exactChecks,
-    })).toMatchObject({ status: 'passed', checks: exactChecks })
+    expect(
+      validateQualificationPayload('passed', {
+        status: 'passed',
+        checks: exactChecks,
+      }),
+    ).toMatchObject({ status: 'passed', checks: exactChecks })
 
     const missing = exactChecks.slice(0, -1)
-    const duplicate = exactChecks.map((check) => ({ ...check }))
+    const duplicate = exactChecks.map(check => ({ ...check }))
     duplicate[duplicate.length - 1] = { ...duplicate[0] }
-    const reordered = exactChecks.map((check) => ({ ...check }))
+    const reordered = exactChecks.map(check => ({ ...check }))
     ;[reordered[0], reordered[1]] = [reordered[1], reordered[0]]
 
     for (const checks of [missing, duplicate, reordered]) {
-      expect(() => validateQualificationPayload('passed', {
-        status: 'passed',
-        checks,
-      })).toThrowError(expect.objectContaining({
-        code: 'E_BROWSER_RESULT_COVERAGE',
-        phase: 'result',
-      }))
+      expect(() =>
+        validateQualificationPayload('passed', {
+          status: 'passed',
+          checks,
+        }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: 'E_BROWSER_RESULT_COVERAGE',
+          phase: 'result',
+        }),
+      )
     }
-    const failed = exactChecks.map((check) => ({ ...check }))
+    const failed = exactChecks.map(check => ({ ...check }))
     failed[5].passed = false
-    expect(() => validateQualificationPayload('passed', {
-      status: 'passed',
-      checks: failed,
-    })).toThrowError(expect.objectContaining({ code: 'E_BROWSER_QUALIFICATION_FAILED' }))
+    expect(() =>
+      validateQualificationPayload('passed', {
+        status: 'passed',
+        checks: failed,
+      }),
+    ).toThrowError(expect.objectContaining({ code: 'E_BROWSER_QUALIFICATION_FAILED' }))
 
-    expect(() => validateQualificationPayload('passed', {
-      status: 'passed',
-      checks: exactChecks,
-      unexpected: true,
-    })).toThrowError(expect.objectContaining({ code: 'E_BROWSER_RESULT_INVALID' }))
-    expect(() => validateQualificationPayload('passed', {
-      status: 'passed',
-      checks: exactChecks.map((check, index) => (
-        index === 0 ? { ...check, unexpected: true } : check
-      )),
-    })).toThrowError(expect.objectContaining({ code: 'E_BROWSER_RESULT_INVALID' }))
+    expect(() =>
+      validateQualificationPayload('passed', {
+        status: 'passed',
+        checks: exactChecks,
+        unexpected: true,
+      }),
+    ).toThrowError(expect.objectContaining({ code: 'E_BROWSER_RESULT_INVALID' }))
+    expect(() =>
+      validateQualificationPayload('passed', {
+        status: 'passed',
+        checks: exactChecks.map((check, index) => (index === 0 ? { ...check, unexpected: true } : check)),
+      }),
+    ).toThrowError(expect.objectContaining({ code: 'E_BROWSER_RESULT_INVALID' }))
   })
 
   it('caps aggregate Vite output bytes independently of the file-count cap', () => {
-    expect(validateBuildArtifactByteBudget([
-      { path: 'a.js', bytes: 4 * 1024 * 1024 },
-      { path: 'b.wasm', bytes: 4 * 1024 * 1024 },
-    ])).toBe(8 * 1024 * 1024)
-    expect(() => validateBuildArtifactByteBudget([
-      { path: 'a.js', bytes: 4 * 1024 * 1024 },
-      { path: 'b.wasm', bytes: 4 * 1024 * 1024 + 1 },
-    ])).toThrowError(expect.objectContaining({
-      code: 'E_BROWSER_BUILD_ARTIFACT_BYTES_LIMIT',
-      details: { maximumBytes: 8 * 1024 * 1024, observedBytes: 8 * 1024 * 1024 + 1 },
-    }))
+    expect(
+      validateBuildArtifactByteBudget([
+        { path: 'a.js', bytes: 4 * 1024 * 1024 },
+        { path: 'b.wasm', bytes: 4 * 1024 * 1024 },
+      ]),
+    ).toBe(8 * 1024 * 1024)
+    expect(() =>
+      validateBuildArtifactByteBudget([
+        { path: 'a.js', bytes: 4 * 1024 * 1024 },
+        { path: 'b.wasm', bytes: 4 * 1024 * 1024 + 1 },
+      ]),
+    ).toThrowError(
+      expect.objectContaining({
+        code: 'E_BROWSER_BUILD_ARTIFACT_BYTES_LIMIT',
+        details: { maximumBytes: 8 * 1024 * 1024, observedBytes: 8 * 1024 * 1024 + 1 },
+      }),
+    )
   })
 
   it('builds only the isolated Vite qualification entry and emits module Worker assets', async () => {
@@ -355,12 +398,12 @@ describe('actual-browser qualification runner', () => {
     expect(evidence.totalBytes).toBe(
       evidence.artifacts.reduce((sum: number, artifact: { bytes: number }) => sum + artifact.bytes, 0),
     )
-    expect(evidence.artifacts.find((artifact: { path: string }) => (
-      artifact.path === evidence.entryPath
-    ))).toMatchObject({ bytes: expect.any(Number), sha256: expect.stringMatching(/^[a-f0-9]{64}$/) })
+    expect(evidence.artifacts.find((artifact: { path: string }) => artifact.path === evidence.entryPath)).toMatchObject(
+      { bytes: expect.any(Number), sha256: expect.stringMatching(/^[a-f0-9]{64}$/) },
+    )
     expect(evidence.workerArtifacts.length).toBeGreaterThan(0)
     expect(evidence.workerArtifacts.every((path: string) => path.startsWith('assets/'))).toBe(true)
-    expect(evidence.artifacts.some((artifact: {path: string}) => artifact.path.startsWith('wasm/'))).toBe(false)
+    expect(evidence.artifacts.some((artifact: { path: string }) => artifact.path.startsWith('wasm/'))).toBe(false)
   })
 
   it('configures every preview as a fresh loopback-only ephemeral Vite server', async () => {
@@ -368,7 +411,11 @@ describe('actual-browser qualification runner', () => {
     const close = vi.fn(async () => {})
     const fakeVite = {
       createLogger: () => ({
-        info: vi.fn(), warn: vi.fn(), warnOnce: vi.fn(), error: vi.fn(), clearScreen: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        warnOnce: vi.fn(),
+        error: vi.fn(),
+        clearScreen: vi.fn(),
       }),
       preview: vi.fn(async (config: Record<string, unknown>) => {
         capturedConfig = config
@@ -383,9 +430,7 @@ describe('actual-browser qualification runner', () => {
 
     const preview = await startQualificationPreview({ vite: fakeVite })
     expect(preview.origin).toBe('http://127.0.0.1:43123')
-    expect(preview.entryUrl).toBe(
-      'http://127.0.0.1:43123/tests/fixtures/browser-qualification.html',
-    )
+    expect(preview.entryUrl).toBe('http://127.0.0.1:43123/tests/fixtures/browser-qualification.html')
     expect(capturedConfig).toMatchObject({
       configFile: resolve(repositoryRoot, 'vite.qualification.config.ts'),
       logLevel: 'silent',
@@ -397,13 +442,16 @@ describe('actual-browser qualification runner', () => {
   })
 
   it('enforces one total engine deadline before any browser can launch', async () => {
-    const evidence = await runBrowserQualification({
-      browser: 'chromium',
-      cleanRuns: 1,
-      engineTimeoutMs: 10,
-    }, {
-      preflightPlaywright: async () => await new Promise(() => {}),
-    })
+    const evidence = await runBrowserQualification(
+      {
+        browser: 'chromium',
+        cleanRuns: 1,
+        engineTimeoutMs: 10,
+      },
+      {
+        preflightPlaywright: async () => await new Promise(() => {}),
+      },
+    )
 
     expect(evidence).toMatchObject({
       qualificationOnly: true,
@@ -445,7 +493,7 @@ describe('actual-browser qualification runner', () => {
               byteLength: 79,
               text: JSON.stringify({
                 status: 'passed',
-                checks: EXPECTED_BROWSER_QUALIFICATION_CHECK_NAMES.map((name) => ({
+                checks: EXPECTED_BROWSER_QUALIFICATION_CHECK_NAMES.map(name => ({
                   name,
                   passed: true,
                 })),
@@ -456,10 +504,9 @@ describe('actual-browser qualification runner', () => {
         waitForFunction: vi.fn(async () => {}),
         goto: vi.fn(async (entryUrl: string) => {
           const origin = new URL(entryUrl).origin
-          const workerName = readdirSync(resolve(
-            repositoryRoot,
-            'tmp/browser-qualification-dist/assets',
-          )).find((name) => name.includes('.worker-') && name.endsWith('.js'))
+          const workerName = readdirSync(resolve(repositoryRoot, 'tmp/browser-qualification-dist/assets')).find(
+            name => name.includes('.worker-') && name.endsWith('.js'),
+          )
           if (workerName === undefined) throw new Error('missing built Worker fixture')
           const workerUrl = origin + '/assets/' + workerName
           for (const listener of listeners.get('worker') ?? []) listener({ url: () => workerUrl })
@@ -510,24 +557,27 @@ describe('actual-browser qualification runner', () => {
       }),
     }
 
-    const evidence = await runBrowserQualification({
-      browser: 'chromium',
-      cleanRuns: 1,
-      engineTimeoutMs: 30_000,
-    }, {
-      vite,
-      preflightPlaywright: async () => ({
-        browserType,
-        metadata: {
-          version: '1.62.1',
-          requiredDependency: 'playwright@1.62.1',
-          browser: 'chromium',
-          managedBinary: true,
-          executablePath: '/managed/browser',
-          executableSha256: 'a'.repeat(64),
-        },
-      }),
-    })
+    const evidence = await runBrowserQualification(
+      {
+        browser: 'chromium',
+        cleanRuns: 1,
+        engineTimeoutMs: 30_000,
+      },
+      {
+        vite,
+        preflightPlaywright: async () => ({
+          browserType,
+          metadata: {
+            version: '1.62.1',
+            requiredDependency: 'playwright@1.62.1',
+            browser: 'chromium',
+            managedBinary: true,
+            executablePath: '/managed/browser',
+            executableSha256: 'a'.repeat(64),
+          },
+        }),
+      },
+    )
 
     expect(evidence.status).toBe('passed')
     expect(evidence).toMatchObject({
@@ -543,9 +593,7 @@ describe('actual-browser qualification runner', () => {
     expect(context.route).toHaveBeenCalledOnce()
     expect(context.routeWebSocket).toHaveBeenCalledOnce()
     expect(context.newPage).toHaveBeenCalledOnce()
-    expect(locatorSelectors).toEqual([
-      '[data-testid="qualification-result"]',
-    ])
+    expect(locatorSelectors).toEqual(['[data-testid="qualification-result"]'])
     expect(pageClose).toHaveBeenCalledOnce()
     expect(contextClose).toHaveBeenCalledOnce()
     expect(previewClose).toHaveBeenCalledOnce()

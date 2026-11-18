@@ -1,4 +1,4 @@
-import type {OriginalPatchContactsQuery,OriginalPatchContactsReport} from '../../src/services/originalPatchContactsProtocol'
+import type {OriginalPatchContactsQuery,OriginalPatchContactsReport} from '../../src/kernel/originalPatchContactsProtocol'
 import {originalPatchFixture} from './original-patch-fixtures.ts'
 type Case={name:string;query:OriginalPatchContactsQuery;check:(r:OriginalPatchContactsReport)=>void}
 function require(value:unknown,message:string):asserts value{if(!value)throw new Error(message)}

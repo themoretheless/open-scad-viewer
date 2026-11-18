@@ -9,7 +9,7 @@ import {
   metricsManifoldInKernel,
   repairManifoldInKernel,
   type ManifoldBooleanOp,
-} from '../../src/services/geometry/manifoldAnalysis'
+} from '../../src/kernel/geometry/manifoldAnalysis'
 
 interface MeshCase { id:string; positions:number[]; indices:number[] }
 interface BooleanPair { id:string; a:string; b:string; operations:ManifoldBooleanOp[] }

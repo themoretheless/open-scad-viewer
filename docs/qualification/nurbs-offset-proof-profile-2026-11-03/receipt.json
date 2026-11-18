@@ -1,0 +1,14 @@
+{
+  "status": "single-live-sample-recorded",
+  "sourceCommit": "363b2ad1e",
+  "command": "sample 34419 1 -file native261-offset-nested.sample.txt",
+  "test": "rational_hole_on_nonlinear_offset_keeps_weights_and_literal_source_clocks",
+  "phase": "Compound::reverify -> Region::reverify -> contact_curve::lift::certify",
+  "sampledActiveThreadStacks": 834,
+  "stacksThroughLiftCertify": 727,
+  "stacksThroughJacobianBounds": 715,
+  "finding": "In this one-second phase, most stacks rebuild interval source Jacobian bounds. Existing jet_on uses weighted centered extraction with literal source weights, while a separate direct Bernstein centered helper exists. A future equivalence and performance experiment may compare them.",
+  "productionChanged": false,
+  "limitsChanged": false,
+  "scope": "One-second live sample of one current opt1 test phase. Not whole-test attribution, speedup, algorithm equivalence or acceptance evidence."
+}

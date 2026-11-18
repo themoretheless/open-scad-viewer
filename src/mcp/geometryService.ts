@@ -4,27 +4,27 @@ import type {
   GeometryEngineRegistrySnapshot,
   GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
-import type { MeshData, MeshSourceReference } from '../core/mesh'
+import type { MeshData } from '../core/mesh'
+import { sha256Hex } from '../core/sha256'
 import {
   attachGeometryExecutionToError,
   defaultGeometryBuildEngine,
   GeometryBuildEngine,
+  GeometryCapabilityUnavailableError,
   type GeometryBuildResult,
-} from '../services/geometryBuildEngine'
-import { buildBinaryStl, buildObj } from '../services/meshExport'
-import { inspectMesh } from '../services/meshInspection'
+} from '../kernel/geometryBuildEngine'
+import { exportCompiledBrepStep } from './geometryService/exportBrepStep'
+import { buildCompileCacheKey, GeometryCompileCache, type GeometryCompileCacheStats } from './geometryCompileCache'
+import { buildBinaryStl, buildObj } from '../exchange/meshExport'
+import { extractCustomizerParameters, replaceCustomizerValue, type CustomizerValue } from '../language/scadCustomizer'
+import { MAX_STORED_ARTIFACT_BYTES, validateModelSource, type ArtifactFormat } from './modelStore'
 import {
-  extractCustomizerParameters,
-  replaceCustomizerValue,
-  type CustomizerParameter,
-  type CustomizerValue,
-} from '../services/scadCustomizer'
-import {
-  MAX_STORED_ARTIFACT_BYTES,
-  validateModelSource,
-  type ArtifactFormat,
-} from './modelStore'
-import { estimatedExportBytes, parameterSummary, summarizeResult, validateArtifactLimit, validateCustomizerValue } from './geometryService/boundedText'
+  estimatedExportBytes,
+  parameterSummary,
+  summarizeResult,
+  validateArtifactLimit,
+  validateCustomizerValue,
+} from './geometryService/boundedText'
 
 export const DEFAULT_MAX_ARTIFACT_BYTES = 4 * 1024 * 1024
 export const MAX_ARTIFACT_BYTES = MAX_STORED_ARTIFACT_BYTES
@@ -122,8 +122,13 @@ export interface CustomizeResult {
 }
 
 export class ArtifactSizeError extends RangeError {
-  constructor(readonly estimatedBytes: number, readonly maxBytes: number) {
-    super(`Export is estimated at ${estimatedBytes.toLocaleString('en-US')} bytes, above the ${maxBytes.toLocaleString('en-US')}-byte limit`)
+  constructor(
+    readonly estimatedBytes: number,
+    readonly maxBytes: number,
+  ) {
+    super(
+      `Export is estimated at ${estimatedBytes.toLocaleString('en-US')} bytes, above the ${maxBytes.toLocaleString('en-US')}-byte limit`,
+    )
     this.name = 'ArtifactSizeError'
   }
 }
@@ -158,11 +163,7 @@ export class CustomizerValueError extends RangeError {
 
 export interface McpGeometryService {
   capabilities(): Promise<GeometryEngineRegistrySnapshot>
-  planSource(
-    source: string,
-    quality: GeometryQuality,
-    purpose: GeometryBuildPurpose,
-  ): GeometryExecutionDescriptor
+  planSource(source: string, quality: GeometryQuality, purpose: GeometryBuildPurpose): GeometryExecutionDescriptor
   compile(
     source: string,
     quality?: GeometryQuality,
@@ -173,9 +174,10 @@ export interface McpGeometryService {
   export(
     source: string,
     format: ArtifactFormat,
-    options?: { maxBytes?: number; signal?: AbortSignal; name?: string },
+    options?: { maxBytes?: number | undefined; signal?: AbortSignal | undefined; name?: string | undefined },
   ): Promise<GeometryExport>
   customize(source: string, values: Record<string, CustomizerValue>): CustomizeResult
+  compileCacheStats?(): GeometryCompileCacheStats
 }
 
 /**
@@ -185,6 +187,7 @@ export interface McpGeometryService {
  */
 export interface McpGeometryBuildRuntime {
   capabilities(): Promise<GeometryEngineRegistrySnapshot>
+  isHealthy?(): boolean
   build(
     source: string,
     quality: GeometryQuality,
@@ -194,20 +197,25 @@ export interface McpGeometryBuildRuntime {
 }
 
 export class HeadlessGeometryService implements McpGeometryService {
+  private readonly compileCache: GeometryCompileCache | null
+
   constructor(
     private readonly engine: GeometryBuildEngine = defaultGeometryBuildEngine,
     private readonly runtime?: McpGeometryBuildRuntime,
-  ) {}
+    options: { compileCache?: GeometryCompileCache | false } = {},
+  ) {
+    this.compileCache = options.compileCache === false ? null : (options.compileCache ?? new GeometryCompileCache())
+  }
+
+  compileCacheStats(): GeometryCompileCacheStats {
+    return this.compileCache ? this.compileCache.stats() : { entries: 0, bytes: 0, hits: 0, misses: 0, evictions: 0 }
+  }
 
   capabilities(): Promise<GeometryEngineRegistrySnapshot> {
     return this.runtime?.capabilities() ?? this.engine.capabilities()
   }
 
-  planSource(
-    source: string,
-    quality: GeometryQuality,
-    purpose: GeometryBuildPurpose,
-  ): GeometryExecutionDescriptor {
+  planSource(source: string, quality: GeometryQuality, purpose: GeometryBuildPurpose): GeometryExecutionDescriptor {
     return this.engine.planSource(source, { quality, purpose })
   }
 
@@ -235,27 +243,42 @@ export class HeadlessGeometryService implements McpGeometryService {
     }
     pendingGeometryJobs++
     try {
+      if (!this.runtime) {
+        try {
+          await this.engine.initializeSource(source, { quality, purpose }, signal)
+        } catch (error) {
+          attachGeometryExecutionToError(error, plannedExecution)
+          throw error
+        }
+      }
+
+      const canUseCache = this.compileCache !== null && (this.runtime?.isHealthy ? this.runtime.isHealthy() : true)
+      const cacheKey = canUseCache ? buildCompileCacheKey(plannedExecution, sha256Hex(source)) : null
+      if (cacheKey && this.compileCache) {
+        const cached = this.compileCache.get(cacheKey)
+        if (cached) return cached
+      }
+
       const startedAt = performance.now()
       let built: GeometryBuildResult
       try {
-        if (!this.runtime) await this.engine.initializeSource(source, { quality, purpose }, signal)
         built = this.runtime
           ? await this.runtime.build(source, quality, purpose, signal)
-          : await this.engine.buildSource(
-              source,
-              { quality, purpose },
-              { shouldAbort: () => signal?.aborted ?? false },
-            )
+          : await this.engine.buildSource(source, { quality, purpose }, { shouldAbort: () => signal?.aborted ?? false })
       } catch (error) {
         attachGeometryExecutionToError(error, plannedExecution)
         throw error
       }
       const durationMs = performance.now() - startedAt
       try {
-        return {
+        const compiled: CompiledGeometry = {
           analysis: summarizeResult(source, built.result, durationMs, built.execution),
           meshes: built.result.meshes,
         }
+        if (this.compileCache && cacheKey && !signal?.aborted) {
+          this.compileCache.set(cacheKey, compiled)
+        }
+        return compiled
       } catch (error) {
         attachGeometryExecutionToError(error, built.execution)
         throw error
@@ -265,28 +288,46 @@ export class HeadlessGeometryService implements McpGeometryService {
     }
   }
 
-  async analyze(
-    source: string,
-    quality: GeometryQuality = 'full',
-    signal?: AbortSignal,
-  ): Promise<GeometryAnalysis> {
+  async analyze(source: string, quality: GeometryQuality = 'full', signal?: AbortSignal): Promise<GeometryAnalysis> {
     return (await this.compile(source, quality, signal, 'analysis')).analysis
   }
 
   async export(
     source: string,
     format: ArtifactFormat,
-    options: { maxBytes?: number; signal?: AbortSignal; name?: string } = {},
+    options: { maxBytes?: number | undefined; signal?: AbortSignal | undefined; name?: string | undefined } = {},
   ): Promise<GeometryExport> {
     const maxBytes = options.maxBytes ?? DEFAULT_MAX_ARTIFACT_BYTES
     validateArtifactLimit(maxBytes)
+    if (format === 'step') {
+      validateModelSource(source)
+      const planned = this.engine.planSource(source, { quality: 'full', purpose: 'export' })
+      if (planned.engineClass !== 'brep') {
+        const error = new GeometryCapabilityUnavailableError(planned, ['export.step'])
+        attachGeometryExecutionToError(error, planned)
+        throw error
+      }
+    }
     const compiled = await this.compile(source, 'full', options.signal, 'export')
     try {
       const estimate = estimatedExportBytes(compiled.meshes, format)
-      if (estimate > maxBytes) throw new ArtifactSizeError(estimate, maxBytes)
-      const data = format === 'stl'
-        ? buildBinaryStl(compiled.meshes, options.name)
-        : new TextEncoder().encode(buildObj(compiled.meshes))
+      if (estimate > maxBytes && format !== 'step') throw new ArtifactSizeError(estimate, maxBytes)
+      if (format === 'step') {
+        if (compiled.analysis.execution.representation !== 'brep') {
+          throw new GeometryCapabilityUnavailableError(compiled.analysis.execution, ['export.step'])
+        }
+        const data = await exportCompiledBrepStep(compiled.meshes, maxBytes)
+        return {
+          analysis: compiled.analysis,
+          data,
+          format,
+          mimeType: 'model/step',
+        }
+      }
+      const data =
+        format === 'stl'
+          ? buildBinaryStl(compiled.meshes, options.name)
+          : new TextEncoder().encode(buildObj(compiled.meshes))
       if (data.byteLength > maxBytes) throw new ArtifactSizeError(data.byteLength, maxBytes)
       return {
         analysis: compiled.analysis,
@@ -304,12 +345,14 @@ export class HeadlessGeometryService implements McpGeometryService {
     const routeBefore = this.engine.planSource(source, { quality: 'preview', purpose: 'preview' })
     const parameters = extractCustomizerParameters(source)
     const byName = new Map(parameters.map(parameter => [parameter.name, parameter]))
-    const replacements = Object.entries(values).map(([name, value]) => {
-      const parameter = byName.get(name)
-      if (!parameter) throw new CustomizerValueError(`Unknown Customizer parameter ${name}`)
-      validateCustomizerValue(parameter, value)
-      return { parameter, value }
-    }).sort((left, right) => right.parameter.valueStart - left.parameter.valueStart)
+    const replacements = Object.entries(values)
+      .map(([name, value]) => {
+        const parameter = byName.get(name)
+        if (!parameter) throw new CustomizerValueError(`Unknown Customizer parameter ${name}`)
+        validateCustomizerValue(parameter, value)
+        return { parameter, value }
+      })
+      .sort((left, right) => right.parameter.valueStart - left.parameter.valueStart)
 
     let updated = source
     for (const replacement of replacements) {
@@ -325,9 +368,11 @@ export class HeadlessGeometryService implements McpGeometryService {
     }
     const updatedParameters = extractCustomizerParameters(updated)
     const routeAfter = this.engine.planSource(updated, { quality: 'preview', purpose: 'preview' })
-    if (routeAfter.languageContract !== routeBefore.languageContract
-      || routeAfter.engineClass !== routeBefore.engineClass
-      || routeAfter.requiredCapabilities.join('\0') !== routeBefore.requiredCapabilities.join('\0')) {
+    if (
+      routeAfter.languageContract !== routeBefore.languageContract ||
+      routeAfter.engineClass !== routeBefore.engineClass ||
+      routeAfter.requiredCapabilities.join('\0') !== routeBefore.requiredCapabilities.join('\0')
+    ) {
       throw new CustomizerValueError('Customizer replacements cannot change the source engine-routing contract')
     }
     const summaries = updatedParameters.slice(0, MAX_ANALYSIS_PARAMETERS).map(parameterSummary)
@@ -335,8 +380,8 @@ export class HeadlessGeometryService implements McpGeometryService {
       source: updated,
       applied: replacements.map(replacement => replacement.parameter.name).sort(),
       parameters: summaries.map(parameter => parameter.summary),
-      parametersTruncated: updatedParameters.length > MAX_ANALYSIS_PARAMETERS
-        || summaries.some(parameter => parameter.truncated),
+      parametersTruncated:
+        updatedParameters.length > MAX_ANALYSIS_PARAMETERS || summaries.some(parameter => parameter.truncated),
     }
   }
 }

@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { callGeometryRust } from '../src/services/geometry/kernel'
-import { invertMatrixF64 } from '../src/services/geometry/matrixInverse'
-import { invert, identity, multiply, perspective, orthographic, lookAt, translate, type Mat4, type Vec3, type Aabb3 } from '../src/services/math3d'
-import { computeOrbitCameraFrame } from '../src/services/orbitCameraProjection'
-import { clientRayInKernel, projectPointInKernel } from '../src/services/geometry/viewport'
+import { callGeometryRust } from '../src/kernel/geometry/kernel'
+import { invertMatrixF64 } from '../src/kernel/geometry/matrixInverse'
+import {
+  invert,
+  identity,
+  multiply,
+  perspective,
+  orthographic,
+  lookAt,
+  translate,
+  type Mat4,
+  type Vec3,
+  type Aabb3,
+} from '../src/kernel/geometry/math3d'
+import { computeOrbitCameraFrame } from '../src/render/orbitCameraProjection'
+import { clientRayInKernel, projectPointInKernel } from '../src/kernel/geometry/viewport'
 
 /** Relative-or-absolute closeness within the 1e-12 audit tolerance. */
 const close = (actual: number, expected: number) =>
@@ -38,7 +49,10 @@ function testMatrices(): Mat4[] {
     const m = new Float32Array(16)
     for (let k = 0; k < 16; k++) m[k] = random() * 8
     // Keep most random matrices invertible but not trivially conditioned.
-    m[0] += 4; m[5] += 4; m[10] += 4; m[15] += 4
+    m[0] += 4
+    m[5] += 4
+    m[10] += 4
+    m[15] += 4
     matrices.push(m)
   }
   matrices.push(translate(identity(), [3, -2, 7]))
@@ -75,13 +89,22 @@ describe('pure-TS viewport math parity with the WASM kernel', () => {
         for (const pitch of [-Math.PI / 2, -0.4, 0, Math.PI / 4, Math.PI / 2]) {
           for (const distance of [100, 30, 5, 0.01]) {
             const options = {
-              yaw, pitch, distance,
+              yaw,
+              pitch,
+              distance,
               target: [0, 0, 5] as Vec3,
-              aspect: 1.6, fovY: Math.PI / 4, projection,
-              bounds, backgroundRadius: 350,
+              aspect: 1.6,
+              fovY: Math.PI / 4,
+              projection,
+              bounds,
+              backgroundRadius: 350,
             }
             const native = callGeometryRust<{
-              eye: Vec3; viewProjection: number[]; eyeDistance: number; near: number; far: number
+              eye: Vec3
+              viewProjection: number[]
+              eyeDistance: number
+              near: number
+              far: number
             }>('viewport', { ...options, action: 'orbit' })
             const ts = computeOrbitCameraFrame(options)
             for (let i = 0; i < 3; i++) closeTrig(ts.eye[i], native.eye[i], ts.eyeDistance)
@@ -95,11 +118,20 @@ describe('pure-TS viewport math parity with the WASM kernel', () => {
     }
     // Empty-scene frame too.
     const options = {
-      yaw: 0, pitch: 0, distance: 100, target: [0, 0, 0] as Vec3,
-      aspect: 1.6, fovY: Math.PI / 4, projection: 'perspective' as const,
-      bounds: null, backgroundRadius: 350,
+      yaw: 0,
+      pitch: 0,
+      distance: 100,
+      target: [0, 0, 0] as Vec3,
+      aspect: 1.6,
+      fovY: Math.PI / 4,
+      projection: 'perspective' as const,
+      bounds: null,
+      backgroundRadius: 350,
     }
-    const native = callGeometryRust<{ eye: Vec3; viewProjection: number[] }>('viewport', { ...options, action: 'orbit' })
+    const native = callGeometryRust<{ eye: Vec3; viewProjection: number[] }>('viewport', {
+      ...options,
+      action: 'orbit',
+    })
     const ts = computeOrbitCameraFrame(options)
     for (let i = 0; i < 16; i++) closeF32(ts.viewProjection[i], native.viewProjection[i])
   })
@@ -108,10 +140,18 @@ describe('pure-TS viewport math parity with the WASM kernel', () => {
     const view = lookAt([7, -5, 9], [1, 2, -1], [0, 0, 1])
     for (const projection of [perspective(1.1, 1.7, 0.1, 1000), orthographic(-7, 7, -4, 4, 0.1, 1000)]) {
       const matrix = multiply(projection, view)
-      for (const [cx, cy] of [[17, 31], [442, 181], [867, 531]]) {
+      for (const [cx, cy] of [
+        [17, 31],
+        [442, 181],
+        [867, 531],
+      ]) {
         const rect: [number, number, number, number] = [17, 31, 850, 500]
-        const native = callGeometryRust<{ origin: Vec3; direction: Vec3 } | null>(
-          'viewport', { action: 'client_ray', matrix: Array.from(matrix), rect, client: [cx, cy] })
+        const native = callGeometryRust<{ origin: Vec3; direction: Vec3 } | null>('viewport', {
+          action: 'client_ray',
+          matrix: Array.from(matrix),
+          rect,
+          client: [cx, cy],
+        })
         const ts = clientRayInKernel(matrix, rect, [cx, cy])
         expect(ts === null).toBe(native === null)
         if (ts && native) {
@@ -121,10 +161,17 @@ describe('pure-TS viewport math parity with the WASM kernel', () => {
           }
         }
       }
-      for (const point of [[0, 0, -5], [3, -2, -40]]) {
+      for (const point of [
+        [0, 0, -5],
+        [3, -2, -40],
+      ]) {
         const size: [number, number] = [800, 600]
-        const native = callGeometryRust<[number, number] | null>(
-          'viewport', { action: 'project', matrix: Array.from(matrix), point, size })
+        const native = callGeometryRust<[number, number] | null>('viewport', {
+          action: 'project',
+          matrix: Array.from(matrix),
+          point,
+          size,
+        })
         const ts = projectPointInKernel(matrix, point, size)
         expect(ts === null).toBe(native === null)
         if (ts && native) {

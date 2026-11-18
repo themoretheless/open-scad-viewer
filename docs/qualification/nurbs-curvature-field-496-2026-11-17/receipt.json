@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0496",
+  "testedBase": "5b92b8d652e3a76f9201e46577ad9a67fbc2c278",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 46,
+  "scope": [
+    "Join curves and remove only proven redundant seam knots under a shared budget.",
+    "Use exact merge and prove each subsequent seam-knot removal over the complete curve. Preserve the last verified curve on a removal refusal."
+  ],
+  "logSha256": "3e4d67d6059fe472f3f14908dadffdb20b1a6d8e44fe001d4c1fdaa3da9ae16d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fb3aba881f6bd6b444cb9ed12ac4528fd9287087af1b58d1a321e22002b1bcca",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "aa4b139bb8ed3d08eb5cc35e4d5ea5fbbacbdc996a2b96b65137e135a36cba7f",
+    "crates/nurbs-core/src/editing/exact_knot_removal.rs": "491bec4f9ccf8e39a7b8807b4c28f1c85697fc1c45dd60721a754005dc92b262"
+  }
+}

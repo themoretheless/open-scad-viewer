@@ -8,7 +8,7 @@ import {
   swapKeyboardLayout,
   transliterateCommandText,
   type PaletteCommand,
-} from '../src/services/commandSearch'
+} from '../src/app/commandSearch'
 
 function command(id: string, label: string, options: Partial<PaletteCommand> = {}): PaletteCommand {
   return { id, label, ...options }
@@ -106,7 +106,13 @@ describe('command search', () => {
     expect(nextEnabledCommandIndex(commands, 1, 1)).toBe(3)
     expect(nextEnabledCommandIndex(commands, 3, 1)).toBe(1)
     expect(nextEnabledCommandIndex(commands, 1, -1)).toBe(3)
-    expect(nextEnabledCommandIndex(commands.filter(item => item.enabled === false), -1, 1)).toBe(-1)
+    expect(
+      nextEnabledCommandIndex(
+        commands.filter(item => item.enabled === false),
+        -1,
+        1,
+      ),
+    ).toBe(-1)
   })
 
   it('lets keyboard navigation land on disabled options to expose their reasons', () => {

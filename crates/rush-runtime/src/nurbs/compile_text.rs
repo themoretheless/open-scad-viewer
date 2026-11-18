@@ -209,6 +209,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_boolean",
             "brep_chamfer",
             "brep_fillet",
+            "brep_full_round_exact",
             "brep_tessellate",
             "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
@@ -263,6 +264,32 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 for (name,limit) in value.as_object_mut().ok_or_else(||text_error(key,"Expected embedding limits"))? {
                     *limit=field(limit,SCALAR,&params,&format!("{key}/{name}"))?;
                 }
+                continue;
+            }
+            if key == "edges" && value.is_object() {
+                // B-rep edge query: names and enum text stay; lengths are mm, the rest scalar.
+                fn query(value: &J, params: &BTreeMap<String, Numeric>, path: &str) -> Result<J> {
+                    let object = value
+                        .as_object()
+                        .ok_or_else(|| text_error(path, "Expected an edge or face query"))?;
+                    let mut out = value_codec::Map::new();
+                    for (name, v) in object {
+                        let at = format!("{path}/{name}");
+                        let lowered = match name.as_str() {
+                            "face" => query(v, params, &at)?,
+                            "convexity" | "type" => v
+                                .as_str()
+                                .or_else(|| v.get("text").and_then(J::as_str))
+                                .map(|t| J::String(t.to_owned()))
+                                .ok_or_else(|| text_error(&at, "Expected text"))?,
+                            "min_length" | "max_length" => field(v, LENGTH, params, &at)?,
+                            _ => field(v, SCALAR, params, &at)?,
+                        };
+                        out.insert(name.clone(), lowered);
+                    }
+                    Ok(J::Object(out))
+                }
+                *value = query(value, &params, key)?;
                 continue;
             }
             if key == "expressions" {

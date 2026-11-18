@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0301",
+  "testedBase": "1753e88b8744dc94b560da2409ac023241218451",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_edge_agreement_contracts",
+    "--test",
+    "exact_pcurve_lift_contracts",
+    "--test",
+    "exact_pcurve_relayout_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Compare original homogeneous edge and tensor-composed trim traces on their full common parameter partition without storing reconstructed edge pieces.",
+    "Same absolute curve parameter domain, exact UV grid cuts. Reports an exact mismatch even when endpoint positions agree. No generated edge binary64 storage required."
+  ],
+  "logSha256": "384dbd11c62a82f6772ee7fadcb3d56455c2212874fdface8f1948684b1c391a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "1dd3216c6b56fc0647d53d2a23967440f022a6d489e8df8b5f74330fde3eed18",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs": "ff5e98315b1a8992d097dcdefc19a08fec8e2d057fb607de0813234ce0ff34cc",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs": "9a3dc2dfcb647ccbc160d1e7969ab594468722954f7e9fca52f4dab0995864d7",
+    "crates/nurbs-core/tests/exact_pcurve_edge_agreement_contracts.rs": "a23e132056ef2ece4a034f5452bb8e12d2e7a3fc1871f3eaf01d0d3830ffee99"
+  }
+}

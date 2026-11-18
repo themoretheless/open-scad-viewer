@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0495",
+  "testedBase": "0d113a46334fd66aad6f80314b1ac6bd6fe3ec20",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 44,
+  "scope": [
+    "Join adjacent NURBS curves of different degree without changing the source parameter laws.",
+    "Prove exact elevation of the lower-degree curve, then reconcile the seam weights under the remaining work budget."
+  ],
+  "logSha256": "762a76b9887449888b509d64a0faf4bb121758a4a8cc392909790c5b3e596822",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "431c4808bd2140d869e6850492824b31cc4499725b8d837ca77c6a722472b1a3",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2e2e6e8fc1fc3a332d025ec9ece8138dfad9591033ee51b1bb0a4b48230171f3",
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "9ecbf710ececb560facdbcc21cabe3872fa3b388edd1faeb2f0ed096ec33dda6"
+  }
+}

@@ -4,9 +4,10 @@ import {readFileSync,writeFileSync} from 'node:fs'
 import * as module from 'node:module'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 import identity from '../src/generated/geometry-kernels/identity'
-if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
+const nodeModule = module as typeof module & { registerHooks?: (hooks: { load: typeof load }) => void }
+if(typeof nodeModule.registerHooks==='function')nodeModule.registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)
-const {evaluateNurbsSurface}=await import('../src/services/nurbsSurface')
+const {evaluateNurbsSurface}=await import('../src/kernel/nurbsSurface')
 const bytes=readFileSync('public/wasm/geometry-kernel.wasm'),hash=createHash('sha256').update(bytes).digest('hex');assert.equal(hash,identity.sha256)
 const surface={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
 for(let i=0;i<50;i++)assert.deepEqual(evaluateNurbsSurface(surface,.25,.75).point,[.25,.75,0])

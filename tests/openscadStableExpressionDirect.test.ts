@@ -1,37 +1,44 @@
 import { describe, expect, it } from 'vitest'
-import { OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
+import { OpenSCADParseError, parseOpenSCAD } from '../src/language/openscadParser'
 
 const stableProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 
 describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
   it('uses represented range sequences for equality and ordering', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       if (
         [0:1:2] == [0:1:2.5]
         && [0:1:2.5] <= [0:1:2]
         && [0:1:2] < [0:2:4]
         && [1:1:2] > [0:2:4]
       ) cube(1); else cube(2);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.warnings).toEqual([])
     expect(result.volume).toBeCloseTo(1, 6)
   })
 
   it('uses exact degree trigonometry for observable branch decisions', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       if (sin(180) == 0 && tan(90) == 1 / 0)
         cube(1);
       else
         cube(2);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.warnings).toEqual([])
     expect(result.volume).toBeCloseTo(1, 6)
   })
 
   it('evaluates wrappers, comprehensions, tagged ranges and shared value operations', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       echo(
         let(a = 1, b = a + 1) b,
         assert(true) 7,
@@ -56,7 +63,9 @@ describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
         [1:1:0] ? true : false
       );
       cube(1);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.warnings).toEqual([
       'ECHO: "inner"',
@@ -70,13 +79,16 @@ describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
   })
 
   it('soft-fails invalid built-ins and keeps built-in argument source order', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       echo(
         abs("x"), len([0:2]), cross([1], [2]),
         min([3, "x", 1]), pow(y = 3, 2)
       );
       cube(1);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.warnings).toEqual([
       'abs() argument 1 must be a number',
@@ -88,26 +100,29 @@ describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
   })
 
   it('binds mixed user function and module arguments to the first free formal', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       function f(a, b, c) = [a, b, c];
       module m(a, b, c) cube([a, b, c]);
       echo(f(b = 2, 1, 3), f(a = 1, a = 2, 3));
       m(b = 2, 1, 3);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
-    expect(result.warnings).toEqual([
-      'Argument a was specified more than once',
-      'ECHO: [1, 2, 3], [2, 3, undef]',
-    ])
+    expect(result.warnings).toEqual(['Argument a was specified more than once', 'ECHO: [1, 2, 3], [2, 3, undef]'])
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(6, 6)
   })
 
   it('evaluates duplicate module arguments once and lets the last named value win', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       module m(a, b) { echo(a, b); cube([a, b, 1]); }
       m(a = echo("first") 1, a = echo("second") 2, 3);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.warnings).toEqual([
       'Argument a was specified more than once',
@@ -119,28 +134,30 @@ describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
   })
 
   it('evaluates every default parameter in the definition environment', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       function f(y = 4, x = y) = x;
       module r(y = 3, x = y) echo(y, x) cube(1);
       echo(f());
       r();
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
-    expect(result.warnings).toEqual([
-      "Ignoring unknown variable 'y'",
-      'ECHO: undef',
-      'ECHO: 3, undef',
-    ])
+    expect(result.warnings).toEqual(["Ignoring unknown variable 'y'", 'ECHO: undef', 'ECHO: 3, undef'])
     expect(result.meshes).toHaveLength(1)
   })
 
   it('iterates tagged ranges and multiple bindings in for and intersection_for', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       for (i = [0:1], j = [0:1])
         translate([i * 2, j * 2, 0]) cube(1);
       intersection_for (i = [0:1], j = [0:1])
         translate([i * 0.25, j * 0.25, 0]) cube(1);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.warnings).toEqual([])
     expect(result.meshes).toHaveLength(1)
@@ -150,24 +167,18 @@ describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
   it('keeps a mismatched descending range tagged but iterates it as empty', async () => {
     const result = await parseOpenSCAD('echo([3:1]); for (i = [3:1]) cube(i);', stableProfile)
 
-    expect(result.warnings).toEqual([
-      'begin is greater than the end, but step is positive',
-      'ECHO: [3 : 1 : 1]',
-    ])
+    expect(result.warnings).toEqual(['begin is greater than the end, but step is positive', 'ECHO: [3 : 1 : 1]'])
     expect(result.meshes).toEqual([])
   })
 
   it('keeps false expression assertions positioned and legacy invalid arithmetic fatal', async () => {
-    await expect(parseOpenSCAD(
-      'echo(assert(false, "boom") 7); cube(1);',
-      stableProfile,
-    )).rejects.toBeInstanceOf(OpenSCADParseError)
-    await expect(parseOpenSCAD(
-      'echo(assert(false, "boom") 7); cube(1);',
-      stableProfile,
-    )).rejects.toThrow(/Assertion .* failed: "boom"/)
+    await expect(parseOpenSCAD('echo(assert(false, "boom") 7); cube(1);', stableProfile)).rejects.toBeInstanceOf(
+      OpenSCADParseError,
+    )
+    await expect(parseOpenSCAD('echo(assert(false, "boom") 7); cube(1);', stableProfile)).rejects.toThrow(
+      /Assertion .* failed: "boom"/,
+    )
 
-    await expect(parseOpenSCAD('cube([1, 2] + 1);'))
-      .rejects.toThrow(/arithmetic operand must be a finite number/)
+    await expect(parseOpenSCAD('cube([1, 2] + 1);')).rejects.toThrow(/arithmetic operand must be a finite number/)
   })
 })

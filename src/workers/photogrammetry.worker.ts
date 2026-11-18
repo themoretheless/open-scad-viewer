@@ -1,14 +1,23 @@
-import {runGpuMatching} from '../services/photogrammetry/gpuMatching'
-import {runGpuSweep} from '../services/photogrammetry/gpuSweep'
-import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoReconstruction, type PhotoSurface} from '../services/photogrammetry/kernel'
-import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photogrammetry/workerProtocol'
-import {activeGpuMemoryArchitecture} from '../services/webgpuCompute'
+import { runGpuMatching } from '../app/photogrammetry/gpuMatching'
+import { runGpuSweep } from '../app/photogrammetry/gpuSweep'
+import {
+  PhotogrammetryKernel,
+  type PhotoDensePreset,
+  type PhotoDiagnostics,
+  type PhotoReconstruction,
+  type PhotoSurface,
+} from '../app/photogrammetry/kernel'
+import type { PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest } from '../app/photogrammetry/workerProtocol'
+import { activeGpuMemoryArchitecture } from '../render/webgpuCompute'
 
-const scope = self as unknown as {postMessage: (event: PhotoWorkerEvent, transfer: Transferable[]) => void}
+const scope = self as unknown as { postMessage: (event: PhotoWorkerEvent, transfer: Transferable[]) => void }
 const post = (event: PhotoWorkerEvent, transfer: Transferable[] = []) => scope.postMessage(event, transfer)
-const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error)
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-function pushSurfaceBuffers(buffers: Transferable[], surface: PhotoSurface['documentSurface'] | PhotoSurface | undefined): void {
+function pushSurfaceBuffers(
+  buffers: Transferable[],
+  surface: PhotoSurface['documentSurface'] | PhotoSurface | undefined,
+): void {
   if (!surface) return
   if (ArrayBuffer.isView(surface.positions)) buffers.push(surface.positions.buffer as ArrayBuffer)
   if (ArrayBuffer.isView(surface.colors)) buffers.push(surface.colors.buffer as ArrayBuffer)
@@ -28,16 +37,16 @@ function publishSurface(kernel: PhotogrammetryKernel, result: PhotoSurface): voi
   try {
     result.documentSurface = kernel.compact()
   } catch (error) {
-    post({type: 'warning', message: errorMessage(error)})
+    post({ type: 'warning', message: errorMessage(error) })
   }
-  post({type: 'surface', result}, transferList(result))
+  post({ type: 'surface', result }, transferList(result))
 }
 
 function reconstructSurface(kernel: PhotogrammetryKernel, resolution: number, preset?: PhotoDensePreset): void {
   try {
     publishSurface(kernel, preset === undefined ? kernel.dense(resolution) : kernel.dense(resolution, preset))
   } catch (error) {
-    post({type: 'warning', message: errorMessage(error)})
+    post({ type: 'warning', message: errorMessage(error) })
   }
 }
 
@@ -63,7 +72,10 @@ async function reconstructSurfaceGpu(
 }
 
 /** Sparse matching via the browser WebGPU; any failure falls back to the CPU path. */
-async function reconstructSparseGpu(kernel: PhotogrammetryKernel, timings: PhotoTimings): Promise<PhotoReconstruction | null> {
+async function reconstructSparseGpu(
+  kernel: PhotogrammetryKernel,
+  timings: PhotoTimings,
+): Promise<PhotoReconstruction | null> {
   const prepareStart = performance.now()
   const prepared = kernel.sparsePrepare()
   timings.sparsePrepareMs = performance.now() - prepareStart
@@ -84,20 +96,20 @@ self.onmessage = (event: MessageEvent<PhotoWorkerRequest>) => run(event.data)
 // WebGPU branch is the only asynchronous stretch.
 async function run(data: PhotoWorkerRequest): Promise<void> {
   let kernel: PhotogrammetryKernel | undefined
-  const timings: PhotoTimings = {sparseMs: 0, denseMs: 0}
+  const timings: PhotoTimings = { sparseMs: 0, denseMs: 0 }
   try {
     kernel = new PhotogrammetryKernel(data.module)
-    if (data.images.some(image => image.calibration)) post({type: 'stage', stage: 'calibration'})
+    if (data.images.some(image => image.calibration)) post({ type: 'stage', stage: 'calibration' })
     const calibrationStart = performance.now()
     for (const image of data.images) kernel.add(image)
     timings.preparationMs = performance.now() - calibrationStart
 
-    post({type: 'stage', stage: 'cameras'})
+    post({ type: 'stage', stage: 'cameras' })
     const sparseStart = performance.now()
     let sparse: PhotoReconstruction
     if (data.gpu) {
       const gpu = await reconstructSparseGpu(kernel, timings).catch(error => {
-        post({type: 'warning', message: `WebGPU matching unavailable: ${errorMessage(error)}`})
+        post({ type: 'warning', message: `WebGPU matching unavailable: ${errorMessage(error)}` })
         return null
       })
       if (gpu) {
@@ -114,18 +126,20 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
       sparse = kernel.sparse()
     }
     timings.sparseMs = performance.now() - sparseStart
-    post({type: 'sparse', result: sparse}, transferList(sparse))
+    post({ type: 'sparse', result: sparse }, transferList(sparse))
 
     if (data.dense) {
-      post({type: 'stage', stage: 'depth'})
+      post({ type: 'stage', stage: 'depth' })
       const denseStart = performance.now()
-      const gpuEligible = data.densePreset === undefined || data.densePreset === 'baseline' || data.densePreset === 'accurate'
-      const gpu = data.gpu && gpuEligible
-        ? await reconstructSurfaceGpu(kernel, data.resolution, data.densePreset, timings).catch(error => {
-            post({type: 'warning', message: `WebGPU sweep unavailable: ${errorMessage(error)}`})
-            return false
-          })
-        : false
+      const gpuEligible =
+        data.densePreset === undefined || data.densePreset === 'baseline' || data.densePreset === 'accurate'
+      const gpu =
+        data.gpu && gpuEligible
+          ? await reconstructSurfaceGpu(kernel, data.resolution, data.densePreset, timings).catch(error => {
+              post({ type: 'warning', message: `WebGPU sweep unavailable: ${errorMessage(error)}` })
+              return false
+            })
+          : false
       if (gpu) {
         timings.densePath = 'gpu'
         if (!timings.gpuMemoryArchitecture) {
@@ -138,7 +152,7 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
       }
       timings.denseMs = performance.now() - denseStart
     }
-    post({type: 'done', timings})
+    post({ type: 'done', timings })
   } catch (error) {
     let diagnostics: PhotoDiagnostics | undefined
     try {
@@ -146,7 +160,7 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
     } catch {
       // Preserve the original error if report transport also fails.
     }
-    post({type: 'error', message: errorMessage(error), diagnostics})
+    post({ type: 'error', message: errorMessage(error), ...(diagnostics !== undefined ? { diagnostics } : {}) })
   } finally {
     try {
       kernel?.clear()

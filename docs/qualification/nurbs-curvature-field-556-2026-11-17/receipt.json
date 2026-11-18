@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0556",
+  "testedBase": "e84a6f03e42f99d493364be93489b4747b20b4d6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 169,
+  "scope": [
+    "Build exact clamped support surfaces and aligned UV trim loops in a shared lifted chart.",
+    "Translate each contour lift by exact integer periods, extract its bounding support tensor, and keep the oriented loops on that clock."
+  ],
+  "logSha256": "d1cc9c65803a4c7edd56826496fab633b6d21436f965a39284ebf5ce30f64ccc",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "e84a1aa29f091a797410e1cbb55a1cd033e74435b09ae6f09455fe8765d4490b",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2d998a9336e27ce65a8690fa1592c7921f5bd050efcdcb34d034b566921e3573",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "b2f07f312f4fc37f0316c1e464c0b8e916c68a73a4227edede41eb356f7134b3"
+  }
+}

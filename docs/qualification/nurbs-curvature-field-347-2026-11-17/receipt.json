@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0347",
+  "testedBase": "e350f35865d9d61cea5479bdc3ec7f8931809da5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 26,
+  "scope": [
+    "Extend certified common boundary coverage using stationary points of rational spans that follow the support line.",
+    "The rational quotient derivative locates stationary witnesses. Rational roots of linear and quadratic equations are evaluated exactly. Other roots supply exact rational samples from isolated normalized parameter brackets; returned intervals are certified inner coverage."
+  ],
+  "logSha256": "50f03d2f23f0f6b84dee7b6fc4f6dc60519434e3940bcdc6102a1da1297256ee",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "42cc1b5274b1ce3860d1ccc0788933c5c16784ece102a45d37bc660b6ba3d6c8",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "f0b7b3778f589b50baddac60dfe6fd32d7e6e1466dd6d1f2a554fd417dd4dd1d",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "d7993cfca1587728b3d1444204ad416ee5df75c259de8408f74dc5307c75eb9c",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "2bc3e4da32e9837c6eeeb83c19edaf90237bcf78df435dc4e5515ace02f7fc91",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "f5bedda26445111ded5e5ff6b8ab42c38d3599e8db4db339cd4d28e2319e47e1",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/contact_partition.rs": "fa815c04decc591f2da80f689754a67066bb352b3ac0a08cdb543e4a552bdc1f",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "400f0ba5b82388a6482751bf82d8e2fdbb6faf4b879f1faa4aa0f253e0905e56"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0508",
+  "testedBase": "ec06214a231b679f89ca358c5a1281f578ed7b36",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 70,
+  "scope": [
+    "Insert a cyclic Boehm knot in exact homogeneous arithmetic and rotate to the new seam without altering the curve.",
+    "Insert the knot in exact homogeneous arithmetic, store one exact cyclic control gauge, and rotate the refined seam without rounding."
+  ],
+  "logSha256": "685a67981dbd15bf46a7eafb18d0b1765bda149ab63ef1792a89729c2a377747",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "9fcc32ac3c627c090b34a980214f8acfdc9d94c743cacdb7d94e9a3aae9f08bb",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "35e04847228d9d9a89b59a82e5b09ea69ab66ef42682361e3817d99dc17c5f7d"
+  }
+}

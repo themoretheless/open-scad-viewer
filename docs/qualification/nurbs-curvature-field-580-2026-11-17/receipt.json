@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0580",
+  "testedBase": "120603576f28200305f44e1ad6e28d46e0b93a18",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 153,
+  "scope": [
+    "Enclose complete 3D contour length under one cell limit while keeping outer and hole lengths separate.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "e7d2330b923b253f57f761eae4b1a54349b8faa8d679e90c86a924aeb64a2870",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "32ff65a436cc5430dedf1e1fcbf1962f85432942de62bfc55e492505c64efd56",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9d8ae81d9d8ec010acd000b4f1a1e8500bd15279b83ff76a28e3eacca8431da8"
+  }
+}

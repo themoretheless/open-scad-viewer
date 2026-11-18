@@ -12,7 +12,7 @@ import {
   rayTriangleDistance,
   translate,
   unprojectRay,
-} from '../src/services/math3d'
+} from '../src/kernel/geometry/math3d'
 
 describe('native matrix operations', () => {
   it('inverts in place and with overlapping views without corrupting source reads', () => {
@@ -45,11 +45,11 @@ describe('native matrix operations', () => {
 })
 
 function project(m: Float32Array, x: number, y: number, z: number) {
-  const w = m[12]*x + m[13]*y + m[14]*z + m[15]
+  const w = m[12] * x + m[13] * y + m[14] * z + m[15]
   return [
-    (m[0]*x + m[1]*y + m[2]*z + m[3]) / w,
-    (m[4]*x + m[5]*y + m[6]*z + m[7]) / w,
-    (m[8]*x + m[9]*y + m[10]*z + m[11]) / w,
+    (m[0] * x + m[1] * y + m[2] * z + m[3]) / w,
+    (m[4] * x + m[5] * y + m[6] * z + m[7]) / w,
+    (m[8] * x + m[9] * y + m[10] * z + m[11]) / w,
   ]
 }
 
@@ -100,16 +100,12 @@ describe('viewport picking math', () => {
     const b: [number, number, number] = [1, -1, 0]
     const c: [number, number, number] = [0, 1, 0]
     expect(rayTriangleDistance({ origin: [0, 0, 2], direction: [0, 0, -1] }, a, b, c)).toBeCloseTo(2, 6)
-    expect(rayTriangleDistance({ origin: [0, 0,-2], direction: [0, 0, 1] }, a, b, c)).toBeCloseTo(2, 6)
-    expect(rayTriangleDistance({ origin: [2, 2, 2], direction: [0, 0,-1] }, a, b, c)).toBeNull()
+    expect(rayTriangleDistance({ origin: [0, 0, -2], direction: [0, 0, 1] }, a, b, c)).toBeCloseTo(2, 6)
+    expect(rayTriangleDistance({ origin: [2, 2, 2], direction: [0, 0, -1] }, a, b, c)).toBeNull()
   })
 
   it('picks an indexed mesh through its inverse object transform', () => {
-    const vertices = new Float32Array([
-      -1,-1,0, 0,0,1,
-       1,-1,0, 0,0,1,
-       0, 1,0, 0,0,1,
-    ])
+    const vertices = new Float32Array([-1, -1, 0, 0, 0, 1, 1, -1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1])
     const indices = new Uint32Array([0, 1, 2])
     const model = translate(identity(), [0, 0, -3])
     const distance = rayIndexedMeshDistance(
@@ -117,16 +113,18 @@ describe('viewport picking math', () => {
       vertices,
       indices,
       invert(model),
-      { min: [-1,-1,0], max: [1,1,0] },
+      { min: [-1, -1, 0], max: [1, 1, 0] },
     )
     expect(distance).toBeCloseTo(5, 6)
-    expect(rayIndexedMeshDistance(
-      { origin: [0, 0, 2], direction: [0, 0, -1] },
-      vertices,
-      indices,
-      invert(model),
-      { min: [-1,-1,0], max: [1,1,0] },
-      4,
-    )).toBeNull()
+    expect(
+      rayIndexedMeshDistance(
+        { origin: [0, 0, 2], direction: [0, 0, -1] },
+        vertices,
+        indices,
+        invert(model),
+        { min: [-1, -1, 0], max: [1, 1, 0] },
+        4,
+      ),
+    ).toBeNull()
   })
 })

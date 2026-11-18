@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0266",
+  "testedBase": "b3b1d59138a8d4be66f33fef3ca3aa04052f3be2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_edge_contracts",
+    "--test",
+    "curvature_gap_threshold_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 9,
+  "scope": [
+    "Exact original one-sided edge restriction and Bernstein sign variation retain exact dyadic roots and complete coverage by open brackets. Variation one proves one simple root. Coincident edges are represented separately.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "eeaf8c0fa94317fa898020df74528e6cf1b5995249423c47269a9214cdebdd80",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "e757e8a5c21f93818a8fdbdb383dd16f92c423b756a8ea360909f1f924deccfa",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_edge.rs": "fc38cc9bb813bf6b8db94cd1c81675474516bcbafec2573c98d158f187072b2f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_edge_contracts.rs": "dfb0b576340af517c86691a9b7401fad9dd792b7021aa25b703782c335da8a57",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs": "2caf811e137eeeb3539dbd115b9df24e464b0dd8c85104699de3a046dfb7f9a0",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs": "034cddeb6ea363f71fffce76ce0b743b227b4f5e65f459c23b6076e0ca7fc9a3"
+  }
+}

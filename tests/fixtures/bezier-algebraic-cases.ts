@@ -1,4 +1,4 @@
-import type {NurbsCurve} from '../../src/services/nurbsCurve'
+import type {NurbsCurve} from '../../src/kernel/nurbsCurve'
 export const bezierCurve=(controlPoints:number[][]):NurbsCurve=>({degree:controlPoints.length-1,knots:[...Array(controlPoints.length).fill(0),...Array(controlPoints.length).fill(1)],controlPoints,weights:Array(controlPoints.length).fill(1),periodic:false})
 export const bezierLine=(a:number[],b:number[])=>bezierCurve([a,b])
 export const nonlinearFirst=bezierCurve([[0,0],[0,0],[10,0],[30,0],[60,1]])

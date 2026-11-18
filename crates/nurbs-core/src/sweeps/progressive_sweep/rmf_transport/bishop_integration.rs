@@ -1,16 +1,27 @@
 //! Bishop integration: preserves the original arithmetic and proof budgets.
 use super::*;
 
+/// Cell and exact-work budgets of one RMF transport proof; `shared` is the
+/// aggregate allowance when premises and transport spend one budget.
+#[derive(Clone, Copy)]
+pub(super) struct TransportWork {
+    pub max_cells: usize,
+    pub max_exact_work: u64,
+    pub shared: Option<usize>,
+}
 pub(super) fn certify_original_rmf_transport_impl(
     path: &Curve,
     normal: [f64; 3],
     steps: usize,
-    max_cells: usize,
-    max_exact_work: u64,
+    work: TransportWork,
     closed: bool,
-    shared_work: Option<usize>,
     geometric_arc: bool,
 ) -> Result<OriginalRmfTransportReport> {
+    let TransportWork {
+        max_cells,
+        max_exact_work,
+        shared: shared_work,
+    } = work;
     path.validate()?;
     check(
         path.control_points.iter().all(|p| p.len() == 3)

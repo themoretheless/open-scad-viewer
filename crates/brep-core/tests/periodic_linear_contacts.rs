@@ -118,9 +118,11 @@ fn periodic_contact_regions_and_image_owners_retain_corrected_corner_fill() {
         Q::new(1.into(), 8.into())
     );
     let mapped = p::regularize_multispan_periodic_winding(
-        &[source.clone()],
-        &[report.clone()],
-        &[[0; 2]],
+        p::WindingSources {
+            sources: &[source.clone()],
+            partitions: &[report.clone()],
+            windings: &[[0; 2]],
+        },
         [[0., 1.]; 2],
         [0.5, 0.5],
         limits(),
@@ -133,9 +135,11 @@ fn periodic_contact_regions_and_image_owners_retain_corrected_corner_fill() {
     assert_eq!(mapped.regions().components().len(), 4);
     assert_eq!(mapped.graph(), mapped.original().graph().unwrap());
     let clock = p::regularize_clock_mapped_periodic_winding(
-        &[source],
-        &[report],
-        &[[0; 2]],
+        p::WindingSources {
+            sources: &[source],
+            partitions: &[report],
+            windings: &[[0; 2]],
+        },
         [[0., 1.]; 2],
         [0.5, 0.5],
         limits(),

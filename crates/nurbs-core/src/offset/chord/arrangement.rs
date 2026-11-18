@@ -239,4 +239,48 @@ mod tests {
         assert_eq!(graph.edges.len(),2);
         assert_eq!(graph.source_edges.as_ref().unwrap().len(),3);
     }
+
+    /// Compare exact recipes over represented source endpoints, never rounded observations.
+    fn same_crossing(first:[[f64;2];4],second:[[f64;2];4],tolerance_mm:f64)->Result<bool> {
+     use cad_predicates::{AuthoredScalar,SourceArena,ToleranceContext,PredicateContext,Limits,
+      intersect_authored_lines2d,LineIntersection2,Point2Input,orient2d_points,Outcome,Sign};
+     let arena=SourceArena::authored("represented-chord-crossing-recipes",1,
+      first.into_iter().chain(second).flatten().map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect())
+      .map_err(|e|crate::input(format!("Crossing source admission failed: {e}")))?;
+     let tolerance=ToleranceContext::from_brep_tolerance_mm(tolerance_mm)
+      .map_err(|e|crate::input(format!("Crossing tolerance admission failed: {e}")))?;
+     let mut context=PredicateContext::new(&arena,&tolerance,Limits::default(),None);
+     let point=|i:usize|[arena.leaf(2*i).unwrap(),arena.leaf(2*i+1).unwrap()];
+     let result=intersect_authored_lines2d(&mut context,point(0),point(1),point(2),point(3))
+      .map_err(|e|crate::input(format!("Crossing recipe failed: {e}")))?;
+     let LineIntersection2::Unique(recipe)=result.outcome else {return Err(crate::input("Exact crossing recipe was not resolved."));};
+     for i in [4,6] {
+      let result=orient2d_points(&mut context,Point2Input::Authored(point(i)),Point2Input::Authored(point(i+1)),Point2Input::Constructed(&recipe))
+       .map_err(|e|crate::input(format!("Crossing incidence failed: {e}")))?;
+      match result.outcome {
+       Outcome::Sign(Sign::Zero)=>{},Outcome::Sign(_)=>return Ok(false),
+       Outcome::Indeterminate(_)=>return Err(crate::input("Exact crossing incidence was not resolved.")),
+      }
+     }
+     Ok(true)
+    }
+
+
+
+    #[test]
+    fn exact_recipe_does_not_equate_nearby_intersections() {
+        let first=[[-2.,0.],[5.,1.],[0.,1.],[1.,-1.]];
+        let second=[[-2.,0.],[5.,1.],[0.,1.+2f64.powi(-40)],[1.,-1.]];
+        assert!(!same_crossing(first,second,1e-6).unwrap());
+        assert!(same_crossing(first,[[-2.,-2.],[2.,2.],[0.,1.],[1.,-1.]],1e-6).unwrap());
+    }
+
+
+    #[test]
+    fn nearby_distinct_crossings_are_not_merged_by_tolerance() {
+        let d=2f64.powi(-30);
+        let graph=split(&chain(&[[-4.,0.],[4.,0.],[d,4.],[d,-4.],[-4.,-4.],[4.,4.]]),false,1e-6,1000).unwrap();
+        assert_eq!(graph.vertices.iter().filter(|v|v.point.iter().all(|x|x.abs()<1e-8)).count(),3);
+        crate::chord_embedding::admit(&graph,1000).unwrap();
+    }
 }

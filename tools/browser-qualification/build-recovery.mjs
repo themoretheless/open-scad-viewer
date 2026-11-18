@@ -110,7 +110,7 @@ try {
   assert.deepEqual(pageErrors, [])
   await page.screenshot({path: join(output, 'app-recovered.png')})
   const hashes = {}
-  for (const file of [`dist/assets/${workers[0]}`, 'public/wasm/geometry-kernel.wasm', 'src/services/buildCoordinator.ts', 'src/workers/geometry.worker.ts', 'src/App.vue', 'tools/browser-qualification/build-recovery.ts', 'tools/browser-qualification/build-recovery.mjs']) {
+  for (const file of [`dist/assets/${workers[0]}`, 'public/wasm/geometry-kernel.wasm', 'src/app/buildCoordinator.ts', 'src/workers/geometry.worker.ts', 'src/App.vue', 'tools/browser-qualification/build-recovery.ts', 'tools/browser-qualification/build-recovery.mjs']) {
     hashes[file] = createHash('sha256').update(await readFile(file)).digest('hex')
   }
   await mkdir(output, {recursive: true})

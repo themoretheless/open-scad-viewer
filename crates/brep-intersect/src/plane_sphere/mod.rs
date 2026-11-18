@@ -29,7 +29,7 @@
 //! Nothing here authorizes a topology change.
 #[cfg(feature = "codec")]
 mod serialization;
-use super::sphere_sphere::{self, CanonicalSphere, RECOGNITION, SpherePatchCircle};
+use super::sphere_sphere::{self, CanonicalSphere, SpherePatchCircle};
 use super::*;
 use brep_core::Model;
 

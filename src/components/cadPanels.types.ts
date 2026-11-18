@@ -40,6 +40,14 @@ export interface InspectSelection {
   triangleCount?: number
   surfaceArea?: number
   volume?: number
+  /** Distinct (welded) vertices of the selected body. */
+  vertexCount?: number
+  edgeCount?: number
+  /** Authored or coplanar face groups. */
+  faceCount?: number
+  /** Watertight and manifold; volume is only reported for closed bodies. */
+  closed?: boolean
+  centroid?: Vector3
   position?: Vector3
   normal?: Vector3
   bounds?: InspectBounds

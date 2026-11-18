@@ -98,6 +98,16 @@ impl Rational {
     }
 }
 pub(crate) type Series = Vec<[Rational; 4]>;
+/// Homogeneous jet rows of the two strips under comparison, with their
+/// degrees, the scale of the second strip relative to the first, and the
+/// highest compared jet order.
+#[derive(Clone, Copy)]
+pub(crate) struct StripJets<'a> {
+    pub jets: &'a [Vec<Series>],
+    pub degrees: [usize; 2],
+    pub scale: &'a Rational,
+    pub order: usize,
+}
 pub(crate) fn series(
     x: &[Expansion],
     u: &[Expansion],

@@ -1,22 +1,31 @@
-import {RUNTIME_GEOMETRY_EVIDENCE_V5} from './runtimeGeometryEvidenceV5'
-import {RUNTIME_GEOMETRY_EVIDENCE_V6} from './runtimeGeometryEvidenceV6'
-import {RUNTIME_GEOMETRY_EVIDENCE_V7} from './runtimeGeometryEvidenceV7'
-import {RUNTIME_GEOMETRY_EVIDENCE_V8} from './runtimeGeometryEvidenceV8'
-import {RUNTIME_GEOMETRY_EVIDENCE_V9} from './runtimeGeometryEvidenceV9'
-import {CURRENT_RUNTIME_GEOMETRY_EVIDENCE} from './currentRuntimeGeometryEvidence'
+import { RUNTIME_GEOMETRY_EVIDENCE_V5 } from './runtimeGeometryEvidenceV5'
+import { RUNTIME_GEOMETRY_EVIDENCE_V6 } from './runtimeGeometryEvidenceV6'
+import { RUNTIME_GEOMETRY_EVIDENCE_V7 } from './runtimeGeometryEvidenceV7'
+import { RUNTIME_GEOMETRY_EVIDENCE_V8 } from './runtimeGeometryEvidenceV8'
+import { RUNTIME_GEOMETRY_EVIDENCE_V9 } from './runtimeGeometryEvidenceV9'
+import { RUNTIME_GEOMETRY_EVIDENCE_V10 } from './runtimeGeometryEvidenceV10'
+import { RUNTIME_GEOMETRY_EVIDENCE_V11 } from './runtimeGeometryEvidenceV11'
+import { RUNTIME_GEOMETRY_EVIDENCE_V12 } from './runtimeGeometryEvidenceV12'
+import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from './currentRuntimeGeometryEvidence'
 import { RUNTIME_GEOMETRY_EVIDENCE_V3 } from './runtimeGeometryEvidenceV3'
 import { RUNTIME_GEOMETRY_EVIDENCE_V4 } from './runtimeGeometryEvidenceV4'
 import { OWN_RUST_CAD_EVIDENCE } from './ownRustCadEvidence'
 import type { GeometryQuality } from './build'
-import { sha256Hex } from './sha256'
-import {
-  parseGeometrySourceRoutingHeader,
-  type GeometryLanguageContract,
-} from './geometryRouting'
-import { isWellFormedUnicode } from './unicode'
+import { type GeometryLanguageContract } from './geometryRouting'
 import { deepFreeze } from './objects'
-import { computeGeometryManifestDigest, qualifiedRuntimeManifestVersion } from './geometryExecution/geometryEngineClassForLanguageContract'
-export { geometryEngineClassForLanguageContract, canonicalJson, toWireManifest, computeGeometryManifestDigest, geometryProviderAdmissionForManifest, planGeometrySourceExecution, freezeGeometryExecutionDescriptor } from './geometryExecution/geometryEngineClassForLanguageContract'
+import {
+  computeGeometryManifestDigest,
+  qualifiedRuntimeManifestVersion,
+} from './geometryExecution/geometryEngineClassForLanguageContract'
+export {
+  geometryEngineClassForLanguageContract,
+  canonicalJson,
+  toWireManifest,
+  computeGeometryManifestDigest,
+  geometryProviderAdmissionForManifest,
+  planGeometrySourceExecution,
+  freezeGeometryExecutionDescriptor,
+} from './geometryExecution/geometryEngineClassForLanguageContract'
 
 export {
   GEOMETRY_LANGUAGE_CONTRACTS,
@@ -29,7 +38,7 @@ export {
 
 export const GEOMETRY_ENGINE_CLASSES = Object.freeze(['mesh', 'brep'] as const)
 
-export type GeometryEngineClass = typeof GEOMETRY_ENGINE_CLASSES[number]
+export type GeometryEngineClass = (typeof GEOMETRY_ENGINE_CLASSES)[number]
 
 export interface GeometryEngineRoute {
   readonly languageContract: GeometryLanguageContract
@@ -135,42 +144,89 @@ export interface GeometryEngineManifest extends GeometryEngineStaticManifest {
 
 const ownRustCadManifest: GeometryEngineStaticManifest = {
   engineClass: 'mesh',
-  displayName: 'Own Rust CAD', permanent: true, maturity: 'production',
-  engineKey: 'own-rust-cad-v2', kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
-  semanticProgramVersion: 'legacy-direct-evaluator-v1', capabilityManifestVersion: 'own-rust-node-v2',
-  languageContracts: ['legacy/current'], inputContract: 'legacy-source-direct',
+  displayName: 'Own Rust CAD',
+  permanent: true,
+  maturity: 'production',
+  engineKey: 'own-rust-cad-v2',
+  kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
+  semanticProgramVersion: 'legacy-direct-evaluator-v1',
+  capabilityManifestVersion: 'own-rust-node-v2',
+  languageContracts: ['legacy/current'],
+  inputContract: 'legacy-source-direct',
   capabilities: ['analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'geometry.mesh'],
-  plannedCapabilities: ['provenance.source-ranges'], qualities: ['preview', 'full'],
-  representations: ['mesh'], plannedRepresentations: [], exportFormats: ['stl', 'obj'], plannedExportFormats: [],
-  limits: {sourceCharacters: 250_000, triangles: 750_000}, isolation: 'in-process-serialized', deployment: 'node-mcp',
-  qualification: {status: 'baseline-pending', recordId: null, corpusVersion: null, target: 'browser-worker/node-mcp'},
-  dependency: {packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md', sbomSha256: OWN_RUST_CAD_EVIDENCE.noticesSha256, lockfileSha256: OWN_RUST_CAD_EVIDENCE.lockfileSha256},
-  rollbackCompatibility: {disableEngineCapability: true, sourceContractPreserved: true, crossEngineFallback: false, minimumCatalogSchema: 3},
-  manifestDigest: '', automaticFallback: false,
+  plannedCapabilities: ['provenance.source-ranges'],
+  qualities: ['preview', 'full'],
+  representations: ['mesh'],
+  plannedRepresentations: [],
+  exportFormats: ['stl', 'obj'],
+  plannedExportFormats: [],
+  limits: { sourceCharacters: 250_000, triangles: 750_000 },
+  isolation: 'in-process-serialized',
+  deployment: 'node-mcp',
+  qualification: { status: 'baseline-pending', recordId: null, corpusVersion: null, target: 'browser-worker/node-mcp' },
+  dependency: {
+    packageName: 'workspace:geometry-bridge',
+    version: '0.1.0',
+    licenseExpression: 'MIT',
+    sbomRef: 'THIRD_PARTY_NOTICES.md',
+    sbomSha256: OWN_RUST_CAD_EVIDENCE.noticesSha256,
+    lockfileSha256: OWN_RUST_CAD_EVIDENCE.lockfileSha256,
+  },
+  rollbackCompatibility: {
+    disableEngineCapability: true,
+    sourceContractPreserved: true,
+    crossEngineFallback: false,
+    minimumCatalogSchema: 3,
+  },
+  manifestDigest: '',
+  automaticFallback: false,
 }
 ownRustCadManifest.manifestDigest = computeGeometryManifestDigest(ownRustCadManifest)
 
 // Historical snapshots intentionally do not inherit the mutable current catalog.
 const ownRustCadManifestV1: GeometryEngineStaticManifest = {
   engineClass: 'mesh',
-  displayName: 'Own Rust CAD', permanent: true, maturity: 'production',
+  displayName: 'Own Rust CAD',
+  permanent: true,
+  maturity: 'production',
   engineKey: 'own-rust-cad-v1',
   kernelFingerprint: 'sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6',
   semanticProgramVersion: 'legacy-direct-evaluator-v1',
   capabilityManifestVersion: 'own-rust-node-v1',
-  languageContracts: ['legacy/current'], inputContract: 'legacy-source-direct',
+  languageContracts: ['legacy/current'],
+  inputContract: 'legacy-source-direct',
   capabilities: ['analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'geometry.mesh'],
-  plannedCapabilities: ['provenance.source-ranges'], qualities: ['preview', 'full'],
-  representations: ['mesh'], plannedRepresentations: [], exportFormats: ['stl', 'obj'], plannedExportFormats: [],
-  limits: {sourceCharacters: 250_000, triangles: 750_000}, isolation: 'in-process-serialized', deployment: 'node-mcp',
-  qualification: {status: 'qualified', recordId: 'docs/qualification/own-rust-cad-v1.json', corpusVersion: 'own-rust-cad-v1', target: 'browser-worker/node-mcp'},
+  plannedCapabilities: ['provenance.source-ranges'],
+  qualities: ['preview', 'full'],
+  representations: ['mesh'],
+  plannedRepresentations: [],
+  exportFormats: ['stl', 'obj'],
+  plannedExportFormats: [],
+  limits: { sourceCharacters: 250_000, triangles: 750_000 },
+  isolation: 'in-process-serialized',
+  deployment: 'node-mcp',
+  qualification: {
+    status: 'qualified',
+    recordId: 'docs/qualification/own-rust-cad-v1.json',
+    corpusVersion: 'own-rust-cad-v1',
+    target: 'browser-worker/node-mcp',
+  },
   dependency: {
-    packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md',
+    packageName: 'workspace:geometry-bridge',
+    version: '0.1.0',
+    licenseExpression: 'MIT',
+    sbomRef: 'THIRD_PARTY_NOTICES.md',
     sbomSha256: 'ff988c02c87aac5ee582a393378bb59ff40a024850dd377abd0cde7fdad231e6',
     lockfileSha256: '70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704',
   },
-  rollbackCompatibility: {disableEngineCapability: true, sourceContractPreserved: true, crossEngineFallback: false, minimumCatalogSchema: 3},
-  manifestDigest: '', automaticFallback: false,
+  rollbackCompatibility: {
+    disableEngineCapability: true,
+    sourceContractPreserved: true,
+    crossEngineFallback: false,
+    minimumCatalogSchema: 3,
+  },
+  manifestDigest: '',
+  automaticFallback: false,
 }
 ownRustCadManifestV1.manifestDigest = computeGeometryManifestDigest(ownRustCadManifestV1)
 
@@ -242,8 +298,15 @@ const brepClosedManifestV1: GeometryEngineStaticManifest = {
   languageContracts: ['openscad-viewer/brep-1'],
   inputContract: 'semantic-program-required',
   capabilities: [
-    'analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'export.step',
-    'geometry.brep', 'nurbs.curves', 'nurbs.surfaces', 'topology.stable-ids',
+    'analysis.metrics',
+    'csg.boolean',
+    'export.obj',
+    'export.stl',
+    'export.step',
+    'geometry.brep',
+    'nurbs.curves',
+    'nurbs.surfaces',
+    'topology.stable-ids',
   ],
   plannedCapabilities: [],
   qualities: ['preview', 'full'],
@@ -261,13 +324,18 @@ const brepClosedManifestV1: GeometryEngineStaticManifest = {
     target: 'browser-worker/node-mcp',
   },
   dependency: {
-    packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md',
+    packageName: 'workspace:geometry-bridge',
+    version: '0.1.0',
+    licenseExpression: 'MIT',
+    sbomRef: 'THIRD_PARTY_NOTICES.md',
     sbomSha256: 'ff988c02c87aac5ee582a393378bb59ff40a024850dd377abd0cde7fdad231e6',
     lockfileSha256: '70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704',
   },
   rollbackCompatibility: {
-    disableEngineCapability: true, sourceContractPreserved: true,
-    crossEngineFallback: false, minimumCatalogSchema: 3,
+    disableEngineCapability: true,
+    sourceContractPreserved: true,
+    crossEngineFallback: false,
+    minimumCatalogSchema: 3,
   },
   manifestDigest: '',
   automaticFallback: false,
@@ -277,47 +345,185 @@ brepClosedManifestV1.manifestDigest = computeGeometryManifestDigest(brepClosedMa
 // Private candidate binding. Publication requires the referenced complete
 // qualification record; historical manifests remain immutable.
 function bindCurrentRuntime(
-  base: GeometryEngineStaticManifest, version: string, engineKey: string,
-  evidence: {wasmSha256:string;noticesSha256:string;lockfileSha256:string;recordId:string;corpusVersion:string},
+  base: GeometryEngineStaticManifest,
+  version: string,
+  engineKey: string,
+  evidence: {
+    wasmSha256: string
+    noticesSha256: string
+    lockfileSha256: string
+    recordId: string
+    corpusVersion: string
+  },
 ): GeometryEngineStaticManifest {
   const manifest: GeometryEngineStaticManifest = {
-    ...base, engineKey, capabilityManifestVersion: version,
+    ...base,
+    engineKey,
+    capabilityManifestVersion: version,
     kernelFingerprint: `sha256:${evidence.wasmSha256}`,
-    qualification: {status: 'qualified', recordId: evidence.recordId,
-      corpusVersion: evidence.corpusVersion, target: 'browser-worker/node-mcp'},
-    dependency: {...base.dependency, sbomSha256: evidence.noticesSha256,
-      lockfileSha256: evidence.lockfileSha256},
+    qualification: {
+      status: 'qualified',
+      recordId: evidence.recordId,
+      corpusVersion: evidence.corpusVersion,
+      target: 'browser-worker/node-mcp',
+    },
+    dependency: { ...base.dependency, sbomSha256: evidence.noticesSha256, lockfileSha256: evidence.lockfileSha256 },
     manifestDigest: '',
   }
   manifest.manifestDigest = computeGeometryManifestDigest(manifest)
   return manifest
 }
 
-const ownRustCadRuntimeV3 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v3', 'own-rust-cad-v3', RUNTIME_GEOMETRY_EVIDENCE_V3)
-const brepClosedRuntimeV3 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v3', 'rust-brep-closed-v3', RUNTIME_GEOMETRY_EVIDENCE_V3)
+const ownRustCadRuntimeV3 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v3',
+  'own-rust-cad-v3',
+  RUNTIME_GEOMETRY_EVIDENCE_V3,
+)
+const brepClosedRuntimeV3 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v3',
+  'rust-brep-closed-v3',
+  RUNTIME_GEOMETRY_EVIDENCE_V3,
+)
 
-const ownRustCadRuntimeV4 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v4', 'own-rust-cad-v4', RUNTIME_GEOMETRY_EVIDENCE_V4)
-const brepClosedRuntimeV4 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v4', 'rust-brep-closed-v4', RUNTIME_GEOMETRY_EVIDENCE_V4)
+const ownRustCadRuntimeV4 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v4',
+  'own-rust-cad-v4',
+  RUNTIME_GEOMETRY_EVIDENCE_V4,
+)
+const brepClosedRuntimeV4 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v4',
+  'rust-brep-closed-v4',
+  RUNTIME_GEOMETRY_EVIDENCE_V4,
+)
 
-const ownRustCadRuntimeV5 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v5', 'own-rust-cad-v5', RUNTIME_GEOMETRY_EVIDENCE_V5)
-const brepClosedRuntimeV5 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v5', 'rust-brep-closed-v5', RUNTIME_GEOMETRY_EVIDENCE_V5)
+const ownRustCadRuntimeV5 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v5',
+  'own-rust-cad-v5',
+  RUNTIME_GEOMETRY_EVIDENCE_V5,
+)
+const brepClosedRuntimeV5 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v5',
+  'rust-brep-closed-v5',
+  RUNTIME_GEOMETRY_EVIDENCE_V5,
+)
 
-const ownRustCadRuntimeV6 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v6', 'own-rust-cad-v6', RUNTIME_GEOMETRY_EVIDENCE_V6)
-const brepClosedRuntimeV6 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v6', 'rust-brep-closed-v6', RUNTIME_GEOMETRY_EVIDENCE_V6)
+const ownRustCadRuntimeV6 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v6',
+  'own-rust-cad-v6',
+  RUNTIME_GEOMETRY_EVIDENCE_V6,
+)
+const brepClosedRuntimeV6 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v6',
+  'rust-brep-closed-v6',
+  RUNTIME_GEOMETRY_EVIDENCE_V6,
+)
 
-const ownRustCadRuntimeV7 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v7', 'own-rust-cad-v7', RUNTIME_GEOMETRY_EVIDENCE_V7)
-const brepClosedRuntimeV7 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v7', 'rust-brep-closed-v7', RUNTIME_GEOMETRY_EVIDENCE_V7)
+const ownRustCadRuntimeV7 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v7',
+  'own-rust-cad-v7',
+  RUNTIME_GEOMETRY_EVIDENCE_V7,
+)
+const brepClosedRuntimeV7 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v7',
+  'rust-brep-closed-v7',
+  RUNTIME_GEOMETRY_EVIDENCE_V7,
+)
 
-const ownRustCadRuntimeV8 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v8', 'own-rust-cad-v8', RUNTIME_GEOMETRY_EVIDENCE_V8)
-const brepClosedRuntimeV8 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v8', 'rust-brep-closed-v8', RUNTIME_GEOMETRY_EVIDENCE_V8)
+const ownRustCadRuntimeV8 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v8',
+  'own-rust-cad-v8',
+  RUNTIME_GEOMETRY_EVIDENCE_V8,
+)
+const brepClosedRuntimeV8 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v8',
+  'rust-brep-closed-v8',
+  RUNTIME_GEOMETRY_EVIDENCE_V8,
+)
 
-const ownRustCadRuntimeV9 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v9', 'own-rust-cad-v9', RUNTIME_GEOMETRY_EVIDENCE_V9)
-const brepClosedRuntimeV9 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v9', 'rust-brep-closed-v9', RUNTIME_GEOMETRY_EVIDENCE_V9)
+const ownRustCadRuntimeV9 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v9',
+  'own-rust-cad-v9',
+  RUNTIME_GEOMETRY_EVIDENCE_V9,
+)
+const brepClosedRuntimeV9 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v9',
+  'rust-brep-closed-v9',
+  RUNTIME_GEOMETRY_EVIDENCE_V9,
+)
 
-const ownRustCadRuntimeV10 = bindCurrentRuntime(ownRustCadManifestV1, 'own-rust-node-v10', 'own-rust-cad-v10', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
-const brepClosedRuntimeV10 = bindCurrentRuntime(brepClosedManifestV1, 'brep-closed-v10', 'rust-brep-closed-v10', CURRENT_RUNTIME_GEOMETRY_EVIDENCE)
+const ownRustCadRuntimeV10 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v10',
+  'own-rust-cad-v10',
+  RUNTIME_GEOMETRY_EVIDENCE_V10,
+)
+const brepClosedRuntimeV10 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v10',
+  'rust-brep-closed-v10',
+  RUNTIME_GEOMETRY_EVIDENCE_V10,
+)
+
+const ownRustCadRuntimeV11 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v11',
+  'own-rust-cad-v11',
+  RUNTIME_GEOMETRY_EVIDENCE_V11,
+)
+const brepClosedRuntimeV11 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v11',
+  'rust-brep-closed-v11',
+  RUNTIME_GEOMETRY_EVIDENCE_V11,
+)
+
+const ownRustCadRuntimeV12 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v12',
+  'own-rust-cad-v12',
+  RUNTIME_GEOMETRY_EVIDENCE_V12,
+)
+const brepClosedRuntimeV12 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v12',
+  'rust-brep-closed-v12',
+  RUNTIME_GEOMETRY_EVIDENCE_V12,
+)
+
+const ownRustCadRuntimeV13 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v13',
+  'own-rust-cad-v13',
+  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+)
+const brepClosedRuntimeV13 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v13',
+  'rust-brep-closed-v13',
+  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+)
 
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v13': ownRustCadRuntimeV13,
+  'brep-closed-v13': brepClosedRuntimeV13,
+  'own-rust-node-v12': ownRustCadRuntimeV12,
+  'brep-closed-v12': brepClosedRuntimeV12,
+  'own-rust-node-v11': ownRustCadRuntimeV11,
+  'brep-closed-v11': brepClosedRuntimeV11,
   'own-rust-node-v10': ownRustCadRuntimeV10,
   'brep-closed-v10': brepClosedRuntimeV10,
   'own-rust-node-v9': ownRustCadRuntimeV9,
@@ -394,14 +600,11 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v10',
-  brep: 'brep-closed-v10',
+  mesh: 'own-rust-node-v13',
+  brep: 'brep-closed-v13',
 } as const)
 
-export type GeometryProviderAdmissionMode =
-  | 'legacy-grandfathered'
-  | 'qualified'
-  | 'denied'
+export type GeometryProviderAdmissionMode = 'legacy-grandfathered' | 'qualified' | 'denied'
 
 export const GEOMETRY_PROVIDER_ADMISSION_REASON_CODES = Object.freeze([
   'manifest-integrity-failed',
@@ -412,8 +615,7 @@ export const GEOMETRY_PROVIDER_ADMISSION_REASON_CODES = Object.freeze([
   'qualified',
 ] as const)
 
-export type GeometryProviderAdmissionReasonCode =
-  typeof GEOMETRY_PROVIDER_ADMISSION_REASON_CODES[number]
+export type GeometryProviderAdmissionReasonCode = (typeof GEOMETRY_PROVIDER_ADMISSION_REASON_CODES)[number]
 
 export interface GeometryProviderAdmissionDecision {
   readonly allowed: boolean
@@ -429,8 +631,12 @@ export interface GeometryProviderAdmissionDecision {
 export const ACTIVE_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
   // Importing a diagnostic API must not instantiate a production provider.
   // Every actual route still performs the same artifact-bound admission.
-  get mesh() { return qualifiedRuntimeManifestVersion('mesh') },
-  get brep() { return qualifiedRuntimeManifestVersion('brep') },
+  get mesh() {
+    return qualifiedRuntimeManifestVersion('mesh')
+  },
+  get brep() {
+    return qualifiedRuntimeManifestVersion('brep')
+  },
 })
 
 export interface GeometryEngineRegistrySnapshot {

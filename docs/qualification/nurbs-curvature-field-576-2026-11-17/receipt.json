@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0576",
+  "testedBase": "de2148d05f9015608821280ab8f8fdc49ac24914",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 147,
+  "scope": [
+    "Distinguish exact C1, oriented G1, reversal, corner, stationary and one-sided joins.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "263deb60223ff009ab9ef271795089b421d2bf258f1fbc4132f40248a54e7770",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "6385282a72ab0c28ec74373e387d904ea30c9f63954f0ed1f79106665618c6cc",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a3f2a5ce85d98e93c59d50bf068b794d3c8453060534809689efca7f1a03fc5e"
+  }
+}

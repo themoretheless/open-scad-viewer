@@ -1,11 +1,5 @@
-import {isNativeGeometryArtifact,type NativeGeometryArtifact} from './nativeGeometry'
-import type {
-  MeshBvh,
-  MeshData,
-  MeshProvenanceRun,
-  MeshTopologyDiagnostics,
-  SceneEntityId,
-} from './mesh'
+import { isNativeGeometryArtifact, type NativeGeometryArtifact } from './nativeGeometry'
+import type { MeshBvh, MeshData, MeshLodLevel, MeshProvenanceRun, MeshTopologyDiagnostics, SceneEntityId } from './mesh'
 
 export type GeometryAssetId = `asset:${string}`
 
@@ -30,7 +24,8 @@ export interface ReadyGeometryInspectionArtifacts {
   readonly topology: MeshTopologyDiagnostics
 }
 
-export type GeometryInspectionArtifacts = ReadyGeometryInspectionArtifacts
+export type GeometryInspectionArtifacts =
+  | ReadyGeometryInspectionArtifacts
   | { readonly state: 'absent'; readonly version: 1 }
   | { readonly state: 'pending'; readonly version: 1; readonly requestId: string }
   | { readonly state: 'failed'; readonly version: 1; readonly errorCode: string }
@@ -42,6 +37,8 @@ export interface SceneEntity {
   readonly color: readonly [number, number, number, number]
   readonly transform: Float32Array
   readonly inspection?: GeometryInspectionArtifacts
+  /** Certified display levels, coarse to fine, in the entity's local coordinates. */
+  readonly lods?: readonly MeshLodLevel[]
 }
 
 export interface GeometryScene {
@@ -59,15 +56,19 @@ function hashBytes(hash: number, bytes: Uint8Array) {
     const full = bytes.length - (bytes.length % 4)
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, full / 4)
     for (const word of words) {
-      next ^= word & 0xff; next = Math.imul(next, 0x01000193) >>> 0
-      next ^= (word >>> 8) & 0xff; next = Math.imul(next, 0x01000193) >>> 0
-      next ^= (word >>> 16) & 0xff; next = Math.imul(next, 0x01000193) >>> 0
-      next ^= word >>> 24; next = Math.imul(next, 0x01000193) >>> 0
+      next ^= word & 0xff
+      next = Math.imul(next, 0x01000193) >>> 0
+      next ^= (word >>> 8) & 0xff
+      next = Math.imul(next, 0x01000193) >>> 0
+      next ^= (word >>> 16) & 0xff
+      next = Math.imul(next, 0x01000193) >>> 0
+      next ^= word >>> 24
+      next = Math.imul(next, 0x01000193) >>> 0
     }
     index = full
   }
   for (; index < bytes.length; index++) {
-    next ^= bytes[index]
+    next ^= bytes[index] ?? 0
     next = Math.imul(next, 0x01000193) >>> 0
   }
   return next
@@ -93,8 +94,7 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
   const assets: GeometryAsset[] = []
   const assetsById = new Map<GeometryAssetId, GeometryAsset>()
   const entities: SceneEntity[] = []
-  for (let index = 0; index < meshes.length; index++) {
-    const mesh = meshes[index]
+  for (const [index, mesh] of meshes.entries()) {
     let id = mesh.geometryAssetId ?? geometryAssetId(mesh.vertices, mesh.indices)
     const existing = assetsById.get(id)
     if (existing && (!sameView(existing.vertices, mesh.vertices) || !sameView(existing.indices, mesh.indices))) {
@@ -105,24 +105,27 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
       assetsById.set(id, asset)
       assets.push(asset)
     }
-    entities.push(Object.freeze({
-      id: mesh.entityId ?? `entity:legacy/${index}`,
-      geometryAssetId: id,
-      ...(mesh.nativeGeometry?{nativeGeometry:mesh.nativeGeometry}:{}),
-      color: [...mesh.color] as [number, number, number, number],
-      transform: mesh.transform,
-      inspection: Object.freeze({
-        state: 'ready' as const,
-        version: 1 as const,
-        bvh: mesh.bvh,
-        edgeIndices: mesh.edgeIndices,
-        faceIds: mesh.faceIds,
-        ...(mesh.faceIdsInferred === undefined ? {} : {faceIdsInferred:mesh.faceIdsInferred}),
-        ...(mesh.faceIdsAuthoritative === undefined ? {} : {faceIdsAuthoritative:mesh.faceIdsAuthoritative}),
-        provenance: mesh.provenance,
-        topology: mesh.topology,
+    entities.push(
+      Object.freeze({
+        id: mesh.entityId ?? `entity:legacy/${index}`,
+        geometryAssetId: id,
+        ...(mesh.nativeGeometry ? { nativeGeometry: mesh.nativeGeometry } : {}),
+        ...(mesh.lods ? { lods: mesh.lods } : {}),
+        color: [...mesh.color] as [number, number, number, number],
+        transform: mesh.transform,
+        inspection: Object.freeze({
+          state: 'ready' as const,
+          version: 1 as const,
+          bvh: mesh.bvh,
+          edgeIndices: mesh.edgeIndices,
+          faceIds: mesh.faceIds,
+          ...(mesh.faceIdsInferred === undefined ? {} : { faceIdsInferred: mesh.faceIdsInferred }),
+          ...(mesh.faceIdsAuthoritative === undefined ? {} : { faceIdsAuthoritative: mesh.faceIdsAuthoritative }),
+          provenance: mesh.provenance,
+          topology: mesh.topology,
+        }),
       }),
-    }))
+    )
   }
   return Object.freeze({ version: 1, assets: Object.freeze(assets), entities: Object.freeze(entities) })
 }
@@ -139,7 +142,8 @@ export function meshesFromGeometryScene(scene: GeometryScene): MeshData[] {
     return {
       entityId: entity.id,
       geometryAssetId: asset.id,
-      ...(entity.nativeGeometry?{nativeGeometry:entity.nativeGeometry}:{}),
+      ...(entity.nativeGeometry ? { nativeGeometry: entity.nativeGeometry } : {}),
+      ...(entity.lods ? { lods: entity.lods } : {}),
       vertices: asset.vertices,
       indices: asset.indices,
       bvh: artifacts.bvh,
@@ -147,8 +151,8 @@ export function meshesFromGeometryScene(scene: GeometryScene): MeshData[] {
       color: [...entity.color],
       transform: entity.transform,
       faceIds: artifacts.faceIds,
-      ...(artifacts.faceIdsInferred === undefined ? {} : {faceIdsInferred:artifacts.faceIdsInferred}),
-      ...(artifacts.faceIdsAuthoritative === undefined ? {} : {faceIdsAuthoritative:artifacts.faceIdsAuthoritative}),
+      ...(artifacts.faceIdsInferred === undefined ? {} : { faceIdsInferred: artifacts.faceIdsInferred }),
+      ...(artifacts.faceIdsAuthoritative === undefined ? {} : { faceIdsAuthoritative: artifacts.faceIdsAuthoritative }),
       provenance: [...artifacts.provenance],
       topology: artifacts.topology,
     }
@@ -166,9 +170,21 @@ export function geometrySceneTransferables(scene: GeometryScene): ArrayBuffer[] 
     }
     buffers.add(view.buffer)
   }
-  for (const asset of scene.assets) { add(asset.vertices); add(asset.indices) }
+  for (const asset of scene.assets) {
+    add(asset.vertices)
+    add(asset.indices)
+  }
   for (const entity of scene.entities) {
     add(entity.transform)
+    for (const level of entity.lods ?? []) {
+      add(level.vertices)
+      add(level.indices)
+      add(level.edgeIndices)
+      add(level.faceIds)
+      add(level.bvh.bounds)
+      add(level.bvh.nodes)
+      add(level.bvh.triangles)
+    }
     const artifacts = entity.inspection
     if (artifacts?.state !== 'ready') continue
     add(artifacts.edgeIndices)
@@ -187,18 +203,48 @@ export function assertGeometryScene(scene: GeometryScene): void {
     if (assets.has(asset.id)) throw new Error(`Duplicate geometry asset ${asset.id}`)
     if (asset.version !== 1 || asset.vertices.length % 6 !== 0) throw new Error(`Invalid geometry asset ${asset.id}`)
     const vertexCount = asset.vertices.length / 6
-    if (asset.indices.some(index => index >= vertexCount)) throw new Error(`Geometry asset ${asset.id} has an out-of-range index`)
+    if (asset.indices.some(index => index >= vertexCount))
+      throw new Error(`Geometry asset ${asset.id} has an out-of-range index`)
     assets.set(asset.id, asset)
   }
   const entityIds = new Set<SceneEntityId>()
   for (const entity of scene.entities) {
-    if(entity.nativeGeometry!==undefined&&!isNativeGeometryArtifact(entity.nativeGeometry))throw new Error('Invalid native geometry snapshot')
+    if (entity.nativeGeometry !== undefined && !isNativeGeometryArtifact(entity.nativeGeometry))
+      throw new Error('Invalid native geometry snapshot')
     if (entityIds.has(entity.id)) throw new Error(`Duplicate scene entity ${entity.id}`)
-    if (!assets.has(entity.geometryAssetId)) throw new Error(`Scene entity ${entity.id} references a missing geometry asset`)
-    if (entity.transform.length !== 16 || !entity.transform.every(Number.isFinite)
-      || entity.color.length !== 4 || !entity.color.every(Number.isFinite)) {
+    if (!assets.has(entity.geometryAssetId))
+      throw new Error(`Scene entity ${entity.id} references a missing geometry asset`)
+    if (
+      entity.transform.length !== 16 ||
+      !entity.transform.every(Number.isFinite) ||
+      entity.color.length !== 4 ||
+      !entity.color.every(Number.isFinite)
+    ) {
       throw new Error(`Scene entity ${entity.id} has invalid presentation data`)
     }
+    if (entity.lods !== undefined) assertSceneLods(entity.id, entity.lods)
     entityIds.add(entity.id)
   }
+}
+
+function assertSceneLods(id: SceneEntityId, lods: readonly MeshLodLevel[]): void {
+  if (lods.length < 2 || lods.length > 3) throw new Error(`Scene entity ${id} needs two or three display levels`)
+  lods.forEach((level, index) => {
+    const vertexCount = level.vertices.length / 6
+    if (
+      !Number.isInteger(vertexCount) ||
+      level.indices.length % 3 !== 0 ||
+      level.triangleCount !== level.indices.length / 3 ||
+      level.faceIds.length !== level.triangleCount ||
+      level.indices.some(vertex => vertex >= vertexCount) ||
+      !(level.errorUpper >= 0) ||
+      !Number.isFinite(level.errorUpper)
+    ) {
+      throw new Error(`Scene entity ${id} has an invalid display level ${index}`)
+    }
+    const coarser = lods[index - 1]
+    if (coarser && !(coarser.triangleCount < level.triangleCount && coarser.errorUpper > level.errorUpper)) {
+      throw new Error(`Scene entity ${id} display levels must be ordered coarse to fine`)
+    }
+  })
 }

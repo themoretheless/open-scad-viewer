@@ -1,4 +1,145 @@
 use super::*;
+use std::borrow::Cow;
+
+/// Version of the Manifold WASM export surface (`abi_manifold_*` signatures
+/// and `abi_array_field` slot layouts). The TypeScript wrappers compare it
+/// with their own `MANIFOLD_ABI_VERSION` before the first Manifold call and
+/// refuse with `GEOMETRY_ABI_MISMATCH` when they differ. Bump on any change
+/// to an export signature or a result slot layout.
+pub const MANIFOLD_ABI_VERSION: u32 = 3;
+
+/// Documented shape of the Manifold operation reports as the TypeScript
+/// wrappers expose them. Mirrored by `src/kernel/geometry/manifoldReportSchema.json`;
+/// a bridge test fails when the two differ.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManifoldReportSchema {
+    /// `manifold_core::REPORT_SCHEMA_VERSION`.
+    pub schema_version: u32,
+    /// [`MANIFOLD_ABI_VERSION`].
+    pub abi_version: u32,
+    /// `(report kind, ordered field names)`.
+    pub reports: &'static [(&'static str, &'static [&'static str])],
+}
+
+pub const MANIFOLD_REPORT_SCHEMA: ManifoldReportSchema = ManifoldReportSchema {
+    schema_version: manifold_core::REPORT_SCHEMA_VERSION,
+    abi_version: MANIFOLD_ABI_VERSION,
+    reports: &[
+        (
+            "check",
+            &[
+                "vertexCount",
+                "triangleCount",
+                "componentCount",
+                "isManifold",
+                "isManifoldWithBoundary",
+                "boundaryEdges",
+                "nonManifoldEdges",
+                "orientationEdges",
+                "degenerateTriangles",
+                "nonManifoldVertices",
+                "isolatedVertices",
+                "zeroAreaTriangles",
+                "sliverTriangles",
+                "manifoldComponentCount",
+                "nonOrientableComponents",
+            ],
+        ),
+        (
+            "repair",
+            &[
+                "positions",
+                "indices",
+                "weldedVertices",
+                "removedDegenerateTriangles",
+                "flippedTriangles",
+                "splitVertices",
+                "filledHoles",
+                "filledTriangles",
+                "mode",
+                "isManifold",
+                "isManifoldWithBoundary",
+                "removedIsolatedVertices",
+                "vertexRemap",
+            ],
+        ),
+        (
+            "metrics",
+            &[
+                "vertexCount",
+                "triangleCount",
+                "edgeCount",
+                "eulerCharacteristic",
+                "componentCount",
+                "signedVolume",
+                "surfaceArea",
+                "watertight",
+                "components",
+            ],
+        ),
+        (
+            "metricsComponent",
+            &[
+                "triangleCount",
+                "vertexCount",
+                "edgeCount",
+                "boundaryEdges",
+                "eulerCharacteristic",
+                "genus",
+                "signedVolume",
+                "surfaceArea",
+            ],
+        ),
+        (
+            "boolean",
+            &[
+                "positions",
+                "indices",
+                "operandRepaired",
+                "kernel",
+                "isManifold",
+            ],
+        ),
+        (
+            "diagnostics",
+            &[
+                "selfIntersectionPairs",
+                "selfIntersectionCandidatePairs",
+                "selfIntersectionTruncated",
+                "minThickness",
+                "maxThickness",
+                "minThicknessTriangle",
+                "thicknessSamples",
+                "thicknessMissed",
+                "thinTriangles",
+                "minGap",
+                "minGapTriangle",
+                "componentCount",
+                "clearancePairs",
+                "mass",
+            ],
+        ),
+        (
+            "diagnosticsClearancePair",
+            &[
+                "componentA",
+                "componentB",
+                "distance",
+                "triangleA",
+                "triangleB",
+            ],
+        ),
+        (
+            "diagnosticsMass",
+            &["volume", "mass", "centerOfMass", "inertia"],
+        ),
+    ],
+};
+
+/// Manifold export surface version for the worker startup check.
+pub fn abi_manifold_abi_version() -> u32 {
+    MANIFOLD_ABI_VERSION
+}
 
 fn validate_transport(fmt: u32, vp: usize, vl: usize, ip: usize, il: usize) -> Result<()> {
     if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
@@ -10,35 +151,97 @@ fn validate_transport(fmt: u32, vp: usize, vl: usize, ip: usize, il: usize) -> R
     Ok(())
 }
 
-unsafe fn read_mesh(
+/// Borrow `len` elements of `T` at `ptr` when the caller's buffer is
+/// suitably aligned, so the kernel reads the uploaded bytes in place.
+///
+/// # Safety
+/// `ptr` must be readable for `len * size_of::<T>()` bytes for the returned
+/// lifetime, every bit pattern must be a valid `T`, and nothing may write the
+/// range meanwhile.
+unsafe fn borrow_aligned<'a, T>(ptr: usize, len: usize) -> Option<&'a [T]> {
+    if len == 0 {
+        return Some(&[]);
+    }
+    (ptr != 0 && ptr % std::mem::align_of::<T>() == 0)
+        .then(|| unsafe { std::slice::from_raw_parts(ptr as *const T, len) })
+}
+
+/// Read one uploaded mesh for a Manifold call without duplicating whole
+/// buffers: aligned f64 positions (and, on 32-bit targets such as wasm32,
+/// aligned u32 indices) are borrowed from the caller's upload; otherwise each
+/// element is converted once straight into the owned buffer, with no
+/// intermediate copy of the raw upload. On a 1M-triangle f64 mesh this
+/// removes ~40 MB of transient WASM heap per operand.
+///
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers that stay
+/// unmodified for the returned lifetime (the duration of the ABI call).
+unsafe fn read_mesh<'a>(
     fmt: u32,
     vp: usize,
     vl: usize,
     ip: usize,
     il: usize,
-) -> Result<(Vec<f64>, Vec<usize>)> {
+) -> Result<(Cow<'a, [f64]>, Cow<'a, [usize]>)> {
     validate_transport(fmt, vp, vl, ip, il)?;
-    let positions = unsafe { read_vertices_f64(fmt, vp, vl) }?;
-    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
-        .into_iter()
-        .map(|index| index as usize)
-        .collect();
+    let positions: Cow<'a, [f64]> = match fmt {
+        FMT_F64 => match unsafe { borrow_aligned::<f64>(vp, vl) } {
+            Some(slice) => Cow::Borrowed(slice),
+            None => Cow::Owned(unsafe { read_pod(vp, vl) }),
+        },
+        _ => Cow::Owned(
+            (0..vl)
+                .map(|k| f64::from(unsafe { std::ptr::read_unaligned((vp as *const f32).add(k)) }))
+                .collect(),
+        ),
+    };
+    let borrowed_indices = if std::mem::size_of::<usize>() == std::mem::size_of::<u32>() {
+        unsafe { borrow_aligned::<usize>(ip, il) }
+    } else {
+        None
+    };
+    let indices: Cow<'a, [usize]> = match borrowed_indices {
+        Some(slice) => Cow::Borrowed(slice),
+        None => Cow::Owned(
+            (0..il)
+                .map(|k| unsafe { std::ptr::read_unaligned((ip as *const u32).add(k)) } as usize)
+                .collect(),
+        ),
+    };
     manifold_core::validate_indexed_mesh(&positions, &indices)
         .map_err(|error| input(error.to_string()))?;
     Ok((positions, indices))
 }
 
 /// Run manifold-core `check` on an uploaded mesh and return a result handle
-/// for `abi_array_field` (`ManifoldCheck` slots).
+/// for `abi_array_field` (`ManifoldCheck` slots). `sliver_area` is the
+/// area threshold of `sliverTriangles` (finite, `>= 0`; `0` reports none).
 /// # Safety
 /// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
 /// caller-owned buffers; they are only read.
-pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt: u32) -> u64 {
+pub unsafe fn abi_manifold_check(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    sliver_area: f64,
+) -> u64 {
+    if !(sliver_area.is_finite() && sliver_area >= 0.0) {
+        return packed(geometry(Err(input("Invalid sliver area threshold"))));
+    }
     let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
         Ok(mesh) => mesh,
         Err(error) => return packed(geometry(Err(error))),
     };
-    let report = manifold_core::check(&vertices, &indices);
+    let report = manifold_core::check_with_options(
+        &vertices,
+        &indices,
+        &manifold_core::CheckOptions {
+            sliver_area_threshold: sliver_area,
+        },
+    );
+    let list = |items: &[usize]| -> Vec<u32> { items.iter().map(|&i| i as u32).collect() };
     let flat = |edges: &[manifold_core::EdgeKey]| -> Vec<u32> {
         edges
             .iter()
@@ -60,12 +263,16 @@ pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt
             .iter()
             .map(|&i| i as u32)
             .collect(),
-        isolated_vertices: report.isolated_vertices.iter().map(|&i| i as u32).collect(),
+        isolated_vertices: list(&report.isolated_vertices),
+        zero_area_triangles: list(&report.zero_area_triangles),
+        sliver_triangles: list(&report.sliver_triangles),
         summary: [
             report.vertex_count as u32,
             report.triangle_count as u32,
             report.component_count as u32,
             flags,
+            report.manifold_component_count as u32,
+            report.non_orientable_components as u32,
         ],
     };
     packed(geometry(encode(mesh_analysis::store(buffers))))
@@ -74,7 +281,9 @@ pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt
 /// Run manifold-core `repair` and return the repaired mesh plus stats
 /// (`ManifoldRepair` slots). `mode`: 0 = Conservative (weld + de-degenerate +
 /// orientation unify), 1 = Full (additionally splits non-manifold
-/// edges/vertices and fills simple boundary loops).
+/// edges/vertices and fills simple boundary loops). `remove_isolated` != 0
+/// drops unreferenced vertices and returns the input-to-output vertex remap
+/// (`u32::MAX` = removed); otherwise the remap buffer is empty.
 /// # Safety
 /// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
 /// caller-owned buffers; they are only read. `epsilon` must be finite.
@@ -86,6 +295,7 @@ pub unsafe fn abi_manifold_repair(
     fmt: u32,
     epsilon: f64,
     mode: u32,
+    remove_isolated: u32,
 ) -> u64 {
     if !epsilon.is_finite() {
         return packed(geometry(Err(input("Invalid weld epsilon"))));
@@ -99,12 +309,30 @@ pub unsafe fn abi_manifold_repair(
         Ok(mesh) => mesh,
         Err(error) => return packed(geometry(Err(error))),
     };
-    let out = manifold_core::repair_with_mode(&vertices, &indices, epsilon, mode);
+    let options = manifold_core::RepairOptions {
+        mode,
+        epsilon,
+        remove_isolated_vertices: remove_isolated != 0,
+        ..manifold_core::RepairOptions::default()
+    };
+    let out = match manifold_core::repair_with_options(&vertices, &indices, &options) {
+        Ok(out) => out,
+        Err(exhausted) => *exhausted.partial, // unreachable: no budget set
+    };
+    let vertex_remap = if remove_isolated != 0 {
+        out.vertex_remap
+            .iter()
+            .map(|v| v.map_or(u32::MAX, |w| w as u32))
+            .collect()
+    } else {
+        Vec::new()
+    };
     let flags = (out.report.residual.is_manifold() as u32)
         | ((out.report.residual.is_manifold_with_boundary() as u32) << 1);
     let buffers = mesh_analysis::AnalysisBuffers::ManifoldRepair {
         positions: out.positions,
         indices: out.indices.iter().map(|&i| i as u32).collect(),
+        vertex_remap,
         stats: [
             out.report.welded_vertices as u32,
             out.report.removed_degenerate_triangles as u32,
@@ -114,6 +342,7 @@ pub unsafe fn abi_manifold_repair(
             out.report.filled_holes as u32,
             out.report.filled_triangles as u32,
             mode as u32,
+            out.report.removed_isolated_vertices as u32,
         ],
     };
     packed(geometry(encode(mesh_analysis::store(buffers))))
@@ -162,8 +391,9 @@ pub unsafe fn abi_manifold_metrics(vp: usize, vl: usize, ip: usize, il: usize, f
 }
 
 /// Run a manifold-ops boolean `a OP b` (`op`: 0 = union, 1 = intersection,
-/// 2 = difference) with guaranteed strictly manifold output and return the
-/// result mesh plus kernel stats (`ManifoldBoolean` slots).
+/// 2 = difference, 3 = symmetric difference) with guaranteed strictly manifold output and return the
+/// result mesh plus kernel stats (`ManifoldBoolean` slots). `max_work` is the
+/// BSP work budget per kernel step; 0 selects the default budget.
 /// # Safety
 /// All vertex/index buffers must reference live caller-owned memory; read only.
 #[allow(clippy::too_many_arguments)]
@@ -181,11 +411,13 @@ pub unsafe fn abi_manifold_boolean(
     op: u32,
     weld_epsilon: f64,
     relative_tolerance: f64,
+    max_work: u32,
 ) -> u64 {
     let op = match op {
         0 => manifold_ops::BooleanOp::Union,
         1 => manifold_ops::BooleanOp::Intersection,
         2 => manifold_ops::BooleanOp::Difference,
+        3 => manifold_ops::BooleanOp::Xor,
         _ => return packed(geometry(Err(input("Invalid boolean operation")))),
     };
     let (a_positions, a_indices) = match unsafe { read_mesh(a_fmt, a_vp, a_vl, a_ip, a_il) } {
@@ -205,6 +437,11 @@ pub unsafe fn abi_manifold_boolean(
         manifold_ops::BooleanOptions {
             weld_epsilon,
             relative_tolerance,
+            max_work: if max_work == 0 {
+                manifold_ops::DEFAULT_WORK_BUDGET
+            } else {
+                max_work as usize
+            },
         },
     ) {
         Ok(out) => out,
@@ -234,4 +471,240 @@ pub unsafe fn abi_manifold_boolean(
         ],
     };
     packed(geometry(encode(mesh_analysis::store(buffers))))
+}
+
+/// Default work budget of [`abi_manifold_diagnostics`] (`max_work == 0`).
+pub const DIAGNOSTICS_DEFAULT_WORK: usize = 4_000_000;
+
+fn diagnostics_error(e: manifold_core::DiagnosticsError) -> Error {
+    let code = match e {
+        manifold_core::DiagnosticsError::WorkBudgetExceeded { .. } => "GEOMETRY_RESOURCE_LIMIT",
+        _ => "GEOMETRY_INVALID_INPUT",
+    };
+    Error::new(code, e.to_string())
+}
+
+fn diagnostics_buffers(
+    vertices: &[f64],
+    indices: &[usize],
+    density: f64,
+    min_thickness: f64,
+    clearance_threshold: f64,
+    max_work: usize,
+) -> Result<mesh_analysis::AnalysisBuffers> {
+    use manifold_core::DiagnosticsError;
+    let si = manifold_core::self_intersections(
+        vertices,
+        indices,
+        manifold_core::SelfIntersectionOptions {
+            max_candidate_pairs: max_work,
+            ..Default::default()
+        },
+    )
+    .map_err(diagnostics_error)?;
+    let th = manifold_core::wall_thickness(
+        vertices,
+        indices,
+        manifold_core::ThicknessOptions {
+            min_thickness,
+            max_rays: max_work,
+        },
+    )
+    .map_err(diagnostics_error)?;
+    let cl = manifold_core::clearance(
+        vertices,
+        indices,
+        manifold_core::ClearanceOptions {
+            threshold: clearance_threshold,
+            max_candidate_pairs: max_work,
+        },
+    )
+    .map_err(diagnostics_error)?;
+    let mass = match manifold_core::mass_properties(vertices, indices, density) {
+        Ok(m) => Some(m),
+        Err(DiagnosticsError::OpenMesh | DiagnosticsError::ZeroVolume) => None,
+        Err(e) => return Err(diagnostics_error(e)),
+    };
+    let mut floats = vec![
+        th.min_thickness.unwrap_or(f64::NAN),
+        th.max_thickness.unwrap_or(f64::NAN),
+        th.min_gap.unwrap_or(f64::NAN),
+    ];
+    match &mass {
+        Some(m) => {
+            floats.extend([m.volume, m.mass]);
+            floats.extend(m.center_of_mass);
+            floats.extend(m.inertia.iter().flatten());
+        }
+        None => floats.extend([f64::NAN; 14]),
+    }
+    floats.extend(cl.pairs.iter().map(|p| p.distance));
+    let flags = si.truncated as u32 | ((mass.is_some() as u32) << 1);
+    Ok(mesh_analysis::AnalysisBuffers::ManifoldDiagnostics {
+        intersection_pairs: si
+            .pairs
+            .iter()
+            .flat_map(|&(a, b)| [a as u32, b as u32])
+            .collect(),
+        thin_triangles: th.thin_triangles.iter().map(|&t| t as u32).collect(),
+        clearance_pairs: cl
+            .pairs
+            .iter()
+            .flat_map(|p| {
+                [
+                    p.component_a as u32,
+                    p.component_b as u32,
+                    p.triangle_a as u32,
+                    p.triangle_b as u32,
+                ]
+            })
+            .collect(),
+        floats,
+        summary: [
+            si.candidate_pairs as u32,
+            flags,
+            th.samples as u32,
+            th.missed as u32,
+            cl.component_count as u32,
+            th.min_triangle.map_or(0, |t| t as u32 + 1),
+            th.min_gap_triangle.map_or(0, |t| t as u32 + 1),
+            0,
+        ],
+    })
+}
+
+/// Run the manifold-core diagnostics (self-intersections, wall thickness,
+/// shell clearance, mass properties) and return a result handle for
+/// `abi_array_field` (`ManifoldDiagnostics` slots). `max_work` bounds every
+/// pass (candidate pairs, rays); 0 selects [`DIAGNOSTICS_DEFAULT_WORK`].
+/// Mass properties are omitted (flag bit 1 clear) for open or zero-volume
+/// meshes; a pass over budget fails with `GEOMETRY_RESOURCE_LIMIT`.
+/// # Safety
+/// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read.
+#[allow(clippy::too_many_arguments)]
+pub unsafe fn abi_manifold_diagnostics(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    density: f64,
+    min_thickness: f64,
+    clearance_threshold: f64,
+    max_work: u32,
+) -> u64 {
+    let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
+        Ok(mesh) => mesh,
+        Err(error) => return packed(geometry(Err(error))),
+    };
+    let max_work = if max_work == 0 {
+        DIAGNOSTICS_DEFAULT_WORK
+    } else {
+        max_work as usize
+    };
+    match diagnostics_buffers(
+        &vertices,
+        &indices,
+        density,
+        min_thickness,
+        clearance_threshold,
+        max_work,
+    ) {
+        Ok(buffers) => packed(geometry(encode(mesh_analysis::store(buffers)))),
+        Err(error) => packed(geometry(Err(error))),
+    }
+}
+
+#[cfg(test)]
+mod read_mesh_tests {
+    use super::*;
+
+    const TETRA_F64: [f64; 12] = [0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 1.];
+    const TETRA_INDICES: [u32; 12] = [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3];
+
+    #[test]
+    fn aligned_f64_positions_are_read_in_place() {
+        let (positions, indices) = unsafe {
+            read_mesh(
+                FMT_F64,
+                TETRA_F64.as_ptr() as usize,
+                12,
+                TETRA_INDICES.as_ptr() as usize,
+                12,
+            )
+        }
+        .expect("valid tetrahedron");
+        assert!(matches!(positions, Cow::Borrowed(_)));
+        assert_eq!(positions.as_ptr(), TETRA_F64.as_ptr());
+        assert_eq!(&*positions, &TETRA_F64);
+        let expected: Vec<usize> = TETRA_INDICES.iter().map(|&i| i as usize).collect();
+        assert_eq!(&*indices, expected.as_slice());
+        // u32 indices can only be borrowed where usize is 32 bits (wasm32).
+        assert_eq!(
+            matches!(indices, Cow::Borrowed(_)),
+            std::mem::size_of::<usize>() == 4
+        );
+    }
+
+    #[test]
+    fn misaligned_uploads_are_copied_once_with_identical_values() {
+        // Byte buffers offset by one force unaligned f64 and u32 reads.
+        let mut vertex_bytes = vec![0u8; 1 + 12 * 8];
+        for (k, v) in TETRA_F64.iter().enumerate() {
+            vertex_bytes[1 + k * 8..1 + (k + 1) * 8].copy_from_slice(&v.to_ne_bytes());
+        }
+        let mut index_bytes = vec![0u8; 1 + 12 * 4];
+        for (k, i) in TETRA_INDICES.iter().enumerate() {
+            index_bytes[1 + k * 4..1 + (k + 1) * 4].copy_from_slice(&i.to_ne_bytes());
+        }
+        let (positions, indices) = unsafe {
+            read_mesh(
+                FMT_F64,
+                vertex_bytes.as_ptr() as usize + 1,
+                12,
+                index_bytes.as_ptr() as usize + 1,
+                12,
+            )
+        }
+        .expect("valid tetrahedron");
+        assert!(matches!(positions, Cow::Owned(_)));
+        assert!(matches!(indices, Cow::Owned(_)));
+        assert_eq!(&*positions, &TETRA_F64);
+        assert_eq!(
+            indices.iter().map(|&i| i as u32).collect::<Vec<_>>(),
+            TETRA_INDICES
+        );
+    }
+
+    #[test]
+    fn f32_positions_widen_exactly_and_bad_meshes_still_fail() {
+        let f32s: Vec<f32> = [0.1f32, 0.2, 0.3, 1., 0., 0., 0., 1., 0., 0., 0., 1.].to_vec();
+        let (positions, _) = unsafe {
+            read_mesh(
+                FMT_F32,
+                f32s.as_ptr() as usize,
+                12,
+                TETRA_INDICES.as_ptr() as usize,
+                12,
+            )
+        }
+        .expect("valid mesh");
+        let widened: Vec<f64> = f32s.iter().map(|&v| f64::from(v)).collect();
+        assert_eq!(&*positions, widened.as_slice());
+        let out_of_range = [0u32, 1, 9];
+        let error = unsafe {
+            read_mesh(
+                FMT_F64,
+                TETRA_F64.as_ptr() as usize,
+                12,
+                out_of_range.as_ptr() as usize,
+                3,
+            )
+        }
+        .expect_err("index 9 is out of range");
+        assert_eq!(error.code, "GEOMETRY_INVALID_INPUT");
+        let empty = unsafe { read_mesh(FMT_F64, 0, 0, 0, 0) }.expect("empty mesh");
+        assert!(empty.0.is_empty() && empty.1.is_empty());
+    }
 }

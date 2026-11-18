@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import {
   ORACLE_CASES,
   ORACLE_REVIEW,
@@ -101,9 +101,13 @@ type OwnOracle = {
   verification: { freshProcesses: number; deterministic: boolean; semanticContract: string }
   cases: Record<string, OwnSnapshot>
 }
-const PREVIOUS_SNAPSHOTS = JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v2.json', import.meta.url), 'utf8')).cases as Record<string, Omit<OwnSnapshot, 'source' | 'quality'>>
+const PREVIOUS_SNAPSHOTS = JSON.parse(
+  readFileSync(new URL('./fixtures/own-rust-cad-oracle-v2.json', import.meta.url), 'utf8'),
+).cases as Record<string, Omit<OwnSnapshot, 'source' | 'quality'>>
 function currentOracle(): OwnOracle {
-  return JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v3.json', import.meta.url), 'utf8')) as OwnOracle
+  return JSON.parse(
+    readFileSync(new URL('./fixtures/own-rust-cad-oracle-v3.json', import.meta.url), 'utf8'),
+  ) as OwnOracle
 }
 
 const outcomes = new Map<string, ReferenceLegacyOutcome>()
@@ -125,34 +129,50 @@ function expectMutationClass(
 ): void {
   const candidate = clone(baseline)
   mutate(candidate)
-  expect(referenceCompareLegacyOutcomes(baseline, candidate))
-    .toEqual(expect.arrayContaining([expect.objectContaining({ fieldClass })]))
+  expect(referenceCompareLegacyOutcomes(baseline, candidate)).toEqual(
+    expect.arrayContaining([expect.objectContaining({ fieldClass })]),
+  )
 }
 
 beforeAll(async () => {
   for (const fixture of SUCCESS_FIXTURES) {
-    outcomes.set(fixture.id, await referenceCaptureLegacyOutcome(() => parseOpenSCAD(
-      fixture.source,
-      { quality: fixture.quality },
-    )))
+    outcomes.set(
+      fixture.id,
+      await referenceCaptureLegacyOutcome(() => parseOpenSCAD(fixture.source, { quality: fixture.quality })),
+    )
   }
 })
 
 describe('independent pinned direct-evaluator differential oracle', () => {
-  it('captures deterministic complete results in fresh Node processes without writing a baseline', () => {
-    const capture = () => JSON.parse(execFileSync(process.execPath,
-      ['--import', 'tsx', 'scripts/record-own-cad-oracle.mjs', '--capture'],
-      { cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8', timeout: CAPTURE_PROCESS_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 }))
-    const first = capture(), second = capture()
-    expect(first).toEqual(second)
-    expect(Object.keys(first)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
-  }, CAPTURE_TEST_TIMEOUT_MS)
+  it(
+    'captures deterministic complete results in fresh Node processes without writing a baseline',
+    () => {
+      const capture = () =>
+        JSON.parse(
+          execFileSync(process.execPath, ['--import', 'tsx', 'scripts/record-own-cad-oracle.mjs', '--capture'], {
+            cwd: fileURLToPath(new URL('../', import.meta.url)),
+            encoding: 'utf8',
+            timeout: CAPTURE_PROCESS_TIMEOUT_MS,
+            maxBuffer: 4 * 1024 * 1024,
+          }),
+        )
+      const first = capture(),
+        second = capture()
+      expect(first).toEqual(second)
+      expect(Object.keys(first)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
+    },
+    CAPTURE_TEST_TIMEOUT_MS,
+  )
 
   it('publishes complete new baselines exclusively and leaves no output when source stability fails', () => {
     const directory = mkdtempSync(join(tmpdir(), 'own-oracle-publish-'))
     try {
       const path = join(directory, 'baseline.json')
-      expect(() => publishOracleExclusive(path, { candidate: 1 }, () => { throw new Error('source changed') })).toThrow('source changed')
+      expect(() =>
+        publishOracleExclusive(path, { candidate: 1 }, () => {
+          throw new Error('source changed')
+        }),
+      ).toThrow('source changed')
       expect(readdirSync(directory)).toEqual([])
       publishOracleExclusive(path, { original: true }, () => {})
       expect(() => publishOracleExclusive(path, { replacement: true }, () => {})).toThrow()
@@ -164,8 +184,11 @@ describe('independent pinned direct-evaluator differential oracle', () => {
   })
 
   it('retains immutable v1 and pins the explicit v2 capture contract', () => {
-    expect(createHash('sha256').update(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url))).digest('hex'))
-      .toBe('4564124cc236974f353d66944cff953f4ae4fbd71f546d5c10310bf645c0a9c7')
+    expect(
+      createHash('sha256')
+        .update(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url)))
+        .digest('hex'),
+    ).toBe('4564124cc236974f353d66944cff953f4ae4fbd71f546d5c10310bf645c0a9c7')
     expect(ORACLE_CASES).toEqual(SUCCESS_FIXTURES.map(({ id, source, quality }) => ({ id, source, quality })))
     const oracle = currentOracle()
     expect(oracle.id).toBe('own-rust-cad-oracle-v3')
@@ -175,7 +198,11 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(oracle.source.files).toBeGreaterThan(0)
     expect(Object.keys(oracle.artifacts).sort()).toEqual(['decoderSha256', 'packedSha256', 'wasmSha256'])
     Object.values(oracle.artifacts).forEach(hash => expect(hash).toMatch(/^[a-f0-9]{64}$/))
-    expect(oracle.verification).toEqual({ freshProcesses: 2, deterministic: true, semanticContract: 'own-rust-cad-oracle-v3' })
+    expect(oracle.verification).toEqual({
+      freshProcesses: 2,
+      deterministic: true,
+      semanticContract: 'own-rust-cad-oracle-v3',
+    })
     expect(Object.keys(oracle.cases)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
     for (const fixture of SUCCESS_FIXTURES.filter(item => item.id === 'colored-transform')) {
       expect(oracle.cases[fixture.id]).toMatchObject(PREVIOUS_SNAPSHOTS[fixture.id])
@@ -193,9 +220,7 @@ describe('independent pinned direct-evaluator differential oracle', () => {
 
     const testSource = readFileSync(new URL('./legacyDirectEvaluatorOracle.test.ts', import.meta.url), 'utf8')
     const productionImports = testSource.match(/^\s*import\s+.*['"]\.\.\/src\/.*$/gm) ?? []
-    expect(productionImports).toEqual([
-      "import { parseOpenSCAD } from '../src/services/openscadParser'",
-    ])
+    expect(productionImports).toEqual(["import { parseOpenSCAD } from '../src/language/openscadParser'"])
   })
 
   it('freezes exact, tolerant, validate-only, and unavailable field classes before adapter results', () => {
@@ -208,13 +233,15 @@ describe('independent pinned direct-evaluator differential oracle', () => {
       },
     })
     expect(REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT.validateOnly).toHaveLength(2)
-    expect(REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT.unavailableFromDirectEvaluator)
-      .toEqual(expect.arrayContaining([
+    expect(REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT.unavailableFromDirectEvaluator).toEqual(
+      expect.arrayContaining([
         'canonical protocol-v5 scene/wire bytes',
         'multiple diagnostic ordering or warnings retained on failure',
-      ]))
-    expect(REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT.blockingIntegrationRequirements)
-      .toContain('candidate path must expose a complete ParseResult-compatible terminal outcome, not only opaque backend payloads')
+      ]),
+    )
+    expect(REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT.blockingIntegrationRequirements).toContain(
+      'candidate path must expose a complete ParseResult-compatible terminal outcome, not only opaque backend payloads',
+    )
     expect(REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT.workerBoundaryPolicy).toEqual({
       identityCharacters: 256,
       oversizedDirectSuccess: 'worker-level-unavailable',
@@ -227,16 +254,16 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     const raw = await parseOpenSCAD(source)
     expect(raw.meshes).toHaveLength(1)
     expect(raw.meshes[0].entityId).toMatch(/^entity:sha256:/)
-    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw))).resolves.toMatchObject({tag:'success'})
+    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw))).resolves.toMatchObject({ tag: 'success' })
     raw.meshes[0].entityId = 'x'.repeat(257)
 
-    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw)))
-      .rejects.toMatchObject({
-        name: 'ReferenceLegacyOracleError',
-        path: '$.meshes[0].entityId',
-      })
-    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw)))
-      .rejects.toThrow('expected well-formed text of at most 256 UTF-16 code units')
+    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw))).rejects.toMatchObject({
+      name: 'ReferenceLegacyOracleError',
+      path: '$.meshes[0].entityId',
+    })
+    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw))).rejects.toThrow(
+      'expected well-formed text of at most 256 UTF-16 code units',
+    )
   })
 
   it.each(SUCCESS_FIXTURES)('pins own Rust LME1/LSE1 bytes for $id', fixture => {
@@ -254,22 +281,48 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(referenceLegacySha256(sceneBytes)).toBe(snapshot.sceneHash)
   })
 
-  it.each(SUCCESS_FIXTURES)('checks fixed geometry and semantic invariants independently of v2 hashes for $id', fixture => {
-    expect(() => assertOwnCadSemantics(fixture, success(fixture.id))).not.toThrow()
-  })
+  it.each(SUCCESS_FIXTURES)(
+    'checks fixed geometry and semantic invariants independently of v2 hashes for $id',
+    fixture => {
+      expect(() => assertOwnCadSemantics(fixture, success(fixture.id))).not.toThrow()
+    },
+  )
 
   it.each([
-    { name: 'reported metric drift', mutate: (value: ReturnType<typeof success>) => { (value.success as { volume: number }).volume += 0.01 } },
-    { name: 'forged source span', mutate: (value: ReturnType<typeof success>) => { (value.success.meshes[0].provenance[0].source as { start: number }).start++ } },
-    { name: 'lost color', mutate: (value: ReturnType<typeof success>) => { (value.success.meshes[0].color as number[])[3] = 1 } },
-    { name: 'invalid normal', mutate: (value: ReturnType<typeof success>) => { value.success.meshes[0].vertices.bytes.fill(0, 12, 24) } },
-    { name: 'wrong winding despite unchanged reported topology', mutate: (value: ReturnType<typeof success>) => {
-      const bytes = value.success.meshes[0].indices.bytes
-      const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-      const first = data.getUint32(0, true)
-      data.setUint32(0, data.getUint32(4, true), true)
-      data.setUint32(4, first, true)
-    } },
+    {
+      name: 'reported metric drift',
+      mutate: (value: ReturnType<typeof success>) => {
+        ;(value.success as { volume: number }).volume += 0.01
+      },
+    },
+    {
+      name: 'forged source span',
+      mutate: (value: ReturnType<typeof success>) => {
+        ;(value.success.meshes[0].provenance[0].source as { start: number }).start++
+      },
+    },
+    {
+      name: 'lost color',
+      mutate: (value: ReturnType<typeof success>) => {
+        ;(value.success.meshes[0].color as number[])[3] = 1
+      },
+    },
+    {
+      name: 'invalid normal',
+      mutate: (value: ReturnType<typeof success>) => {
+        value.success.meshes[0].vertices.bytes.fill(0, 12, 24)
+      },
+    },
+    {
+      name: 'wrong winding despite unchanged reported topology',
+      mutate: (value: ReturnType<typeof success>) => {
+        const bytes = value.success.meshes[0].indices.bytes
+        const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+        const first = data.getUint32(0, true)
+        data.setUint32(0, data.getUint32(4, true), true)
+        data.setUint32(4, first, true)
+      },
+    },
   ])('refuses semantic mutation before recording a replacement hash: $name', ({ mutate }) => {
     const value = clone(success('colored-transform'))
     mutate(value)
@@ -295,8 +348,7 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(colored.meshes[0].provenance[0].source?.operationId).toBe(
       'op:root/call%3Acolor%230/children/call%3Atranslate%230/children/call%3Acube%230',
     )
-    expect(colored.meshes[0].provenance[0].source?.instanceId)
-      .toBe(colored.meshes[0].entityId)
+    expect(colored.meshes[0].provenance[0].source?.instanceId).toBe(colored.meshes[0].entityId)
 
     const repeated = success('repeated-loop-identities').success
     expect(repeated.meshes).toHaveLength(3)
@@ -321,18 +373,14 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(twoDimensional).toMatchObject({
       tag: 'success',
       success: {
-        warnings: [
-          '1 top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()',
-        ],
+        warnings: ['1 top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()'],
         volume: 0,
         surfaceArea: 0,
         meshes: [],
         scene: { assets: [], entities: [] },
       },
     })
-    expect(success('reduced-preview').success.warnings).toEqual([
-      '$fn=96 was clamped to 48 for preview rendering',
-    ])
+    expect(success('reduced-preview').success.warnings).toEqual(['$fn=96 was clamped to 48 for preview rendering'])
   })
 
   it.each([
@@ -418,8 +466,9 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     const retargeted = clone(repeated)
     if (retargeted.tag !== 'error') throw new Error('Expected a repeated source-boundary error')
     ;(retargeted.error as { message: string }).message = `${retargeted.error.message} forged`
-    expect(referenceCompareLegacyOutcomes(baseline, retargeted))
-      .toEqual(expect.arrayContaining([expect.objectContaining({ fieldClass: 'error' })]))
+    expect(referenceCompareLegacyOutcomes(baseline, retargeted)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ fieldClass: 'error' })]),
+    )
   })
 
   it('compares full-equivalent and reduced preview/full pairs under separate frozen rules', async () => {
@@ -449,13 +498,11 @@ describe('independent pinned direct-evaluator differential oracle', () => {
   })
 
   it('preserves the first-seen original-ID equality partition and rejects producer collapse', async () => {
-    const baseline = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(
-      'cube(1); sphere(r=1,$fn=12);',
-    ))
+    const baseline = await referenceCaptureLegacyOutcome(() => parseOpenSCAD('cube(1); sphere(r=1,$fn=12);'))
     if (baseline.tag !== 'success') throw new Error('Expected a successful outcome')
-    const originalIds = baseline.success.meshes.map(mesh => (
-      mesh.provenance.find(run => run.source !== null)?.source?.originalId
-    ))
+    const originalIds = baseline.success.meshes.map(
+      mesh => mesh.provenance.find(run => run.source !== null)?.source?.originalId,
+    )
     expect(originalIds).toEqual([0, 1])
 
     const forged = clone(baseline)
@@ -463,22 +510,25 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     const secondSource = forged.success.meshes[1].provenance.find(run => run.source !== null)?.source
     if (!secondSource) throw new Error('Expected a second producer source')
     ;(secondSource as { originalId: number }).originalId = 0
-    expect(referenceCompareLegacyOutcomes(baseline, forged))
-      .toEqual(expect.arrayContaining([
+    expect(referenceCompareLegacyOutcomes(baseline, forged)).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           fieldClass: 'provenance',
           path: expect.stringContaining('.originalId'),
         }),
-      ]))
+      ]),
+    )
   })
 
   it('pins cooperative cancellation as a distinct terminal outcome', async () => {
     const source = Array.from({ length: 120 }, (_, index) => `cube([1,1,${index + 1}]);`).join('\n')
     let calls = 0
-    const cancelled = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(source, {
-      shouldAbort: () => calls++ > 0,
-      yieldControl: async () => {},
-    }))
+    const cancelled = await referenceCaptureLegacyOutcome(() =>
+      parseOpenSCAD(source, {
+        shouldAbort: () => calls++ > 0,
+        yieldControl: async () => {},
+      }),
+    )
     expect(cancelled).toEqual({
       tag: 'cancelled',
       error: {
@@ -495,8 +545,9 @@ describe('independent pinned direct-evaluator differential oracle', () => {
 
     const forged = clone(cancelled) as ReferenceLegacyOutcome
     ;(forged as { tag: string }).tag = 'error'
-    expect(referenceCompareLegacyOutcomes(cancelled, forged))
-      .toEqual([expect.objectContaining({ fieldClass: 'outcome', path: '$.tag' })])
+    expect(referenceCompareLegacyOutcomes(cancelled, forged)).toEqual([
+      expect.objectContaining({ fieldClass: 'outcome', path: '$.tag' }),
+    ])
   })
 
   it.each([
@@ -585,8 +636,9 @@ describe('independent pinned direct-evaluator differential oracle', () => {
 
     const outside = clone(baseline)
     ;(outside.success as { surfaceArea: number }).surfaceArea += 1e-4
-    expect(referenceCompareLegacyOutcomes(baseline, outside))
-      .toEqual([expect.objectContaining({ fieldClass: 'metrics', path: '$.success.surfaceArea' })])
+    expect(referenceCompareLegacyOutcomes(baseline, outside)).toEqual([
+      expect.objectContaining({ fieldClass: 'metrics', path: '$.success.surfaceArea' }),
+    ])
   })
 
   it('detects error message/span mutations and rejects invalid timing/mesh schemas', async () => {
@@ -595,20 +647,22 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     const forged = clone(baseline)
     ;(forged.error as { message: string }).message = 'forged'
     ;(forged.error as { start: number }).start = 1
-    expect(referenceCompareLegacyOutcomes(baseline, forged))
-      .toEqual(expect.arrayContaining([
+    expect(referenceCompareLegacyOutcomes(baseline, forged)).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({ fieldClass: 'error', path: '$.error.message' }),
         expect.objectContaining({ fieldClass: 'error', path: '$.error.start' }),
-      ]))
+      ]),
+    )
 
     const raw = await parseOpenSCAD('cube(1);')
-    expect(() => referenceSnapshotLegacySuccess({
-      ...raw,
-      timings: { ...raw.timings, analyzeMs: -1 },
-    })).toThrow(ReferenceLegacyOracleError)
+    expect(() =>
+      referenceSnapshotLegacySuccess({
+        ...raw,
+        timings: { ...raw.timings, analyzeMs: -1 },
+      }),
+    ).toThrow(ReferenceLegacyOracleError)
     const missingIdentity = { ...raw, meshes: raw.meshes.map(mesh => ({ ...mesh })) }
     delete (missingIdentity.meshes[0] as { geometryAssetId?: string }).geometryAssetId
-    expect(() => referenceSnapshotLegacySuccess(missingIdentity))
-      .toThrow(ReferenceLegacyOracleError)
+    expect(() => referenceSnapshotLegacySuccess(missingIdentity)).toThrow(ReferenceLegacyOracleError)
   })
 })

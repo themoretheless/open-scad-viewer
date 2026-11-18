@@ -1,8 +1,8 @@
 //! Shared exact original tensor queries. Never rounded extracted controls.
 use crate::surface::Surface;
 use cad_predicates::{
-    AuthoredScalar, BezierIdentity, Limits, PredicateContext, RationalTensorSource, SourceArena,
-    ToleranceContext,
+    AuthoredScalar, BezierIdentity, Limits, PredicateContext, RationalTensorSource, Reason,
+    SourceArena, ToleranceContext,
 };
 pub(crate) struct Work {
     pub cells: usize,
@@ -15,17 +15,30 @@ pub(crate) fn query(
     max_cells: usize,
     max_work: u64,
 ) -> bool {
-    if out.exact_work >= max_work
-        || caps.iter().any(|s| {
-            s.periodic_u
-                || s.periodic_v
-                || !(1..=8).contains(&s.degree_u)
-                || !(1..=8).contains(&s.degree_v)
-                || s.control_points.len() > 64
-                || s.control_points[0].len() > 64
-        })
-    {
-        return false;
+    matches!(
+        query_outcome(caps, order, out, max_cells, max_work),
+        BezierIdentity::Equal
+    )
+}
+pub(crate) fn query_outcome(
+    caps: &[&Surface],
+    order: Option<usize>,
+    out: &mut Work,
+    max_cells: usize,
+    max_work: u64,
+) -> BezierIdentity {
+    if out.exact_work >= max_work {
+        return BezierIdentity::Indeterminate(Reason::ResourceLimit);
+    }
+    if caps.iter().any(|s| {
+        s.periodic_u
+            || s.periodic_v
+            || !(1..=8).contains(&s.degree_u)
+            || !(1..=8).contains(&s.degree_v)
+            || s.control_points.len() > 64
+            || s.control_points[0].len() > 64
+    }) {
+        return BezierIdentity::Indeterminate(Reason::MissingProof);
     }
     let charge = caps
         .iter()
@@ -34,7 +47,7 @@ pub(crate) fn query(
         })
         .sum::<usize>();
     if charge > 100000 || charge > max_cells.saturating_sub(out.cells) {
-        return false;
+        return BezierIdentity::Indeterminate(Reason::ResourceLimit);
     }
     out.cells += charge;
     let mut values = Vec::new();
@@ -63,7 +76,7 @@ pub(crate) fn query(
             .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
             .collect(),
     ) else {
-        return false;
+        return BezierIdentity::Indeterminate(Reason::MissingProof);
     };
     let mut controls = Vec::new();
     let mut knots = Vec::new();
@@ -112,7 +125,9 @@ pub(crate) fn query(
     } else {
         cad_predicates::rational_bspline_tensor_normalized_identity(&mut ctx, source(0), source(1))
     };
-    let equal = matches!(proof.map(|r| r.outcome), Ok(BezierIdentity::Equal));
+    let outcome = proof
+        .map(|r| r.outcome)
+        .unwrap_or(BezierIdentity::Indeterminate(Reason::MissingProof));
     out.exact_work += ctx.work_used();
-    equal
+    outcome
 }

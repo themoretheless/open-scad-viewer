@@ -62,17 +62,26 @@ fn strip(s: &Surface, i: usize) -> Surface {
         periodic_v: false,
     }
 }
-fn record(
-    out: &mut RetainedSmoothnessReport,
-    a: &Surface,
-    b: &Surface,
-    left: usize,
-    right: usize,
+/// Where a retained seam sits in the report: its patch, station, and whether it closes the path.
+#[derive(Clone, Copy)]
+struct SeamAt {
     patch: usize,
     station: usize,
     closure: bool,
+}
+/// Certify the seam between column `left + 1` of `a` and column `right` of `b`.
+fn record(
+    out: &mut RetainedSmoothnessReport,
+    [a, b]: [&Surface; 2],
+    [left, right]: [usize; 2],
+    at: SeamAt,
     max_work: u64,
 ) -> Result<()> {
+    let SeamAt {
+        patch,
+        station,
+        closure,
+    } = at;
     if out.seams.len() >= 100000 {
         out.all_station_seams_certified = false;
         out.reason = Some("retained-seam-count-unproved");
@@ -238,7 +247,17 @@ impl Level {
                     out.reason = Some("retained-station-chunk-correspondence-unproved");
                     return Ok(out);
                 }
-                record(&mut out, a, s, na - 2, 0, prev, na - 1, false, max_work)?;
+                record(
+                    &mut out,
+                    [a, s],
+                    [na - 2, 0],
+                    SeamAt {
+                        patch: prev,
+                        station: na - 1,
+                        closure: false,
+                    },
+                    max_work,
+                )?;
             }
             for i in 1..n - 1 {
                 if out.seams.len() >= 100000 {
@@ -246,20 +265,30 @@ impl Level {
                     out.reason = Some("retained-seam-count-unproved");
                     return Ok(out);
                 }
-                record(&mut out, s, s, i - 1, i, patch, i, false, max_work)?;
+                record(
+                    &mut out,
+                    [s, s],
+                    [i - 1, i],
+                    SeamAt {
+                        patch,
+                        station: i,
+                        closure: false,
+                    },
+                    max_work,
+                )?;
             }
             if s.knots_v[n] == 1. {
                 let first = group_start.take().unwrap();
                 if self.report.closed_path {
                     record(
                         &mut out,
-                        s,
-                        &self.patches[first],
-                        n - 2,
-                        0,
-                        patch,
-                        n - 1,
-                        true,
+                        [s, &self.patches[first]],
+                        [n - 2, 0],
+                        SeamAt {
+                            patch,
+                            station: n - 1,
+                            closure: true,
+                        },
                         max_work,
                     )?;
                 }

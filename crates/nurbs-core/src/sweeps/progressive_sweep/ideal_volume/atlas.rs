@@ -183,7 +183,8 @@ fn monotone_hull(
     // Point checks only discard unpromising proposals. They supply zero
     // admission credit. A promising fixed metric gets a deeper source-paid
     // complete field cover, including spatially nonlinear rational carriers.
-    let promising=refinement::promising(pieces,projection,scale,inverse,symmetric_positive,query,out,max)?;
+    let chart=refinement::MetricChart{projection,scale,metric:inverse,predicate:symmetric_positive};
+    let promising=refinement::promising(pieces,chart,query,out,max)?;
     #[cfg(test)]
     if std::env::var_os("OSV_TRACE_ACTUAL_METRIC").is_some() {
         eprintln!("METRIC proposal pieces={pieces:?} cells={} promising={promising} scale={scale:?} inverse={inverse:?}",out.cells);
@@ -216,7 +217,7 @@ fn monotone_hull(
         let choice = match e {
             Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>
                 refinement::Choice::Split{axis:i,complete:[false;2]},
-            _ => refinement::axis(b,projection,scale,inverse,symmetric_positive,query,out,max)?,
+            _ => refinement::axis(b,chart,query,out,max)?,
         };
         let (axis,complete)=match choice {
             refinement::Choice::Covered=>continue,

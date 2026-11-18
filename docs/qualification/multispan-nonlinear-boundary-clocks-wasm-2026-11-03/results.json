@@ -1,0 +1,45 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/198b764d7b91fa4442a63a08b9289303a5057db00140e724e78fd306b012efc2.wasm",
+  "sha256": "198b764d7b91fa4442a63a08b9289303a5057db00140e724e78fd306b012efc2",
+  "bytes": 21866981,
+  "sourceCommit": "f5b3e19ab09c6b3af0219d2dc92733e0b353f5b9",
+  "status": "passed",
+  "abiCases": 211,
+  "graphCases": 96,
+  "workersStarted": 189,
+  "workersTerminated": 189,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "f037b4981665f1d42b0c0b72bbe9791e8038d96a6bdd959d4e86ac70c1b0f9b8",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "16b9670937a30e9757ba0daa72c11943c4bbc2d852648b1c776e26b3b140b724",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "tools/browser-qualification/surface-self-intersection.mjs": "da40a149d28baa16e00a5a27a978d839869bbe8ea0cac25f11e3e5dfd04fa5ea",
+    "src/services/originalQuadricGraphProtocol.ts": "851293eede7ede2d589907a1a5fd040bd647099c5b6a7dae847f6640469bfb65"
+  },
+  "nativeReceipt": "docs/qualification/multispan-nonlinear-boundary-clocks-2026-11-03/results.json",
+  "observedTimings": {
+    "graph-multispan-boundary-clocks-rotated-false-gauge-1-denominator-3": {
+      "abiMs": 4.7214580000002115,
+      "workerMs": 8.599999994039536
+    },
+    "graph-multispan-boundary-clocks-rotated-false-gauge-1-denominator-2": {
+      "abiMs": 9.706042000000025,
+      "workerMs": 12.099999994039536
+    },
+    "graph-multispan-boundary-clocks-algebraic-edge": {
+      "abiMs": 4.968583000000081,
+      "workerMs": 9
+    }
+  },
+  "timingScope": "Single-run observations, not repeat benchmark qualification. ABI request versus complete Worker call, excluding fixture checks.",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of nonplanar coupled multi-span graph targets with exact independent global nonlinear original boundary clocks. Internal-knot and non-knot UV, rotations/gauges, algebraic edge, wrong original membership, zero predicate budget and ABI ULP refusal are checked.",
+  "remaining": [
+    "General joint coupled projected maps without independent clocks",
+    "Unordered boundary clock certificates and general UV precision",
+    "General freeform all branches",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}

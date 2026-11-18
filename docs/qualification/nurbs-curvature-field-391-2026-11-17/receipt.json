@@ -1,0 +1,41 @@
+{
+  "id": "NURBS-0391",
+  "testedBase": "ca13c25877c963d71a4891e61605b59b350bcec6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 108,
+  "scope": [
+    "Expand an affine cap support on an exact rational lattice to retain edge identity without rounding the support plane.",
+    "Exact integer lattice increments around a rim pole cancel the odd slope denominators. The expanded support preserves the Cartesian trim chart and all original edge clocks. Unstorable outputs refuse."
+  ],
+  "logSha256": "1f08fc8022ea9d925bdee995965204091385b103b89894f7e03b33173384c42c",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "93b6df3fc58b9647b53a8f36196545b0f7da6794114f74e24e11fcf3784fc20f",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "7e49dd74736601299ca141931b2926925b831a7f52fbd1e88d88f5e5e401b964",
+    "crates/brep-core/tests/section_cap_sheets.rs": "4fbe4cd745e046eb0fcee26d2d36b5d4087cb429b33ddfaab5ae66ccc3bf65ed",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "18c1708a306ccffa38347b48d89ddd5660a6cebd44d7d6ced39f53f6931ea78d",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "895dc6a6e94ea518c99db2d8ce302a30fc546fb3a38d82b209869f08c0929dba",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "ca352d481c2f10b053e8da4f888d9dd043e74032446bb2ea0a260af1913f2087",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "cd5e72ea9414e6c5092e2652e4d93f86be611334a2d0c3bcd81955f730c8281e",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0642",
+  "testedBase": "8796139113c2ac7813f9db54a4259b05f9890e83",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 282,
+  "scope": [
+    "Expose optional density-weighted inertia at a fixed reference point through the WASM mass request.",
+    "Check analytic diagonal and mixed entries through WASM, coexistence with axis moment, malformed point rejection and incomplete coverage."
+  ],
+  "logSha256": "636c2b7e82fc51b5deb28e90d8f01c33338dae5b7459692c1fce91276fd8abd5",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "b0a04619e2172e9457e55d1f80ab68e52bf2574457a5eb191e9e7f22c859daa6",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "ae86a7737adb88ba2c222c64fb5403c46351592e339a1b32fd9487548b919159",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "dbf33e65948e602a1d1d9595f0bee104191c70b422dc8b2b2d2bb2e34b4185bf"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

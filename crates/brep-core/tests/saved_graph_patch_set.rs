@@ -6,11 +6,13 @@ fn saved_patch_graph_proofs_bind_actual_closed_model_and_preserve_source_support
     let (source, request, skin, contacts) = fixture::fixture();
     let before = source.clone();
     let retention = face_cut::plan_contact_retention(
-        &source,
-        0,
-        request,
-        &skin,
-        [&contacts[0], &contacts[1]],
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
         "saved-graph-regression",
         1e-8,
         Default::default(),
@@ -36,10 +38,12 @@ fn saved_patch_graph_proofs_bind_actual_closed_model_and_preserve_source_support
         .collect::<Vec<_>>();
     let body = r::sew_g2_patch_set_with_graph_work(
         &partition,
-        &selected,
-        &authored.vertices,
-        &authored.edges,
-        &patches,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
         "saved-graph-qualified",
         1e-8,
         Default::default(),

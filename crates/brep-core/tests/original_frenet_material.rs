@@ -1,5 +1,5 @@
 //! Actual material ownership on a spatial periodic Frenet source, entirely native.
-use brep_core::{LoftCap,sweep_boundary_owned::*};
+use brep_core::{LoftCap, sweep_boundary_owned::*};
 use nurbs_core as nurbs;
 use nurbs::progressive_sweep::*;
 #[path="../../nurbs-core/tests/support/contact_material_source.rs"] mod source;

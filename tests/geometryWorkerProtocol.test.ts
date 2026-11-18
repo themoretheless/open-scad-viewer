@@ -7,13 +7,91 @@ import {
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   GEOMETRY_WORKER_PAYLOAD_LIMITS,
-  isGeometryWorkerEvent,
+  isGeometryWorkerEvent as isWireGeometryWorkerEvent,
   isGeometryWorkerRequest,
   type GeometryWorkerEvent,
-} from '../src/services/geometryWorkerProtocol'
+} from '../src/kernel/geometryWorkerProtocol'
 import type { MeshData } from '../src/core/mesh'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { sha256Hex } from '../src/core/sha256'
+
+/**
+ * Wire scene for the mesh-shaped fixtures below, built without validation so
+ * malformed meshes reach the validator as malformed entities/assets.
+ */
+function rawScene(meshes: readonly unknown[]) {
+  const views = meshes.map(mesh => (mesh ?? {}) as Record<string, unknown>)
+  return {
+    version: 1,
+    assets: views.map((mesh, index) => ({
+      version: 1,
+      id: mesh.geometryAssetId ?? `asset:test/${index}`,
+      vertices: mesh.vertices,
+      indices: mesh.indices,
+    })),
+    entities: views.map((mesh, index) => {
+      const {
+        vertices: _vertices,
+        indices: _indices,
+        entityId,
+        geometryAssetId,
+        nativeGeometry,
+        lods,
+        color,
+        transform,
+        bvh,
+        edgeIndices,
+        faceIds,
+        faceIdsInferred,
+        faceIdsAuthoritative,
+        provenance,
+        topology,
+        ...extra
+      } = mesh
+      return {
+        id: entityId ?? `entity:test/${index}`,
+        geometryAssetId: geometryAssetId ?? `asset:test/${index}`,
+        color,
+        transform,
+        ...(nativeGeometry === undefined ? {} : { nativeGeometry }),
+        ...(lods === undefined ? {} : { lods }),
+        inspection: {
+          state: 'ready',
+          version: 1,
+          bvh,
+          edgeIndices,
+          faceIds,
+          provenance,
+          topology,
+          ...(faceIdsInferred === undefined ? {} : { faceIdsInferred }),
+          ...(faceIdsAuthoritative === undefined ? {} : { faceIdsAuthoritative }),
+        },
+        ...extra,
+      }
+    }),
+  }
+}
+
+/**
+ * The fixtures in this file describe successes with the host-side `meshes`
+ * view; translate them to the wire `scene` form without reading accessors or
+ * dropping hidden/symbol properties, so every other wire check still applies.
+ */
+function isGeometryWorkerEvent(value: unknown) {
+  if (value === null || typeof value !== 'object') return isWireGeometryWorkerEvent(value)
+  const descriptors = Object.getOwnPropertyDescriptors(value)
+  const status = descriptors.status,
+    meshes = descriptors.meshes
+  if (status?.value !== 'succeeded' || !meshes || !('value' in meshes) || !Array.isArray(meshes.value)) {
+    return isWireGeometryWorkerEvent(value)
+  }
+  const { meshes: _meshes, ...rest } = descriptors
+  const wire = Object.create(Object.getPrototypeOf(value), {
+    ...rest,
+    scene: { value: rawScene(meshes.value), enumerable: true, writable: true, configurable: true },
+  })
+  return isWireGeometryWorkerEvent(wire)
+}
 
 const envelope = {
   protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -49,21 +127,12 @@ function validMesh(): MeshData {
 function triangleMesh(): MeshData {
   return {
     entityId: 'entity:triangle',
-    vertices: new Float32Array([
-      0, 0, 0, 0, 0, 1,
-      1, 0, 0, 0, 0, 1,
-      0, 1, 0, 0, 0, 1,
-    ]),
+    vertices: new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1]),
     indices: new Uint32Array([0, 1, 2]),
     edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
     faceIds: new Uint32Array([0]),
     color: [1, 0.5, 0.25, 1],
-    transform: new Float32Array([
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1,
-    ]),
+    transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
     bvh: {
       version: 1,
       vertexStride: 6,
@@ -82,28 +151,15 @@ function twoTriangleMesh(): MeshData {
   const mesh = triangleMesh()
   return {
     ...mesh,
-    vertices: new Float32Array([
-      0, 0, 0, 0, 0, 1,
-      1, 0, 0, 0, 0, 1,
-      0, 1, 0, 0, 0, 1,
-      1, 1, 0, 0, 0, 1,
-    ]),
+    vertices: new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1]),
     indices: new Uint32Array([0, 1, 2, 1, 3, 2]),
     edgeIndices: new Uint32Array([0, 1, 1, 3, 3, 2, 2, 0]),
     faceIds: new Uint32Array([0, 1]),
     bvh: {
       ...mesh.bvh,
       nodeCount: 3,
-      bounds: new Float32Array([
-        0, 0, 0, 1, 1, 0,
-        0, 0, 0, 1, 1, 0,
-        0, 0, 0, 1, 1, 0,
-      ]),
-      nodes: new Uint32Array([
-        1, 2,
-        0, 0x80000001,
-        1, 0x80000001,
-      ]),
+      bounds: new Float32Array([0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0]),
+      nodes: new Uint32Array([1, 2, 0, 0x80000001, 1, 0x80000001]),
       triangles: new Uint32Array([0, 1]),
     },
   }
@@ -145,44 +201,54 @@ describe('geometry worker protocol validation', () => {
     expect(isGeometryWorkerEvent({ ...envelope, status: 'progress', phase: 'compiling', progress: 1.01 })).toBe(false)
     expect(isGeometryWorkerEvent({ ...envelope, status: 'progress', phase: 'compiling' })).toBe(false)
 
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'failed',
-      phase: 'compiling',
-      error: { name: 'Error', message: 'bad source', line: 1, column: 2 },
-      durationMs: 2,
-    })).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'failed',
+        phase: 'compiling',
+        error: { name: 'Error', message: 'bad source', line: 1, column: 2 },
+        durationMs: 2,
+      }),
+    ).toBe(true)
     expect(isGeometryWorkerEvent({ ...envelope, status: 'failed', phase: 'compiling', durationMs: 2 })).toBe(false)
 
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'cancelled',
-      phase: 'compiling',
-      reason: 'superseded',
-      durationMs: 2,
-    })).toBe(true)
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'cancelled',
-      phase: 'compiling',
-      reason: 'maybe',
-      durationMs: 2,
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'cancelled',
+        phase: 'compiling',
+        reason: 'superseded',
+        durationMs: 2,
+      }),
+    ).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'cancelled',
+        phase: 'compiling',
+        reason: 'maybe',
+        durationMs: 2,
+      }),
+    ).toBe(false)
 
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'stale',
-      phase: 'complete',
-      supersededBy: { documentRevision: 4, jobId: 8 },
-      durationMs: 2,
-    })).toBe(true)
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'stale',
-      phase: 'complete',
-      supersededBy: { documentRevision: -1, jobId: 8 },
-      durationMs: 2,
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'stale',
+        phase: 'complete',
+        supersededBy: { documentRevision: 4, jobId: 8 },
+        durationMs: 2,
+      }),
+    ).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'stale',
+        phase: 'complete',
+        supersededBy: { documentRevision: -1, jobId: 8 },
+        durationMs: 2,
+      }),
+    ).toBe(false)
 
     expect(isGeometryWorkerEvent({ ...succeeded(), warnings: [42] })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [{}] })).toBe(false)
@@ -191,95 +257,116 @@ describe('geometry worker protocol validation', () => {
     expect(isGeometryWorkerEvent({ ...succeeded(), reduced: 1 })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), reduced: true })).toBe(true)
     expect(isGeometryWorkerEvent({ ...succeeded(), timings: undefined })).toBe(false)
-    expect(isGeometryWorkerEvent({ ...succeeded(), timings: { parseMs: -1, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 } })).toBe(false)
-    expect(isGeometryWorkerEvent({ ...succeeded(), timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 } })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        timings: { parseMs: -1, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({ ...succeeded(), timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 } }),
+    ).toBe(false)
   })
 
   it('requires coherent runtime engine provenance on successful publications', () => {
     expect(isGeometryWorkerEvent({ ...succeeded(), execution: undefined })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      execution: {
-        ...LEGACY_MANIFOLD_EXECUTION,
-        languageContract: 'openscad-viewer/brep-1',
-        engineClass: 'mesh',
-        quality: 'preview',
-        evidence: 'runtime',
-        effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
-      },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      execution: {
-        languageContract: 'openscad-viewer/brep-1',
-        requiredCapabilities: [],
-        engineClass: 'brep',
-        engineKey: 'rust-brep-reserved-v1',
-        kernelFingerprint: 'not-deployed',
-        semanticProgramVersion: 'semantic-program-contract-v1',
-        capabilityManifestVersion: 'brep-contract-v1',
-        manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'].manifestDigest,
-        purpose: 'preview',
-        quality: 'preview',
-        representation: 'brep',
-        evidence: 'runtime',
-        effectiveLimits: { sourceCharacters: 250_000 },
-        automaticFallback: false,
-      },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      execution: { ...succeeded().execution!, engineKey: 'forged-manifold' },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      execution: { ...succeeded().execution!, manifestDigest: '0'.repeat(64) },
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        execution: {
+          ...LEGACY_MANIFOLD_EXECUTION,
+          languageContract: 'openscad-viewer/brep-1',
+          engineClass: 'mesh',
+          quality: 'preview',
+          evidence: 'runtime',
+          effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        execution: {
+          languageContract: 'openscad-viewer/brep-1',
+          requiredCapabilities: [],
+          engineClass: 'brep',
+          engineKey: 'rust-brep-reserved-v1',
+          kernelFingerprint: 'not-deployed',
+          semanticProgramVersion: 'semantic-program-contract-v1',
+          capabilityManifestVersion: 'brep-contract-v1',
+          manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'].manifestDigest,
+          purpose: 'preview',
+          quality: 'preview',
+          representation: 'brep',
+          evidence: 'runtime',
+          effectiveLimits: { sourceCharacters: 250_000 },
+          automaticFallback: false,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        execution: { ...succeeded().execution!, engineKey: 'forged-manifold' },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        execution: { ...succeeded().execution!, manifestDigest: '0'.repeat(64) },
+      }),
+    ).toBe(false)
   })
 
   it('accepts planned B-rep provenance on an unavailable-engine failure', () => {
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'failed',
-      phase: 'compiling',
-      execution: {
-        languageContract: 'openscad-viewer/brep-1',
-        requiredCapabilities: ['geometry.brep'],
-        engineClass: 'brep',
-        engineKey: 'rust-brep-reserved-v1',
-        kernelFingerprint: 'not-deployed',
-        semanticProgramVersion: 'semantic-program-contract-v1',
-        capabilityManifestVersion: 'brep-contract-v1',
-        manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'].manifestDigest,
-        purpose: 'preview',
-        quality: 'preview',
-        representation: 'brep',
-        evidence: 'planned',
-        effectiveLimits: { sourceCharacters: 250_000 },
-        automaticFallback: false,
-      },
-      error: { name: 'GeometryEngineUnavailableError', message: 'not deployed' },
-      durationMs: 1,
-    })).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'failed',
+        phase: 'compiling',
+        execution: {
+          languageContract: 'openscad-viewer/brep-1',
+          requiredCapabilities: ['geometry.brep'],
+          engineClass: 'brep',
+          engineKey: 'rust-brep-reserved-v1',
+          kernelFingerprint: 'not-deployed',
+          semanticProgramVersion: 'semantic-program-contract-v1',
+          capabilityManifestVersion: 'brep-contract-v1',
+          manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'].manifestDigest,
+          purpose: 'preview',
+          quality: 'preview',
+          representation: 'brep',
+          evidence: 'planned',
+          effectiveLimits: { sourceCharacters: 250_000 },
+          automaticFallback: false,
+        },
+        error: { name: 'GeometryEngineUnavailableError', message: 'not deployed' },
+        durationMs: 1,
+      }),
+    ).toBe(true)
   })
 
   it('rejects negative identifiers in requests and events', () => {
-    expect(isGeometryWorkerRequest({
-      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'build',
-      documentRevision: -1,
-      jobId: 1,
-      source: 'cube(1);',
-      sourceSha256: '5748fc5442d26f3407c2be861219e61233204258340374390ddc01c0ada7b67d',
-      quality: 'preview',
-    })).toBe(false)
-    expect(isGeometryWorkerRequest({
-      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'cancel',
-      documentRevision: 1,
-      jobId: -1,
-      reason: 'user',
-    })).toBe(false)
+    expect(
+      isGeometryWorkerRequest({
+        protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+        type: 'build',
+        documentRevision: -1,
+        jobId: 1,
+        source: 'cube(1);',
+        sourceSha256: '5748fc5442d26f3407c2be861219e61233204258340374390ddc01c0ada7b67d',
+        quality: 'preview',
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerRequest({
+        protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+        type: 'cancel',
+        documentRevision: 1,
+        jobId: -1,
+        reason: 'user',
+      }),
+    ).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), jobId: -1 })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), documentRevision: -1 })).toBe(false)
   })
@@ -296,24 +383,40 @@ describe('geometry worker protocol validation', () => {
       quality: 'preview' as const,
     }
     expect(isGeometryWorkerRequest(request)).toBe(true)
-    for (const forbidden of ['engine', 'engine_class', 'backend', 'kernel', 'provider', 'automatic_fallback', 'programHash', 'semanticProgram', 'workerEpoch']) {
-      expect(isGeometryWorkerRequest({ ...request, [forbidden]: forbidden === 'automatic_fallback' ? false : 'smuggled' })).toBe(false)
+    for (const forbidden of [
+      'engine',
+      'engine_class',
+      'backend',
+      'kernel',
+      'provider',
+      'automatic_fallback',
+      'programHash',
+      'semanticProgram',
+      'workerEpoch',
+    ]) {
+      expect(
+        isGeometryWorkerRequest({ ...request, [forbidden]: forbidden === 'automatic_fallback' ? false : 'smuggled' }),
+      ).toBe(false)
     }
-    expect(isGeometryWorkerRequest({
-      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      type: 'cancel',
-      documentRevision: 1,
-      jobId: 1,
-      reason: 'user',
-      engine: 'brep',
-    })).toBe(false)
+    expect(
+      isGeometryWorkerRequest({
+        protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+        type: 'cancel',
+        documentRevision: 1,
+        jobId: 1,
+        reason: 'user',
+        engine: 'brep',
+      }),
+    ).toBe(false)
     expect(isGeometryWorkerRequest({ ...request, source: 'sphere(1);' })).toBe(false)
     const oversized = 'x'.repeat(250_001)
-    expect(isGeometryWorkerRequest({
-      ...request,
-      source: oversized,
-      sourceSha256: sha256Hex(oversized),
-    })).toBe(false)
+    expect(
+      isGeometryWorkerRequest({
+        ...request,
+        source: oversized,
+        sourceSha256: sha256Hex(oversized),
+      }),
+    ).toBe(false)
 
     const failure = {
       ...envelope,
@@ -325,50 +428,66 @@ describe('geometry worker protocol validation', () => {
     expect(isGeometryWorkerEvent(failure)).toBe(true)
     expect(isGeometryWorkerEvent({ ...failure, programHash: '0'.repeat(64) })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), engine: 'brep' })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...failure,
-      error: { name: 'Error', message: 'bounded', provider: 'brep' },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...failure,
-      error: { name: 'x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.errorNameCharacters + 1), message: '' },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...failure,
-      error: { name: 'Error', message: 'x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.errorMessageCharacters + 1) },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...failure,
-      error: { name: 'Error', message: 'partial span', start: 0 },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...failure,
-      error: { name: 'Error', message: 'partial span', end: 1 },
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...failure,
-      error: { name: 'Error', message: 'complete span', start: 0, end: 1 },
-    })).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...failure,
+        error: { name: 'Error', message: 'bounded', provider: 'brep' },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...failure,
+        error: { name: 'x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.errorNameCharacters + 1), message: '' },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...failure,
+        error: { name: 'Error', message: 'x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.errorMessageCharacters + 1) },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...failure,
+        error: { name: 'Error', message: 'partial span', start: 0 },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...failure,
+        error: { name: 'Error', message: 'partial span', end: 1 },
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...failure,
+        error: { name: 'Error', message: 'complete span', start: 0, end: 1 },
+      }),
+    ).toBe(true)
   })
 
   it('rejects duplicate mesh entity identities and oversized provenance labels', () => {
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [validMesh(), validMesh()],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [validMesh(), validMesh()],
+      }),
+    ).toBe(false)
     const mesh = triangleMesh()
-    mesh.provenance = [{
-      triangleStart: 0,
-      triangleEnd: 1,
-      backside: false,
-      source: {
-        id: 1,
-        originalId: 1,
-        start: 0,
-        end: 1,
-        label: 'x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.sourceLabelCharacters + 1),
+    mesh.provenance = [
+      {
+        triangleStart: 0,
+        triangleEnd: 1,
+        backside: false,
+        source: {
+          id: 1,
+          originalId: 1,
+          start: 0,
+          end: 1,
+          label: 'x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.sourceLabelCharacters + 1),
+        },
       },
-    }]
+    ]
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [mesh] })).toBe(false)
   })
 
@@ -380,28 +499,42 @@ describe('geometry worker protocol validation', () => {
       { triangleStart: 1, triangleEnd: 2, backside: false, source: source(1) },
     ]
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [mesh] })).toBe(true)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, provenance: [mesh.provenance[1]] }],
-    })).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, provenance: [mesh.provenance[1]] }],
+      }),
+    ).toBe(true)
 
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, provenance: [...mesh.provenance].reverse() }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, provenance: [
-        { ...mesh.provenance[0], triangleEnd: 2 },
-        mesh.provenance[1],
-      ] }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, provenance: [{
-        ...mesh.provenance[0], triangleStart: 1, triangleEnd: 1,
-      }] }],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, provenance: [...mesh.provenance].reverse() }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, provenance: [{ ...mesh.provenance[0], triangleEnd: 2 }, mesh.provenance[1]] }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [
+          {
+            ...mesh,
+            provenance: [
+              {
+                ...mesh.provenance[0],
+                triangleStart: 1,
+                triangleEnd: 1,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(false)
   })
 
   it('rejects color components outside the normalized RGBA contract', () => {
@@ -420,92 +553,112 @@ describe('geometry worker protocol validation', () => {
 
   it('accepts the complete payload produced by the geometry compiler', async () => {
     const result = await parseOpenSCAD('cube(1);', { quality: 'preview' })
-    expect(isGeometryWorkerEvent({
-      ...envelope,
-      status: 'succeeded',
-      phase: 'complete',
-      ...result,
-      execution: {
-        ...planGeometrySourceExecution('cube(1);', { quality: 'preview', purpose: 'preview' }),
-        evidence: 'runtime',
-      },
-      durationMs: 1,
-    })).toBe(true)
+    expect(
+      isGeometryWorkerEvent({
+        ...envelope,
+        status: 'succeeded',
+        phase: 'complete',
+        ...result,
+        execution: {
+          ...planGeometrySourceExecution('cube(1);', { quality: 'preview', purpose: 'preview' }),
+          evidence: 'runtime',
+        },
+        durationMs: 1,
+      }),
+    ).toBe(true)
   })
 
   it('rejects mesh indices and BVH triangle references outside their source buffers', () => {
     const mesh = triangleMesh()
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [mesh] })).toBe(true)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, indices: new Uint32Array([0, 1, 3]) }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, edgeIndices: new Uint32Array([0, 3]) }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, bvh: { ...mesh.bvh, triangles: new Uint32Array([1]) } }],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, indices: new Uint32Array([0, 1, 3]) }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, edgeIndices: new Uint32Array([0, 3]) }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, bvh: { ...mesh.bvh, triangles: new Uint32Array([1]) } }],
+      }),
+    ).toBe(false)
   })
 
   it('rejects incompatible strides, invalid leaf ranges and non-finite bounds', () => {
     const mesh = triangleMesh()
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, bvh: { ...mesh.bvh, vertexStride: 3 } }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, bvh: { ...mesh.bvh, nodes: new Uint32Array([1, 0x80000001]) } }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...mesh, bvh: { ...mesh.bvh, bounds: new Float32Array([0, 0, 0, Infinity, 1, 0]) } }],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, bvh: { ...mesh.bvh, vertexStride: 3 } }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, bvh: { ...mesh.bvh, nodes: new Uint32Array([1, 0x80000001]) } }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...mesh, bvh: { ...mesh.bvh, bounds: new Float32Array([0, 0, 0, Infinity, 1, 0]) } }],
+      }),
+    ).toBe(false)
   })
 
   it('rejects cyclic, shared-child and unreachable BVH graphs', () => {
     const single = triangleMesh()
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...single, bvh: { ...single.bvh, nodes: new Uint32Array([0, 0]) } }],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...single, bvh: { ...single.bvh, nodes: new Uint32Array([0, 0]) } }],
+      }),
+    ).toBe(false)
 
     const pair = twoTriangleMesh()
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [pair] })).toBe(true)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...pair, bvh: { ...pair.bvh, nodes: new Uint32Array([
-        1, 1,
-        0, 0x80000001,
-        1, 0x80000001,
-      ]) } }],
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...pair, bvh: { ...pair.bvh, nodes: new Uint32Array([
-        0, 0x80000002,
-        0, 0x80000001,
-        1, 0x80000001,
-      ]) } }],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...pair, bvh: { ...pair.bvh, nodes: new Uint32Array([1, 1, 0, 0x80000001, 1, 0x80000001]) } }],
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [
+          { ...pair, bvh: { ...pair.bvh, nodes: new Uint32Array([0, 0x80000002, 0, 0x80000001, 1, 0x80000001]) } },
+        ],
+      }),
+    ).toBe(false)
   })
 
   it('rejects oversized success envelopes before deep payload validation', () => {
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: Array.from({ length: GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes + 1 }, validMesh),
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      warnings: Array.from({ length: GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings + 1 }, () => 'warning'),
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      warnings: ['x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters + 1)],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: Array.from({ length: GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes + 1 }, validMesh),
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        warnings: Array.from({ length: GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings + 1 }, () => 'warning'),
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        warnings: ['x'.repeat(GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters + 1)],
+      }),
+    ).toBe(false)
 
     const oversized = validMesh()
     oversized.indices = new Uint32Array((GEOMETRY_WORKER_PAYLOAD_LIMITS.triangles + 1) * 3)
@@ -539,30 +692,38 @@ describe('geometry worker protocol validation', () => {
   })
 
   it('checks array cardinality before density scans and rejects non-owned buffers', () => {
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      warnings: new Array(GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings + 1),
-    })).toBe(false)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      execution: {
-        ...succeeded().execution!,
-        requiredCapabilities: new Array(1_000_000),
-      },
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        warnings: new Array(GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings + 1),
+      }),
+    ).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        execution: {
+          ...succeeded().execution!,
+          requiredCapabilities: new Array(1_000_000),
+        },
+      }),
+    ).toBe(false)
 
     const oversizedBacking = new ArrayBuffer(8)
-    expect(isGeometryWorkerEvent({
-      ...succeeded(),
-      meshes: [{ ...validMesh(), vertices: new Float32Array(oversizedBacking, 0, 1) }],
-    })).toBe(false)
+    expect(
+      isGeometryWorkerEvent({
+        ...succeeded(),
+        meshes: [{ ...validMesh(), vertices: new Float32Array(oversizedBacking, 0, 1) }],
+      }),
+    ).toBe(false)
 
     if (typeof SharedArrayBuffer !== 'undefined') {
       const shared = new SharedArrayBuffer(0)
-      expect(isGeometryWorkerEvent({
-        ...succeeded(),
-        meshes: [{ ...validMesh(), vertices: new Float32Array(shared) }],
-      })).toBe(false)
+      expect(
+        isGeometryWorkerEvent({
+          ...succeeded(),
+          meshes: [{ ...validMesh(), vertices: new Float32Array(shared) }],
+        }),
+      ).toBe(false)
     }
 
     const aliased = triangleMesh()
@@ -573,85 +734,171 @@ describe('geometry worker protocol validation', () => {
   })
 })
 
-
-it('accepts bounded display-only sweep previews and rejects invalid admission metadata',()=>{
- const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'sweep',sections:5,
-  accepted:false,sampledControlDeviation:.1,budget:.01,meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- for(const change of [{sections:1},{sections:1026},{sections:5.5},{budget:-1},
-  {sampledControlDeviation:NaN},{nodeId:''},{accepted:'false'},{phase:'complete'},
-  {accepted:true},{volume:1},{patches:[]},{meshes:[{...triangleMesh(),nativeGeometry:{}}]}]){
-  expect(isGeometryWorkerEvent({...preview,...change})).toBe(false)
- }
+it('accepts bounded display-only sweep previews and rejects invalid admission metadata', () => {
+  const preview = {
+    ...envelope,
+    status: 'sweep-preview',
+    phase: 'compiling',
+    nodeId: 'sweep',
+    sections: 5,
+    accepted: false,
+    sampledControlDeviation: 0.1,
+    budget: 0.01,
+    meshes: [{ ...triangleMesh(), faceIdsAuthoritative: false }],
+  }
+  preview.meshes[0]!.provenance.forEach(run => (run.source = null))
+  expect(isGeometryWorkerEvent(preview)).toBe(true)
+  for (const change of [
+    { sections: 1 },
+    { sections: 1026 },
+    { sections: 5.5 },
+    { budget: -1 },
+    { sampledControlDeviation: NaN },
+    { nodeId: '' },
+    { accepted: 'false' },
+    { phase: 'complete' },
+    { accepted: true },
+    { volume: 1 },
+    { patches: [] },
+    { meshes: [{ ...triangleMesh(), nativeGeometry: {} }] },
+  ]) {
+    expect(isGeometryWorkerEvent({ ...preview, ...change })).toBe(false)
+  }
 })
 
-it('carries authored retained-patch rejection even when sampled refinement is within budget',()=>{
- const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'authored',sections:3,
-  accepted:false,sampledControlDeviation:.001,continuousErrorUpper:.02,budget:.01,
-  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.005,accepted:true})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:undefined})).toBe(false)
+it('carries authored retained-patch rejection even when sampled refinement is within budget', () => {
+  const preview = {
+    ...envelope,
+    status: 'sweep-preview',
+    phase: 'compiling',
+    nodeId: 'authored',
+    sections: 3,
+    accepted: false,
+    sampledControlDeviation: 0.001,
+    continuousErrorUpper: 0.02,
+    budget: 0.01,
+    meshes: [{ ...triangleMesh(), faceIdsAuthoritative: false }],
+  }
+  preview.meshes[0]!.provenance.forEach(run => (run.source = null))
+  expect(isGeometryWorkerEvent(preview)).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, accepted: true })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, continuousErrorUpper: 0.005, accepted: true })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, continuousErrorUpper: undefined })).toBe(false)
 })
-it('uses scoped partial-profile evidence for admission without fabricating a full continuous bound',()=>{
- const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'profiles',sections:9,
-  accepted:false,sampledControlDeviation:0,knownProfileErrorUpper:.02,budget:.01,
-  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,knownProfileErrorUpper:.005,accepted:true})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.02})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.03})).toBe(false)
- for(const upper of [NaN,Infinity,-1,null])expect(isGeometryWorkerEvent({...preview,knownProfileErrorUpper:upper})).toBe(false)
+it('uses scoped partial-profile evidence for admission without fabricating a full continuous bound', () => {
+  const preview = {
+    ...envelope,
+    status: 'sweep-preview',
+    phase: 'compiling',
+    nodeId: 'profiles',
+    sections: 9,
+    accepted: false,
+    sampledControlDeviation: 0,
+    knownProfileErrorUpper: 0.02,
+    budget: 0.01,
+    meshes: [{ ...triangleMesh(), faceIdsAuthoritative: false }],
+  }
+  preview.meshes[0]!.provenance.forEach(run => (run.source = null))
+  expect(isGeometryWorkerEvent(preview)).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, accepted: true })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, knownProfileErrorUpper: 0.005, accepted: true })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, continuousErrorUpper: 0.02 })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, continuousErrorUpper: 0.03 })).toBe(false)
+  for (const upper of [NaN, Infinity, -1, null])
+    expect(isGeometryWorkerEvent({ ...preview, knownProfileErrorUpper: upper })).toBe(false)
 })
-it('keeps unresolved miter phase previews displayable without accepting aliased error',()=>{
- const preview={protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,documentRevision:1,jobId:1,quality:'full',sourceSha256:'a'.repeat(64),status:'sweep-preview',phase:'compiling',nodeId:'miter',sections:2,accepted:false,phaseResolved:false,sampledControlDeviation:0,budget:.01,meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,accepted:true})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:'false'})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,continuousErrorUpper:.02})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,continuousErrorUpper:.02,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:NaN})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,frameTransportCertified:false})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,frameTransportCertified:false,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,frameTransportCertified:'true'})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:null})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:null,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:.02})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:.02,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,certifiedErrorUpper:NaN})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,endpointContourErrorUpper:[0,.01]})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,endpointContourErrorUpper:null})).toBe(true)
- for(const endpointContourErrorUpper of [[0],[-1,0],[0,NaN],[0,Infinity],'0,0'])expect(isGeometryWorkerEvent({...preview,endpointContourErrorUpper})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,profileRegularityCertified:false})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,profileRegularityCertified:false,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,wallRegularityCertified:null})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,phaseResolved:true,wallRegularityCertified:false,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,wallRegularityCertified:'true'})).toBe(false)
+it('keeps unresolved miter phase previews displayable without accepting aliased error', () => {
+  const preview = {
+    protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+    documentRevision: 1,
+    jobId: 1,
+    quality: 'full',
+    sourceSha256: 'a'.repeat(64),
+    status: 'sweep-preview',
+    phase: 'compiling',
+    nodeId: 'miter',
+    sections: 2,
+    accepted: false,
+    phaseResolved: false,
+    sampledControlDeviation: 0,
+    budget: 0.01,
+    meshes: [{ ...triangleMesh(), faceIdsAuthoritative: false }],
+  }
+  preview.meshes[0]!.provenance.forEach(run => (run.source = null))
+  expect(isGeometryWorkerEvent(preview)).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, accepted: true })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, accepted: true })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: 'false' })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, continuousErrorUpper: 0.02 })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, continuousErrorUpper: 0.02, accepted: true })).toBe(
+    false,
+  )
+  expect(isGeometryWorkerEvent({ ...preview, continuousErrorUpper: NaN })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, frameTransportCertified: false })).toBe(true)
+  expect(
+    isGeometryWorkerEvent({ ...preview, phaseResolved: true, frameTransportCertified: false, accepted: true }),
+  ).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, frameTransportCertified: 'true' })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, certifiedErrorUpper: null })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, certifiedErrorUpper: null, accepted: true })).toBe(
+    false,
+  )
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, certifiedErrorUpper: 0.02 })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, certifiedErrorUpper: 0.02, accepted: true })).toBe(
+    false,
+  )
+  expect(isGeometryWorkerEvent({ ...preview, certifiedErrorUpper: NaN })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, endpointContourErrorUpper: [0, 0.01] })).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, endpointContourErrorUpper: null })).toBe(true)
+  for (const endpointContourErrorUpper of [[0], [-1, 0], [0, NaN], [0, Infinity], '0,0'])
+    expect(isGeometryWorkerEvent({ ...preview, endpointContourErrorUpper })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, profileRegularityCertified: false })).toBe(true)
+  expect(
+    isGeometryWorkerEvent({ ...preview, phaseResolved: true, profileRegularityCertified: false, accepted: true }),
+  ).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, phaseResolved: true, wallRegularityCertified: null })).toBe(true)
+  expect(
+    isGeometryWorkerEvent({ ...preview, phaseResolved: true, wallRegularityCertified: false, accepted: true }),
+  ).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, wallRegularityCertified: 'true' })).toBe(false)
 })
 
-
-it('validates bounded sweep acknowledgements without accepting unknown fields',()=>{
- const ack={...envelope,type:'sweep-preview-ack',nodeId:'miter',sections:21}
- expect(isGeometryWorkerRequest(ack)).toBe(true)
- for(const change of [{sections:1},{sections:1026},{sections:2.5},{nodeId:''},{sourceSha256:'bad'},{quality:'draft'},{extra:true}])expect(isGeometryWorkerRequest({...ack,...change})).toBe(false)
+it('validates bounded sweep acknowledgements without accepting unknown fields', () => {
+  const ack = { ...envelope, type: 'sweep-preview-ack', nodeId: 'miter', sections: 21 }
+  expect(isGeometryWorkerRequest(ack)).toBe(true)
+  for (const change of [
+    { sections: 1 },
+    { sections: 1026 },
+    { sections: 2.5 },
+    { nodeId: '' },
+    { sourceSha256: 'bad' },
+    { quality: 'draft' },
+    { extra: true },
+  ])
+    expect(isGeometryWorkerRequest({ ...ack, ...change })).toBe(false)
 })
 
-
-it('transports native conservative sweep refusal without inventing a whole-union bound',()=>{
- const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'original',sections:10,
-  accepted:false,continuousBound:false,sampledControlDeviation:.001,budget:1,
-  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
- preview.meshes[0]!.provenance.forEach(run=>run.source=null)
- expect(isGeometryWorkerEvent(preview)).toBe(true)
- expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,continuousBound:true,accepted:true})).toBe(false)
- expect(isGeometryWorkerEvent({...preview,continuousBound:true,continuousErrorUpper:.01,accepted:true})).toBe(true)
- expect(isGeometryWorkerEvent({...preview,continuousBound:true,continuousErrorUpper:2,accepted:true})).toBe(false)
+it('transports native conservative sweep refusal without inventing a whole-union bound', () => {
+  const preview = {
+    ...envelope,
+    status: 'sweep-preview',
+    phase: 'compiling',
+    nodeId: 'original',
+    sections: 10,
+    accepted: false,
+    continuousBound: false,
+    sampledControlDeviation: 0.001,
+    budget: 1,
+    meshes: [{ ...triangleMesh(), faceIdsAuthoritative: false }],
+  }
+  preview.meshes[0]!.provenance.forEach(run => (run.source = null))
+  expect(isGeometryWorkerEvent(preview)).toBe(true)
+  expect(isGeometryWorkerEvent({ ...preview, accepted: true })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, continuousBound: true, accepted: true })).toBe(false)
+  expect(isGeometryWorkerEvent({ ...preview, continuousBound: true, continuousErrorUpper: 0.01, accepted: true })).toBe(
+    true,
+  )
+  expect(isGeometryWorkerEvent({ ...preview, continuousBound: true, continuousErrorUpper: 2, accepted: true })).toBe(
+    false,
+  )
 })

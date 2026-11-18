@@ -274,6 +274,7 @@ impl Tube {
     }
 }
 
+#[cfg(test)]
 /// For G(x,y,s)=C(s)+x N(s)+y B(s)+c_z(s)L(s), choose the
 /// SAME exact columns A0=[N0,B0,T0] at one endpoint and z=L*s.
 /// ||DG diag(1,1,1/L)-A0||F² is bounded by
@@ -287,9 +288,11 @@ impl Tube {
 /// injective Q transfers this to source UV, without requiring its image convex.
 /// The bound covers both seam pieces with the SAME periodic reference. For
 /// path-aligned frames A0 is orthonormal and the spectral floor is one.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 fn tube_bound(width: I, radius: I, length: I, curvature: I, angular: I) -> Result<bool> {
     tube_bound_with_floor(width, radius, length, curvature, angular, I::point(1.))
 }
+#[cfg(test)]
 fn tube_bound_with_floor(
     width: I,
     radius: I,

@@ -30,103 +30,16 @@ pub fn export_iges(model: &Model) -> Result<(String, FeatureCertificate)> {
         ));
     }
     let (min, max) = model_bounds(model);
-    let mut lines = Vec::new();
-    lines.push(
+    let mut writer = IgesWriter::default();
+    writer.lines.push(
         "                                                                        S      1".into(),
     );
-    lines.push(
+    writer.lines.push(
         "1H,,1H;,4HSOLID,11Hopen-scad-v,32Hanalytic IGES walking slice,32H,    G      1".into(),
     );
-    let mut seq = 1usize;
-    for v in &model.vertices {
-        // Entity 116: Point
-        lines.push(format!(
-            "     116       1       0       1       0       0       0       0       1D{seq:7}"
-        ));
-        seq += 1;
-        lines.push(format!(
-            "116,{:.15},{:.15},{:.15};                                          P{seq:7}",
-            v.point[0], v.point[1], v.point[2]
-        ));
-        seq += 1;
-    }
-    for edge in &model.edges {
-        if edge.curve.degree == 1 && edge.curve.control_points.len() == 2 {
-            let a = &edge.curve.control_points[0];
-            let b = &edge.curve.control_points[1];
-            // Entity 110: Line
-            lines.push(format!(
-                "     110       1       0       1       0       0       0       0       1D{seq:7}"
-            ));
-            seq += 1;
-            lines.push(format!(
-                "110,{:.8},{:.8},{:.8},{:.8},{:.8},{:.8};                      P{seq:7}",
-                a[0], a[1], a[2], b[0], b[1], b[2]
-            ));
-            seq += 1;
-        }
-    }
-    for face in &model.faces {
-        if face.surface.degree_u == 1 && face.surface.degree_v == 1 {
-            // Entity 190: Plane Surface
-            lines.push(format!(
-                "     190       1       0       1       0       0       0       0       1D{seq:7}"
-            ));
-            seq += 1;
-            lines.push(format!(
-                "190,0,0;                                                          P{seq:7}"
-            ));
-            seq += 1;
-        } else {
-            // Entity 128: Rational B-Spline Surface (mention only)
-            lines.push(format!(
-                "     128       1       0       1       0       0       0       0       1D{seq:7}"
-            ));
-            seq += 1;
-            lines.push(format!(
-                "128,{},{},0,0,0,0,0;                                              P{seq:7}",
-                face.surface.degree_u, face.surface.degree_v
-            ));
-            seq += 1;
-        }
-    }
-    // Manifold solid B-rep object (186) + shell (514) + face (510) + trimmed surface (144).
-    lines.push(format!(
-        "     186       1       0       1       0       0       0       0       1D{seq:7}"
-    ));
-    seq += 1;
-    lines.push(format!(
-        "186,1,0;                                                          P{seq:7}"
-    ));
-    seq += 1;
-    lines.push(format!(
-        "     514       1       0       1       0       0       0       0       1D{seq:7}"
-    ));
-    seq += 1;
-    lines.push(format!(
-        "514,{},0;                                                         P{seq:7}",
-        model.faces.len()
-    ));
-    seq += 1;
-    for _ in &model.faces {
-        lines.push(format!(
-            "     510       1       0       1       0       0       0       0       1D{seq:7}"
-        ));
-        seq += 1;
-        lines.push(format!(
-            "510,1,0,0;                                                        P{seq:7}"
-        ));
-        seq += 1;
-        lines.push(format!(
-            "     144       1       0       1       0       0       0       0       1D{seq:7}"
-        ));
-        seq += 1;
-        lines.push(format!(
-            "144,0,1,0,0;                                                      P{seq:7}"
-        ));
-        seq += 1;
-    }
-    lines.push(format!(
+    writer.write_geometry(model);
+    writer.write_topology(model);
+    writer.lines.push(format!(
         "/* open-scad-viewer iges-interchange/1; faces={} bounds=[{:.3},{:.3},{:.3}]-[{:.3},{:.3},{:.3}] */",
         model.faces.len(),
         min[0],
@@ -136,10 +49,10 @@ pub fn export_iges(model: &Model) -> Result<(String, FeatureCertificate)> {
         max[1],
         max[2]
     ));
-    lines.push(
+    writer.lines.push(
         "S      1G      1D      1P      1                                        T      1".into(),
     );
-    let text = lines.join("\n");
+    let text = writer.lines.join("\n");
     if text.to_ascii_uppercase().contains("FACETED")
         || text.contains("solid ")
         || text.contains("mtllib")
@@ -157,6 +70,102 @@ pub fn export_iges(model: &Model) -> Result<(String, FeatureCertificate)> {
             notes: vec!["iges_entity_110_116_128_190", "iges_solid_186_514_510_144"],
         },
     ))
+}
+
+/// Sequential IGES directory/parameter line writer.
+struct IgesWriter {
+    lines: Vec<String>,
+    seq: usize,
+}
+
+impl Default for IgesWriter {
+    fn default() -> Self {
+        Self {
+            lines: Vec::new(),
+            seq: 1,
+        }
+    }
+}
+
+impl IgesWriter {
+    /// Pushes one directory entry and its padded parameter record.
+    fn entity(&mut self, entity: u16, parameters: &str) {
+        let seq = self.seq;
+        self.lines.push(format!(
+            "     {entity}       1       0       1       0       0       0       0       1D{seq:7}"
+        ));
+        let seq = seq + 1;
+        self.lines.push(format!("{parameters}P{seq:7}"));
+        self.seq = seq + 1;
+    }
+
+    /// Points (116), lines (110) and plane/B-spline surfaces (190/128).
+    fn write_geometry(&mut self, model: &Model) {
+        for v in &model.vertices {
+            self.entity(
+                116,
+                &format!(
+                    "116,{:.15},{:.15},{:.15};                                          ",
+                    v.point[0], v.point[1], v.point[2]
+                ),
+            );
+        }
+        for edge in &model.edges {
+            if edge.curve.degree == 1 && edge.curve.control_points.len() == 2 {
+                let a = &edge.curve.control_points[0];
+                let b = &edge.curve.control_points[1];
+                self.entity(
+                    110,
+                    &format!(
+                        "110,{:.8},{:.8},{:.8},{:.8},{:.8},{:.8};                      ",
+                        a[0], a[1], a[2], b[0], b[1], b[2]
+                    ),
+                );
+            }
+        }
+        for face in &model.faces {
+            if face.surface.degree_u == 1 && face.surface.degree_v == 1 {
+                self.entity(
+                    190,
+                    "190,0,0;                                                          ",
+                );
+            } else {
+                // Rational B-Spline Surface (mention only).
+                self.entity(
+                    128,
+                    &format!(
+                        "128,{},{},0,0,0,0,0;                                              ",
+                        face.surface.degree_u, face.surface.degree_v
+                    ),
+                );
+            }
+        }
+    }
+
+    /// Manifold solid B-rep object (186) + shell (514) + face (510) + trimmed surface (144).
+    fn write_topology(&mut self, model: &Model) {
+        self.entity(
+            186,
+            "186,1,0;                                                          ",
+        );
+        self.entity(
+            514,
+            &format!(
+                "514,{},0;                                                         ",
+                model.faces.len()
+            ),
+        );
+        for _ in &model.faces {
+            self.entity(
+                510,
+                "510,1,0,0;                                                        ",
+            );
+            self.entity(
+                144,
+                "144,0,1,0,0;                                                      ",
+            );
+        }
+    }
 }
 
 /// Import IGES walking slice: require Start/Global/Directory/Parameter sections and entity subset.

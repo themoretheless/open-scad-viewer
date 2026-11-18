@@ -26,21 +26,16 @@ pub fn inspect(v: Value) -> Result<Value> {
             normal_spans: field(&coverage, "maxNormalSpans")?,
         },
     )?;
-    let alignment = match r.candidate.aligned {
-        Some(true) => "angular-tolerance",
-        Some(false) => "oblique",
-        None => "unresolved",
-    };
     let candidate = super::cad_material_chord::render(
         &model,
         &r.candidate.chord,
-        origin,
-        direction,
-        tolerance_uv,
-        &config,
-        &Some(normal),
-        Some(super::cad_material_chord::normal_evidence(&r.candidate)),
-        alignment,
+        super::cad_material_chord::ChordRequest {
+            origin,
+            direction,
+            tolerance_uv,
+            config: &config,
+        },
+        super::cad_material_chord::NormalAudit::of(&normal, &r.candidate),
     )?;
     Ok(json!({"method":"bounded-whole-material-wall",
         "scope":"aligned-material-chords-over-all-original-face-pairs",

@@ -1,5 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs'
-import {inspectSweepProjectiveSeams} from '../src/services/nurbsSweepAudit'
+import {inspectSweepProjectiveSeams} from '../src/kernel/nurbsSweepAudit'
 const candidates=JSON.parse(readFileSync(process.argv[2]??'/tmp/sweep-circle-repair-candidates.json','utf8'))
 const reports=candidates.map((candidate:any)=>{
  const seams=Array.from({length:candidate.patches.length},(_,i)=>({patches:[i,Math.floor(i/4)*4+(i+1)%4] as [number,number],boundaries:['uMax','uMin'] as ['uMax','uMin'],order:2 as const,normalScale:1,jetTolerance:0}))

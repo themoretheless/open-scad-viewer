@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0553",
+  "testedBase": "9268cf1a4cdca476a80aabf188e5be06e21f9bf1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 163,
+  "scope": [
+    "Compute exact central second moments per periodic UV component with aligned holes.",
+    "Align holes to each outer lift, combine exact second moments by the parallel-axis formula, and center them at the filled component centroid."
+  ],
+  "logSha256": "ab35c168647b832dde4f9ce234561dcc2b63b64e078c8849ca08da9fd09e59ce",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "647cb4aeebc5dafde0e68be85890cddcca7b0d9289f674dd5eaeeb2a5d90cd35",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "2d9b77d64ddd08b8151b3343b16e1c95dcde2042a4c7a25e5947d2500c2eade3"
+  }
+}

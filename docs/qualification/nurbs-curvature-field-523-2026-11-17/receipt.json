@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0523",
+  "testedBase": "606a3826d58b5f063e4bad2e173c2128ae393328",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 103,
+  "scope": [
+    "Align proportional rational weights across both periodic surface axes while preserving every patch law.",
+    "Reconcile exact patch scales across V and then across the U strips, requiring both periodic wraps before returning a result."
+  ],
+  "logSha256": "68872046c777c78949e1a6b57f822bb25d7af4a32dcd52e56a06bc14721e152b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "41182d4174ee752ae6242a6739102f025ec8e3f89366ba6c9155bd6492d511e8",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "f54af4c103811bc973172dff992f6e80e4f736e7522b32d47597e46757bec554"
+  }
+}

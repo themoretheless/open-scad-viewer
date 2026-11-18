@@ -25,7 +25,7 @@ fn config(depth: u32, mode: VertexMode) -> IsosurfaceConfig {
 /// FNV-1a over the raw bytes of the output — byte-identical determinism.
 /// Uses the shared `guards::Fnv1a` construction (item 1094).
 fn hash_output(out: &IsosurfaceOutput) -> u64 {
-    use crate::foundation::guards::Fnv1a;
+    use crate::numerics::guards::Fnv1a;
     let mut h = Fnv1a::new();
     for p in &out.mesh.points {
         for v in p {
@@ -306,7 +306,7 @@ fn adaptive_refinement_guard_preserves_budget_error() {
 
 #[test]
 fn hash_output_uses_shared_fnv1a_and_stays_deterministic() {
-    use crate::foundation::guards::Fnv1a;
+    use crate::numerics::guards::Fnv1a;
     let out = polygonize_sdf(
         [-1.4; 3],
         [1.4; 3],

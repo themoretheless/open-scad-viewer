@@ -100,10 +100,17 @@ fn norm(values: &[Interval]) -> Result<Interval> {
     Interval::new(lo, hi)
 }
 fn cell(curve: &Curve, span: usize, domain: [f64; 2], serial: usize) -> Result<Cell> {
-    let jets = curve_jets::enclose(curve, span, domain)?;
+    mapped_cell(curve, span, domain, serial, Ok)
+}
+
+fn mapped_cell(
+    curve: &Curve, span: usize, domain: [f64;2], serial: usize,
+    map: impl Fn(Vec<Vec<Interval>>) -> Result<Vec<Vec<Interval>>>,
+) -> Result<Cell> {
+    let jets = map(curve_jets::enclose(curve, span, domain)?)?;
     let speed = norm(&jets[1])?;
-    let start = curve_jets::endpoint(curve, span, domain, false)?;
-    let end = curve_jets::endpoint(curve, span, domain, true)?;
+    let start = map(curve_jets::endpoint(curve, span, domain, false)?)?;
+    let end = map(curve_jets::endpoint(curve, span, domain, true)?)?;
     let chord = box_distance(&start[0], &end[0])?.0;
     let mut lo = speed.lo.max(chord);
     let mut hi = speed.hi;
@@ -201,6 +208,13 @@ fn measure(
     Ok(measure_partition(curve,domain,tolerance,max_cells)?.0)
 }
 fn measure_partition(curve:&Curve,domain:[f64;2],tolerance:f64,max_cells:usize)->Result<(LengthReport,Vec<Cell>)> {
+    measure_with_cells(curve, domain, tolerance, max_cells, cell)
+}
+
+fn measure_with_cells(
+    curve: &Curve, domain: [f64;2], tolerance: f64, max_cells: usize,
+    make_cell: impl Fn(&Curve,usize,[f64;2],usize) -> Result<Cell>,
+) -> Result<(LengthReport,Vec<Cell>)> {
     if domain[0] == domain[1] {
         return Ok((report(Interval::point(0.), 0, tolerance, StopReason::Tolerance)?,Vec::new()));
     }
@@ -214,7 +228,7 @@ fn measure_partition(curve:&Curve,domain:[f64;2],tolerance:f64,max_cells:usize)-
             if cells == max_cells {
                 return Err(resource("Initial length spans exceed the work budget"));
             }
-            heap.push(cell(curve, span, [a, b], cells)?);
+            heap.push(make_cell(curve, span, [a, b], cells)?);
             cells += 1;
         }
     }
@@ -235,8 +249,8 @@ fn measure_partition(curve:&Curve,domain:[f64;2],tolerance:f64,max_cells:usize)-
             heap.push(largest);
             return Ok((report(sum(&heap)?, cells, tolerance, StopReason::PrecisionLimit)?,heap.into_vec()));
         }
-        let left = cell(curve, largest.span, [a, mid], cells)?;
-        let right = cell(curve, largest.span, [mid, b], cells + 1)?;
+        let left = make_cell(curve, largest.span, [a, mid], cells)?;
+        let right = make_cell(curve, largest.span, [mid, b], cells + 1)?;
         cells += 2;
         // Remove the exact stored bound endpoints, then add child enclosures.
         // Outward subtraction preserves accumulated lower/upper-sum guarantees.
@@ -257,6 +271,22 @@ pub fn length(curve: &Curve, tolerance: f64, max_cells: usize) -> Result<LengthR
     curve.validate()?;
     validate(tolerance, max_cells)?;
     measure(curve, curve.domain(), tolerance, max_cells)
+}
+pub(crate) fn length_on_interval(
+    curve: &Curve,
+    interval: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<LengthReport> {
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    let [start, end] = curve.domain();
+    let [lo, hi] = interval;
+    check(
+        start <= lo && lo < hi && hi <= end,
+        "Length interval must lie inside the curve domain",
+    )?;
+    measure(curve, interval, tolerance, max_cells)
 }
 fn point_report(
     curve: &Curve,
@@ -613,4 +643,21 @@ mod signed_speed_remainder_tests {
   assert!(measured.within_tolerance,"{measured:?}");assert!(measured.bounds[0]<=analytic&&analytic<=measured.bounds[1]);
  }
 
+}
+
+
+pub(super) fn length_under_plane_metric(
+    curve: &Curve, slopes: [Interval; 2], tolerance: f64, max_cells: usize,
+) -> Result<LengthReport> {
+    validate(tolerance, max_cells)?;
+    let mapped = |curve: &Curve, span, domain, serial| {
+        mapped_cell(curve, span, domain, serial, |mut jets| {
+            for vector in &mut jets {
+                let height = slopes[0].mul(vector[0])?.add(slopes[1].mul(vector[1])?)?;
+                vector.push(height);
+            }
+            Ok(jets)
+        })
+    };
+    Ok(measure_with_cells(curve,curve.domain(),tolerance,max_cells,mapped)?.0)
 }

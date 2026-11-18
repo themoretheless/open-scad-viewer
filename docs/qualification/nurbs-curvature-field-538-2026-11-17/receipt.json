@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0538",
+  "testedBase": "321e282816eee794fb0a1509a31e3e89787c8bb3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 133,
+  "scope": [
+    "Evaluate ordered batches after exact periodic parameter reduction with one validated evaluator.",
+    "Verify both periodic axes once, reuse the surface evaluator and reject the whole batch on the first exact reduction failure."
+  ],
+  "logSha256": "dd061dfbb11c3f91b29bc583a70084c364ba4170f3d7b11ab644b29fab8acb2b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8cdf89194cb4a5cf3f63e8568f719edf3838295a6e63e36e4fe994f68f2f77e2",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "3558a0d58afbe94bd3a2a6d874d826f1e4ed6bd79fd8b3005ac92482e4b886e8"
+  }
+}

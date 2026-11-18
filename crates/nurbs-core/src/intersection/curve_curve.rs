@@ -1,7 +1,7 @@
 //! Curve/curve intersection core: coincidence admission, Krawczyk isolation,
 //! contact classification, and the subdivision driver (split from the hub).
 use super::*;
-use crate::foundation::guards::{Budget, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_point};
 
 fn tangent_sine(first: &Curve, second: &Curve, t: f64, u: f64) -> Result<f64> {
     let mut best: f64 = 0.;
@@ -573,8 +573,10 @@ pub fn intersect_curve_curve_bounded_report(
 /// Per-box fat-line clip round budget for the production entry point.
 const CLIP_ROUNDS_PER_BOX: usize = 16;
 
+#[cfg(test)]
 /// Test/diagnostic entry: `clip_budget == 0` disables the fat-line pre-filter
 /// so the unclipped subdivision path can be A/B compared against the fast one.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(crate) fn intersect_curve_curve_report_with_clip(
     first: &Curve,
     second: &Curve,

@@ -2,7 +2,7 @@
 //! topology-preserving decimation, and lightening cell construction.
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 mod markers;
 mod print_report;
 mod report_util;

@@ -82,6 +82,7 @@ pub struct MixedComponentDiscoveryResult {
     searches: Vec<MixedTransitionSearch>,
     rectangles: usize,
     reason: &'static str,
+    unresolved_pair: Option<[usize; 2]>,
 }
 impl MixedComponentDiscoveryResult {
     pub fn components(&self) -> Option<&DiscoveredMixedFiberComponents> {
@@ -99,6 +100,9 @@ impl MixedComponentDiscoveryResult {
     pub fn reason(&self) -> &'static str {
         self.reason
     }
+    pub fn unresolved_pair(&self) -> Option<[usize; 2]> {
+        self.unresolved_pair
+    }
 }
 /// Infer original-source bridge boxes between charts in a complete mixed
 /// coverage. Only fresh qualified transitions join labels; failed searches do
@@ -112,11 +116,11 @@ pub fn connect_mixed_fiber_cover_automatic(
 ) -> Result<MixedComponentDiscoveryResult> {
     check(
         (1..=100000).contains(&limits.max_rectangles)
-            && limits.max_pairs <= 2016
+            && limits.max_pairs <= MAX_MIXED_FIBER_PAIRS
             && limits.max_bridges <= 256
             && (1..=1024).contains(&limits.transition_proposals)
             && limits.transition_depth <= 24
-            && coverage.fibers().len() <= 64,
+            && coverage.fibers().len() <= MAX_MIXED_FIBERS,
         "Need bounded automatic mixed component work",
     )?;
     let fs = coverage.fibers();
@@ -158,6 +162,7 @@ pub fn connect_mixed_fiber_cover_automatic(
         searches: vec![],
         rectangles: 0,
         reason: "automatic-transitions-unproven",
+        unresolved_pair: None,
     };
     let proposal_cap = limits.max_rectangles / 2;
     loop {
@@ -201,7 +206,33 @@ pub fn connect_mixed_fiber_cover_automatic(
                 point_domain: None,
                 point_rectangles: 0,
             };
-            let domain = if let Some(found) = r.into_transition() {
+            let mut bridge_charts = [i, j];
+            let mut transition = r.into_transition();
+            // A uniform bridge can be well conditioned in the other chart's
+            // free coordinate. Preserve its ordering for independent replay.
+            if transition.is_none() && fs[i].free_axis() != fs[j].free_axis() {
+                let reverse_allowance = (allowance - search.rectangles) / 2;
+                if reverse_allowance > 0 {
+                    let reverse = discover_fiber_transition(
+                        &fs[j],
+                        &fs[i],
+                        FiberTransitionDiscoveryLimits {
+                            max_rectangles: reverse_allowance,
+                            max_proposals: limits.transition_proposals,
+                            max_depth: limits.transition_depth,
+                        },
+                    )?;
+                    search.rectangles += reverse.rectangles();
+                    search.attempts.extend_from_slice(reverse.attempts());
+                    search.reason.push_str("; reverse: ");
+                    search.reason.push_str(reverse.reason());
+                    transition = reverse.into_transition();
+                    if transition.is_some() {
+                        bridge_charts = [j, i];
+                    }
+                }
+            }
+            let domain = if let Some(found) = transition {
                 Some(found.proof().bridge().domain())
             } else if search.rectangles < allowance {
                 // Closed atlas leaves may only touch at one original root. A
@@ -212,12 +243,12 @@ pub fn connect_mixed_fiber_cover_automatic(
                     used: 0,
                     max: remaining,
                 };
-                let point = super::super::discovered_components::point_connection(
-                    fs[i].source(),
-                    &fs[i],
-                    &fs[j],
-                    &mut work,
-                );
+                let point = match affine_boundary_point(&fs[i], &fs[j], &mut work)? {
+                    Some(point) => Ok(Some(point)),
+                    None => super::super::discovered_components::point_connection(
+                        fs[i].source(), &fs[i], &fs[j], &mut work,
+                    ),
+                };
                 let point = match point {
                     Ok(point) => point,
                     Err(_) => {
@@ -242,7 +273,7 @@ pub fn connect_mixed_fiber_cover_automatic(
             out.searches.push(search);
             if let Some(domain) = domain {
                 specs.push(FiberBridgeSpec {
-                    charts: [i, j],
+                    charts: bridge_charts,
                     domain,
                 });
                 let low = labels[i].min(labels[j]);
@@ -267,6 +298,7 @@ pub fn connect_mixed_fiber_cover_automatic(
     let r = connect_mixed_fiber_cover(coverage, &specs, limits.max_rectangles - out.rectangles)?;
     out.rectangles += r.rectangles();
     out.reason = r.reason();
+    out.unresolved_pair = r.unresolved_pair;
     if let Some(core) = r.into_components() {
         out.reason = "complete-discovered-mixed-parameter-components";
         out.components = Some(DiscoveredMixedFiberComponents {
@@ -277,4 +309,42 @@ pub fn connect_mixed_fiber_cover_automatic(
         });
     }
     Ok(out)
+}
+
+fn affine_boundary_point(
+    first: &QualifiedFiber,
+    second: &QualifiedFiber,
+    work: &mut Work,
+) -> Result<Option<QualifiedFiber>> {
+    let Ok(projection) = mixed::AffineGraphExclusion::new(first.source()) else {
+        return Ok(None);
+    };
+    let (a, b) = (first.domain(), second.domain());
+    let common: Box4 = std::array::from_fn(|k| [a[k][0].max(b[k][0]), a[k][1].min(b[k][1])]);
+    for axis in [first.free_axis(), second.free_axis()] {
+        let k = axis.index();
+        let paired = (k + 2) % 4;
+        for value in common[k] {
+            let mapped = projection.matching_parameter(k, value)?;
+            if mapped[0] < common[paired][0] || mapped[1] > common[paired][1]
+                || (mapped[0] > common[paired][0] && mapped[1] < common[paired][1])
+            {
+                continue;
+            }
+            let mut domain = common;
+            domain[k] = [value; 2];
+            domain[paired] = [a[paired][0].min(b[paired][0]), a[paired][1].max(b[paired][1])];
+            if work.used == work.max || !super::point_box_in_charts(first, second, domain, k)
+                || (0..4).any(|axis| axis != k && domain[axis][0] >= domain[axis][1])
+            {
+                continue;
+            }
+            let result = first.source().certify_contracted(domain, axis, work.max - work.used)?;
+            work.used += result.rectangles();
+            if let Some(point) = result.into_fiber() {
+                return Ok(Some(point));
+            }
+        }
+    }
+    Ok(None)
 }

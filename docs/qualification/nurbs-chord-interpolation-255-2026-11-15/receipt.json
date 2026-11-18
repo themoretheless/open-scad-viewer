@@ -1,0 +1,24 @@
+{
+  "id": "NURBS-0255",
+  "baseCommit": "39f4c2652db012b825812f6623a89d46eecfb4ce",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "chord_interpolation_contracts"
+  ],
+  "passed": 4,
+  "failed": 0,
+  "scope": "An outward interval certificate using normalized second jets and the weighted variance bound. It covers exact surface samples in every triangle contained in the cell, with original knot pieces and an explicit cell budget. Crossing a knot requires C1 continuity.",
+  "sha256": {
+    "crates/nurbs-core/src/analysis/surface_chord_bound.rs": "bef6ee0cfaa3a8b28b03eed6dc86ed0f33a8aef14f486b158d46752a8ccac18d",
+    "crates/nurbs-core/tests/chord_interpolation_contracts.rs": "ac1713df0f251992dceba37be6958ba2c224881b5e96458e8b2d5ca0db79a229"
+  },
+  "logSha256": "b441dac1943c503359a15a10f22d4eeadcb5db5549a8a2b1ad001e1a05999ad4"
+}

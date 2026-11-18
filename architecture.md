@@ -7,8 +7,8 @@ debt and acceptance criteria live in [recommendation.md](docs/recommendation.md)
 
 ## Product boundary
 
-The OpenSCAD Viewer product remains a client-only Vue 3 + TypeScript
-application: geometry compilation and rendering stay in the browser and there
+The OpenSCAD Viewer product remains a client-only TypeScript
+application on the Svet runtime (single-file `.svt` components): geometry compilation and rendering stay in the browser and there
 is no application backend. The repository also ships an optional local Node
 process that exposes headless compiler operations over MCP stdio and persists
 its own catalog in DuckDB. The MCP process is a sidecar/tooling surface, not a
@@ -41,7 +41,7 @@ The supported language and limits are documented in
 ## System map
 
 ```text
-Vue workspace / file actions / textarea
+Svet workspace / file actions / textarea
         │
         ├─ commandRegistry.ts: palette metadata + scoped keyboard routing
         ▼
@@ -75,7 +75,7 @@ Published MeshData[] + diagnostics + metrics
 ```
 
 The optional headless path shares pure compiler/inspection/export services but
-does not enter the Vue or WebGPU graph:
+does not enter the Svet or WebGPU graph:
 
 ```text
 MCP client
@@ -108,7 +108,7 @@ createOpenScadMcpServer
 
 | Component | Current responsibility |
 | --- | --- |
-| [`src/App.vue`](src/App.vue) | Workspace composition, file/share/export actions, explicit recovery-conflict choice, build publication, renderer recovery, Vue view state and orchestration. |
+| [`src/App.svt`](src/App.svt) | Workspace composition, file/share/export actions, explicit recovery-conflict choice, build publication, renderer recovery, Svet view state and orchestration. |
 | [`src/core/mesh.ts`](src/core/mesh.ts) / [`src/core/build.ts`](src/core/build.ts) | Renderer-neutral mesh, identity, provenance, transfer and quality contracts; no parser/kernel dependency. |
 | [`src/services/workspaceDocument.ts`](src/services/workspaceDocument.ts) | Versioned, validated single-document contract with separate geometry revision and monotonic persistence mutation, including legacy migration. |
 | [`src/services/workspaceIndexedDb.ts`](src/services/workspaceIndexedDb.ts) | Browser-only active-head repository with runtime validation, compare-and-swap writes, upgrade handling and bounded open failure. |
@@ -442,7 +442,7 @@ commands flowing inward and renderer intents/events flowing outward.
   retained entity deltas and shared GPU assets are absent.
 - Face/source overlay creation still scans mesh data and allocates GPU buffers;
   style changes update every object uniform, and bounds are rescanned.
-- `App.vue` and `webgpuRenderer.ts` retain broad responsibilities and mirror
+- `App.svt` and `webgpuRenderer.ts` retain broad responsibilities and mirror
   selection/visibility state. Replacement continuity is now a pure service,
   but App still applies the resulting state to both owners.
 - Browser persistence is versioned and IndexedDB-first, with a synchronous

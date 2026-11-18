@@ -5,34 +5,50 @@ import {
   computeSliceArea,
   groupSegmentsByLayer,
   MESH_SLICER_WGSL,
-} from '../src/services/gpuSlicer'
+} from '../src/render/gpuSlicer'
 
 /** Helper: Creates a closed watertight box from [0,0,0] to [sx, sy, sz] with outward normals */
 function createBoxMesh(sx: number, sy: number, sz: number) {
   const vertices = new Float32Array([
-    0, 0, 0,   // 0
-    sx, 0, 0,  // 1
-    sx, sy, 0, // 2
-    0, sy, 0,  // 3
-    0, 0, sz,  // 4
-    sx, 0, sz, // 5
-    sx, sy, sz,// 6
-    0, sy, sz, // 7
+    0,
+    0,
+    0, // 0
+    sx,
+    0,
+    0, // 1
+    sx,
+    sy,
+    0, // 2
+    0,
+    sy,
+    0, // 3
+    0,
+    0,
+    sz, // 4
+    sx,
+    0,
+    sz, // 5
+    sx,
+    sy,
+    sz, // 6
+    0,
+    sy,
+    sz, // 7
   ])
 
   const indices = new Uint32Array([
     // Bottom (-Z)
-    0, 2, 1,  0, 3, 2,
+    0, 2, 1, 0, 3, 2,
     // Top (+Z)
-    4, 5, 6,  4, 6, 7,
+    4, 5, 6, 4, 6, 7,
     // Front (-Y, normal [0, -1, 0])
-    0, 1, 5,  0, 5, 4,
+    0, 1, 5, 0, 5, 4,
     // Back (+Y, normal [0, +1, 0])
-    2, 3, 7,  2, 7, 6,
+    2, 3, 7, 2, 7, 6,
     // Left (-X, normal [-1, 0, 0])
-    3, 0, 4,  3, 4, 7,
+    3, 0, 4, 3, 4, 7,
     // Right (+X, normal [+1, 0, 0])
-    1, 2, 6,  1, 6, 5,
+    1, 2, 6, 1, 6, 5,
   ])
 
   return { vertices, indices }
@@ -90,21 +106,28 @@ describe('WebGPU Compute Multi-Plane Mesh Slicer', () => {
   it('slices a square pyramid and verifies quadratic area scaling across height', () => {
     // Square base [-2, 2] x [-2, 2] at z = 0 (area = 16), apex at [0, 0, 4]
     const vertices = new Float32Array([
-      -2, -2, 0, // 0
-       2, -2, 0, // 1
-       2,  2, 0, // 2
-      -2,  2, 0, // 3
-       0,  0, 4, // 4 (apex)
+      -2,
+      -2,
+      0, // 0
+      2,
+      -2,
+      0, // 1
+      2,
+      2,
+      0, // 2
+      -2,
+      2,
+      0, // 3
+      0,
+      0,
+      4, // 4 (apex)
     ])
 
     const indices = new Uint32Array([
       // Base (-Z)
-      0, 2, 1,  0, 3, 2,
+      0, 2, 1, 0, 3, 2,
       // 4 side triangles (CCW outward)
-      0, 1, 4,
-      1, 2, 4,
-      2, 3, 4,
-      3, 0, 4,
+      0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4,
     ])
 
     // Slice at z = 1.0 (3/4 of base width => side = 3, area = 9)

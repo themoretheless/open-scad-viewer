@@ -56,7 +56,7 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
         .checked_sub(usize::from(!closed))
         .ok_or_else(|| input("Invalid miter sites"))?;
     let mut spans = 0;
-    for profile in profiles.as_array().unwrap() {
+    for profile in loops.iter().flatten() {
         spans += nurbs("curve_decompose", json!({"curve":profile}))?
             .as_array()
             .ok_or_else(|| input("Invalid native decomposition"))?
@@ -135,7 +135,7 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     let model = owned["model"].clone();
     let mut cap_domains = Value::Null;
     if !closed {
-        let rows = sections.as_array().unwrap();
+        let rows = sections.as_array().expect("partition returns a JSON array with one row per loop");
         let budgets = value(
             o,
             "contourAuditBudgets",
@@ -179,7 +179,7 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
         decomp_error,
     )?;
     let budget: f64 = field(o, "maxDeviation")?;
-    if !correction.is_null() && (wall_error.is_null() || wall_error.as_f64().unwrap() > budget) {
+    if !correction.is_null() && wall_error.as_f64().is_none_or(|err| err > budget) {
         return Err(input(format!(
             "Corrected progressive miter retained wall error exceeds max_deviation or is unproved (upper={wall_error}, budget={budget}, source={}, correction={}, decomposition={})",
             report["certifiedErrorUpper"],
@@ -190,8 +190,8 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     let caps = cap_faces(&model, closed)?;
     let volume_budgets = value(o, "volumeBudgets", volume_budgets());
     let cap_budgets = &volume_budgets["capBudgets"];
-    let rows = sections.as_array().unwrap();
-    let endpoints = json!([rows[0], rows.last().unwrap()]);
+    let rows = sections.as_array().expect("partition returns a JSON array with one row per loop");
+    let endpoints = json!([rows[0], rows.last().expect("partition rows are non-empty: loops is 1..16")]);
     let retained_caps = if closed {
         Value::Null
     } else {
@@ -241,7 +241,7 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     let mut projection = Value::Null;
     let mut parallelism = Value::Null;
     if !closed {
-        let faces = model["faces"].as_array().unwrap();
+        let faces = model["faces"].as_array().ok_or_else(|| input("Miter body model has no faces array"))?;
         let req = merge(
             request.clone(),
             &json!({"caps":[faces[faces.len()-2]["surface"],faces[faces.len()-1]["surface"]],"maxCells":value(&o["capProjectionBudgets"],"maxCells",json!(10000)),"maxExactWork":value(&o["capProjectionBudgets"],"maxExactWork",json!(1000000))}),
@@ -408,7 +408,7 @@ pub fn miter(v: Value) -> Result<Value> {
         "brep_miter_profile_smoothness_audit",
         json!({"model":model,"capFaces":caps,"maxWork":2000000}),
     )?;
-    let mut report = json!({"profileSmoothness":smoothness,"method":"polyline-miter-sections","sections":retained.as_array().unwrap().len(),"closedPath":closed,"globalEmbeddingCertified":false,"roundingCertified":false,"continuousBound":false,"profileRegularityCertified":regularity["spanwiseRegular"],"profileRegularity":regularity,"wallRegularityCertified":charts["allChartsCertified"],"retainedWallCharts":charts,"volume":volume});
+    let mut report = json!({"profileSmoothness":smoothness,"method":"polyline-miter-sections","sections":retained.as_array().map_or(0, Vec::len),"closedPath":closed,"globalEmbeddingCertified":false,"roundingCertified":false,"continuousBound":false,"profileRegularityCertified":regularity["spanwiseRegular"],"profileRegularity":regularity,"wallRegularityCertified":charts["allChartsCertified"],"retainedWallCharts":charts,"volume":volume});
     if !correction.is_null() {
         report["sectionCorrection"] = correction;
         report["retainedCorrespondence"] = correspondence;
@@ -563,25 +563,47 @@ pub fn smooth(mut v: Value, reconstruct: bool) -> Result<Value> {
         json!({"sections":v["sections"],"sides":candidate["sides"],"closed":closed}),
     )?;
     let caps = cap_faces(&model, closed)?;
-    for face in caps.as_array().unwrap() {
-        let i = face.as_u64().unwrap() as usize;
+    for face in caps
+        .as_array()
+        .ok_or_else(|| input("Invalid cap faces array"))?
+    {
+        let i = face
+            .as_u64()
+            .ok_or_else(|| input("Invalid cap face index"))? as usize;
         if !equivalent(&model["faces"][i], &source.model["faces"][i]) {
             return Err(input("Station smoothing changed a filled cap"));
         }
         let f = &model["faces"][i];
-        let wires = std::iter::once(&f["outer"]).chain(f["holes"].as_array().unwrap());
+        let holes = f["holes"]
+            .as_array()
+            .ok_or_else(|| input("Invalid cap face holes"))?;
+        let wires = std::iter::once(&f["outer"]).chain(holes);
         for wire in wires {
-            let wire = wire.as_u64().unwrap() as usize;
+            let wire = wire
+                .as_u64()
+                .ok_or_else(|| input("Invalid cap loop index"))? as usize;
             if !equivalent(&model["loops"][wire], &source.model["loops"][wire]) {
                 return Err(input("Station smoothing changed cap trims"));
             }
-            for coedge in model["loops"][wire]["coedges"].as_array().unwrap() {
-                let edge = coedge["edge"].as_u64().unwrap() as usize;
+            for coedge in model["loops"][wire]["coedges"]
+                .as_array()
+                .ok_or_else(|| input("Invalid cap loop coedges"))?
+            {
+                let edge = coedge["edge"]
+                    .as_u64()
+                    .ok_or_else(|| input("Invalid cap edge index"))?
+                    as usize;
                 if !equivalent(&model["edges"][edge], &source.model["edges"][edge]) {
                     return Err(input("Station smoothing changed a cap boundary edge"));
                 }
-                for vertex in model["edges"][edge]["vertices"].as_array().unwrap() {
-                    let vertex = vertex.as_u64().unwrap() as usize;
+                for vertex in model["edges"][edge]["vertices"]
+                    .as_array()
+                    .ok_or_else(|| input("Invalid cap edge vertices"))?
+                {
+                    let vertex = vertex
+                        .as_u64()
+                        .ok_or_else(|| input("Invalid cap vertex index"))?
+                        as usize;
                     if !equivalent(
                         &model["vertices"][vertex],
                         &source.model["vertices"][vertex],

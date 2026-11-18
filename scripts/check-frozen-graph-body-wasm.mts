@@ -6,16 +6,19 @@ import {resolve} from 'node:path'
 import * as module from 'node:module'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 import identity from '../src/generated/geometry-kernels/identity'
-import type {MainSolidJob} from '../src/services/mainSolidProtocol'
-if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
+import type {MainSolidJob} from '../src/kernel/mainSolidProtocol'
+const nodeModule = module as typeof module & { registerHooks?: (hooks: { load: typeof load }) => void }
+/** Decoded ABI payload; its shape is asserted at runtime by this script. */
+type Wire = ReturnType<typeof JSON.parse>
+if(typeof nodeModule.registerHooks==='function')nodeModule.registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)
-const {restoreFrozenGraphBody,displayFrozenGraphBody}=await import('../src/services/frozenGraphBody')
-const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
-const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+const {restoreFrozenGraphBody,displayFrozenGraphBody}=await import('../src/kernel/frozenGraphBody')
+const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
+const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
 const bytes=readFileSync('public/wasm/geometry-kernel.wasm'),sha256=createHash('sha256').update(bytes).digest('hex')
 assert.equal(sha256,identity.sha256);assert.equal(bytes.length,identity.byteLength)
 const packed=(await import('../src/generated/geometry-kernels/bytes')).default
-const {unpackBrotliWasmBase64}=await import('../src/services/wasmBrotliPacking')
+const {unpackBrotliWasmBase64}=await import('../src/kernel/wasmBrotliPacking')
 const embedded=unpackBrotliWasmBase64(packed)
 assert.equal(embedded.length,bytes.length)
 assert.equal(createHash('sha256').update(embedded).digest('hex'),sha256)
@@ -25,7 +28,7 @@ const start=performance.now(),direct=restoreFrozenGraphBody(artifact,options),di
 assert.equal(direct.report.faces,9);assert.equal(direct.report.pairProducts,36)
 assert.equal(direct.report.nativeVolumeCertified,true);assert.equal(direct.report.applicationAdmitted,false)
 assert.deepEqual(direct.artifact.geometry,artifact.geometry)
-const replies:any[]=[],handler=createMainSolidWorkerHandler(reply=>replies.push(reply))
+const replies:Wire[]=[],handler=createMainSolidWorkerHandler(reply=>replies.push(reply))
 const job:MainSolidJob={kind:'frozenGraphBodyRestore',artifact,options}
 const workerStart=performance.now();await handler({version:1,id:1,job});const workerMs=performance.now()-workerStart
 const reply=replies.at(-1);assert.equal(reply.ok,true);assert(mainSolidResult(mainSolidExpectation(job),reply.result));assert.deepEqual(reply.result,direct)

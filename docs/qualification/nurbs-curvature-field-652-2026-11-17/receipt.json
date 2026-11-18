@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0652",
+  "testedBase": "e93fb9017f978ed8c017ab4c5e7393dfa20ea58e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 250,
+  "scope": [
+    "Convert a principal-axis angular certificate into a sign-invariant interval projector.",
+    "Check a rotated exact projector, direction sign invariance, a nonzero angular uncertainty and invalid certificate rejection."
+  ],
+  "logSha256": "7de459c7a72010a6c872c892cfef6ea381916df0f421b583c92c95b6f9fd6e25",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "483531422e430fc9000de711e85ba343d445bb9436fdd04dd006c5641b89f18e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "327b538b0973da984de2523639e9d3cd20907a799426bea3fa494b6484773c40"
+  }
+}

@@ -89,10 +89,10 @@ fn pole_sphere_all_analytic_pair_kinds_preserve_source_uv_constraints() {
     assert!(pair.unresolved.is_empty(), "{:?}", pair.unresolved);
     assert!(!pair.permits_topology_change());
     assert_eq!(pair.components.len(), 2);
-    for SphereCylinderComponent::Circle {
-        curve, sphere_uv, ..
-    } in &pair.components
-    {
+    for component in &pair.components {
+        let SphereCylinderComponent::Circle { curve, sphere_uv, .. } = component else {
+            panic!("axial pairs give circles");
+        };
         lifts(&centered, sphere_uv, curve);
     }
     let cone = analytic::frustum(0.5, 2., 6.).unwrap();
@@ -100,10 +100,10 @@ fn pole_sphere_all_analytic_pair_kinds_preserve_source_uv_constraints() {
     assert!(pair.unresolved.is_empty(), "{:?}", pair.unresolved);
     assert!(!pair.permits_topology_change());
     assert!(!pair.components.is_empty());
-    for SphereConeComponent::Circle {
-        curve, sphere_uv, ..
-    } in &pair.components
-    {
+    for component in &pair.components {
+        let SphereConeComponent::Circle { curve, sphere_uv, .. } = component else {
+            panic!("axial pairs give circles");
+        };
         lifts(&centered, sphere_uv, curve);
     }
     let torus = analytic::torus(3., 1.).unwrap();
@@ -112,10 +112,13 @@ fn pole_sphere_all_analytic_pair_kinds_preserve_source_uv_constraints() {
     assert!(pair.unresolved.is_empty(), "{:?}", pair.unresolved);
     assert!(!pair.permits_topology_change());
     assert_eq!(pair.components.len(), 2);
-    for SphereTorusComponent::Circle {
-        curve, sphere_uv, ..
-    } in &pair.components
-    {
+    for component in &pair.components {
+        let SphereTorusComponent::Circle {
+            curve, sphere_uv, ..
+        } = component
+        else {
+            panic!("expected exact circles for an axial pair");
+        };
         lifts(&torus_sphere, sphere_uv, curve);
     }
 }

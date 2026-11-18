@@ -1,0 +1,274 @@
+{
+  "sourceCommit": "0640ebd846dcfa1112cf50f60ac33337f8e4e6b3",
+  "catalogueCount": 240,
+  "capabilityCountIncrease": 0,
+  "productionAdmitted": false,
+  "installedPackageUpdated": false,
+  "limits": {
+    "streamingBytes": 16000000,
+    "decodedBytes": 16777216
+  },
+  "baseline": {
+    "sourceCommit": "0640ebd846dcfa1112cf50f60ac33337f8e4e6b3",
+    "status": "terminal",
+    "started": "2026-11-02T23:01:22.103Z",
+    "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+    "scope": "Stock geometry WASM build and stock Binaryen optimizer, private target/output only; no packaged/generated/public asset or profile update.",
+    "sourceInputsSha256": "00b7cf42fa8d3957d5694dc1e318a8b11f210c3d3138288be3f2ba1b46d47820",
+    "command": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--release",
+      "--config",
+      "profile.release.opt-level=\"z\"",
+      "--config",
+      "profile.release.strip=\"symbols\"",
+      "--config",
+      "profile.release.package.brep-core.opt-level=\"z\"",
+      "--config",
+      "profile.release.package.geometry-bridge.opt-level=\"z\"",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--manifest-path",
+      "crates/geometry-wasm/Cargo.toml"
+    ],
+    "buildEnv": {
+      "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+      "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "buildExit": 0,
+    "buildSignal": null,
+    "raw": {
+      "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+      "bytes": 18930968,
+      "sha256": "d55531a70064cd7ea9c71bb11a99b0918d52264231610ce2282a29731929afc0"
+    },
+    "optimized": {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native242-stock-optimized.wasm",
+      "bytes": 16794038,
+      "sha256": "4a569bd74b0f71568b0e608ac41f5112257bf4515c2486708c3efeeb701b0e30",
+      "valid": true
+    },
+    "finished": "2026-11-02T23:08:05.993Z"
+  },
+  "rejectedExperiments": {
+    "jsonOutlining": {
+      "sourceCommit": "0640ebd846dcfa1112cf50f60ac33337f8e4e6b3",
+      "status": "terminal",
+      "started": "2026-11-02T23:18:22.959Z",
+      "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+      "scope": "JSON object insertion outlining experiment, stock size flags and same-version native Binaryen optimizer, private target/output only; no packaged/generated/public asset or profile update.",
+      "dirtySourceFiles": [
+        "crates/value-codec/src/lib.rs",
+        "crates/value-codec/tests/json_macro_semantics.rs"
+      ],
+      "sourceDiffSha256": "45a59a61e282f266ade6ec44e81e2ab49b4edb1fecd9abe610e3385c7ca01836",
+      "sourceInputsSha256": "42aac5e986fb7edfbebe8c24d9ca086b1d374ca1905d347d30b9b3353799939f",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--release",
+        "--config",
+        "profile.release.opt-level=\"z\"",
+        "--config",
+        "profile.release.strip=\"symbols\"",
+        "--config",
+        "profile.release.package.brep-core.opt-level=\"z\"",
+        "--config",
+        "profile.release.package.geometry-bridge.opt-level=\"z\"",
+        "--target",
+        "wasm32-unknown-unknown",
+        "--manifest-path",
+        "crates/geometry-wasm/Cargo.toml"
+      ],
+      "buildEnv": {
+        "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+        "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+        "CARGO_BUILD_JOBS": "2"
+      },
+      "buildExit": 0,
+      "buildSignal": null,
+      "raw": {
+        "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+        "bytes": 18930993,
+        "sha256": "aa787b09e882bdad4d7a0b49a2a4755d1a49c8152ab6bcb09f14b223c8b2ad60"
+      },
+      "optimized": {
+        "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native242-json-optimized.wasm",
+        "bytes": 16794062,
+        "sha256": "6d405c17f1eb6bf948ce6946c3a7b46207ce10f03fb03497069cd1fa5d16ead5",
+        "valid": true
+      },
+      "finished": "2026-11-02T23:22:14.858Z"
+    },
+    "extraBinaryen": {
+      "status": "terminal",
+      "sourceCommit": "0640ebd846dcfa1112cf50f60ac33337f8e4e6b3",
+      "input": {
+        "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+        "sha256": "d55531a70064cd7ea9c71bb11a99b0918d52264231610ce2282a29731929afc0",
+        "bytes": 18930968
+      },
+      "tool": {
+        "path": "/Users/themoretheless/.cargo/bin/wasm-opt",
+        "sha256": "4c575c3d092cdfa434ead67f44c0379a28289c94b966136055d51c7946ed6523",
+        "version": "wasm-opt version 116 (version_116)"
+      },
+      "start": "2026-11-02T23:07:24.295799+00:00",
+      "scope": "Scratch optimizer experiment only; no runtime, installed-package or delivery admission.",
+      "command": [
+        "/Users/themoretheless/.cargo/bin/wasm-opt",
+        "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+        "-Oz",
+        "--gufa-optimizing",
+        "--code-folding",
+        "--dae-optimizing",
+        "-Oz",
+        "--converge",
+        "--enable-bulk-memory",
+        "--enable-sign-ext",
+        "--enable-nontrapping-float-to-int",
+        "--enable-mutable-globals",
+        "--enable-reference-types",
+        "--enable-multivalue",
+        "-o",
+        "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native242-gufa-optimized.wasm"
+      ],
+      "environment": {
+        "BINARYEN_CORES": "2"
+      },
+      "exitCode": 0,
+      "end": "2026-11-02T23:17:20.724918+00:00",
+      "output": {
+        "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native242-gufa-optimized.wasm",
+        "bytes": 16779786,
+        "sha256": "ebbd5cc45804539ed5d447528b00e5b1bb529a52ee694c9165682ba98889c98a"
+      }
+    }
+  },
+  "checks": {
+    "surfaceBinaryAbiCases": 102,
+    "exactPrimitiveCases": 11,
+    "exactPrimitiveChecks": 33,
+    "independentOracleNegativeControls": 8,
+    "codecTests": 7,
+    "architecture": "54 existing oversized pins; 0 layer violations"
+  },
+  "scope": "Source-bound private raw WASM correctness slice. Oversize baseline and experimental binaries are not production, Worker, editor, STEP or performance qualification. JSON outlining reverted after size regression; extra Binaryen remains above both limits. Native code and all delivery limits preserved.",
+  "sourceSha256": {
+    "crates/value-codec/src/lib.rs": "b8d86aa42df66c6ffe650ad8d28c9f56871649ae2d789f7298b0da9e9e68a312",
+    "crates/value-codec/tests/json_macro_semantics.rs": "a775f73a776943f210d59d9122cc3021d72bbcfc76ff1da499f2e0e47c974914",
+    "scripts/check-exact-primitives-wasm.mts": "c4c163df00c473b7109e0751bb5cefa93e86b78f562ceaae6f5c0a0c47b3e46c"
+  },
+  "predicatesSizeExperiment": {
+    "sourceCommit": "0640ebd846dcfa1112cf50f60ac33337f8e4e6b3",
+    "status": "terminal",
+    "started": "2026-11-02T23:23:08.699Z",
+    "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+    "scope": "WASM-only cad-predicates opt-z experiment, stock size flags and same-version native Binaryen optimizer, private target/output only; no packaged/generated/public asset or profile update.",
+    "dirtySourceFiles": [
+      "crates/value-codec/tests/json_macro_semantics.rs"
+    ],
+    "sourceDiffSha256": "cfbe485bd91a66e05ba2b90c16b48b118ceaa3a3bf7fa63a6886413506d2bb87",
+    "sourceInputsSha256": "a1b15d164ba5349a6e76467c533a50b04a3194080dc21c7add7aa57c04df96d1",
+    "command": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--release",
+      "--config",
+      "profile.release.opt-level=\"z\"",
+      "--config",
+      "profile.release.strip=\"symbols\"",
+      "--config",
+      "profile.release.package.brep-core.opt-level=\"z\"",
+      "--config",
+      "profile.release.package.geometry-bridge.opt-level=\"z\"",
+      "--config",
+      "profile.release.package.cad-predicates.opt-level=\"z\"",
+      "--target",
+      "wasm32-unknown-unknown",
+      "--manifest-path",
+      "crates/geometry-wasm/Cargo.toml"
+    ],
+    "buildEnv": {
+      "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+      "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "buildExit": 0,
+    "buildSignal": null,
+    "raw": {
+      "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+      "bytes": 18769953,
+      "sha256": "7db0b316e696f4b2f98a4d40d19deb4083d7e651a55b67b5db2cf4d3dcaf3835"
+    },
+    "optimized": {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native242-predicates-optimized.wasm",
+      "bytes": 16641867,
+      "sha256": "632f90543c1a835931b061b2543830200c9fd570dad972b25a80bfe7ad5692df",
+      "valid": true
+    },
+    "finished": "2026-11-02T23:26:53.461Z",
+    "productionAdmitted": false,
+    "streamingLimitExcess": 641867,
+    "decodedLimitHeadroom": 135349,
+    "bytesSavedAgainstStock": 152171,
+    "checks": {
+      "surfaceAbi": 102,
+      "exactPrimitiveAbi": 33,
+      "independentOracleRecords": 11,
+      "independentNegativeControls": 8
+    }
+  },
+  "boundedTimingComparison": {
+    "roundsEach": 5,
+    "casesEach": 102,
+    "timedCasesEach": 26,
+    "allCaseResultsEqual": true,
+    "scope": "Five alternating fresh-instance ABI fixture runs per variant; bounded timing observation, not broad performance qualification or production admission",
+    "totalsMs": {
+      "stock": [
+        477.4887499999999,
+        477.4840810000002,
+        480.4883310000001,
+        469.205502,
+        473.28145800000004
+      ],
+      "predicates": [
+        470.41729400000025,
+        471.71133400000014,
+        472.1160379999999,
+        470.6764609999998,
+        472.2668760000001
+      ]
+    },
+    "medianTotalMs": {
+      "stock": 477.4840810000002,
+      "predicates": 471.71133400000014
+    },
+    "candidateToStockMedianRatio": 0.9879100744303138
+  },
+  "privatePacked": {
+    "sizes": {
+      "bytesTs": 5887451,
+      "identityTs": 195,
+      "wasm": 16641867,
+      "productionAdmitted": false
+    },
+    "verification": {
+      "result": 16641867,
+      "verified": true,
+      "installedPackageUpdated": false,
+      "scope": "Private packed literal decodes byte-for-byte to exact candidate; no production profile admission or Worker/editor qualification"
+    },
+    "encodedSourceSha256": "df2ccaf3ac097b6b38b773a6b9e7a2021e3510c6c254d1d378d9e0f9c5025d76",
+    "scope": "Private packing and byte equality only. bytesTs is encoded source size, not a measured emitted application chunk. Streaming and exact-profile admission remain unmet."
+  }
+}

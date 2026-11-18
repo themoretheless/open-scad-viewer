@@ -2,12 +2,12 @@ import assert from 'node:assert/strict'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {extrudeSketchProfile} from '../src/services/directExtrusion'
-import {exactSimplePrismFillet,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
-import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
-import {stringifyMeshJson} from '../src/services/meshJson'
-import {importDirectStepV9} from '../src/services/cadNurbsStep'
+import {extrudeSketchProfile} from '../src/app/directExtrusion'
+import {exactSimplePrismFillet,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
+import {DirectHistory,parseDirectDocument} from '../src/app/directModeling'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
+import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
 const directory=resolve(process.argv[2]??'output/qualification/simple-prism-fillet')
 mkdirSync(directory,{recursive:true})
 const parts=[]

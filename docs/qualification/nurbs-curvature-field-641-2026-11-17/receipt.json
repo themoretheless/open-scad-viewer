@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0641",
+  "testedBase": "41f3003b5a28ae0da1b3f171ec0b6beec1529250",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 238,
+  "scope": [
+    "Translate each component tensor to the same fixed world point and add its contribution with outward rounding.",
+    "Check signed cross terms and analytic tensor diagonals under independent interval masses, a weighted nested island and incomplete integration."
+  ],
+  "logSha256": "920fbeef0cda091f39f20e68698033b8622e2b2eccecb24af81264b3cb4cf4d8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "b9b1ada97953adf041d607819110b8c7bab2bdcd601fe4c2ba786fce3998e57e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "918f8ce65649686244679dcd31d73414a7341c8008320018766aa200ed977a73"
+  }
+}

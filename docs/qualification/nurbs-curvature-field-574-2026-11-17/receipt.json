@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0574",
+  "testedBase": "d8a467f03c760691b564c0ff49878db797ad9d55",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 143,
+  "scope": [
+    "Evaluate lifted rational Bezier edges in world coordinates and verify incident pieces agree at their split.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "10fd2c45fd4d909bcf70e686acc8c58319c4a7d1c30bafc075cbfb8b5661f2d4",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "443871cdaf08eaf449b571019a21c4456d31401dab92c1228503fe076b1bd751",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e3a261955da7581341472e963a08e91e94a5fed8af864e5b7591ac78103c01f1"
+  }
+}

@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync} from 'node:fs'
-import {compileRushFrontend} from '../../src/services/rushFrontend'
-import {parseOpenSCAD} from '../../src/services/openscadParser'
+import {compileRushFrontend} from '../../src/language/rushFrontend'
+import {parseOpenSCAD} from '../../src/language/openscadParser'
 const source=readFileSync('examples/skadis-box/skadis-dovetail.rush.scad','utf8')
 const samples=[]
 let result

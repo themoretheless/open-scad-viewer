@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0345",
+  "testedBase": "98e7bea98b88d38069065c885ea47f1933b63023",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 22,
+  "scope": [
+    "Certify exact shared boundary points by rational line intersections, including weighted crossings and rational quadratic tangencies.",
+    "Exact span limits and rational interior roots of linear and quadratic homogeneous line equations are included. Irrational and higher-degree interior roots are outside this proof."
+  ],
+  "logSha256": "01fb14d5400d1b1b4b1802521a8ca373cb60953686590e4cc5bd4a295bb9f0f5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "488a52faeaec04342b94829a4be5c50effcc72c84e8f4ce763898c2be411f4f0",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "149345d9651f964a37b07621c0580a5f3cafa05a5e1ae8a1e724cef31bf154fa",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "132b901792470feb62aecd0c57f8ebd1e424edf0e64edc224f6bcc8ebbacd237",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "a7bdf69376a844b919a78e16333b7046a329a5511124faccb1e15126b64a5776",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "80525cdd7fbfdf2e821c13d02879829478ef4f8e472b98919d8ca0b4674abafb",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "1c95634f5efcdc8247227d600532da830ebd5b8ca711fc643351ee833c73754d"
+  }
+}

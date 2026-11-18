@@ -35,18 +35,23 @@ fn bounds(
     }
     Ok((lower, upper))
 }
+/// The path with its authored axis and normal frame laws.
+#[derive(Clone, Copy)]
+pub(super) struct ChordFrame<'a> {
+    pub path: &'a Curve,
+    pub axis: &'a Curve,
+    pub normal: &'a Curve,
+}
 pub(super) fn certify(
     sweep: &Sweep<'_>,
-    path: &Curve,
-    axis: &Curve,
-    normal: &Curve,
+    frame: ChordFrame<'_>,
     coordinates: &[[[f64; 2]; 3]],
     interval: [f64; 2],
-    a: &Curve,
-    b: &Curve,
+    [a, b]: [&Curve; 2],
     spent: &mut usize,
     max: usize,
 ) -> Result<Option<f64>> {
+    let ChordFrame { path, axis, normal } = frame;
     let mut pending = vec![interval];
     let mut upper: f64 = 0.;
     while let Some(leaf) = pending.pop() {
@@ -55,12 +60,7 @@ pub(super) fn certify(
         }
         *spent += 1;
         let value = authored_frame_certificate::certify_control_values(
-            path,
-            sweep.scale,
-            sweep.twist,
-            axis,
-            normal,
-            sweep.affine_laws,
+            authored_frame_certificate::AuthoredFrameLaws { path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
             coordinates,
             leaf,
             max - *spent,
@@ -81,12 +81,7 @@ pub(super) fn certify(
             }
             *spent += 1;
             let point = authored_frame_certificate::certify_control_values(
-                path,
-                sweep.scale,
-                sweep.twist,
-                axis,
-                normal,
-                sweep.affine_laws,
+                authored_frame_certificate::AuthoredFrameLaws { path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
                 coordinates,
                 [middle, middle],
                 max - *spent,

@@ -11,9 +11,11 @@
 //! never falls back to numerical surface/surface subdivision. Axiality is
 //! certified, never forced: a perpendicular offset at pure rounding scale
 //! snaps to the axis, an offset inside the recognition-scale band reports a
-//! `NearCoincidence` region, and a clearly off-axis pair is
-//! `UnsupportedSurface` (the general sphere/torus pair is a quartic, out of
-//! scope). Classification uses outward binary64 bands widened by both
+//! `NearCoincidence` region, and a clearly off-axis contact is traced and
+//! certified as `Traced` pieces with certified cubic UV lifts on both surfaces
+//! and a completeness certificate for the component set (see `completeness`)
+//! (see `traced_lift`) unless it provably misses: an off-axis sphere entirely outside the
+//! tube, entirely inside it, or enclosing the whole torus resolves empty. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
 //!
 //! Both surfaces are surfaces of revolution about the shared axis, so the
@@ -51,17 +53,26 @@
 //! region. Nothing here authorizes a topology change.
 #[cfg(feature = "codec")]
 mod serialization;
+mod boolean;
+pub(crate) mod completeness;
+mod drill;
+pub use drill::cylinder_drill_boolean;
+pub(crate) mod traced_lift;
+pub use boolean::{
+    cone_torus_boolean, cylinder_torus_boolean, sphere_cone_boolean, sphere_cylinder_boolean,
+    sphere_torus_boolean,
+};
+pub use traced_lift::LIFT_TOLERANCE;
 use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
+use super::*;
+use brep_core::Model;
 #[cfg(test)]
 use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
 use brep_core::intersections::sphere_sphere::{
     self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_curve, lift,
 };
-use super::*;
-use brep_core::Model;
-
 
 #[derive(Clone, Debug)]
 pub enum SphereTorusComponent {
@@ -80,7 +91,33 @@ pub enum SphereTorusComponent {
         /// and the scaled torus implicit equation.
         max_sample_residual: f64,
     },
+    /// Off-axis transverse intersection: a space quartic with no exact
+    /// rational form, traced and represented by cubic pieces that close into
+    /// one loop with exactly shared ends. Every point of every piece is
+    /// certified within `distance_bound` of both surfaces (Bernstein bounds
+    /// of the implicit equations in outward interval arithmetic).
+    /// `complete` says whether the component set is certified complete.
+    Traced {
+        pieces: Vec<Curve>,
+        /// Certified upper bound on the distance from either surface.
+        distance_bound: f64,
+        /// Number of certified Bezier spans.
+        spans: usize,
+        /// Cubic UV pcurves per sphere patch, cut at the patch seams.
+        sphere_uv: Vec<SpherePatchCircle>,
+        /// Cubic UV pcurves per torus patch, cut at the patch seams.
+        torus_uv: Vec<TorusPatchCurve>,
+        /// Certified bound on the distance of the pcurve images (on their own
+        /// surface) from the other surface, at most `LIFT_TOLERANCE`.
+        lift_deviation: f64,
+        /// True when the traced components are certified to be all of the
+        /// intersection (see `completeness`); the same for every component.
+        complete: bool,
+    },
 }
+
+/// Certified distance of a traced curve from either surface.
+pub const TRACE_TOLERANCE: f64 = 1e-7;
 
 /// Exact circle component at axial height `z` above the torus center plane
 /// with radius `rho`, with UV lifts on both surfaces and a 16-sample
@@ -161,13 +198,89 @@ pub fn intersect_sphere_torus(
     // larger is the unsupported general (quartic) configuration.
     let snap = 64. * f64::EPSILON * terms;
     if d_perp > snap {
+        // Off the axis the section is a quartic, but a miss is still
+        // provable. The torus is the level set dist(p, core circle) = r_t
+        // and that distance is 1-Lipschitz, so every torus point lies at a
+        // distance from the sphere center between |dmin - r_t| and
+        // dmax + r_t, with dmin and dmax the nearest and farthest distances
+        // from the center to the core circle.
+        let dmin = (d_perp - torus.major).hypot(h);
+        let dmax = (d_perp + torus.major).hypot(h);
+        let reach = band + 16. * f64::EPSILON * (d_perp + terms);
+        let nearest = (dmin - torus.minor).abs();
+        if sphere.radius + reach < nearest || sphere.radius > dmax + torus.minor + reach {
+            return Ok(report);
+        }
         let near = RECOGNITION * (sphere.radius + torus.major + torus.minor);
-        let reason = if d_perp <= near {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
+        if d_perp <= near {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        // A genuine off-axis contact: trace the quartic and certify it.
+        let frame = [torus.frame[0], torus.frame[1], torus.axis];
+        let s_implicit = crate::implicit_trace::SphereImplicit {
+            center: sphere.center,
+            radius: sphere.radius,
         };
-        report.unresolved(domain, reason);
+        let t_implicit = crate::implicit_trace::TorusImplicit {
+            center: torus.center,
+            frame,
+            major: torus.major,
+            minor: torus.minor,
+        };
+        let seed = |theta: f64, phi: f64| -> [f64; 3] {
+            let (st, ct) = theta.sin_cos();
+            let (sp, cp) = phi.sin_cos();
+            std::array::from_fn(|k| {
+                sphere.center[k]
+                    + sphere.radius
+                        * (st * cp * frame[0][k] + st * sp * frame[1][k] + ct * frame[2][k])
+            })
+        };
+        let scale = terms + d_perp;
+        let feature = sphere.radius.min(torus.minor);
+        match crate::implicit_trace::trace_intersection(
+            &s_implicit,
+            &t_implicit,
+            seed,
+            scale,
+            feature,
+            TRACE_TOLERANCE,
+        ) {
+            Ok(loops) if !loops.is_empty() => {
+                let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+                let complete =
+                    completeness::certify_complete(&sphere, &torus, sphere_model, &all);
+                for l in loops {
+                    let lifted = traced_lift::lift_traced(
+                        &sphere,
+                        &torus,
+                        sphere_model,
+                        torus_model,
+                        &l.pieces,
+                    );
+                    let Ok((sphere_uv, torus_uv, lift_deviation)) = lifted else {
+                        report.components.clear();
+                        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                        return Ok(report);
+                    };
+                    report.components.push(SphereTorusComponent::Traced {
+                        pieces: l.pieces,
+                        distance_bound: l.distance_bound,
+                        spans: l.spans,
+                        sphere_uv,
+                        torus_uv,
+                        lift_deviation,
+                        complete,
+                    });
+                }
+            }
+            Ok(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+            Err(e) if e.message.contains("tangency") => {
+                report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot)
+            }
+            Err(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+        }
         return Ok(report);
     }
     let (r_t, r_s, big_r) = (torus.minor, sphere.radius, torus.major);
@@ -236,516 +349,4 @@ pub fn intersect_sphere_torus(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::test_utils::{rotated_translated, translated};
-    use super::*;
-
-    fn only_circles(
-        report: &Report<SphereTorusComponent>,
-        count: usize,
-    ) -> &Report<SphereTorusComponent> {
-        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
-        assert!(report.unresolved.is_empty(), "{report:?}");
-        assert!(!report.permits_topology_change());
-        assert_eq!(report.components.len(), count, "{report:?}");
-        report
-    }
-    #[allow(clippy::type_complexity)]
-    fn circle_of(
-        component: &SphereTorusComponent,
-    ) -> (
-        &Curve,
-        [f64; 3],
-        f64,
-        [f64; 3],
-        &[SpherePatchCircle],
-        &[TorusPatchCurve],
-        f64,
-    ) {
-        let SphereTorusComponent::Circle {
-            curve,
-            center,
-            radius,
-            normal,
-            sphere_uv,
-            torus_uv,
-            max_sample_residual,
-        } = component;
-        (
-            curve,
-            *center,
-            *radius,
-            *normal,
-            sphere_uv,
-            torus_uv,
-            *max_sample_residual,
-        )
-    }
-    fn sphere_residual(point: [f64; 3], center: [f64; 3], radius: f64) -> f64 {
-        let d = sub(point, center);
-        (d[0].hypot(d[1]).hypot(d[2]) - radius).abs()
-    }
-    /// Torus implicit residual (unscaled quartic) in the canonical z-up frame.
-    fn implicit(point: [f64; 3], major: f64, minor: f64) -> f64 {
-        let total = dot(point, point);
-        let rho2 = point[0] * point[0] + point[1] * point[1];
-        let base = total + major * major - minor * minor;
-        (base * base - 4. * major * major * rho2).abs()
-    }
-    /// Worst residual of lifted UV arcs evaluated through their own surface,
-    /// against the sphere equation and a caller-supplied torus predicate.
-    fn uv_samples(
-        sphere_model: &Model,
-        torus_model: &Model,
-        sphere_center: [f64; 3],
-        sphere_radius: f64,
-        sphere_uv: &[SpherePatchCircle],
-        torus_uv: &[TorusPatchCurve],
-        torus_check: impl Fn([f64; 3]) -> f64,
-    ) -> f64 {
-        let mut worst = 0_f64;
-        for lift in sphere_uv {
-            let surface = &sphere_model.faces[lift.patch].surface;
-            for arc in &lift.arcs {
-                for k in 0..=8 {
-                    let uv = arc.evaluate(k as f64 / 8.).unwrap().point;
-                    let p = surface
-                        .evaluate(uv[0].clamp(0., 1.), uv[1].clamp(0., 1.))
-                        .unwrap()
-                        .point;
-                    let p = [p[0], p[1], p[2]];
-                    worst = worst
-                        .max(sphere_residual(p, sphere_center, sphere_radius))
-                        .max(torus_check(p));
-                }
-            }
-        }
-        for lift in torus_uv {
-            let surface = &torus_model.faces[lift.patch].surface;
-            for arc in &lift.arcs {
-                for k in 0..=8 {
-                    let uv = arc.evaluate(k as f64 / 8.).unwrap().point;
-                    assert!((0. ..=1.).contains(&uv[0]) && (0. ..=1.).contains(&uv[1]));
-                    let p = surface.evaluate(uv[0], uv[1]).unwrap().point;
-                    let p = [p[0], p[1], p[2]];
-                    worst = worst
-                        .max(sphere_residual(p, sphere_center, sphere_radius))
-                        .max(torus_check(p));
-                }
-            }
-        }
-        worst
-    }
-    /// Exact rational 90-degree-arc parameter (the plane_torus map).
-    fn arc_parameter(local: f64) -> f64 {
-        let t = (local / 2.).tan();
-        let s = std::f64::consts::SQRT_2 * t / (1. - t);
-        s / (1. + s)
-    }
-    /// Meridian circle/circle oracle: roots of (rho-R)^2 + z^2 = r_t^2
-    /// against rho^2 + (z-h)^2 = r_s^2 as (rho, z) pairs.
-    fn meridian_roots(major: f64, minor: f64, h: f64, r_s: f64) -> [(f64, f64); 2] {
-        let d = major.hypot(h);
-        let a = (d * d + minor * minor - r_s * r_s) / (2. * d);
-        let l = (minor * minor - a * a).sqrt();
-        let root = |sign: f64| {
-            (
-                major - (a * major + sign * l * h) / d,
-                (a * h - sign * l * major) / d,
-            )
-        };
-        [root(1.), root(-1.)]
-    }
-
-    #[test]
-    fn equator_symmetric_pair_matches_the_circle_circle_oracle() {
-        // Torus R=3, r=1; sphere r=sqrt(5.2) centered at the torus center:
-        // d=3, a=0.8, l=0.6 — the exact circle pair of radius 2.2 at
-        // z = +-0.6.
-        let sphere = brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap();
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        let report = only_circles(&report, 2);
-        for (component, z) in report.components.iter().zip([-0.6, 0.6]) {
-            let (curve, center, radius, normal, sphere_uv, torus_uv, sampled) =
-                circle_of(component);
-            assert!((radius - 2.2).abs() <= 1e-12, "{radius}");
-            assert!(
-                sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
-                "{center:?}"
-            );
-            assert!(normal[2].abs() >= 1. - 1e-12, "{normal:?}");
-            // Exact rational circle: four 90-degree arcs, weights cos(pi/4).
-            assert_eq!(curve.degree, 2);
-            assert_eq!(
-                curve.knots,
-                vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
-            );
-            assert_eq!(curve.control_points.len(), 9);
-            assert_eq!(
-                curve.weights,
-                vec![
-                    1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
-                ]
-            );
-            // Sixteen samples satisfy both implicit equations.
-            let mut worst = 0_f64;
-            for i in 0..16 {
-                let p = curve.evaluate(i as f64 / 4.).unwrap().point;
-                let p = [p[0], p[1], p[2]];
-                worst = worst
-                    .max(sphere_residual(p, [0., 0., 0.], 5.2_f64.sqrt()))
-                    .max(implicit(p, 3., 1.));
-            }
-            assert!(worst <= 1e-10, "{worst}");
-            assert!(sampled <= 1e-10, "{sampled}");
-            // Torus lift: one iso-v line per revolution quadrant patch of the
-            // profile row, at the exact rational-arc v parameter.
-            assert_eq!(torus_uv.len(), 4, "{torus_uv:?}");
-            let phi = z.atan2(2.2 - 3.).rem_euclid(TAU);
-            let quadrant = (phi / std::f64::consts::FRAC_PI_2).floor() as usize;
-            let v0 = arc_parameter(phi - quadrant as f64 * std::f64::consts::FRAC_PI_2);
-            for lift in torus_uv {
-                assert_eq!(lift.arcs.len(), 1);
-                let arc = &lift.arcs[0];
-                assert_eq!(arc.degree, 1);
-                assert!((arc.control_points[0][1] - v0).abs() <= 1e-12, "{arc:?}");
-                assert!((arc.control_points[1][1] - v0).abs() <= 1e-12, "{arc:?}");
-                assert_eq!(arc.control_points[0][0], 0.);
-                assert_eq!(arc.control_points[1][0], 1.);
-            }
-            assert!(!sphere_uv.is_empty());
-            let uv_worst = uv_samples(
-                &sphere,
-                &torus,
-                [0., 0., 0.],
-                5.2_f64.sqrt(),
-                sphere_uv,
-                torus_uv,
-                |p| implicit(p, 3., 1.),
-            );
-            assert!(uv_worst <= 1e-9, "{uv_worst}");
-        }
-    }
-
-    #[test]
-    fn off_center_sphere_yields_two_distinct_circles() {
-        // Torus R=3, r=1; sphere r=sqrt(26) centered at z=-4: d=5, a=0,
-        // l=1 — the exact circles of radii 3.8 at z=-0.6 and 2.2 at z=0.6.
-        let sphere = translated(
-            &brep_core::analytic::sphere(26_f64.sqrt()).unwrap(),
-            [0., 0., -4.],
-        );
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        let report = only_circles(&report, 2);
-        for (component, (rho, z)) in report.components.iter().zip([(3.8, -0.6), (2.2, 0.6)]) {
-            let (curve, center, radius, _, sphere_uv, torus_uv, sampled) = circle_of(component);
-            assert!((radius - rho).abs() <= 1e-12, "{radius}");
-            assert!(
-                sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
-                "{center:?}"
-            );
-            let mut worst = 0_f64;
-            for i in 0..16 {
-                let p = curve.evaluate(i as f64 / 4.).unwrap().point;
-                let p = [p[0], p[1], p[2]];
-                worst = worst
-                    .max(sphere_residual(p, [0., 0., -4.], 26_f64.sqrt()))
-                    .max(implicit(p, 3., 1.));
-            }
-            assert!(worst <= 1e-10, "{worst}");
-            assert!(sampled <= 1e-10, "{sampled}");
-            assert_eq!(torus_uv.len(), 4);
-            let uv_worst = uv_samples(
-                &sphere,
-                &torus,
-                [0., 0., -4.],
-                26_f64.sqrt(),
-                sphere_uv,
-                torus_uv,
-                |p| implicit(p, 3., 1.),
-            );
-            assert!(uv_worst <= 1e-9, "{uv_worst}");
-        }
-    }
-
-    #[test]
-    fn generic_height_pair_matches_the_meridian_oracle() {
-        // Torus R=3, r=1; sphere r=2.2 centered at z=0.5: both roots land
-        // strictly inside the meridian circle and revolve into two circles.
-        let sphere = translated(&brep_core::analytic::sphere(2.2).unwrap(), [0., 0., 0.5]);
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        let report = only_circles(&report, 2);
-        let mut roots = meridian_roots(3., 1., 0.5, 2.2);
-        roots.sort_by(|a, b| a.1.total_cmp(&b.1));
-        for (component, (rho, z)) in report.components.iter().zip(roots) {
-            let (_, center, radius, _, _, torus_uv, sampled) = circle_of(component);
-            assert!((radius - rho).abs() <= 1e-12, "{radius} vs {rho}");
-            assert!(
-                sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
-                "{center:?} vs {z}"
-            );
-            assert!(sampled <= 1e-10, "{sampled}");
-            assert_eq!(torus_uv.len(), 4);
-        }
-    }
-
-    #[test]
-    fn inner_equator_tangency_stays_a_tangency_region() {
-        // Sphere centered at the torus center with r == R - r_t = 2: the
-        // meridian circles touch externally (d = 3 = r_t + r_s), the contact
-        // revolves into the inner equator circle — never a guessed circle.
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        for r in [2., 2. + 2e-15, 2. - 2e-15] {
-            let sphere = brep_core::analytic::sphere(r).unwrap();
-            let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-            assert!(report.components.is_empty(), "{report:?}");
-            assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(
-                report.unresolved[0].reason,
-                UnresolvedReason::TangencyOrMultipleRoot
-            );
-            assert!(!report.permits_topology_change());
-        }
-        // Just clear of the band on the outside: provable miss, resolved.
-        let clear = brep_core::analytic::sphere(2. - 1e-9).unwrap();
-        let report = intersect_sphere_torus(&clear, &torus, Options::default()).unwrap();
-        assert!(
-            report.components.is_empty() && report.unresolved.is_empty(),
-            "{report:?}"
-        );
-        // Just across: two small transverse circles around the inner equator.
-        let across = brep_core::analytic::sphere(2. + 1e-9).unwrap();
-        let report = intersect_sphere_torus(&across, &torus, Options::default()).unwrap();
-        only_circles(&report, 2);
-    }
-
-    #[test]
-    fn outer_equator_internal_tangency_stays_a_tangency_region() {
-        // Sphere centered at the torus center with r == R + r_t = 4: the
-        // meridian circles touch internally (d = 3 = |r_t - r_s|) at the
-        // outer equator — never a guessed circle.
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        for r in [4., 4. + 2e-15, 4. - 2e-15] {
-            let sphere = brep_core::analytic::sphere(r).unwrap();
-            let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-            assert!(report.components.is_empty(), "{report:?}");
-            assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(
-                report.unresolved[0].reason,
-                UnresolvedReason::TangencyOrMultipleRoot
-            );
-        }
-        // Just larger: the sphere swallows the tube, provably contained.
-        let swallow = brep_core::analytic::sphere(4. + 1e-9).unwrap();
-        let report = intersect_sphere_torus(&swallow, &torus, Options::default()).unwrap();
-        assert!(
-            report.components.is_empty() && report.unresolved.is_empty(),
-            "{report:?}"
-        );
-        // Just smaller: two transverse circles around the outer equator.
-        let across = brep_core::analytic::sphere(4. - 1e-9).unwrap();
-        let report = intersect_sphere_torus(&across, &torus, Options::default()).unwrap();
-        only_circles(&report, 2);
-        // Off-center external tangency: r_s = hypot(R, h) - r_t at h = 0.5.
-        let tangent = 3_f64.hypot(0.5) - 1.;
-        let sphere = translated(&brep_core::analytic::sphere(tangent).unwrap(), [0., 0., 0.5]);
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::TangencyOrMultipleRoot
-        );
-    }
-
-    #[test]
-    fn zero_circle_configurations_resolve_empty() {
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        // Small sphere floating in the hole, clear of the tube.
-        let hole = translated(&brep_core::analytic::sphere(1.).unwrap(), [0., 0., 0.5]);
-        // Sphere far along the axis, no reach back.
-        let far = translated(&brep_core::analytic::sphere(1.).unwrap(), [0., 0., 10.]);
-        // Huge sphere swallowing the whole torus (contained meridian circle).
-        let swallow = brep_core::analytic::sphere(10.).unwrap();
-        for sphere in [&hole, &far, &swallow] {
-            let report = intersect_sphere_torus(sphere, &torus, Options::default()).unwrap();
-            assert!(
-                report.components.is_empty() && report.unresolved.is_empty(),
-                "{report:?}"
-            );
-            assert_eq!(report.coverage, Coverage::NumericallyResolved);
-        }
-    }
-
-    #[test]
-    fn near_axial_offset_within_the_band_stays_unresolved() {
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        let sphere = translated(
-            &brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap(),
-            [1e-10, 0., 0.],
-        );
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::NearCoincidence
-        );
-    }
-
-    #[test]
-    fn clearly_off_axis_pairs_are_unsupported_regions() {
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        let sphere = translated(
-            &brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap(),
-            [0.5, 0., 0.],
-        );
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::UnsupportedSurface
-        );
-        assert_eq!(
-            report.unresolved[0].parameter_box,
-            vec![0., 1., 0., 1., 0., 1., 0., 1.]
-        );
-    }
-
-    #[test]
-    fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let sphere = brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap();
-        let torus = brep_core::analytic::torus(3., 1.).unwrap();
-        // Cylinders, tori, cuboids and tori-as-first-operand are neither
-        // canonical operand; swapped operand order is refused by the fixed
-        // order.
-        for (a, b) in [
-            (
-                brep_core::analytic::cylinder(1., 3.).unwrap(),
-                brep_core::analytic::torus(3., 1.).unwrap(),
-            ),
-            (
-                brep_core::analytic::sphere(2.).unwrap(),
-                brep_core::analytic::sphere(2.).unwrap(),
-            ),
-            (
-                brep_core::analytic::torus(3., 1.).unwrap(),
-                brep_core::analytic::torus(2., 1.).unwrap(),
-            ),
-            (
-                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                brep_core::analytic::torus(3., 1.).unwrap(),
-            ),
-            (
-                brep_core::analytic::torus(3., 1.).unwrap(),
-                brep_core::analytic::sphere(2.).unwrap(),
-            ),
-        ] {
-            let report = intersect_sphere_torus(&a, &b, Options::default()).unwrap();
-            assert!(report.components.is_empty(), "{report:?}");
-            assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(
-                report.unresolved[0].reason,
-                UnresolvedReason::UnsupportedSurface
-            );
-        }
-        // A canonical pair still resolves.
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        assert_eq!(report.coverage, Coverage::NumericallyResolved);
-        assert_eq!(report.components.len(), 2);
-        // A structurally perturbed torus (one moved control point) fails the
-        // exact certification and is an unsupported region, never a fallback.
-        let mut perturbed = torus.clone();
-        perturbed.faces[0].surface.control_points[1][1][0] += 1e-6;
-        perturbed.rebuild_topology_ids();
-        let report = intersect_sphere_torus(&sphere, &perturbed, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::UnsupportedSurface
-        );
-    }
-
-    #[test]
-    fn rotated_translated_placement_keeps_the_exact_circles() {
-        // Rigid placement of the whole axial configuration about X by 0.5.
-        let angle = 0.5;
-        let offset = [0.3, -0.2, 1.1];
-        let sphere = rotated_translated(
-            &translated(
-                &brep_core::analytic::sphere(26_f64.sqrt()).unwrap(),
-                [0., 0., -4.],
-            ),
-            angle,
-            offset,
-        );
-        let torus = rotated_translated(&brep_core::analytic::torus(3., 1.).unwrap(), angle, offset);
-        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-        let report = only_circles(&report, 2);
-        // Independent binary64 oracle in the placed frame.
-        let (sin, cos) = angle.sin_cos();
-        let placed = |p: [f64; 3]| {
-            [
-                p[0] + offset[0],
-                cos * p[1] - sin * p[2] + offset[1],
-                sin * p[1] + cos * p[2] + offset[2],
-            ]
-        };
-        let sphere_center = placed([0., 0., -4.]);
-        let axis = sub(placed([0., 0., 1.]), placed([0., 0., 0.]));
-        for (component, (rho, z)) in report.components.iter().zip([(3.8, -0.6), (2.2, 0.6)]) {
-            let (curve, center, radius, normal, sphere_uv, torus_uv, sampled) =
-                circle_of(component);
-            let expected = placed([0., 0., z]);
-            assert!((radius - rho).abs() <= 1e-12, "{radius}");
-            assert!(
-                sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
-                "{center:?}"
-            );
-            assert!(
-                sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
-                "{normal:?}"
-            );
-            let mut worst = 0_f64;
-            for i in 0..16 {
-                let p = curve.evaluate(i as f64 / 4.).unwrap().point;
-                let p = [p[0], p[1], p[2]];
-                worst = worst.max(sphere_residual(p, sphere_center, 26_f64.sqrt()));
-                // Placed torus implicit via the axial/radial decomposition.
-                let rel = sub(p, placed([0., 0., 0.]));
-                let a = dot(rel, axis);
-                let perp = sub(rel, axis.map(|x| x * a));
-                let rho_p = perp[0].hypot(perp[1]).hypot(perp[2]);
-                let base = rho_p * rho_p + a * a + 9. - 1.;
-                worst = worst.max((base * base - 36. * rho_p * rho_p).abs());
-            }
-            assert!(worst <= 1e-9, "{worst}");
-            assert!(sampled <= 1e-10);
-            assert_eq!(torus_uv.len(), 4);
-            assert!(!sphere_uv.is_empty());
-            let axis = normal;
-            let uv_worst = uv_samples(
-                &sphere,
-                &torus,
-                sphere_center,
-                26_f64.sqrt(),
-                sphere_uv,
-                torus_uv,
-                |p| {
-                    let rel = sub(p, placed([0., 0., 0.]));
-                    let a = dot(rel, axis);
-                    let perp = sub(rel, axis.map(|x| x * a));
-                    let rho_p = perp[0].hypot(perp[1]).hypot(perp[2]);
-                    let base = rho_p * rho_p + a * a + 9. - 1.;
-                    (base * base - 36. * rho_p * rho_p).abs()
-                },
-            );
-            assert!(uv_worst <= 1e-9, "{uv_worst}");
-        }
-    }
-}
+mod tests;

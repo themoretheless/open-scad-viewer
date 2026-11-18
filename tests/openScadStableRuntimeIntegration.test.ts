@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const source = `
   echo($t, $preview, $vpt, $vpr, $vpd, $vpf, $parent_modules);
@@ -37,11 +37,14 @@ describe('OpenSCAD 2021.01 runtime variables in independent execution lanes', ()
   })
 
   it('keeps is_undef probes quiet and forwards repaired built-in warnings', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       echo(is_undef(not_declared));
       echo(parent_module(999));
       cube(1);
-    `, { languageProfile: 'openscad/stable-2021.01' })
+    `,
+      { languageProfile: 'openscad/stable-2021.01' },
+    )
 
     expect(result.warnings).toEqual([
       'ECHO: true',
@@ -51,11 +54,14 @@ describe('OpenSCAD 2021.01 runtime variables in independent execution lanes', ()
   })
 
   it('matches the same quiet probe and warning behavior in semantic lowering', () => {
-    const result = lowerOpenSCADToSemanticProgram(`
+    const result = lowerOpenSCADToSemanticProgram(
+      `
       echo(is_undef(not_declared));
       echo(parent_module(999));
       cube(1);
-    `, { languageProfile: 'openscad/stable-2021.01' })
+    `,
+      { languageProfile: 'openscad/stable-2021.01' },
+    )
 
     expect(result.warnings).toEqual([
       'ECHO: true',

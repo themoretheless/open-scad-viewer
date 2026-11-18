@@ -1,0 +1,14 @@
+{
+  "distinct_tests_passed": 34,
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock.rs": "883cad764efdbd8b285af05c09bb3c4c1b780547944184d8ea14e517d00ccfaf",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock/equality.rs": "6b89b6d82db6905414764b41dc2f2a9a9edd3dc0164bedaf6d27fbad8d8a0138",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "51bcf06bfc0398a74a075174ccb6151d78d890c10325788fe104744a1a2e019f",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "b82eb79b49a444487181cc79398e7e3a30600ab71fbb99694c1a0661a528ed34",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port/membership.rs": "cd7a1108f6bb019efd176557a9fdc4cec35d1679cae055d463e62367b2eeeba5",
+    "crates/nurbs-core/tests/ss_affine_point_charts.rs": "e5912214b39e3a28cabfda9631e1637f9988ce53f6facba84301890c3f698d5a",
+    "crates/nurbs-core/tests/ss_algebraic_clock.rs": "2f7613226436537856cee85d4d9d280ca294d47dab615c20353c42e8fd79762d"
+  },
+  "scope": "Exact affine scalar root maps, original native/local same-free-axis graph identity and contour endpoint reconciliation",
+  "remaining": "Different free axes, cross-source junctions, generated third-face constraints, complete singular/periodic arrangements, full material trim, general Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

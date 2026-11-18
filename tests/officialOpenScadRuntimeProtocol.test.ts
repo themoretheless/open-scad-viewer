@@ -20,11 +20,13 @@ function request(): OfficialOpenScadWireRequest {
     operation: 'export',
     source,
     sourceSha256: sha256Buffer(source),
-    files: [{
-      path: 'lib/helpers.scad',
-      dataBase64: file.toString('base64'),
-      sha256: sha256Buffer(file),
-    }],
+    files: [
+      {
+        path: 'lib/helpers.scad',
+        dataBase64: file.toString('base64'),
+        sha256: sha256Buffer(file),
+      },
+    ],
     format: 'stl',
     options: {
       experimentalFeatures: [],
@@ -43,26 +45,43 @@ describe('official OpenSCAD child protocol', () => {
     const valid = request()
     expect(isOfficialOpenScadWireRequest(valid)).toBe(true)
     expect(isOfficialOpenScadWireRequest({ ...valid, sourceSha256: '0'.repeat(64) })).toBe(false)
-    expect(isOfficialOpenScadWireRequest({
-      ...valid,
-      files: [{ ...valid.files[0], path: '../host.scad' }],
-    })).toBe(false)
-    expect(isOfficialOpenScadWireRequest({
-      ...valid,
-      files: [valid.files[0], valid.files[0]],
-    })).toBe(false)
-    expect(isOfficialOpenScadWireRequest({
-      ...valid,
-      options: { ...valid.options, experimentalFeatures: ['all'] },
-    })).toBe(false)
+    expect(
+      isOfficialOpenScadWireRequest({
+        ...valid,
+        files: [{ ...valid.files[0], path: '../host.scad' }],
+      }),
+    ).toBe(false)
+    expect(
+      isOfficialOpenScadWireRequest({
+        ...valid,
+        files: [valid.files[0], valid.files[0]],
+      }),
+    ).toBe(false)
+    expect(
+      isOfficialOpenScadWireRequest({
+        ...valid,
+        options: { ...valid.options, experimentalFeatures: ['all'] },
+      }),
+    ).toBe(false)
   })
 
   it('normalizes no paths and reserves the entry and output names', () => {
     expect(normalizeOfficialOpenScadProjectPath('parts/body.stl')).toBe('parts/body.stl')
     for (const path of [
-      '/etc/passwd', '../x', 'a/../x', './x', 'a//x', 'a\\x',
-      'main.scad', 'main.scad/child', 'fonts', 'fonts/fonts.conf/child',
-      'fonts/Basic-Regular.ttf/child', 'home', 'home/cache/item', '__open_scad_result.stl',
+      '/etc/passwd',
+      '../x',
+      'a/../x',
+      './x',
+      'a//x',
+      'a\\x',
+      'main.scad',
+      'main.scad/child',
+      'fonts',
+      'fonts/fonts.conf/child',
+      'fonts/Basic-Regular.ttf/child',
+      'home',
+      'home/cache/item',
+      '__open_scad_result.stl',
     ]) {
       expect(() => normalizeOfficialOpenScadProjectPath(path)).toThrow()
     }
@@ -71,32 +90,36 @@ describe('official OpenSCAD child protocol', () => {
   it('rejects file paths that would also have to be MEMFS directories', () => {
     const valid = request()
     const library = Buffer.from('module library() {}')
-    expect(isOfficialOpenScadWireRequest({
-      ...valid,
-      files: [
-        {
-          path: 'lib',
-          dataBase64: library.toString('base64'),
-          sha256: sha256Buffer(library),
-        },
-        valid.files[0],
-      ],
-    })).toBe(false)
+    expect(
+      isOfficialOpenScadWireRequest({
+        ...valid,
+        files: [
+          {
+            path: 'lib',
+            dataBase64: library.toString('base64'),
+            sha256: sha256Buffer(library),
+          },
+          valid.files[0],
+        ],
+      }),
+    ).toBe(false)
   })
 
   it('enforces the aggregate decoded project byte limit', () => {
     const valid = request()
     const half = Buffer.alloc(Math.floor(OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES / 2) + 1, 1)
-    expect(isOfficialOpenScadWireRequest({
-      ...valid,
-      source: '',
-      sourceSha256: sha256Buffer(''),
-      files: ['large-a.dat', 'large-b.dat'].map(path => ({
-        path,
-        dataBase64: half.toString('base64'),
-        sha256: sha256Buffer(half),
-      })),
-    })).toBe(false)
+    expect(
+      isOfficialOpenScadWireRequest({
+        ...valid,
+        source: '',
+        sourceSha256: sha256Buffer(''),
+        files: ['large-a.dat', 'large-b.dat'].map(path => ({
+          path,
+          dataBase64: half.toString('base64'),
+          sha256: sha256Buffer(half),
+        })),
+      }),
+    ).toBe(false)
   })
 
   it('accepts only exact, correlated and content-verified terminals', () => {
@@ -121,14 +144,24 @@ describe('official OpenSCAD child protocol', () => {
     }
     expect(isOfficialOpenScadWireTerminal(terminal, validRequest)).toBe(true)
     expect(isOfficialOpenScadWireTerminal({ ...terminal, jobId: 8 }, validRequest)).toBe(false)
-    expect(isOfficialOpenScadWireTerminal({
-      ...terminal,
-      output: { ...terminal.output, mimeType: 'application/octet-stream' },
-    }, validRequest)).toBe(false)
-    expect(isOfficialOpenScadWireTerminal({
-      ...terminal,
-      output: { ...terminal.output, byteLength: data.byteLength + 1 },
-    }, validRequest)).toBe(false)
+    expect(
+      isOfficialOpenScadWireTerminal(
+        {
+          ...terminal,
+          output: { ...terminal.output, mimeType: 'application/octet-stream' },
+        },
+        validRequest,
+      ),
+    ).toBe(false)
+    expect(
+      isOfficialOpenScadWireTerminal(
+        {
+          ...terminal,
+          output: { ...terminal.output, byteLength: data.byteLength + 1 },
+        },
+        validRequest,
+      ),
+    ).toBe(false)
     expect(isOfficialOpenScadWireTerminal({ ...terminal, unexpected: true }, validRequest)).toBe(false)
   })
 
@@ -136,22 +169,27 @@ describe('official OpenSCAD child protocol', () => {
     const validRequest = request()
     const data = Buffer.alloc(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES + 1, 0xa5)
     expect(data.byteLength).toBeLessThanOrEqual(OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES)
-    expect(isOfficialOpenScadWireTerminal({
-      protocolVersion: OFFICIAL_OPENSCAD_PROTOCOL_VERSION,
-      jobId: validRequest.jobId,
-      operation: validRequest.operation,
-      sourceSha256: validRequest.sourceSha256,
-      runtimeVersion: '2026.09.01',
-      durationMs: 12,
-      logs: { stdout: [], stderr: [], truncated: false },
-      status: 'succeeded',
-      output: {
-        format: 'stl',
-        mimeType: 'model/stl',
-        byteLength: data.byteLength,
-        sha256: sha256Buffer(data),
-        dataBase64: data.toString('base64'),
-      },
-    }, validRequest)).toBe(true)
+    expect(
+      isOfficialOpenScadWireTerminal(
+        {
+          protocolVersion: OFFICIAL_OPENSCAD_PROTOCOL_VERSION,
+          jobId: validRequest.jobId,
+          operation: validRequest.operation,
+          sourceSha256: validRequest.sourceSha256,
+          runtimeVersion: '2026.09.01',
+          durationMs: 12,
+          logs: { stdout: [], stderr: [], truncated: false },
+          status: 'succeeded',
+          output: {
+            format: 'stl',
+            mimeType: 'model/stl',
+            byteLength: data.byteLength,
+            sha256: sha256Buffer(data),
+            dataBase64: data.toString('base64'),
+          },
+        },
+        validRequest,
+      ),
+    ).toBe(true)
   })
 })

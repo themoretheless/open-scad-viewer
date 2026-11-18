@@ -1,10 +1,57 @@
 import { spawn } from 'node:child_process'
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
-import { EXPERIMENT_SET, MAX_FONT_BYTES, MAX_FONT_LICENSE_BYTES, MAX_MANIFEST_BYTES, MAX_RUNTIME_BYTES, OfficialOpenScadSupervisorError, SETUP_COMMAND, UTF8 } from '../officialOpenScadRuntimeService'
-import type { NodePermissionFlag, OfficialOpenScadCapabilities, OfficialOpenScadChildFactoryInput, OfficialOpenScadProjectFileInput, OfficialOpenScadRunOptions, OfficialOpenScadUnavailableReason, VerifiedInstallation } from '../officialOpenScadRuntimeService'
-import { OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES, OFFICIAL_OPENSCAD_EXPORT_FORMATS, OFFICIAL_OPENSCAD_MAX_DEFINES, OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES, OFFICIAL_OPENSCAD_MAX_LOG_BYTES, OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES, OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES, OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES, OFFICIAL_OPENSCAD_MAX_PROJECT_FILES, OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES, OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES, OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS, OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES, OFFICIAL_OPENSCAD_PROTOCOL_VERSION, isOfficialOpenScadWireRequest, isWellFormedOfficialOpenScadText, normalizeOfficialOpenScadProjectPath, officialOpenScadProjectPathsConflict } from '../officialOpenScadRuntimeProtocol'
+import {
+  EXPERIMENT_SET,
+  MAX_FONT_BYTES,
+  MAX_FONT_LICENSE_BYTES,
+  MAX_MANIFEST_BYTES,
+  MAX_RUNTIME_BYTES,
+  OfficialOpenScadSupervisorError,
+  SETUP_COMMAND,
+  UTF8,
+} from './types'
+import type {
+  NodePermissionFlag,
+  OfficialOpenScadCapabilities,
+  OfficialOpenScadChildFactoryInput,
+  OfficialOpenScadProjectFileInput,
+  OfficialOpenScadRunOptions,
+  OfficialOpenScadUnavailableReason,
+  VerifiedInstallation,
+} from './types'
+import {
+  OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES,
+  OFFICIAL_OPENSCAD_EXPORT_FORMATS,
+  OFFICIAL_OPENSCAD_MAX_DEFINES,
+  OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_LOG_BYTES,
+  OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES,
+  OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
+  OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
+  OFFICIAL_OPENSCAD_PROTOCOL_VERSION,
+  isOfficialOpenScadWireRequest,
+  isWellFormedOfficialOpenScadText,
+  normalizeOfficialOpenScadProjectPath,
+  officialOpenScadProjectPathsConflict,
+} from '../officialOpenScadRuntimeProtocol'
 import type { OfficialOpenScadExportFormat, OfficialOpenScadWireRequest } from '../officialOpenScadRuntimeProtocol'
-import { OFFICIAL_OPENSCAD_FONT_FAMILY, OFFICIAL_OPENSCAD_FONT_FILENAME, OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME, OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256, OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME, OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION, OFFICIAL_OPENSCAD_RUNTIME_VERSION, isOfficialOpenScadRuntimeManifest, matchesOfficialOpenScadRuntimeIntegrity, sha256Buffer } from '../officialOpenScadRuntimePatch'
+import {
+  OFFICIAL_OPENSCAD_FONT_FAMILY,
+  OFFICIAL_OPENSCAD_FONT_FILENAME,
+  OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME,
+  OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
+  OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME,
+  OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
+  OFFICIAL_OPENSCAD_RUNTIME_VERSION,
+  isOfficialOpenScadRuntimeManifest,
+  matchesOfficialOpenScadRuntimeIntegrity,
+  sha256Buffer,
+} from '../officialOpenScadRuntimePatch'
 import type { OfficialOpenScadRuntimeIntegrity } from '../officialOpenScadRuntimePatch'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -35,21 +82,25 @@ export function defaultChildFactory(input: OfficialOpenScadChildFactoryInput): C
   if (permissionFlag === null) {
     throw new Error('The current Node.js runtime does not provide the permission model')
   }
-  return spawn(process.execPath, [
-    permissionFlag,
-    '--max-old-space-size=512',
-    `--allow-fs-read=${input.runnerPath}`,
-    `--allow-fs-read=${input.runtimePath}`,
-    `--allow-fs-read=${input.fontPath}`,
-    input.runnerPath,
-    input.runtimePath,
-    input.fontPath,
-    input.fontSha256,
-  ], {
-    env: { NODE_NO_WARNINGS: '1' },
-    stdio: ['pipe', 'pipe', 'pipe'],
-    windowsHide: true,
-  })
+  return spawn(
+    process.execPath,
+    [
+      permissionFlag,
+      '--max-old-space-size=512',
+      `--allow-fs-read=${input.runnerPath}`,
+      `--allow-fs-read=${input.runtimePath}`,
+      `--allow-fs-read=${input.fontPath}`,
+      input.runnerPath,
+      input.runtimePath,
+      input.fontPath,
+      input.fontSha256,
+    ],
+    {
+      env: { NODE_NO_WARNINGS: '1' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    },
+  )
 }
 
 export function boundedInteger(value: number, label: string, minimum: number, maximum: number): number {
@@ -125,8 +176,13 @@ export function capabilitiesShape(
 
 export async function readBoundedFile(path: string, maximumBytes: number, label: string): Promise<Buffer> {
   const details = await lstat(path)
-  if (details.isSymbolicLink() || !details.isFile() || !Number.isSafeInteger(details.size) || details.size <= 0
-    || details.size > maximumBytes) {
+  if (
+    details.isSymbolicLink() ||
+    !details.isFile() ||
+    !Number.isSafeInteger(details.size) ||
+    details.size <= 0 ||
+    details.size > maximumBytes
+  ) {
     throw new Error(`${label} is missing or exceeds ${maximumBytes} bytes`)
   }
   const data = await readFile(path)
@@ -202,10 +258,11 @@ export async function installationSignature(paths: readonly string[]): Promise<s
   }
 }
 
-export function classifyUnavailable(error: unknown): OfficialOpenScadUnavailableReason {  if (error && typeof error === 'object' && 'code' in error
-    && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) return 'not-installed'
-  if (error && typeof error === 'object' && 'verificationStage' in error
-    && error.verificationStage === 'runtime') return 'runtime-integrity-failed'
+export function classifyUnavailable(error: unknown): OfficialOpenScadUnavailableReason {
+  if (error && typeof error === 'object' && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR'))
+    return 'not-installed'
+  if (error && typeof error === 'object' && 'verificationStage' in error && error.verificationStage === 'runtime')
+    return 'runtime-integrity-failed'
   return 'manifest-invalid'
 }
 
@@ -224,9 +281,13 @@ export function validateDefines(defines: readonly string[]): void {
   }
   let bytes = 0
   for (const define of defines) {
-    if (typeof define !== 'string' || !isWellFormedOfficialOpenScadText(define)
-      || define.includes('\0') || /[\r\n]/.test(define)
-      || !/^[$A-Za-z_][$A-Za-z0-9_]*\s*=/.test(define)) {
+    if (
+      typeof define !== 'string' ||
+      !isWellFormedOfficialOpenScadText(define) ||
+      define.includes('\0') ||
+      /[\r\n]/.test(define) ||
+      !/^[$A-Za-z_][$A-Za-z0-9_]*\s*=/.test(define)
+    ) {
       throw new TypeError('Each OpenSCAD definition must be a single-line name=value expression')
     }
     bytes += UTF8.encode(define).byteLength
@@ -251,7 +312,8 @@ export function encodeFiles(sourceBytes: number, files: readonly OfficialOpenSca
     paths.add(path)
     let data: Uint8Array
     if (typeof file.data === 'string') {
-      if (!isWellFormedOfficialOpenScadText(file.data)) throw new TypeError(`Project file ${path} is not well-formed text`)
+      if (!isWellFormedOfficialOpenScadText(file.data))
+        throw new TypeError(`Project file ${path} is not well-formed text`)
       data = UTF8.encode(file.data)
     } else if (file.data instanceof Uint8Array) {
       data = new Uint8Array(file.data)
@@ -316,7 +378,8 @@ export function buildRequest(
       checkParameterRanges: options.checkParameterRanges ?? true,
     }),
   })
-  if (!isOfficialOpenScadWireRequest(request)) throw new TypeError('Official OpenSCAD request failed protocol validation')
+  if (!isOfficialOpenScadWireRequest(request))
+    throw new TypeError('Official OpenSCAD request failed protocol validation')
   const wireBytes = Buffer.byteLength(JSON.stringify(request))
   if (wireBytes > OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES) {
     throw new OfficialOpenScadSupervisorError(
@@ -330,6 +393,10 @@ export function buildRequest(
 
 export function compactChildError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error)
-  return raw.replace(/[\r\n\u2028\u2029]+/g, ' ').trim().slice(0, 512)
-    || 'Official OpenSCAD child failed'
+  return (
+    raw
+      .replace(/[\r\n\u2028\u2029]+/g, ' ')
+      .trim()
+      .slice(0, 512) || 'Official OpenSCAD child failed'
+  )
 }

@@ -58,13 +58,8 @@ fn nonlinear_collar_has_whole_rounding_bound_and_original_boundary_g2() {
         curve_surface_agreement::Status::WithinTolerance
     );
     let g2 = surface_g2_pcurves::inspect(
-        &edge,
-        [&pc, &own],
-        [&s, &out.surface],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        surface_g2_pcurves::PcurveSeam { curve: &edge, pcurves: [&pc, &own], surfaces: [&s, &out.surface], reversed: [false; 2] },
+        surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         100000,
         1000000,
     )
@@ -103,9 +98,11 @@ fn nonlinear_collar_has_whole_rounding_bound_and_original_boundary_g2() {
         &pc,
         [0., 0.1],
         &defect,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -118,13 +115,8 @@ fn nonlinear_collar_has_whole_rounding_bound_and_original_boundary_g2() {
             && damaged.error_upper[0][2].unwrap() < 0.0600001
     );
     let bad = surface_g2_pcurves::inspect(
-        &edge,
-        [&pc, &own],
-        [&s, &defect],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        surface_g2_pcurves::PcurveSeam { curve: &edge, pcurves: [&pc, &own], surfaces: [&s, &defect], reversed: [false; 2] },
+        surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         100000,
         1000000,
     )
@@ -174,9 +166,11 @@ fn rational_collar_qualifies_by_fresh_coefficients_while_generic_query_is_unreso
         &pc,
         [0.05, 0.1],
         &out.surface,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -238,13 +232,8 @@ fn rational_collar_qualifies_by_fresh_coefficients_while_generic_query_is_unreso
     );
     let own = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
     let g2 = surface_g2_pcurves::inspect(
-        &edge,
-        [&pc, &own],
-        [&s, &out.surface],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        surface_g2_pcurves::PcurveSeam { curve: &edge, pcurves: [&pc, &own], surfaces: [&s, &out.surface], reversed: [false; 2] },
+        surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         100000,
         1000000,
     )

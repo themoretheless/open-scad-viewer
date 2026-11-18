@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0606",
+  "testedBase": "58e40c57590c1d91c07fd6808a83cc62537596d1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 190,
+  "scope": [
+    "Reuse prepared trim domains and transfer exact inside or outside classifications to descendants.",
+    "Verify refinement of proved inside cells after exhausting trim work and repeatable area queries on prepared domains."
+  ],
+  "logSha256": "e84c91e1e4a80d57dcce28762c0b4ab7137759d828acf0278049793267ab98ab",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "432123a83e708e04dca1409d26f4b3116f067fac1f44a92254fdec42e6cc3541",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "ca399665bf12dec3f324c9dec9d1f5eb465efadd14363cf46f0a68ca6632ac9b"
+  }
+}

@@ -9,7 +9,7 @@
 //! sweep shifts the section by span*tan(sweep) along +X, dihedral shifts
 //! it by |span|*tan(dihedral) along +Y, taper scales the local section
 //! about the leading edge.
-use crate::foundation::guards::{assert_finite_slice_debug, require_finite_f64};
+use crate::numerics::guards::{assert_finite_slice_debug, require_finite_f64};
 use crate::surface::Surface;
 use crate::{Result, check, curve::Curve};
 
@@ -632,7 +632,17 @@ mod tests {
     #[test]
     fn airfoil_sections_loft_into_wing() {
         // Smoke test with real NACA profiles: prismatic wing.
-        let profile = airfoil::naca4(12, 1., true, 80, 3, 20).unwrap();
+        let profile = airfoil::naca4(
+            12,
+            airfoil::NacaFit {
+                chord: 1.,
+                closed_te: true,
+                samples: 80,
+                degree: 3,
+                controls: 20,
+            },
+        )
+        .unwrap();
         let sections = vec![section(profile.clone(), 0.), section(profile, 3.)];
         let surface = loft_wing(&sections).unwrap();
         surface.validate().unwrap();

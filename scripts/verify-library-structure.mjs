@@ -36,7 +36,8 @@ const nativeKernels=['cad-predicates','osv-math','mesh-topology','mesh-query','m
 const adapters=new Set(['geometry-bridge','geometry-wasm','languages-bridge','languages-wasm','photogrammetry-ffi','photogrammetry-wasm'])
 const native=[]
 for(const name of nativeKernels){
- const lines=cargo(['tree','-p',name,'--no-default-features','--edges','normal','--prefix','none','--format','{p}']).trim().split('\n')
+ const featureArgs=packages.has(name)?['--no-default-features']:[]
+ const lines=cargo(['tree','-p',name,...featureArgs,'--edges','normal','--prefix','none','--format','{p}']).trim().split('\n')
  const dependencies=[...new Set(lines.map(line=>line.split(' ')[0]))].sort()
  native.push({package:name,dependencies})
  for(const dependency of dependencies){
@@ -50,9 +51,9 @@ function inspectSource(directory){
  for(const entry of readdirSync(directory,{withFileTypes:true})){
   const path=resolve(directory,entry.name)
   if(entry.isDirectory()){inspectSource(path);continue}
-  if(!/\.(tsx?|vue)$/.test(entry.name))continue
+  if(!/\.(tsx?|svt)$/.test(entry.name))continue
   let text=readFileSync(path,'utf8')
-  if(entry.name.endsWith('.vue')){
+  if(entry.name.endsWith('.svt')){
    const {descriptor}=parseVue(text,{filename:path})
    text=[descriptor.script?.content,descriptor.scriptSetup?.content, ...[descriptor.script?.src,descriptor.scriptSetup?.src].filter(Boolean).map(src=>'import '+JSON.stringify(src))].filter(Boolean).join('\n')
   }

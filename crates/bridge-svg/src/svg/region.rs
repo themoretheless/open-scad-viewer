@@ -97,18 +97,18 @@ impl Geometry {
             return Err(limit("SVG curve subdivision budget exceeded"));
         }
         let mut levels = vec![p.to_vec()];
-        while levels.last().unwrap().len() > 1 {
+        while levels.last().is_some_and(|l| l.len() > 1) {
+            let Some(prev) = levels.last() else {
+                break;
+            };
             levels.push(
-                levels
-                    .last()
-                    .unwrap()
-                    .windows(2)
+                prev.windows(2)
                     .map(|w| [(w[0][0] + w[1][0]) * 0.5, (w[0][1] + w[1][1]) * 0.5])
                     .collect(),
             );
         }
         let left: Vec<_> = levels.iter().map(|l| l[0]).collect();
-        let right: Vec<_> = levels.iter().rev().map(|l| *l.last().unwrap()).collect();
+        let right: Vec<_> = levels.iter().rev().filter_map(|l| l.last().copied()).collect();
         self.curve(&left, depth + 1, out)?;
         self.curve(&right, depth + 1, out)
     }
@@ -234,7 +234,9 @@ impl Geometry {
                     let resolution = scale.clamp(1., 100_000.) as f32;
                     let dashed;
                     let data = if let Some(dash) = &style.dash {
-                        check_dash_budget(path.data(), stroke.dasharray().unwrap())?;
+                        if let Some(intervals) = stroke.dasharray() {
+                            check_dash_budget(path.data(), intervals)?;
+                        }
                         let Some(result) = path.data().dash(dash, resolution) else {
                             return Ok(out);
                         };

@@ -185,7 +185,12 @@ mod tests {
         assert!(certificate(&pair.cofactors[0], &mut ctx).unwrap());
         assert!(
             Bounds::default()
-                .cofactor(0, 0, 0, 0, 0, 0, &pair.cofactors[0], &spans, &u, &mut ctx)
+                .cofactor(
+                    super::bounds::BoxKey { a: 0, b: 0, axis: 0, level: 0, pa: 0, pb: 0 },
+                    &pair.cofactors[0],
+                    super::bounds::StripKnots { spans: &spans, u: &u },
+                    &mut ctx,
+                )
                 .unwrap()
         );
         assert!(matches!(

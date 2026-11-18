@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sdfWgslVariants } from '../src/services/sdfGpu'
+import { sdfWgslVariants } from '../src/render/sdfGpu'
 
 describe('SDF WebGPU WGSL variants', () => {
   it('builds a linear_indexing shader variant for the 1D SDF sweep', () => {
@@ -28,7 +28,8 @@ describe('SDF WebGPU WGSL variants', () => {
   })
 
   it('keeps only the baseline when the shader uses multidimensional invocation ids', () => {
-    const wgsl = '@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) { values[id.y] = f32(id.x); }'
+    const wgsl =
+      '@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) { values[id.y] = f32(id.x); }'
     expect(sdfWgslVariants(wgsl)).toEqual([{ label: 'sdf-baseline', wgsl }])
   })
 })

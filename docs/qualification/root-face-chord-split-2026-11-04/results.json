@@ -1,0 +1,10 @@
+{
+  "passed": 12,
+  "tests": [
+    "root_uv_closure",
+    "root_model",
+    "root_brep_subdivision"
+  ],
+  "actual_face_subdivision": true,
+  "general_material_trim_complete": false
+}

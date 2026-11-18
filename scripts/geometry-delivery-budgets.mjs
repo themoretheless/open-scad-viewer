@@ -19,9 +19,95 @@ const profiles=Object.freeze({
   '390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201':Object.freeze({
     version:9,geometryChunkBytes:5_370_000,totalAssetBytes:10_080_000,
   }),
-  // v10: exactbaf58e bytes, sept payload measured within unchanged caps.
+  // v10: exactbaf58e bytes, sept payload + full CSS emission measured within packaging cap.
   'baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254':Object.freeze({
-    version:10,geometryChunkBytes:5_370_000,totalAssetBytes:10_080_000,
+    version:10,geometryChunkBytes:5_370_000,totalAssetBytes:10_160_000,
+  }),
+  // v11: exact 15596a bytes (G0 v106 / runtime v11 re-freeze). Measured locally:
+  // 6,272,449 packed geometry bytes and 12,034,839 total asset bytes; the kernel grew
+  // from 15.9 MB to 17.7 MB raw since baf58e. Caps keep a small reviewed margin.
+  '15596aa8bd7c26888ae18fd1b0bcea49c36af76ef50b1a5558a6e164c142e938':Object.freeze({
+    version:11,geometryChunkBytes:6_280_000,totalAssetBytes:12_050_000,
+  }),
+  // v12: exact fba78e bytes (G0 v107 / runtime v12 re-freeze). Measured locally:
+  // 6,272,442 packed geometry bytes and 12,057,424 total asset bytes, including the
+  // CodeMirror editor and other main-branch UI growth. Caps keep a small reviewed margin.
+  'fba78e35f862c3259769f5d7a2458b6f060a61a104c5e7b94e3b13ec2d5da837':Object.freeze({
+    version:12,geometryChunkBytes:6_280_000,totalAssetBytes:12_070_000,
+  }),
+  // v13: periodic section body and current merged geometry sources. Measured
+  // 18,030,969 raw WASM bytes, 6,424,363 packed geometry bytes and 12,281,514
+  // asset bytes. Both browser Worker loading paths verified this exact digest.
+  '15f93b60958953d09a0c72e1e581636cd148d672470bc473e83387b112bcba30':Object.freeze({
+    version:13,geometryChunkBytes:6_430_000,totalAssetBytes:12_290_000,rawGeometryBytes:18_040_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/6YzdHiG9.js':108_000}),
+  }),
+  // v14: exact isolated contact certificates. Local production measured
+  // 18,062,286 raw WASM bytes, 6,435,493 packed geometry bytes and 12,293,327
+  // asset bytes. The raw kernel grew by 31,317 bytes over v13.
+  '94dc1e2fae7de0c1764723278e22892aee749fc2b9a805ebe0c5c4a3b74837d0':Object.freeze({
+    version:14,geometryChunkBytes:6_440_000,totalAssetBytes:12_300_000,rawGeometryBytes:18_070_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CgGnarTW.js':108_000}),
+  }),
+  // v15: closed SS network Boolean. Local production measured 18,339,084 raw
+  // WASM bytes, 6,537,252 packed geometry bytes and 12,401,470 asset bytes.
+  '842f0872b21f2add7b9ee3cad71cd37dae38db02991f2fac96a859d4808d0f85':Object.freeze({
+    version:15,geometryChunkBytes:6_545_000,totalAssetBytes:12_410_000,rawGeometryBytes:18_345_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BjrmXJqH.js':111_500}),
+  }),
+  // v16: periodic stock intersection. Measured production build:
+  // 18,523,833 raw WASM bytes, 6,604,053 packed geometry bytes, up to 12,468,855 asset bytes.
+  '6e11301a009b087851660ace975eeee6230c4fdc89f16baa73bfd1cd1f63989e':Object.freeze({
+    version:16,geometryChunkBytes:6_612_000,totalAssetBytes:12_475_000,rawGeometryBytes:18_530_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DZpgor1M.js':111_500}),
+  }),
+  // v17: origin/main merged with ruled loft section correspondence and boundary-anchored face
+  // workplanes (runtime v13 record). Measured production build: 18,531,352 raw WASM bytes,
+  // 6,611,760 packed geometry bytes and 12,501,640 asset bytes. The index, DirectModeler and
+  // wasmStreaming chunks measure 256,066, 496,707 and 195,621 bytes, identical with main's
+  // src/core, so their growth over v16 comes from main.
+  '61b58706d1412023064cc2bbfa2bbbaa48243caea45014d5a22d2b6276609ffc':Object.freeze({
+    version:17,geometryChunkBytes:6_620_000,totalAssetBytes:12_510_000,rawGeometryBytes:18_540_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:497_300,geometryBuildEngine:335_200,wasmStreaming:196_200,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // v18: Fillet operation contract for audited multi-edge fillet, nested graph column Boolean and
+  // off-axis sphere tracing across a cone apex plane. Measured production build: 18,553,202 raw
+  // WASM bytes, 6,616,898 packed geometry bytes and 12,530,943 asset bytes. The index,
+  // DirectModeler and wasmStreaming chunks measure 256,134, 500,918 and 196,179 bytes; the
+  // kernel change is Rust-only, so the DirectModeler growth over v17 (496,707) comes from main.
+  '9cb8ebbc7747c61730a2bc707a9bd4e235fc900c60cfe042a3919929535b4b31':Object.freeze({
+    version:18,geometryChunkBytes:6_625_000,totalAssetBytes:12_539_000,rawGeometryBytes:18_562_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:501_500,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // v19: healing edge split across both face uses, STEP /10 ordinary pcurve repair and exact planar
+  // face mass properties. Measured production build: 18,558,145 raw WASM bytes, 6,617,591 packed
+  // geometry bytes and 12,581,815 asset bytes. The index, DirectModeler, geometryBuildEngine and
+  // wasmStreaming chunks measure 256,134, 510,648, 332,568 and 196,179 bytes; the kernel change is
+  // Rust-only, so the DirectModeler growth over v18 (500,918) comes from main.
+  '7467ec8b0d7e378a0510cf94790bf4da2146b7b735d4204a80975e2afa514986':Object.freeze({
+    version:19,geometryChunkBytes:6_626_000,totalAssetBytes:12_590_000,rawGeometryBytes:18_567_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
   }),
 })
 

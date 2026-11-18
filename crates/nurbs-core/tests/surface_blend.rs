@@ -10,7 +10,15 @@ fn rational_curved_cap_trace_is_checked_on_original_support() {
     let o=Options{gains:[0.1;2],..Default::default()};
     let trace=surface_blend::Trace{at:0.9,along:[0.,1.]};
     let before=[floor.clone(),cap.clone()];
-    let r=surface_blend::g2_to_plane_trace(&floor,trace,&cap,&pc,[0.,1.],o,[1e-7,1e-5,1e-4],100000,1000000).unwrap();
+    let r=surface_blend::g2_to_plane_trace(
+        &floor,
+        trace,
+        surface_blend::PlaneTarget { plane: &cap, target: &pc, transverse: [0.,1.] },
+        o,
+        [1e-7,1e-5,1e-4],
+        100000,
+        1000000,
+    ).unwrap();
     assert!(r.complete&&r.within_tolerance,"cells={} seams={:?}",r.cells,r.support_seams.iter().map(|s|(&s.2.geometric,s.2.positions.proven)).collect::<Vec<_>>());
     assert!(r.support_seams.iter().all(|s|s.2.positions.proven));
     for u in [0.,0.31,1.] {
@@ -18,9 +26,25 @@ fn rational_curved_cap_trace_is_checked_on_original_support() {
         close(r.construction.patches[0].evaluate(u,1.).unwrap().point,cap.evaluate(uv[0],uv[1]).unwrap().point,1e-10);
     }
     let mut forged=cap.clone();forged.control_points[1][1][1]+=0.1;
-    let bad=surface_blend::g2_to_plane_trace(&floor,trace,&forged,&pc,[0.,1.],o,[1e-7,1e-5,1e-4],100000,1000000).unwrap();
+    let bad=surface_blend::g2_to_plane_trace(
+        &floor,
+        trace,
+        surface_blend::PlaneTarget { plane: &forged, target: &pc, transverse: [0.,1.] },
+        o,
+        [1e-7,1e-5,1e-4],
+        100000,
+        1000000,
+    ).unwrap();
     assert!(!bad.within_tolerance);
-    let exhausted=surface_blend::g2_to_plane_trace(&floor,trace,&cap,&pc,[0.,1.],o,[1e-7,1e-5,1e-4],0,0).unwrap();
+    let exhausted=surface_blend::g2_to_plane_trace(
+        &floor,
+        trace,
+        surface_blend::PlaneTarget { plane: &cap, target: &pc, transverse: [0.,1.] },
+        o,
+        [1e-7,1e-5,1e-4],
+        0,
+        0,
+    ).unwrap();
     assert!(!exhausted.complete&&!exhausted.within_tolerance);
     assert_eq!([floor,cap],before);
 }

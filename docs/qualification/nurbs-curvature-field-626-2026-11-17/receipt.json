@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0626",
+  "testedBase": "3b8cce0492cc113da4e409f570733b7125e8e379",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 253,
+  "scope": [
+    "Expose the complete inertia tensor at an optional fixed reference point alongside the centroidal tensor and offset-axis moment.",
+    "Check signed off-diagonal entries, agreement with an axis through the fixed reference point, and null or rejection for incomplete or invalid requests."
+  ],
+  "logSha256": "71c513a1ec1c3d6d34971d590075db929d5bb88fef754dc168d5977dcdfae024",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "33dc6b515d2cca3820d8de0108232073dee6b55882834462191442ef8cc916d5",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "72468f161540b728b202dd71795ea8966449596fe5bb6813e5e718efdd80cca6",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "61714bf7d1e820b814a997628bc468d9bc8709f5257700ca63e9d31bfb03706b",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "4296018a25803926790c28f496f04b0b5f3f351f1b925482bd8d7047fd1aff90"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

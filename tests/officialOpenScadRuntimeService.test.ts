@@ -37,10 +37,7 @@ async function installStub(root: string) {
   await writeFile(join(root, OFFICIAL_OPENSCAD_RUNTIME_FILENAME), runtime)
   await writeFile(join(root, OFFICIAL_OPENSCAD_FONT_FILENAME), font)
   await writeFile(join(root, OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME), fontLicense)
-  await writeFile(
-    join(root, OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME),
-    `${JSON.stringify(manifest)}\n`,
-  )
+  await writeFile(join(root, OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME), `${JSON.stringify(manifest)}\n`)
   return {
     runtime,
     expectedIntegrity: {
@@ -127,10 +124,9 @@ describe('official OpenSCAD runtime supervisor', () => {
       testOnlyExpectedIntegrity: installation.expectedIntegrity,
     })
 
-    const checked = await supervisor.check(
-      'include <lib/helpers.scad>; function f(x) = x * x; cube(f(size));',
-      { files: [{ path: 'lib/helpers.scad', data: 'module helper() {}' }] },
-    )
+    const checked = await supervisor.check('include <lib/helpers.scad>; function f(x) = x * x; cube(f(size));', {
+      files: [{ path: 'lib/helpers.scad', data: 'module helper() {}' }],
+    })
     expect(checked).toMatchObject({
       runtimeVersion: '2026.09.01',
       csgBytes: expect.any(Number),
@@ -161,31 +157,29 @@ describe('official OpenSCAD runtime supervisor', () => {
       fileName: 'model.csg',
       experimentalFeatures: ['textmetrics', 'vector-swizzle'],
     })
-    expect(childEvidence.args).toEqual(expect.arrayContaining([
-      '--backend=CGAL',
-      '--check-parameters=false',
-      '--check-parameter-ranges=false',
-      '--enable=textmetrics',
-      '--enable=vector-swizzle',
-      'size=7',
-      '$t=0.25',
-      '--export-format=csg',
-    ]))
+    expect(childEvidence.args).toEqual(
+      expect.arrayContaining([
+        '--backend=CGAL',
+        '--check-parameters=false',
+        '--check-parameter-ranges=false',
+        '--enable=textmetrics',
+        '--enable=vector-swizzle',
+        'size=7',
+        '$t=0.25',
+        '--export-format=csg',
+      ]),
+    )
     expect(childEvidence.args).not.toContain('--hardwarnings')
-    expect(childEvidence.projectFiles).toEqual(expect.arrayContaining([
-      '/project/main.scad',
-      '/project/data/raw.bin',
-    ]))
+    expect(childEvidence.projectFiles).toEqual(expect.arrayContaining(['/project/main.scad', '/project/data/raw.bin']))
     expect(childEvidence.rawFs).toBe(false)
     expect(childEvidence.environment).toEqual({
       FONTCONFIG_FILE: '/project/fonts/fonts.conf',
       FONTCONFIG_PATH: '/project/fonts',
       HOME: '/project/home',
     })
-    expect(childEvidence.projectFiles).toEqual(expect.arrayContaining([
-      '/project/fonts/fonts.conf',
-      '/project/fonts/Basic-Regular.ttf',
-    ]))
+    expect(childEvidence.projectFiles).toEqual(
+      expect.arrayContaining(['/project/fonts/fonts.conf', '/project/fonts/Basic-Regular.ttf']),
+    )
     expect(supervisor.snapshot()).toEqual({
       activeJobs: 0,
       jobsStarted: 2,
@@ -277,33 +271,41 @@ describe('official OpenSCAD runtime supervisor', () => {
       testOnlyExpectedIntegrity: installation.expectedIntegrity,
     })
 
-    await expect(supervisor.check('cube(1);', {
-      files: [{ path: '../host.scad', data: 'cube(1);' }],
-    })).rejects.toThrow(/path|segments/)
-    await expect(supervisor.check('cube(1);', {
-      files: [
-        { path: 'lib', data: 'not a directory' },
-        { path: 'lib/part.scad', data: 'cube(1);' },
-      ],
-    })).rejects.toThrow(/conflicting/i)
-    await expect(supervisor.check('cube(1);', {
-      files: [{ path: 'home/cache.dat', data: 'reserved runtime state' }],
-    })).rejects.toThrow(/reserved/i)
+    await expect(
+      supervisor.check('cube(1);', {
+        files: [{ path: '../host.scad', data: 'cube(1);' }],
+      }),
+    ).rejects.toThrow(/path|segments/)
+    await expect(
+      supervisor.check('cube(1);', {
+        files: [
+          { path: 'lib', data: 'not a directory' },
+          { path: 'lib/part.scad', data: 'cube(1);' },
+        ],
+      }),
+    ).rejects.toThrow(/conflicting/i)
+    await expect(
+      supervisor.check('cube(1);', {
+        files: [{ path: 'home/cache.dat', data: 'reserved runtime state' }],
+      }),
+    ).rejects.toThrow(/reserved/i)
     await expect(supervisor.check('x'.repeat(1_048_577))).rejects.toThrow(/exceeds/)
     expect(supervisor.snapshot()).toMatchObject({ jobsStarted: 0, jobsJoined: 0 })
 
     const maximumFile = new Uint8Array(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES)
     const remainingFile = new Uint8Array(
-      OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES
-        - OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES
-        - OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+      OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES -
+        OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES -
+        OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
     )
-    await expect(supervisor.check('\0'.repeat(OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES), {
-      files: [
-        { path: 'large-a.bin', data: maximumFile },
-        { path: 'large-b.bin', data: remainingFile },
-      ],
-    })).rejects.toMatchObject({ code: 'E_OFFICIAL_OPENSCAD_REQUEST_LIMIT' })
+    await expect(
+      supervisor.check('\0'.repeat(OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES), {
+        files: [
+          { path: 'large-a.bin', data: maximumFile },
+          { path: 'large-b.bin', data: remainingFile },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'E_OFFICIAL_OPENSCAD_REQUEST_LIMIT' })
     expect(supervisor.snapshot()).toMatchObject({ jobsStarted: 0, jobsJoined: 0 })
 
     const controller = new AbortController()
@@ -315,8 +317,10 @@ describe('official OpenSCAD runtime supervisor', () => {
     const noisy = await supervisor.export('NOISY_RUNTIME;', 'csg')
     expect(noisy.logs.truncated).toBe(true)
     expect(noisy.logs.stdout.length + noisy.logs.stderr.length).toBeLessThanOrEqual(128)
-    const retainedBytes = [...noisy.logs.stdout, ...noisy.logs.stderr]
-      .reduce((sum, value) => sum + Buffer.byteLength(value), 0)
+    const retainedBytes = [...noisy.logs.stdout, ...noisy.logs.stderr].reduce(
+      (sum, value) => sum + Buffer.byteLength(value),
+      0,
+    )
     expect(retainedBytes).toBeLessThanOrEqual(64 * 1024)
     await supervisor.close()
   })

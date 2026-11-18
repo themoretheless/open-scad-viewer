@@ -71,8 +71,8 @@ const implementation=[
  'crates/brep-core/src/transactions.rs','crates/brep-core/src/trim_sew.rs',
  'crates/brep-core/src/uv_arrangement.rs','crates/brep-topology/src/lib.rs',
  'crates/geometry-bridge/src/lib.rs','crates/geometry-bridge/src/tests.rs',
- 'src/services/geometry/brep.ts','src/services/geometry/brepCapability.ts',
- 'src/services/geometry/kernel.ts',
+ 'src/kernel/geometry/brep.ts','src/kernel/geometry/brepCapability.ts',
+ 'src/kernel/geometry/kernel.ts',
 ]
 write(v6.plan,{
  $schema:'./brep-capability-qualification-plan-v6.schema.json',
@@ -86,7 +86,7 @@ write(v6.plan,{
  capability:'nurbs-boolean-bezier-le3/8',successorOf:'nurbs-boolean-bezier-le3/7',
  dependencies:dependencies.map(capability=>({capability,requiredMaturity:'Qualified'})),
  scope:{included,excluded},matrix:matrix.map(([id,expected])=>({id,expected,blocksQualification:true})),
- bindings:{implementation,registry:'src/services/geometry/brepCapability.ts',evidenceJson:v6.evidence},
+ bindings:{implementation,registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:v6.evidence},
  evidence:{state:'qualified',notes:[
   'Only union and tool-minus-source difference are added; every /7 operation remains qualified unchanged.',
   'Tangency and coincidence are refused because complete regularized ownership, not merely contact detection, is required.',

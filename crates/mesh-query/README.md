@@ -20,6 +20,20 @@ assert_eq!(distance, 2.);
 - `bvh_query`: borrows caller-owned buffers. Queries retain unnormalised ray
   parameters, affine transforms, inverse-transpose normals and triangle exclusions.
   Malformed cyclic trees return `QueryError::InvalidTree`.
+- `bvh_range`: box overlap (`overlap_aabb`, a broadphase answer by triangle
+  bounding box), `within_radius` and `nearest` (k nearest triangles), ordered by
+  distance and then triangle ID. `refit` recomputes node boxes after vertices
+  move, keeping the topology; it leaves the tree unchanged on error.
+  `overlap_aabb_iter` is the lazy form of the box query: an iterator in
+  traversal order that collects nothing.
+- `bvh_sah`: binned surface-area-heuristic builder (`build_mesh_bvh_sah`) with
+  the same buffer layout, so every query and `refit` work on its trees. The
+  median builder stays the default and the only one in the TypeScript parity
+  fixture. With the `parallel` feature, `build_mesh_bvh_sah_parallel` builds the
+  top levels on scoped native threads and returns identical buffers.
+- `bvh_codec`: versioned little-endian bytes for a built tree (`encode`,
+  `decode`). Decoding validates the structure; the tree stays tied to the vertex
+  and index buffers it was built from.
 - `scene_bvh`: binary64 object bounds, stable distance/id order.
 - `proximity`: binary64 mesh buffers. Nearest point and signed distance require
   buffers validated once by the caller; out-of-range indices may panic. Empty nearest-point queries return
@@ -48,13 +62,15 @@ the machine and hit/miss distribution; they are measurements, not guarantees.
 ## API contract for 0.1
 
 - `build_mesh_bvh` and `raycast` share the same immutable vertex/index buffers
-  and stride (at least three float32 components). Keep the buffers alive and
-  rebuild the tree after changing geometry. Triangle IDs are source indices.
+  and stride (at least three float32 components). Keep the buffers alive. After
+  moving vertices call `refit`, or rebuild when the deformation is large or the
+  index buffer changed. Triangle IDs are source indices.
 - `Query` rays need not be normalized. `Hit::t` uses ray parameter units; it is
   a distance only for a unit direction. Bounds are inclusive. `local_from_world`
   uses a column-major affine inverse. Exclusions use original triangle IDs.
 - Packed `MeshBvh` buffers are public for existing host adapters. Their layout is
-  an in-memory contract; persisted buffers should carry the producing version.
+  an in-memory contract; persist trees through `bvh_codec`, which carries a
+  format version.
 - `closest_point` uses binary64 geometry and a linear triangle scan, not the
   float32 picking BVH. Validate `MeshView` before using indexed proximity calls.
 - `QueryError` implements `std::error::Error`; malformed trees produce an error.

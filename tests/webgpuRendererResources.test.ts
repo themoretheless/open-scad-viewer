@@ -1,21 +1,26 @@
-import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
+import { createNativeGeometryArtifact } from '../src/core/nativeGeometry'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import { geometryAssetId } from '../src/core/scene'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
-import * as sceneBounds from '../src/services/sceneAabbIndex'
-import * as meshAnalysis from '../src/services/geometry/meshAnalysis'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
+import * as sceneBounds from '../src/render/sceneAabbIndex'
+import * as meshAnalysis from '../src/kernel/geometry/meshAnalysis'
+import { callGeometryRust } from '../src/kernel/geometry/kernel'
 
 class FakeBuffer {
   destroyCalls = 0
   readonly contents: Uint8Array
   readonly written: Uint8Array
-  constructor(readonly size: number, readonly usage: number) {
+  constructor(
+    readonly size: number,
+    readonly usage: number,
+  ) {
     this.contents = new Uint8Array(size)
     this.written = new Uint8Array(size)
   }
-  destroy() { this.destroyCalls++ }
+  destroy() {
+    this.destroyCalls++
+  }
 }
 
 class FakeDevice {
@@ -51,21 +56,27 @@ class FakeDevice {
 }
 
 function fixture(offset = 0): MeshData {
-  const vertices = new Float32Array([
-    offset, 0, 0, 0, 0, 1,
-    offset + 1, 0, 0, 0, 0, 1,
-    offset, 1, 0, 0, 0, 1,
-  ])
+  const vertices = new Float32Array([offset, 0, 0, 0, 0, 1, offset + 1, 0, 0, 0, 0, 1, offset, 1, 0, 0, 0, 1])
   const indices = new Uint32Array([0, 1, 2])
   return {
     entityId: `entity:${offset}`,
     geometryAssetId: geometryAssetId(vertices, indices),
-    vertices, indices,
+    vertices,
+    indices,
     edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
     transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
     faceIds: new Uint32Array([1]),
-    bvh: { version: 1, vertexStride: 6, leafSize: 8, nodeCount: 1, bounds: new Float32Array(6), nodes: new Uint32Array(2), triangles: new Uint32Array([0]) },
-    color: [1, 0, 0, 1], provenance: [],
+    bvh: {
+      version: 1,
+      vertexStride: 6,
+      leafSize: 8,
+      nodeCount: 1,
+      bounds: new Float32Array(6),
+      nodes: new Uint32Array(2),
+      triangles: new Uint32Array([0]),
+    },
+    color: [1, 0, 0, 1],
+    provenance: [],
     topology: { boundary: 3, crease: 0, nonManifold: 0, degenerate: 0 },
   }
 }
@@ -96,40 +107,66 @@ function harness() {
 }
 
 describe('WebGPURenderer retained geometry resources', () => {
-  it('uses one native picking snapshot for repeated hits and frees it on teardown',()=>{
+  it('uses one native picking snapshot for repeated hits and frees it on teardown', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
-    const upload=vi.spyOn(meshAnalysis,'createPickingSnapshotInKernel')
-    const {renderer,internal}=harness()
-    const picking=internal as unknown as {rayForClientPoint(x:number,y:number):unknown;findHitCandidates(x:number,y:number,n:number):Array<{value:{triangleIndex:number}}>}
-    picking.rayForClientPoint=()=>({origin:[0.2,0.2,2],direction:[0,0,-1]})
-    try{
+    const upload = vi.spyOn(meshAnalysis, 'createPickingSnapshotInKernel')
+    const { renderer, internal } = harness()
+    const picking = internal as unknown as {
+      rayForClientPoint(x: number, y: number): unknown
+      findHitCandidates(x: number, y: number, n: number): Array<{ value: { triangleIndex: number } }>
+    }
+    picking.rayForClientPoint = () => ({ origin: [0.2, 0.2, 2], direction: [0, 0, -1] })
+    try {
       renderer.setMeshes([fixture()])
-      for(let i=0;i<20;i++)expect(picking.findHitCandidates(0,0,1)[0]?.value.triangleIndex).toBe(0)
+      for (let i = 0; i < 20; i++) expect(picking.findHitCandidates(0, 0, 1)[0]?.value.triangleIndex).toBe(0)
       expect(upload).toHaveBeenCalledTimes(1)
       renderer.setMeshes([fixture()])
-      expect(picking.findHitCandidates(0,0,1)).toHaveLength(1)
+      expect(picking.findHitCandidates(0, 0, 1)).toHaveLength(1)
       expect(upload).toHaveBeenCalledTimes(1)
-      const handle=upload.mock.results[0].value
+      const handle = upload.mock.results[0].value
       renderer.destroy()
-      expect(()=>callGeometryRust('mesh_picking',{action:'query',handle,origin:[0,0,2],direction:[0,0,-1],excludedTriangles:[]})).toThrow()
-    }finally{renderer.destroy();upload.mockRestore()}
+      expect(() =>
+        callGeometryRust('mesh_picking', {
+          action: 'query',
+          handle,
+          origin: [0, 0, 2],
+          direction: [0, 0, -1],
+          excludedTriangles: [],
+        }),
+      ).toThrow()
+    } finally {
+      renderer.destroy()
+      upload.mockRestore()
+    }
   })
   afterEach(() => vi.unstubAllGlobals())
 
-  it('restores native face selection after mesh publication and rejects changed geometry',()=>{
+  it('restores native face selection after mesh publication and rejects changed geometry', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
-    const {renderer}=harness()
-    const previous=fixture()
-    previous.nativeGeometry=createNativeGeometryArtifact('patch','surface',{controls:[1]}, {})
-    previous.faceIdsAuthoritative=true
-    const next=fixture();next.nativeGeometry=previous.nativeGeometry;next.faceIdsAuthoritative=true
-    renderer.setMeshes([next]);renderer.setSelectionMode('face')
-    const hit={meshIndex:0,triangleIndex:0,faceId:1,point:[0,0,0] as [number,number,number],normal:[0,0,1] as [number,number,number],barycentric:[1,0,0] as [number,number,number],source:null,backside:false}
-    expect(renderer.restoreNativeFaceSelection(previous,hit,0)).toBe(true)
-    expect(renderer.currentHit?.faceId).toBe(1)
-    next.nativeGeometry=createNativeGeometryArtifact('patch','surface',{controls:[2]}, {})
+    const { renderer } = harness()
+    const previous = fixture()
+    previous.nativeGeometry = createNativeGeometryArtifact('patch', 'surface', { controls: [1] }, {})
+    previous.faceIdsAuthoritative = true
+    const next = fixture()
+    next.nativeGeometry = previous.nativeGeometry
+    next.faceIdsAuthoritative = true
     renderer.setMeshes([next])
-    expect(renderer.restoreNativeFaceSelection(previous,hit,0)).toBe(false)
+    renderer.setSelectionMode('face')
+    const hit = {
+      meshIndex: 0,
+      triangleIndex: 0,
+      faceId: 1,
+      point: [0, 0, 0] as [number, number, number],
+      normal: [0, 0, 1] as [number, number, number],
+      barycentric: [1, 0, 0] as [number, number, number],
+      source: null,
+      backside: false,
+    }
+    expect(renderer.restoreNativeFaceSelection(previous, hit, 0)).toBe(true)
+    expect(renderer.currentHit?.faceId).toBe(1)
+    next.nativeGeometry = createNativeGeometryArtifact('patch', 'surface', { controls: [2] }, {})
+    renderer.setMeshes([next])
+    expect(renderer.restoreNativeFaceSelection(previous, hit, 0)).toBe(false)
     expect(renderer.currentHit).toBeNull()
   })
 
@@ -144,28 +181,71 @@ describe('WebGPURenderer retained geometry resources', () => {
     const mesh = fixture()
     // A rotated, mirrored, nonuniformly scaled object with translation catches
     // both matrix-layout mistakes and incorrectly using the model for normals.
-    mesh.transform = new Float32Array([
-      0, -3, 0, 5,
-      -2, 0, 0, -7,
-      0, 0, 4, 11,
-      0, 0, 0, 1,
-    ])
+    mesh.transform = new Float32Array([0, -3, 0, 5, -2, 0, 0, -7, 0, 0, 4, 11, 0, 0, 0, 1])
     mesh.color = [0.125, 0.375, 0.75, 0.625]
     renderer.setMeshes([mesh])
     const uniform = internal.meshes[0].ub
     const expected = [
       // Column-major model matrix.
-      0, -2, 0, 0, -3, 0, 0, 0, 0, 0, 4, 0, 5, -7, 11, 1,
+      0,
+      -2,
+      0,
+      0,
+      -3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      5,
+      -7,
+      11,
+      1,
       // Column-major inverse-transpose, including the homogeneous row.
-      0, -0.5, 0, -3.5, -1 / 3, 0, 0, 5 / 3, 0, 0, 0.25, -2.75, 0, 0, 0, 1,
-      0.125, 0.375, 0.75, 0.625,
-      alpha, 0, edge, 0,
+      0,
+      -0.5,
+      0,
+      -3.5,
+      -1 / 3,
+      0,
+      0,
+      5 / 3,
+      0,
+      0,
+      0.25,
+      -2.75,
+      0,
+      0,
+      0,
+      1,
+      0.125,
+      0.375,
+      0.75,
+      0.625,
+      alpha,
+      0,
+      edge,
+      0,
       // Morph at rest, then material defaults: white base color, metallic 0,
       // black emissive, roughness 0.7, material id 0, padding.
-      1, 0, 0, 0,
-      1, 1, 1, 0,
-      0, 0, 0, 0.7,
-      0, 0, 0, 0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0.7,
+      0,
+      0,
+      0,
+      0,
     ]
     expect(uniform.size).toBe(224)
     expect(uniform.written.every(byte => byte === 1)).toBe(true)
@@ -178,23 +258,36 @@ describe('WebGPURenderer retained geometry resources', () => {
     expect(values[36]).toBeCloseTo(mode === 'xray' ? 0.625 : 0.24, 6)
   })
 
-  it('reuses verified vertex/index buffers and only replaces entity uniforms', () => {
+  it('reuses verified vertex/index buffers and updates a persisting entity uniform in place', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
     const { renderer, device, internal } = harness()
     const first = fixture()
     renderer.setMeshes([first])
-    expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 84, geometryBuffersCreated: 2, reusedEntities: 0 })
+    expect(renderer.sceneUploadMetrics).toEqual({
+      geometryUploadBytes: 84,
+      geometryBuffersCreated: 2,
+      reusedEntities: 0,
+    })
     const initial = internal.meshes[0]
     expect(device.buffers).toHaveLength(3)
 
     const replacement = fixture()
     renderer.setMeshes([replacement])
-    expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 1 })
-    expect(device.buffers).toHaveLength(4)
+    expect(renderer.sceneUploadMetrics).toEqual({
+      geometryUploadBytes: 0,
+      geometryBuffersCreated: 0,
+      reusedEntities: 1,
+    })
+    expect(device.buffers).toHaveLength(3)
     expect(internal.meshes[0].vb).toBe(initial.vb)
     expect(internal.meshes[0].ib).toBe(initial.ib)
+    expect(internal.meshes[0].ub).toBe(initial.ub)
     expect(initial.vb.destroyCalls).toBe(0)
     expect(initial.ib.destroyCalls).toBe(0)
+    expect(initial.ub.destroyCalls).toBe(0)
+    // A different entity sharing the asset gets its own uniform buffer.
+    renderer.setMeshes([{ ...fixture(), entityId: 'entity:other' }])
+    expect(device.buffers).toHaveLength(4)
     expect(initial.ub.destroyCalls).toBe(1)
   })
 
@@ -211,7 +304,11 @@ describe('WebGPURenderer retained geometry resources', () => {
     expect(internal.meshes[0].vb).toBe(originalVertexBuffer)
     expect(internal.meshes[1].vb).not.toBe(originalVertexBuffer)
     expect(internal.meshes[2].vb).toBe(originalVertexBuffer)
-    expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 84, geometryBuffersCreated: 2, reusedEntities: 2 })
+    expect(renderer.sceneUploadMetrics).toEqual({
+      geometryUploadBytes: 84,
+      geometryBuffersCreated: 2,
+      reusedEntities: 2,
+    })
     const changedIndex = { ...replacement, indices: new Uint32Array([0, 2, 1]) }
     renderer.setMeshes([replacement, changedIndex])
     expect(internal.meshes[1].ib).not.toBe(internal.meshes[0].ib)
@@ -275,7 +372,10 @@ describe('WebGPURenderer retained geometry resources', () => {
     const { renderer, device, internal } = harness()
     renderer.setDisplayMode('edges')
     const mesh = fixture()
-    const instances = Array.from({ length: 3 }, (_, index) => ({ ...mesh, entityId: `entity:instance-${index}` as const }))
+    const instances = Array.from({ length: 3 }, (_, index) => ({
+      ...mesh,
+      entityId: `entity:instance-${index}` as const,
+    }))
     renderer.setMeshes(instances)
     const originalVertex = internal.meshes[0].vb
     const originalEdges = internal.meshes[0].edgeIB!
@@ -315,7 +415,9 @@ describe('WebGPURenderer retained geometry resources', () => {
     const live = internal.meshes[0]
     device.failCreateAt = device.buffers.length + 1
 
-    expect(() => renderer.setMeshes([fixture()])).toThrow('injected allocation failure')
+    expect(() => renderer.setMeshes([{ ...fixture(), entityId: 'entity:other' }])).toThrow(
+      'injected allocation failure',
+    )
     expect(internal.meshes[0]).toBe(live)
     expect(live.vb.destroyCalls).toBe(0)
     expect(live.ib.destroyCalls).toBe(0)
@@ -330,7 +432,8 @@ describe('WebGPURenderer retained geometry resources', () => {
     const publishedUniform = live.ub.contents.slice()
     const metrics = renderer.sceneUploadMetrics
     const stagedStart = device.buffers.length
-    device.failBindGroupAt = device.bindGroupCalls + 2
+    // The persisting entity keeps its bind group; the new entity's is the first created.
+    device.failBindGroupAt = device.bindGroupCalls + 1
     const replacement = fixture()
     replacement.color = [0, 0.5, 1, 0.25]
     replacement.transform[3] = 12
@@ -343,7 +446,6 @@ describe('WebGPURenderer retained geometry resources', () => {
     for (const buffer of device.buffers.slice(stagedStart)) expect(buffer.destroyCalls).toBe(1)
   })
 })
-
 
 describe('parameter geometry animation', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -374,7 +476,7 @@ describe('parameter geometry animation', () => {
 
   it('drives vertex morphs from a source buffer and blend uniform without rewriting vertices', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
-    const { renderer, internal } = harness()
+    const { renderer } = harness()
     const state = renderer as unknown as {
       meshes: Array<{
         morph?: { from: Float32Array; started: number }
@@ -414,7 +516,6 @@ describe('parameter geometry animation', () => {
   })
 })
 
-
 it('replaces changed topology opaquely and releases retired buffers', () => {
   vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
   try {
@@ -427,14 +528,17 @@ it('replaces changed topology opaquely and releases retired buffers', () => {
     }
     renderer.setMeshes([fixture()])
     const old = internal.meshes[0].vb
-    renderer.setMeshes([{ ...fixture(10), indices: new Uint32Array([2,1,0]) }], { animate: true })
+    renderer.setMeshes([{ ...fixture(10), indices: new Uint32Array([2, 1, 0]) }], { animate: true })
     expect(state.geometryFade).toBeNull()
-    expect(old.destroyCalls).toBe(1)
+    // The retired asset stays resident in the GPU geometry cache until eviction or teardown.
+    expect(old.destroyCalls).toBe(0)
     expect(state.geometryGhosts).toHaveLength(0)
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(1)
     renderer.destroy()
     expect(old.destroyCalls).toBe(1)
-  } finally { vi.unstubAllGlobals() }
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })
 
 it('animates transform-only changes and continues through quality publications', () => {
@@ -460,7 +564,9 @@ it('animates transform-only changes and continues through quality publications',
     state.advanceGeometryAnimation(start + 1000)
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBe(20)
     expect(moved.transform[3]).toBe(20)
-  } finally { vi.unstubAllGlobals() }
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })
 
 it('keeps the published scene intact if native broadphase admission fails', () => {
@@ -470,15 +576,23 @@ it('keeps the published scene intact if native broadphase admission fails', () =
     renderer.setMeshes([fixture()])
     const previous = internal.meshes[0]
     const stagedStart = device.buffers.length
-    const admission = vi.spyOn(sceneBounds, 'buildSceneAabbIndex').mockImplementationOnce(() => { throw new Error('native admission refused') })
-    try { expect(() => renderer.setMeshes([fixture(2)])).toThrow('native admission refused') }
-    finally { admission.mockRestore() }
+    const admission = vi.spyOn(sceneBounds, 'buildSceneAabbIndex').mockImplementationOnce(() => {
+      throw new Error('native admission refused')
+    })
+    try {
+      expect(() => renderer.setMeshes([fixture(2)])).toThrow('native admission refused')
+    } finally {
+      admission.mockRestore()
+    }
     expect(internal.meshes).toEqual([previous])
     expect(previous.vb.destroyCalls).toBe(0)
     for (const buffer of device.buffers.slice(stagedStart)) expect(buffer.destroyCalls).toBe(1)
     // More than the registry slot limit: each publication must retire its index.
     for (let n = 0; n < 80; n++) renderer.setMeshes([fixture(n)])
-  } finally { renderer.destroy(); vi.unstubAllGlobals() }
+  } finally {
+    renderer.destroy()
+    vi.unstubAllGlobals()
+  }
 })
 
 it('snaps point selection to a transformed corner through Rust', () => {
@@ -495,7 +609,10 @@ it('snaps point selection to a transformed corner through Rust', () => {
     renderer.setMeshes([mesh])
     renderer.setSelectionMode('point')
     expect(picking.findHitCandidates(0, 0, 1)[0]?.value.point).toEqual([5, 0, 0])
-  } finally { renderer.destroy(); vi.unstubAllGlobals() }
+  } finally {
+    renderer.destroy()
+    vi.unstubAllGlobals()
+  }
 })
 
 it('refuses singular geometry transforms before replacing the published scene', () => {
@@ -511,5 +628,83 @@ it('refuses singular geometry transforms before replacing the published scene', 
     expect(internal.meshes).toEqual([live])
     expect(live.vb.destroyCalls).toBe(0)
     expect(device.buffers).toHaveLength(count)
-  } finally { renderer.destroy(); vi.unstubAllGlobals() }
+  } finally {
+    renderer.destroy()
+    vi.unstubAllGlobals()
+  }
+})
+
+describe('WebGPURenderer scene deltas', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('keeps selection, hover and measurement for entities that persist unchanged', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer } = harness()
+    const state = renderer as unknown as { hovered: number | null; measurementPoints: unknown[] }
+    const selections: Array<number | null> = []
+    renderer.onSelectionChange = index => selections.push(index)
+    try {
+      renderer.setMeshes([fixture(), fixture(2)])
+      renderer.selectMesh(1)
+      renderer.setPreselection(0)
+      expect(
+        renderer.restoreMeasurement(
+          {
+            points: [
+              [0, 0, 0],
+              [1, 0, 0],
+            ],
+            distance: 1,
+          },
+          true,
+        ),
+      ).toBe(true)
+      selections.length = 0
+      // Same entities in a new order: state follows the entity, not the array index.
+      renderer.setMeshes([fixture(2), fixture()])
+      expect(renderer.selectedIndex).toBe(0)
+      expect(state.hovered).toBe(1)
+      expect(state.measurementPoints).toHaveLength(2)
+      expect(selections).toEqual([0])
+      // A changed geometry for the selected entity clears its selection and the measurement.
+      renderer.setMeshes([
+        { ...fixture(2), indices: new Uint32Array([2, 1, 0]), geometryAssetId: undefined },
+        fixture(),
+      ])
+      expect(renderer.selectedIndex).toBeNull()
+      expect(state.hovered).toBe(1)
+      expect(state.measurementPoints).toHaveLength(0)
+      // Callers that own re-selection can opt out.
+      renderer.setPreselection(0)
+      renderer.selectMesh(1)
+      renderer.setMeshes([fixture(2), fixture()], { preserveInteraction: false })
+      expect(renderer.selectedIndex).toBeNull()
+      expect(state.hovered).toBeNull()
+    } finally {
+      renderer.destroy()
+    }
+  })
+
+  it('retains unreferenced geometry across publications and reuses it without upload', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    try {
+      renderer.setMeshes([fixture()])
+      const first = internal.meshes[0]
+      renderer.setMeshes([fixture(2)])
+      expect(first.vb.destroyCalls).toBe(0)
+      renderer.setMeshes([fixture()])
+      expect(renderer.sceneUploadMetrics).toEqual({
+        geometryUploadBytes: 0,
+        geometryBuffersCreated: 0,
+        reusedEntities: 1,
+      })
+      expect(internal.meshes[0].vb).toBe(first.vb)
+      expect(internal.meshes[0].ib).toBe(first.ib)
+      renderer.destroy()
+      expect(first.vb.destroyCalls).toBe(1)
+    } finally {
+      renderer.destroy()
+    }
+  })
 })

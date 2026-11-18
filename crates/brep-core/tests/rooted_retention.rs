@@ -1,7 +1,4 @@
-use brep_core::{
-    face_cut::{self, RootEnd, RootedCut, RootedFace},
-    watertight,
-};
+use brep_core::{face_cut::{self, RootEnd, RootedCut, RootedFace}, watertight};
 
 #[test]
 fn cutter_roots_bind_face_cut_ends_to_shared_edge_vertices() {
@@ -111,9 +108,11 @@ fn cutter_roots_bind_face_cut_ends_to_shared_edge_vertices() {
         &cutter,
         plane,
         &requests,
-        1e-8,
-        100000 - generation_cells,
-        1000000,
+        face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000 - generation_cells,
+            max_exact: 1000000,
+        },
         100000,
     )
     .unwrap();
@@ -177,20 +176,11 @@ fn cutter_roots_bind_face_cut_ends_to_shared_edge_vertices() {
         curves: cuts[0].curves.clone(),
     }];
     assert!(
-        face_cut::plan_rooted_retention(
-            &model,
-            &cutter,
-            plane,
-            &[RootedFace {
+        face_cut::plan_rooted_retention(&model, &cutter, plane, &[RootedFace {
                 face: top,
                 cuts: &bad,
                 keep_uv: &seeds
-            }],
-            1e-8,
-            100000,
-            1000000,
-            100000
-        )
+            }], face_cut::CutLimits { tolerance_uv: 1e-8, max_cells: 100000, max_exact: 1000000 }, 100000)
         .is_err()
     );
     assert!(
@@ -199,10 +189,12 @@ fn cutter_roots_bind_face_cut_ends_to_shared_edge_vertices() {
             &cutter,
             plane,
             &requests,
-            1e-8,
-            result.cells - 1,
-            1000000,
-            100000
+            face_cut::CutLimits {
+                tolerance_uv: 1e-8,
+                max_cells: result.cells - 1,
+                max_exact: 1000000,
+            },
+            100000,
         )
         .is_err()
     );

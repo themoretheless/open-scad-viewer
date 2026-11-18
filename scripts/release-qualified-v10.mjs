@@ -38,8 +38,8 @@ const dependencies=['numeric-evidence-curved-brep/1','boundary-correspondence/1'
 const implementation=[
  'crates/brep-core/src/analysis.rs','crates/brep-core/src/intersections.rs',
  'crates/brep-core/src/solid_audit.rs','crates/geometry-bridge/src/brep.rs',
- 'crates/geometry-bridge/src/lib.rs','src/services/geometry/brep.ts',
- 'src/services/geometry/brepCapability.ts',
+ 'crates/geometry-bridge/src/lib.rs','src/kernel/geometry/brep.ts',
+ 'src/kernel/geometry/brepCapability.ts',
 ]
 const specs=[
  {
@@ -100,7 +100,7 @@ for(const spec of specs){
   dependencies:dependencies.map(capability=>({capability,requiredMaturity:'Qualified'})),
   scope:{included:spec.included,excluded:spec.excluded},
   matrix:spec.rows.map(([id,expected])=>({id,expected,blocksQualification:true})),
-  bindings:{implementation,registry:'src/services/geometry/brepCapability.ts',evidenceJson:evidence},
+  bindings:{implementation,registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:evidence},
   evidence:{state:'qualified',notes:[
    'Qualification is limited to independently recognized analytic shells and exact closed-form bounds.',
    'Every generic freeform/loft/bent-sweep row is a typed refusal; numerical convergence estimates are never relabeled certified.',

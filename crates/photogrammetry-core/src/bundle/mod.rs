@@ -11,6 +11,8 @@ use std::ops::Range;
 
 mod observation;
 mod optimize;
+mod intrinsics;
+pub use intrinsics::*;
 #[cfg(test)]
 mod tests;
 pub use observation::*;

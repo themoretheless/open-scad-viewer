@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0511",
+  "testedBase": "90b47bff8484e3694671be9109f3aeaf2f03d8a9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 76,
+  "scope": [
+    "Lift complete and partial periodic turns into one exactly clamped parameter interval under bounded storage and work.",
+    "Extend the exact cyclic basis only until the endpoint is covered and clamp the requested interval without normalizing the parameters."
+  ],
+  "logSha256": "eaaf4f820337240ae8fe286f3b853ed7999b6ad561c84cb57afb002854ff56fd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "ea7510cad0c7c76dff674d6843e42f71214252999203f2f248bda08fa315f8b8",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fb06ef5cf8799b8009f9c005c67a2e820de48e7d36091a2c2ce1e905d2d0cd36"
+  }
+}

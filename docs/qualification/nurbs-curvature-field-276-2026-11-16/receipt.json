@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0276",
+  "testedBase": "b5ae43c86c67676397c81b74b3a3d51ffe2c059c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 27,
+  "scope": [
+    "Exact rational clamped projection onto each stored chord and the continuous world error enclose the minimum Euclidean distance to the original contour. Reports which segment supplies the upper bound.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "7340548cecf16247940d2fe754ec55a3374376816db6f06cb1dae6b3e2b05d4c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "57d781cc7503b676d77ddd362cfa785cdd49428584e111c852c0b3e523db0b9f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_distance.rs": "5f7478b3a39089453f5c37ce7da9b1a485d4deaf30e2fb59cfc05cfe12d6505c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "07db49f0fd27a48723a9ae8eaabd8ebdeedefaef4d77be1365f7c92baac7a4c1",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "180372d100b3158615c45fee072cb294c095bc0ad34d2c218c99856ea65a42d7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs": "edd9fecbe2360055965358727daaecfaea3d8f81d2b934d6ad894fa9e47a097f"
+  }
+}

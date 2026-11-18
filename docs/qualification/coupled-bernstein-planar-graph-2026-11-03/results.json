@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "nativeTests": 31,
+  "bridgeTests": 14,
+  "inverseTests": 3,
+  "clientTests": 72,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "f4382cd85fcfc508e19957c4fc0878d843123feea65c868f978093670c15a1f5",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/membership.rs": "c57547e5f1af186e2f81626175be352d7bc960d9e3ec403637d4cc7b91bbde04",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/coupled_bernstein.rs": "e5e9522204644df317a51870ae6e26ce24d9d256b1b7ed6721fb752c20332bc3",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "38fcb999264fd97a19cb2cfa907e24ff60e98dd876445df6a46aa90ee1e61867",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "da06865e586a572c1a076b2139e795bf100e9f60bd07253937f40d24b3daaece",
+    "crates/geometry-bridge/src/intersections/quadric_graph.rs": "b9decdbb9978a14bc086caaa2db3307ca73c371a194b09119bb247089189fc75",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "2667d5e3af0493164934487a487fc4b81ca6e0bb3278d7e6975d7c6ab31b6d3c"
+  },
+  "scope": "Single planar Bezier targets with positive nonseparable tensor weights, degree 1 through 8 per axis and exact original affine projected control grids. Global coverage/uniqueness by full-support Bernstein exponential-family mean map; inverse coordinate bounds by exact positive adjacent-weight ratio hulls and eight outward-rounded restriction steps.",
+  "independentOracle": "All 64 degree pairs use direct original Bernstein sums. Additional edge/rectangle/gauge tests; actual degree-(2,2) and degree-(8,8) original target finite contacts pass native and the degree-two bridge path passes.",
+  "inverseAccuracy": "Certified enclosure after fixed eight refinement steps; arbitrary requested UV-width tolerance is not guaranteed.",
+  "inverseDegreeCensusSeconds": 128.02,
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for coupled Bernstein targets",
+    "General UV tolerance qualification and refinement performance",
+    "Multispan coupled weights",
+    "Nonplanar coupled targets and general freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

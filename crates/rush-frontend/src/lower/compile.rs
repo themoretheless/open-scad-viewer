@@ -143,21 +143,21 @@ pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
         let a = statement.node;
         c.owner.clear();
         c.owner_serial = 0;
-        let result: R<()> = try {
+        let result: R<()> = (|| {
             let name = s(&a, "name");
             match s(&a, "kind") {
                 "bind" => {
                     if e.contains_key(name) {
-                        do yeet crate::error(format!("Duplicate name {name}"));
+                        return Err(crate::error(format!("Duplicate name {name}")));
                     }
                     c.owner = if let Some(id) = a.get("author_id").and_then(J::as_str) {
-                        if !c.author_ids.insert(id.to_owned()) { do yeet crate::error(format!("Duplicate node ID {id}")); }
+                        if !c.author_ids.insert(id.to_owned()) { return Err(crate::error(format!("Duplicate node ID {id}"))); }
                         format!("ri_{id}")
                     } else { format!("rb_{name}") };
                     c.owner_serial = 0;
                     let v = c.eval(&a["value"], &e, 0)?;
                     if matches!(&v, V::Void(_)) {
-                        do yeet crate::error("Function has no return value");
+                        return Err(crate::error("Function has no return value"));
                     }
                     if c.needs_assertion(&v) {
                         c.statement_checks(&v);
@@ -177,7 +177,7 @@ pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
                         ]
                         .contains(&name)
                     {
-                        do yeet crate::error(format!("Duplicate or reserved type {name}"));
+                        return Err(crate::error(format!("Duplicate or reserved type {name}")));
                     }
                     c.validate_trait(&a)?;
                     c.traits.insert(name.into(), a.clone());
@@ -192,7 +192,7 @@ pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
                         ]
                         .contains(&name)
                     {
-                        do yeet crate::error(format!("Duplicate or reserved type {name}"));
+                        return Err(crate::error(format!("Duplicate or reserved type {name}")));
                     }
                     c.structs.insert(name.into(), a.clone());
                     let g = arr(&a, "generics")
@@ -216,13 +216,13 @@ pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
                 "validate" | "assert" => c.check(s(&a, "kind"), &a["value"], &e)?,
                 "segments" => {
                     if segments.is_some() {
-                        do yeet crate::error("Duplicate segments declaration");
+                        return Err(crate::error("Duplicate segments declaration"));
                     }
                     segments = Some(a["value"].clone())
                 }
                 "param" => {
                     if e.contains_key(name) {
-                        do yeet crate::error(format!("Duplicate name {name}"));
+                        return Err(crate::error(format!("Duplicate name {name}")));
                     }
                     c.parameters.push(a["parameter"].clone());
                     c.controls.push(a["control"].clone());
@@ -239,9 +239,10 @@ pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
                     let value = c.eval(&a["value"], &e, 0)?;
                     c.statement_checks(&value);
                 }
-                _ => do yeet crate::error("Unknown statement"),
+                _ => return Err(crate::error("Unknown statement")),
             }
-        };
+            Ok(())
+        })();
         result
             .map_err(|e| crate::error(format!("Rush line {}: {}", statement.line, e)))?;
     }

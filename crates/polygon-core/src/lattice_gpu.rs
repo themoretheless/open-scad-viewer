@@ -169,17 +169,13 @@ impl GpuLattice {
         nodes: &[f32],
         triangles: &[f32],
         segments: &Segments,
-        min: P,
-        max: P,
-        cells: [usize; 3],
-        skin: f64,
+        grid: &sdf_core::Grid,
+        style: crate::mesh_shell::ShellStyle,
         blend: f64,
-        organic: bool,
-        open_top: bool,
-        wall_depth: f64,
-        keep_core: bool,
         top_z: f64,
     ) -> Vec<f32> {
+        let (min, max, cells) = (grid.min, grid.max, grid.cells);
+        let crate::mesh_shell::ShellStyle { skin, organic, open_top, wall_depth, keep_core } = style;
         let total = ((cells[0] + 1) * (cells[1] + 1) * (cells[2] + 1)) as u32;
         let mut params = Vec::with_capacity(80);
         for v in [
@@ -259,26 +255,18 @@ thread_local! {
 pub(crate) fn try_gpu(
     all: &Node,
     segments: &Segments,
-    min: P,
-    max: P,
-    cells: [usize; 3],
-    skin: f64,
-    organic: bool,
-    open_top: bool,
-    wall_depth: f64,
-    keep_core: bool,
+    grid: &sdf_core::Grid,
+    style: crate::mesh_shell::ShellStyle,
     blend: f64,
     field: &impl Fn(P) -> f64,
 ) -> Result<Option<crate::Mesh>, crate::Error> {
+    let (min, max, cells) = (grid.min, grid.max, grid.cells);
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuLattice)> = cell;
         shared
             .map(|(_, lattice)| {
                 let (nodes, triangles) = flatten_lattice_bvh(all);
-                let mut values = lattice.run(
-                    &nodes, &triangles, segments, min, max, cells, skin, blend, organic, open_top,
-                    wall_depth, keep_core, all.max[2],
-                );
+                let mut values = lattice.run(&nodes, &triangles, segments, grid, style, blend, all.max[2]);
                 // CPU recompute of shader-marked points.
                 let delta: P = std::array::from_fn(|k| (max[k] - min[k]) / cells[k] as f64);
                 let mut index = 0usize;

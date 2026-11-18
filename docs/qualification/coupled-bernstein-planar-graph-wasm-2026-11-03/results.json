@@ -1,0 +1,47 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/6fb3049699defbb793476f4d807e899dd5f666de6120182fe14b3f58c92339c3.wasm",
+  "sha256": "6fb3049699defbb793476f4d807e899dd5f666de6120182fe14b3f58c92339c3",
+  "bytes": 21849095,
+  "sourceCommit": "2e06fcc12d596283339f54b311294c99bd599d92",
+  "status": "passed",
+  "abiCases": 170,
+  "graphCases": 59,
+  "workersStarted": 152,
+  "workersTerminated": 152,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "b5768272cc7d1286696171d160c9d3873a855e442c9e32265425765987dc04ee",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "eca4125fc9f73e40906a8c69a8629668bf1ca087c383c206aca95049e54a074c",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "tools/browser-qualification/surface-self-intersection.mjs": "f112a9ece645d7a6623bf87feef23f3353b830e820e731c3e6f16eb3a3bab662",
+    "src/services/originalQuadricGraphProtocol.ts": "b6f2310a8c96b405069acea305b4edad8552fc29ef50df5737aef32fbe0a0137"
+  },
+  "nativeReceipt": "docs/qualification/coupled-bernstein-planar-graph-2026-11-03/results.json",
+  "observedTimings": {
+    "graph-coupled-degree-two-planar-target": {
+      "abiMs": 10.827458999999976,
+      "workerMs": 13.300000011920929
+    },
+    "graph-coupled-degree-two-algebraic-edge": {
+      "abiMs": 0.7959590000000389,
+      "workerMs": 4.800000011920929
+    },
+    "graph-coupled-degree-eight-original-target": {
+      "abiMs": 162.1384169999999,
+      "workerMs": 144.19999998807907
+    }
+  },
+  "timingScope": "Single-run observations, not a repeat benchmark. ABI duration measures synchronous request; Worker duration includes creation, validation, serialization and native execution. Both exclude fixture checks.",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of positive nonseparable planar Bernstein targets, including degree-(2,2), its algebraic boundary contact, and actual original degree-(8,8) finite contact.",
+  "remaining": [
+    "Arbitrary requested UV enclosure width and refinement performance",
+    "Multispan coupled target charts",
+    "Nonplanar coupled targets and general freeform all branches",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}

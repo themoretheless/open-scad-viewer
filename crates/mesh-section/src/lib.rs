@@ -16,6 +16,7 @@
 //! material classification still require a subsequent validation stage.
 
 pub use math_core::{Error, Result};
+pub mod drawing;
 use math_core::{cross, sub};
 pub use mesh_topology::MeshView;
 fn check(condition: bool, message: &str) -> Result<()> {
@@ -318,7 +319,7 @@ pub fn project(mesh: &MeshView<'_>) -> Result<Rings> {
         let mut r: Vec<_> = t
             .iter()
             .map(|&i| {
-                let p = mesh.point(i).unwrap();
+                let p = mesh.point(i).expect("mesh.validate() checked every index");
                 [p[0], p[1]]
             })
             .collect();
@@ -392,7 +393,7 @@ pub fn slice(mesh: &MeshView<'_>, z: f64) -> Result<Rings> {
             check(ring.len() <= mesh.indices.len(), "Slice boundary budget")?;
             let next = edges.iter().find(|e| e.0 == at).copied();
             check(next.is_some(), "Open or ambiguous slice boundary")?;
-            let edge = next.unwrap();
+            let edge = next.expect("the check above refused a missing successor");
             edges.remove(&edge);
             at = edge.1;
         }

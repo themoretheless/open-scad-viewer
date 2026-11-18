@@ -50,8 +50,10 @@ fn section(
 ) -> Result<(Witness, usize)> {
     let (s, d) = ordered(s, d, span);
     let (w, n) = uv::section(
-        s,
-        d,
+        crate::offset::contact_pcurve::OffsetFaces {
+            surfaces: s,
+            distances: d,
+        },
         span.axis,
         endpoint_clock(span, start),
         span.free,
@@ -125,7 +127,18 @@ pub(super) fn prove(
         "Chart-switch proof interval is numerically unrepresentable",
     )?;
     let (s, d) = ordered(sources, distances, a);
-    let proof = tangent::certify_refined(s, d, a.axis, drive, free, other, l.spans, l.refinements)?;
+    let proof = tangent::certify_refined(
+        crate::offset::contact_pcurve::OffsetFaces {
+            surfaces: s,
+            distances: d,
+        },
+        a.axis,
+        drive,
+        free,
+        other,
+        l.spans,
+        l.refinements,
+    )?;
     check(
         proof.report.regular,
         "Chart-switch original branch regularity remains unresolved",

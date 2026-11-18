@@ -1,52 +1,28 @@
 // assetEvaluator: makeImport.
-import type { CadKernelHandle } from '../../services/cadKernelOps'
 
-import type { CallNode, ExpressionArgument, Value } from '../../services/openscadCompiler'
+import type { CallNode } from '../../language/openscadCompiler'
 
-import { formatOpenScadValue } from '../../services/openScadValueSemantics'
+import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
-import {
-  resolveOpenScadFragments,
-  type OpenScadFragmentResolutionInput,
-} from '../../services/openScadStableModuleSemantics'
-
-import {
-  OpenScadProjectError,
-  resolveOpenScadProjectPath,
-} from '../../services/openScadProject'
+import { OpenScadProjectError, resolveOpenScadProjectPath } from '../../language/openScadProject'
 
 import {
   loadPreparedOpenScadImport,
   OpenScadImportError,
   OpenScadImportPositionedError,
   type OpenScad2021LegacyImportFormat,
-  type OpenScadImportErrorCode,
-} from '../../services/openScadImport'
+} from '../../exchange/openScadImport'
 
 import {
   loadOpenScadSurfaceHeightMap,
   OpenScadSurfaceDataError,
   OpenScadSurfaceError,
   triangulateOpenScadSurface,
-} from '../../services/openScadSurface'
+} from '../../language/openScadSurface'
 
-import {
-  OpenScadTextError,
-  OpenScadTextPositionedError,
-  renderOpenScadText,
-  type OpenScadTextErrorCode,
-  type OpenScadTextParameters,
-} from '../../services/openScadText'
+import { nextColor } from '../../language/openscadColors'
 
-import { nextColor } from '../../services/openscadColors'
-
-import {
-  type EvalContext,
-  type Shape,
-  type Vec2,
-} from '.././types'
-
-import { callExpressionArguments } from '.././astDiscovery'
+import { type EvalContext, type Shape, type Vec2 } from '.././types'
 
 import {
   arg,
@@ -54,20 +30,18 @@ import {
   currentEntityId,
   evalExpression,
   evaluateStableBuiltinModuleArguments,
-  resolveStableVariable,
   trackedSolid,
   warn,
 } from '.././expressionEvaluator'
 
-import { stableModuleSemanticsContext } from '.././geometryEvaluator'
-import { importCallError, surfaceCallSource, IMPORT_POSITIONAL_PARAMETERS, importArgumentValues } from './surfaceCallSource'
+import {
+  importCallError,
+  surfaceCallSource,
+  IMPORT_POSITIONAL_PARAMETERS,
+  importArgumentValues,
+} from './surfaceCallSource'
 
-
-export function makeImport(
-  node: CallNode,
-  ctx: EvalContext,
-  forcedFormat?: OpenScad2021LegacyImportFormat,
-): Shape[] {
+export function makeImport(node: CallNode, ctx: EvalContext, forcedFormat?: OpenScad2021LegacyImportFormat): Shape[] {
   const displayName = node.name
   if (ctx.project === undefined || ctx.importAssets === undefined) {
     return importCallError(
@@ -79,9 +53,7 @@ export function makeImport(
   }
 
   const authored = surfaceCallSource(node, ctx)
-  const argumentContext = authored.source === ctx.source
-    ? ctx
-    : { ...ctx, source: authored.source }
+  const argumentContext = authored.source === ctx.source ? ctx : { ...ctx, source: authored.source }
   const compatibility = forcedFormat !== undefined
   const values = compatibility
     ? evaluateStableBuiltinModuleArguments(
@@ -103,9 +75,7 @@ export function makeImport(
   }
 
   const rawLayerValue = values.get('layer') ?? values.get('layername')
-  const layerValue = compatibility && rawLayerValue !== undefined
-    ? compatibilityString(rawLayerValue)
-    : rawLayerValue
+  const layerValue = compatibility && rawLayerValue !== undefined ? compatibilityString(rawLayerValue) : rawLayerValue
   if (layerValue !== undefined && typeof layerValue !== 'string') {
     return importCallError(node, ctx, 'E_IMPORT_ARGUMENT_INVALID', `${displayName}() layer must be a string.`, {
       specifier: fileValue,
@@ -114,8 +84,11 @@ export function makeImport(
   const originValue = values.get('origin')
   let origin: [number, number] | undefined
   if (originValue !== undefined) {
-    if (!Array.isArray(originValue) || originValue.length !== 2
-      || originValue.some(value => typeof value !== 'number' || !Number.isFinite(value))) {
+    if (
+      !Array.isArray(originValue) ||
+      originValue.length !== 2 ||
+      originValue.some(value => typeof value !== 'number' || !Number.isFinite(value))
+    ) {
       if (compatibility) {
         warn(ctx, `linear_extrude(..., origin=${formatOpenScadValue(originValue)}) could not be converted`)
       } else {
@@ -133,12 +106,15 @@ export function makeImport(
   }
   const rawScaleValue = values.get('scale')
   const scaleValue = compatibility
-    ? (typeof rawScaleValue === 'number' && Number.isFinite(rawScaleValue) && rawScaleValue > 0
-        ? rawScaleValue
-        : 1)
+    ? typeof rawScaleValue === 'number' && Number.isFinite(rawScaleValue) && rawScaleValue > 0
+      ? rawScaleValue
+      : 1
     : rawScaleValue
-  if (!compatibility && scaleValue !== undefined
-    && (typeof scaleValue !== 'number' || !Number.isFinite(scaleValue) || scaleValue <= 0)) {
+  if (
+    !compatibility &&
+    scaleValue !== undefined &&
+    (typeof scaleValue !== 'number' || !Number.isFinite(scaleValue) || scaleValue <= 0)
+  ) {
     return importCallError(
       node,
       ctx,
@@ -150,26 +126,24 @@ export function makeImport(
   const rawCenterValue = values.get('center')
   const centerValue = compatibility ? rawCenterValue === true : rawCenterValue
   if (!compatibility && centerValue !== undefined && typeof centerValue !== 'boolean') {
-    return importCallError(
-      node,
-      ctx,
-      'E_IMPORT_ARGUMENT_INVALID',
-      `${displayName}() center must be boolean.`,
-      { specifier: fileValue },
-    )
+    return importCallError(node, ctx, 'E_IMPORT_ARGUMENT_INVALID', `${displayName}() center must be boolean.`, {
+      specifier: fileValue,
+    })
   }
   const rawDpiValue = values.get('dpi')
   const dpiValue = compatibility
-    ? (typeof rawDpiValue === 'number' && Number.isFinite(rawDpiValue) && rawDpiValue >= 0.001
-        ? rawDpiValue
-        : undefined)
+    ? typeof rawDpiValue === 'number' && Number.isFinite(rawDpiValue) && rawDpiValue >= 0.001
+      ? rawDpiValue
+      : undefined
     : rawDpiValue
-  if (compatibility && typeof rawDpiValue === 'number'
-    && (!Number.isFinite(rawDpiValue) || rawDpiValue < 0.001)) {
+  if (compatibility && typeof rawDpiValue === 'number' && (!Number.isFinite(rawDpiValue) || rawDpiValue < 0.001)) {
     warn(ctx, 'Invalid dpi value given; using the default 72 dpi')
   }
-  if (!compatibility && dpiValue !== undefined
-    && (typeof dpiValue !== 'number' || !Number.isFinite(dpiValue) || dpiValue < 0.001)) {
+  if (
+    !compatibility &&
+    dpiValue !== undefined &&
+    (typeof dpiValue !== 'number' || !Number.isFinite(dpiValue) || dpiValue < 0.001)
+  ) {
     return importCallError(
       node,
       ctx,
@@ -194,56 +168,49 @@ export function makeImport(
   const loadedDpi = typeof dpiValue === 'number' ? dpiValue : undefined
   let assetPath: string | undefined
   try {
-    const loaded = loadPreparedOpenScadImport(
-      ctx.project,
-      ctx.importAssets,
-      importer,
-      fileValue,
-      {
-        ...(layerValue === undefined ? {} : { layer: layerValue }),
-        ...(origin === undefined ? {} : { origin }),
-        ...(loadedScale === undefined ? {} : { scale: loadedScale }),
-        ...(loadedCenter === undefined ? {} : { center: loadedCenter }),
-        ...(loadedDpi === undefined ? {} : { dpi: loadedDpi }),
-        ...(forcedFormat === undefined ? {} : { forcedFormat }),
-      },
-    )
+    const loaded = loadPreparedOpenScadImport(ctx.project, ctx.importAssets, importer, fileValue, {
+      ...(layerValue === undefined ? {} : { layer: layerValue }),
+      ...(origin === undefined ? {} : { origin }),
+      ...(loadedScale === undefined ? {} : { scale: loadedScale }),
+      ...(loadedCenter === undefined ? {} : { center: loadedCenter }),
+      ...(loadedDpi === undefined ? {} : { dpi: loadedDpi }),
+      ...(forcedFormat === undefined ? {} : { forcedFormat }),
+    })
     assetPath = resolveOpenScadProjectPath(importer, fileValue)
 
     if (loaded.dimension === 2) {
-      const sections = loaded.regions.map(region => ctx.kernel.polygon(
-        region.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
-        region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
-      ))
-      const geometry = sections.length === 1
-        ? sections[0]
-        : ctx.kernel.boolean2('union', sections)
+      const sections = loaded.regions.map(region =>
+        ctx.kernel.polygon(
+          region.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
+          region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
+        ),
+      )
+      const [onlySection] = sections
+      const geometry = sections.length === 1 && onlySection ? onlySection : ctx.kernel.boolean2('union', sections)
       if (ctx.kernel.isEmpty(geometry)) {
-        return importCallError(
-          node,
-          ctx,
-          'E_IMPORT_EMPTY',
-          `${displayName}() produced empty 2D geometry.`,
-          { specifier: fileValue, assetPath, format: loaded.format },
-        )
+        return importCallError(node, ctx, 'E_IMPORT_EMPTY', `${displayName}() produced empty 2D geometry.`, {
+          specifier: fileValue,
+          assetPath,
+          format: loaded.format,
+        })
       }
-      return [{
-        dimension: 2,
-        geometry,
-        color: nextColor(),
-        entityId: currentEntityId(ctx),
-      }]
+      return [
+        {
+          dimension: 2,
+          geometry,
+          color: nextColor(),
+          entityId: currentEntityId(ctx),
+        },
+      ]
     }
 
     const geometry = ctx.kernel.ofMesh(loaded.vertices, loaded.triangles)
     if (ctx.kernel.isEmpty(geometry)) {
-      return importCallError(
-        node,
-        ctx,
-        'E_IMPORT_EMPTY',
-        `${displayName}() produced empty 3D geometry.`,
-        { specifier: fileValue, assetPath, format: loaded.format },
-      )
+      return importCallError(node, ctx, 'E_IMPORT_EMPTY', `${displayName}() produced empty 3D geometry.`, {
+        specifier: fileValue,
+        assetPath,
+        format: loaded.format,
+      })
     }
     return [trackedSolid(geometry, nextColor(), node, ctx)]
   } catch (error) {
@@ -267,7 +234,6 @@ export function makeImport(
   }
 }
 
-
 export function surfaceError(
   node: CallNode,
   ctx: EvalContext,
@@ -282,7 +248,6 @@ export function surfaceError(
   })
 }
 
-
 export function makeSurface(node: CallNode, ctx: EvalContext): Shape[] {
   if (ctx.project === undefined || ctx.surfaceAssets === undefined) {
     return surfaceError(
@@ -294,36 +259,21 @@ export function makeSurface(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   const authored = surfaceCallSource(node, ctx)
-  const argumentContext = authored.source === ctx.source
-    ? ctx
-    : { ...ctx, source: authored.source }
+  const argumentContext = authored.source === ctx.source ? ctx : { ...ctx, source: authored.source }
   const fileValue = arg(node, 'file', 0, undefined, argumentContext)
   if (typeof fileValue !== 'string' || fileValue.length === 0) {
-    return surfaceError(
-      node,
-      ctx,
-      'E_SURFACE_FILE_REQUIRED',
-      'surface() requires a non-empty string file path.',
-    )
+    return surfaceError(node, ctx, 'E_SURFACE_FILE_REQUIRED', 'surface() requires a non-empty string file path.')
   }
   const center = arg(node, 'center', 1, false, argumentContext) === true
   // OpenSCAD 2021 stores convexity as a display/preview hint; evaluating the
   // argument preserves side effects and errors, but it cannot change the mesh.
   arg(node, 'convexity', 2, 1, argumentContext)
-  const invert = node.args.invert === undefined
-    ? false
-    : evalExpression(node.args.invert, argumentContext) === true
+  const invert = node.args.invert === undefined ? false : evalExpression(node.args.invert, argumentContext) === true
   const importer = node.sourcePath ?? ctx.project.entrypoint
 
   let assetPath: string | undefined
   try {
-    const loaded = loadOpenScadSurfaceHeightMap(
-      ctx.project,
-      ctx.surfaceAssets,
-      importer,
-      fileValue,
-      invert,
-    )
+    const loaded = loadOpenScadSurfaceHeightMap(ctx.project, ctx.surfaceAssets, importer, fileValue, invert)
     assetPath = loaded.path
     const surface = triangulateOpenScadSurface(loaded.map, center)
     const geometry = ctx.kernel.ofMesh(surface.vertices, surface.triangles)
@@ -331,34 +281,22 @@ export function makeSurface(node: CallNode, ctx: EvalContext): Shape[] {
   } catch (error) {
     if (error instanceof OpenScadSurfaceError) throw error
     if (error instanceof OpenScadProjectError) {
-      return surfaceError(
-        node,
-        ctx,
-        'E_SURFACE_PATH_INVALID',
-        error.message,
-        {
-          specifier: fileValue,
-          ...(error.details.path === undefined ? {} : { assetPath: error.details.path }),
-          ...(error.details.limit === undefined ? {} : { limit: error.details.limit }),
-          ...(error.details.actual === undefined ? {} : { actual: error.details.actual }),
-        },
-      )
+      return surfaceError(node, ctx, 'E_SURFACE_PATH_INVALID', error.message, {
+        specifier: fileValue,
+        ...(error.details.path === undefined ? {} : { assetPath: error.details.path }),
+        ...(error.details.limit === undefined ? {} : { limit: error.details.limit }),
+        ...(error.details.actual === undefined ? {} : { actual: error.details.actual }),
+      })
     }
     if (error instanceof OpenScadSurfaceDataError) {
-      return surfaceError(
-        node,
-        ctx,
-        error.code,
-        error.message,
-        {
-          specifier: fileValue,
-          ...(error.assetPath === undefined && assetPath === undefined
-            ? {}
-            : { assetPath: error.assetPath ?? assetPath }),
-          ...(error.limit === undefined ? {} : { limit: error.limit }),
-          ...(error.actual === undefined ? {} : { actual: error.actual }),
-        },
-      )
+      return surfaceError(node, ctx, error.code, error.message, {
+        specifier: fileValue,
+        ...(error.assetPath === undefined && assetPath === undefined
+          ? {}
+          : { assetPath: error.assetPath ?? assetPath }),
+        ...(error.limit === undefined ? {} : { limit: error.limit }),
+        ...(error.actual === undefined ? {} : { actual: error.actual }),
+      })
     }
     return surfaceError(
       node,
