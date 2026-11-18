@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 946,
-  "unallocatedCount": 54,
+  "specifiedCount": 947,
+  "unallocatedCount": 53,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21614,6 +21614,26 @@
       ],
       "remainingQualification": [
         "Single closed shell with selected horizontal affine end caps and separated walls. Explicit wall replacement; automatic Boolean dispatch and general embedding proof remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0947",
+      "name": "Увеличение сквозного отверстия шестерни штатным вычитанием цилиндра",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-spinner-standard-difference-947-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-standard-difference-947-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
+      ],
+      "remainingQualification": [
+        "Single closed shell with selected horizontal affine end caps and separated walls. Canonical coaxial cylinder with matching end elevations. Other cutter representations and general embedding remain outside this qualification."
       ]
     }
   ],

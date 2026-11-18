@@ -139,3 +139,50 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
     result.validate()?;
     Ok(result)
 }
+
+/// Automatic dispatch is limited to the complete indexed geometry of the native
+/// cylinder and stock whose positive-weight carriers stay in its axial slab.
+/// A changed control net or trim falls back to the other Boolean classifiers.
+pub(crate) fn try_difference(stock: &Model, tool: &Model) -> Option<Model> {
+    if tool.faces.len() != 6
+        || tool.vertices.len() != 8
+        || !tool.1.local_tolerances_mm.is_empty()
+        || !tool.1.sewed_edges.is_empty()
+    {
+        return None;
+    }
+    let radius = tool.vertices.iter().map(|v| v.point[0]).fold(0., f64::max);
+    let height = tool.vertices.iter().map(|v| v.point[2]).fold(0., f64::max);
+    let mut caps = [None; 2];
+    for (index, face) in stock.faces.iter().enumerate() {
+        if face
+            .surface
+            .control_points
+            .iter()
+            .flatten()
+            .any(|p| p[2] < 0. || p[2] > height)
+        {
+            return None;
+        }
+        if face.holes.is_empty() {
+            continue;
+        }
+        let z = face.surface.control_points[0][0][2];
+        let end = if z == 0. {
+            0
+        } else if z == height {
+            1
+        } else {
+            return None;
+        };
+        if caps[end].replace(index).is_some() {
+            return None;
+        }
+    }
+    let caps = [caps[0]?, caps[1]?];
+    let canonical = crate::cylinder(radius, height).ok()?;
+    if tool.0 != canonical.0 {
+        return None;
+    }
+    replace(stock, caps, radius, height).ok()
+}

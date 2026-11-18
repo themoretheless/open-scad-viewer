@@ -77,6 +77,11 @@ pub(super) fn boolean_impl(
         return match curved_boolean_exact(a, b, operation) {
             Ok(model) => Ok(model),
             Err(error) if proof_refusal(error.code) => {
+                if operation == "difference"
+                    && let Some(result) = crate::body_analysis::through_wall_cylinder::try_difference(a, b)
+                {
+                    return Ok(result);
+                }
                 if retry_seams {
                     if let Some(model) =
                         super::seam_boolean::try_seam_normalized_boolean(a, b, operation)?

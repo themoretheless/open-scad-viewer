@@ -1,0 +1,24 @@
+{
+  "id": "NURBS-0947",
+  "testedBase": "9e629d19145e57417508615a852a35a9f86b926c",
+  "testTargets": [
+    "brep-core --test gear_profile --test spinner_bore_boolean",
+    "cad-step --test edited_gear_step exchanged_spinner_cylindrical_replacement_is_a_closed_single_body"
+  ],
+  "independentOcctVolume": {
+    "valid": true,
+    "original": 4145.355114907374,
+    "sewn": 2794.4703309483602,
+    "reference": 2794.470257479367,
+    "removed": 1350.8847839590135,
+    "difference": 7.346899337790092e-05,
+    "nominal": 1350.884841043611
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/through_wall_cylinder.rs": "44a4881279af573c4a18e3e89845ba84291c84f07b158d767a1d8a5627838501",
+    "crates/brep-core/src/boolean/operations/boolean.rs": "b9160b79a51b4a74cf0a9fab024b7d96ebce8c2e471dfdc4c21dc4fb29755c1b",
+    "crates/brep-core/tests/spinner_bore_boolean.rs": "5e6b3ce4385a8a283a969a44ed764e8c10da3bc7672f2a9628c0a1069580f4b3",
+    "crates/cad-step/tests/edited_gear_step.rs": "c5736c9f97d83fb6f09c91885ca068eed8e7dbca2576e8b7c75ad53fb834feaf"
+  },
+  "logSha256": "4fe0406f6d4d4c883dc67d8deb27c1d826300cca0290077769a80a8df3385e6a"
+}
