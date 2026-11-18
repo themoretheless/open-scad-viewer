@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 686,
-  "unallocatedCount": 314,
+  "specifiedCount": 687,
+  "unallocatedCount": 313,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16726,6 +16726,25 @@
       "remainingQualification": [
         "Compare peak absolute speed, acceleration and jerk with inclusive limits in the original parameter clock.",
         "Check original-clock units, violations of each independent limit, a coarse unresolved speed bound, recovery with refinement, and invalid limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0687",
+      "name": "Сертифицированный коэффициент замедления NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_motion_slowdown_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-687-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-687-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose minimum uniform parameter dilation under speed, acceleration and jerk limits.",
+        "Check each derivative scaling power, existing feasibility, zero and subnormal limits, and enclosure under coarse work budgets.",
         "WASM and application integration are separate."
       ]
     }

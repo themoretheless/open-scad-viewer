@@ -1119,6 +1119,74 @@ pub fn check_directional_motion_limits(
     Ok(DirectionalMotionReport { speed, acceleration, jerk, status })
 }
 
+/// Enclose the minimum uniform parameter dilation, constrained to at least 1,
+/// that satisfies the inclusive axis limits. A factor of 2 halves speed,
+/// quarters acceleration and divides jerk by 8. A finite upper endpoint is
+/// a certified feasible factor. Infinity means no finite factor was certified.
+/// The original parameter must represent elapsed time for physical units.
+pub fn directional_motion_slowdown_bounds(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    tolerances: [f64; 3],
+    max_cells_per_derivative: usize,
+) -> Result<[f64; 2]> {
+    use num_rational::BigRational;
+
+    let report = check_directional_motion_limits(
+        curve, interval, direction, limits, tolerances, max_cells_per_derivative,
+    )?;
+    let exact = |value| {
+        BigRational::from_float(value)
+            .ok_or_else(|| crate::numeric_err("Nonfinite motion bound"))
+    };
+    let constraints = [
+        (report.speed.bounds, limits.speed),
+        (report.acceleration.bounds, limits.acceleration),
+        (report.jerk.bounds, limits.jerk),
+    ]
+    .into_iter()
+    .map(|([lo, hi], limit)| Ok(([exact(lo)?, exact(hi)?], exact(limit)?)))
+    .collect::<Result<Vec<_>>>()?;
+
+    let bracket = |endpoint| -> Result<[f64; 2]> {
+        let feasible = |factor: f64| -> Result<bool> {
+            let factor = exact(factor)?;
+            let mut power = factor.clone();
+            for (index, (peak, limit)) in constraints.iter().enumerate() {
+                if &peak[endpoint] > &(&power * limit) {
+                    return Ok(false);
+                }
+                if index < 2 {
+                    power *= &factor;
+                }
+            }
+            Ok(true)
+        };
+        if feasible(1.)? {
+            return Ok([1.; 2]);
+        }
+        if !feasible(f64::MAX)? {
+            return Ok([f64::MAX, f64::INFINITY]);
+        }
+
+        // Positive finite binary64 values have the same order as their bits.
+        let mut lo = 1_f64.to_bits();
+        let mut hi = f64::MAX.to_bits();
+        while hi - lo > 1 {
+            let mid = lo + (hi - lo) / 2;
+            if feasible(f64::from_bits(mid))? {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        Ok([f64::from_bits(lo), f64::from_bits(hi)])
+    };
+    Ok([bracket(0)?[0], bracket(1)?[1]])
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],

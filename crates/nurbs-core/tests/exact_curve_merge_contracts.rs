@@ -8731,3 +8731,58 @@ fn axial_motion_limits_preserve_undetermined_status_at_coarse_budget() {
     assert_eq!([coarse.speed.cells, coarse.acceleration.cells, coarse.jerk.cells], [1; 3]);
     assert_eq!(check(128).status, DirectionalMotionStatus::Within);
 }
+
+#[test]
+fn motion_slowdown_bounds_apply_each_derivative_power() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, directional_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let bounds = |speed, acceleration, jerk| {
+        directional_motion_slowdown_bounds(
+            &curve, [2., 4.], &[1., 0.],
+            DirectionalMotionLimits { speed, acceleration, jerk }, [1e-6; 3], 32,
+        )
+        .unwrap()
+    };
+    for limits in [(6., 20., 20.), (20., 3., 20.), (20., 20., 0.75)] {
+        let [lo, hi] = bounds(limits.0, limits.1, limits.2);
+        assert!(lo <= 2. && 2. <= hi && hi - lo < 1e-6, "{lo}..{hi}");
+    }
+    assert_eq!(bounds(20., 20., 20.), [1.; 2]);
+    assert_eq!(bounds(20., 20., 0.), [f64::MAX, f64::INFINITY]);
+    assert_eq!(bounds(f64::from_bits(1), 20., 20.), [f64::MAX, f64::INFINITY]);
+}
+
+#[test]
+fn motion_slowdown_bounds_cover_coarse_peak_uncertainty() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, directional_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let measure = |cells| {
+        directional_motion_slowdown_bounds(
+            &curve, [2., 6.], &[1., 0.],
+            DirectionalMotionLimits { speed: 0.25, acceleration: 1., jerk: 1. },
+            [1e-5; 3], cells,
+        )
+        .unwrap()
+    };
+    let coarse = measure(1);
+    let fine = measure(128);
+    assert_eq!(coarse[0], 1.);
+    assert!(coarse[1] >= 3.);
+    assert!(fine[0] <= 1.5 && 1.5 <= fine[1] && fine[1] - fine[0] < 1e-4);
+}
