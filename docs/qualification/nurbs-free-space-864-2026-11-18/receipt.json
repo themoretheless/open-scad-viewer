@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0864",
+  "testedBase": "2b3499404076dec756193f86469854fb4a375171",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 211,
+  "scope": [
+    "Recover the regularized free solid inside a bounded assembly inspection box after subtracting all candidate occurrences.",
+    "Overlapping blocks leave two closed components totalling 8 cubic millimetres. Fully occupied, unoccupied, malformed and budget-limited inspection boxes covered."
+  ],
+  "logSha256": "1faf7feebb9d326fbc4f8b1a7d8d1caa75a9cc3d762d46d5f8afb4badfe01634",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "c65f6318d84d5ce8a3c5efcd4aff6a594abd850800f7d82c2a33f0ef38d054b0",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "8a66c09f735d8b87ba5771fe405ce75f8eccb5f2e571ef738d0713c700087bc9"
+  }
+}

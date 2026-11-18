@@ -4056,3 +4056,22 @@ fn inspection_box_reports_clipped_material_with_occurrence_identity() {
     assert!(scene.material_in_box(max, min, 9).is_err());
     assert!(scene.material_in_box([20.; 3], [21.; 3], 0).unwrap().is_empty());
 }
+
+#[test]
+fn assembly_free_space_excludes_overlapping_material_and_preserves_empty_box() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(0.), placed(1.), placed(20.)]).unwrap();
+    let free = scene.free_space_in_box([-1., 0., 0.], [4., 2., 2.], 2).unwrap();
+    assert_eq!(free.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(free.bodies.len(), 2);
+    let volume = |model: &Model| brep_core::analysis::mass_properties(model, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume(&free) - 8.).abs() < 1e-8);
+    assert!(scene.free_space_in_box([0.5; 3], [1.; 3], 2).unwrap().bodies.is_empty());
+    assert!((volume(&scene.free_space_in_box([6.; 3], [7.; 3], 0).unwrap()) - 1.).abs() < 1e-8);
+    assert!(scene.free_space_in_box([0.; 3], [4.; 3], 1).is_err());
+    assert!(scene.free_space_in_box([1.; 3], [0.; 3], 2).is_err());
+}

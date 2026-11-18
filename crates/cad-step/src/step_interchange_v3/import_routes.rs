@@ -989,16 +989,7 @@ impl StepSharedAssembly {
     /// Preserve occurrence indices and report unresolved candidates individually.
     pub fn material_in_box(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize)
         -> Result<Vec<(usize, Result<Model>)>> {
-        if (0..3).any(|i| !min[i].is_finite() || !max[i].is_finite() || min[i] >= max[i]) {
-            return Err(refuse("STEP inspection box requires finite ordered limits"));
-        }
-        let bounds = self.occurrence_bounds()?;
-        let candidates: Vec<_> = bounds.into_iter().enumerate().filter(|(_, [lo, hi])| {
-            (0..3).all(|i| lo[i] < max[i] && min[i] < hi[i])
-        }).collect();
-        if candidates.len() > max_candidates {
-            return Err(refuse("STEP inspection box candidate budget exceeded"));
-        }
+        let candidates = self.box_candidates(min, max, max_candidates)?;
         let clip = brep_core::cuboid(min, max)?;
         let mut hits = Vec::new();
         for (index, [lo, hi]) in candidates {
@@ -1011,6 +1002,32 @@ impl StepSharedAssembly {
             }
         }
         Ok(hits)
+    }
+
+    /// Return the regularized free volume inside a finite assembly-space box.
+    pub fn free_space_in_box(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize) -> Result<Model> {
+        let candidates = self.box_candidates(min, max, max_candidates)?;
+        let mut free = brep_core::cuboid(min, max)?;
+        for (index, _) in candidates {
+            if free.bodies.is_empty() { break; }
+            free = brep_core::boolean(&free, &self.materialize(index)?, "difference")?;
+        }
+        Ok(free)
+    }
+
+    fn box_candidates(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize)
+        -> Result<Vec<(usize, [[f64; 3]; 2])>> {
+        if (0..3).any(|i| !min[i].is_finite() || !max[i].is_finite() || min[i] >= max[i]) {
+            return Err(refuse("STEP inspection box requires finite ordered limits"));
+        }
+        let bounds = self.occurrence_bounds()?;
+        let candidates: Vec<_> = bounds.into_iter().enumerate().filter(|(_, [lo, hi])| {
+            (0..3).all(|i| lo[i] < max[i] && min[i] < hi[i])
+        }).collect();
+        if candidates.len() > max_candidates {
+            return Err(refuse("STEP inspection box candidate budget exceeded"));
+        }
+        Ok(candidates)
     }
 
     /// Split at a world X, Y or Z coordinate. Return the low and high material respectively.
