@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 823,
-  "unallocatedCount": 177,
+  "specifiedCount": 824,
+  "unallocatedCount": 176,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19340,6 +19340,26 @@
       "remainingQualification": [
         "Append a rigid placement for an existing definition without copying its geometry.",
         "Check invalid definition and placement, the 256 occurrence edit limit, and preservation of one shared closed solid with three placements after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0824",
+      "name": "Вставка нового замкнутого тела в существующую STEP-сборку",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::insert_solid",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-824-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-824-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Insert a closed solid as a new definition and add its first rigid placement atomically.",
+        "Check empty solid and invalid placement refusal, keep peer gears shared and reimport the inserted six-face closed solid at its requested height.",
         "WASM and application integration are separate."
       ]
     }

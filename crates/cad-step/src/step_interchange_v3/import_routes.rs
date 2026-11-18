@@ -699,15 +699,36 @@ impl StepSharedAssembly {
         if definition >= self.definitions.len() {
             return Err(refuse("STEP assembly definition index out of range"));
         }
+        self.check_new_placement(transform)?;
+        Ok(self.push_occurrence(definition, transform))
+    }
+
+    /// Insert a closed solid in local coordinates and place its first occurrence.
+    pub fn insert_solid(&mut self, model: Model, transform: [[f64; 4]; 4]) -> Result<usize> {
+        self.check_new_placement(transform)?;
+        if model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed) {
+            return Err(refuse("STEP assembly insertion requires one closed solid"));
+        }
+        model.validate()?;
+        let definition = self.definitions.len();
+        self.definitions.push(model);
+        Ok(self.push_occurrence(definition, transform))
+    }
+
+    fn check_new_placement(&self, transform: [[f64; 4]; 4]) -> Result<()> {
         if self.occurrences.len() >= super::MAX_OCCURRENCES {
             return Err(refuse("STEP assembly exceeds the limit of 256 occurrences"));
         }
         if !super::is_proper_rigid_placement(transform) {
             return Err(refuse("STEP assembly placement must be a finite proper rigid transform"));
         }
+        Ok(())
+    }
+
+    fn push_occurrence(&mut self, definition: usize, transform: [[f64; 4]; 4]) -> usize {
         let index = self.occurrences.len();
         self.occurrences.push(StepAssemblyOccurrence { definition, transform });
-        Ok(index)
+        index
     }
 
     /// Remove one placement and discard its definition when it becomes unused.

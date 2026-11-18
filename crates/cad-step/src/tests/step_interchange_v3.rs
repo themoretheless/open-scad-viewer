@@ -2802,6 +2802,37 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_insert_solid_preserves_existing_shared_gear() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let placement = [
+        [1., 0., 0., 3.],
+        [0., 1., 0., -8.],
+        [0., 0., 1., 40.],
+        [0., 0., 0., 1.],
+    ];
+    assert!(assembly.insert_solid(Model::empty(1e-7).unwrap(), placement).is_err());
+    assert!(assembly.insert_solid(solid.clone(), [[0.; 4]; 4]).is_err());
+    assert_eq!((assembly.definitions().len(), assembly.occurrences().len()), (1, 2));
+    assert_eq!(assembly.insert_solid(solid, placement).unwrap(), 2);
+
+    let step = crate::export_step_shared_assembly(&assembly).unwrap();
+    let back = crate::import_step_shared_assembly(&step).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (2, 3));
+    assert_eq!(back.occurrences()[0].definition, back.occurrences()[1].definition);
+    assert_ne!(back.occurrences()[0].definition, back.occurrences()[2].definition);
+    assert_eq!(back.occurrences()[2].transform, placement);
+    let inserted = back.materialize(2).unwrap();
+    assert_eq!(inserted.faces.len(), 6);
+    assert_eq!(inserted.validate().unwrap().boundary_edge_count, 0);
+    let max_z = inserted.vertices.iter().map(|vertex| vertex.point[2]).fold(f64::NEG_INFINITY, f64::max);
+    assert!((max_z - 44.).abs() < 1e-10);
+}
+
+#[test]
 fn shared_step_add_occurrence_reuses_definition_with_bounded_count() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

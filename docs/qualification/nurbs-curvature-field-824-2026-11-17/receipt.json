@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0824",
+  "testedBase": "d5b966c2e1cbdc49d2bd4a85683a3da3bec515f4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 173,
+  "scope": [
+    "Insert a closed solid as a new definition and add its first rigid placement atomically.",
+    "Check empty solid and invalid placement refusal, keep peer gears shared and reimport the inserted six-face closed solid at its requested height."
+  ],
+  "logSha256": "a179f364eceffc5e2573a2244aa61bba476602f59ebbbe7f321fda26a1f4f588",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "72ca8979de922815a3037fcf823e70e011553c5524c8841c8af161c814f84ef5",
+    "crates/cad-step/src/step_v3_export.rs": "0a2f23d34fb0cdf83de7d1b410acd9d27c6a0a4a259ebfe7ff5004d8cf0a4385",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "9f8e5ab58921b5613781e5dfeaebcd29dc784912daec1d9b6057929cbbb39711"
+  }
+}
