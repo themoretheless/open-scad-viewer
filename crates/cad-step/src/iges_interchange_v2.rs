@@ -893,6 +893,8 @@ enum CompositeVisit {
     Exit(usize, usize),
 }
 
+mod composite_join;
+
 struct CurveDispatcher<'a> {
     entities: &'a BTreeMap<usize, Entity>,
     dim: usize,
@@ -918,7 +920,7 @@ impl<'a> CurveDispatcher<'a> {
         Ok(())
     }
 
-    fn base_curve(&mut self, composite: usize, de: usize, linear: bool) -> Result<Curve> {
+    fn base_curve(&mut self, composite: usize, de: usize, composite_member: bool) -> Result<Curve> {
         let entity = self.entities.get(&de).ok_or_else(|| {
             composite_error(
                 "BREP_IGES_V2_COMPOSITE_DANGLING",
@@ -971,20 +973,8 @@ impl<'a> CurveDispatcher<'a> {
                 ));
             }
         };
-        if !linear {
+        if !composite_member {
             return Ok(curve);
-        }
-        let uniform_weights = curve
-            .weights
-            .first()
-            .is_some_and(|first| curve.weights.iter().all(|weight| weight == first));
-        if curve.degree != 1 || curve.periodic || !uniform_weights {
-            return Err(composite_error(
-                "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
-                format!(
-                    "IGES composite DE {composite} segment DE {de} requires nonlinear or nonuniform-rational join"
-                ),
-            ));
         }
         if curve.control_points.len() > MAX_COMPOSITE_CONTROLS {
             return Err(composite_error(
@@ -992,7 +982,7 @@ impl<'a> CurveDispatcher<'a> {
                 format!("IGES composite DE {composite} control budget exceeded at DE {de}"),
             ));
         }
-        Ok(Curve::from_polyline(curve.control_points.clone())?)
+        Ok(curve)
     }
 
     fn endpoints(curve: &Curve) -> Result<(Vec<f64>, Vec<f64>)> {
@@ -1022,107 +1012,6 @@ impl<'a> CurveDispatcher<'a> {
             ));
         }
         Ok(distance)
-    }
-
-    fn join_segments(
-        composite: usize,
-        segments: &[CompositeSegment],
-        tolerance_mm: f64,
-    ) -> Result<Curve> {
-        let Some(first) = segments.first() else {
-            return Err(composite_error(
-                "BREP_IGES_V2_COMPOSITE_DANGLING",
-                format!("IGES composite DE {composite} has no segments"),
-            ));
-        };
-        let mut joined = Curve::from_polyline(first.curve.control_points.clone())?;
-        let mut previous = first.de;
-        for (index, segment) in segments.iter().enumerate().skip(1) {
-            let (mut current_start, mut current_end) = Self::endpoints(&joined)?;
-            let (segment_start, segment_end) = Self::endpoints(&segment.curve)?;
-            let mut end_start = Self::distance(&current_end, &segment_start)?;
-            let mut end_end = Self::distance(&current_end, &segment_end)?;
-            let mut start_start = Self::distance(&current_start, &segment_start)?;
-            let mut start_end = Self::distance(&current_start, &segment_end)?;
-            let mut forward =
-                usize::from(end_start <= tolerance_mm) + usize::from(end_end <= tolerance_mm);
-            let mut backward =
-                usize::from(start_start <= tolerance_mm) + usize::from(start_end <= tolerance_mm);
-            if index == 1 && forward == 0 && backward > 0 {
-                joined = joined.reverse()?;
-                (current_start, current_end) = Self::endpoints(&joined)?;
-                end_start = Self::distance(&current_end, &segment_start)?;
-                end_end = Self::distance(&current_end, &segment_end)?;
-                start_start = Self::distance(&current_start, &segment_start)?;
-                start_end = Self::distance(&current_start, &segment_end)?;
-                forward =
-                    usize::from(end_start <= tolerance_mm) + usize::from(end_end <= tolerance_mm);
-                backward = usize::from(start_start <= tolerance_mm)
-                    + usize::from(start_end <= tolerance_mm);
-            }
-            if forward == 0 {
-                if backward > 0 {
-                    return Err(composite_error(
-                        "BREP_IGES_V2_COMPOSITE_AMBIGUOUS",
-                        format!(
-                            "IGES composite DE {composite} requires reordering at segments DE {previous} and DE {}",
-                            segment.de
-                        ),
-                    ));
-                }
-                let gap = end_start.min(end_end).min(start_start).min(start_end);
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_GAP",
-                    format!(
-                        "IGES composite DE {composite}, segments DE {previous} -> DE {}, gap_mm={gap:.17e}, tolerance_mm={tolerance_mm:.17e}",
-                        segment.de
-                    ),
-                ));
-            }
-            if forward > 1 || backward > 0 {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_AMBIGUOUS",
-                    format!(
-                        "IGES composite DE {composite} has ambiguous orientation at segments DE {previous} and DE {}",
-                        segment.de
-                    ),
-                ));
-            }
-            let candidate = if end_end <= tolerance_mm {
-                segment.curve.reverse()?
-            } else {
-                segment.curve.clone()
-            };
-            let (candidate_start, _) = Self::endpoints(&candidate)?;
-            let snap = current_end
-                .iter()
-                .zip(&candidate_start)
-                .map(|(a, b)| (a + b) * 0.5)
-                .collect::<Vec<_>>();
-            let mut points = joined.control_points.clone();
-            let mut candidate_points = candidate.control_points.clone();
-            let (Some(joined_end), Some(candidate_end)) =
-                (points.last_mut(), candidate_points.first_mut())
-            else {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_DANGLING",
-                    format!("IGES composite DE {composite} has an empty segment"),
-                ));
-            };
-            *joined_end = snap.clone();
-            *candidate_end = snap;
-            if points.len() + candidate_points.len() - 1 > MAX_COMPOSITE_CONTROLS {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_BUDGET",
-                    format!("IGES composite DE {composite} control budget exceeded"),
-                ));
-            }
-            points.extend(candidate_points.into_iter().skip(1));
-            joined = Curve::from_polyline(points)?;
-            previous = segment.de;
-        }
-        joined.validate()?;
-        Ok(joined)
     }
 
     fn composite(&mut self, root: usize) -> Result<Curve> {
@@ -1193,7 +1082,7 @@ impl<'a> CurveDispatcher<'a> {
                 }
                 CompositeVisit::Exit(de, start) => {
                     active.remove(&de);
-                    let curve = Self::join_segments(de, &segments[start..], self.tolerance_mm)?;
+                    let curve = self.join_segments(de, &segments[start..], self.tolerance_mm)?;
                     memo.insert(de, curve.clone());
                     if de == root {
                         result = Some(curve);

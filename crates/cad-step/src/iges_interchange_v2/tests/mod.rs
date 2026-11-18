@@ -1150,24 +1150,54 @@ fn composite_2d_pcurve_and_3d_edge_pass_face_correspondence() {
 }
 
 #[test]
-fn composite_arc_and_general_rational_join_are_explicitly_unsupported() {
+fn malformed_arc_in_composite_is_refused() {
     let (text, arc) = append_entity(&base_text(), 100, 0, "00000000", |_| vec!["100".into()]);
     let (text, composite) = append_composite(&text, &[arc]);
     let (edge_list, _) = first_edge_curve(&text);
     let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
     assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
 
-    let curve = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]])
-        .unwrap()
-        .elevate(2)
-        .unwrap();
-    let (text, spline) = append_entity(&base_text(), 126, 0, "00000000", |_| {
-        curve_values(&curve, 3)
-    });
-    let (text, composite) = append_composite(&text, &[spline]);
-    let (edge_list, _) = first_edge_curve(&text);
-    let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
-    assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
+}
+
+#[test]
+fn imported_composite_retains_a_split_rational_cylinder_edge() {
+    let cylinder = brep_core::cylinder(3., 5.).unwrap();
+    let mut text = export_iges_v2(&cylinder).unwrap().0;
+    let (entities, _, _) = parse(&text).unwrap();
+    let edge_list = directory_entity(&text, 504, 0);
+    let values = &entities[&edge_list].values;
+    let (at, original) = (2..values.len()).step_by(5).find_map(|at| {
+        let de = u(values, at, "edge curve").unwrap();
+        let curve = curve126(&entities, de, 3, 1.).unwrap();
+        curve.weights.iter().any(|&w| w != 1.).then_some((at, curve))
+    }).unwrap();
+    let [a,b] = original.domain();
+    let mid = (a+b)*0.5;
+    let mut members = Vec::new();
+    for piece in [original.trim(a,mid).unwrap().reverse().unwrap(), original.trim(mid,b).unwrap()] {
+        let (updated, de) = append_entity(&text, 126, 0, "00000000", |_| curve_values(&piece, 3));
+        text = updated;
+        members.push(de);
+    }
+    let (text, composite) = append_composite(&text, &members);
+    let text = rewire_reference(&text, edge_list, at, composite);
+    let model = import_iges_v2(&text).unwrap().0;
+    if let Some(dir) = std::env::var_os("CAD_IGES_COMPOSITE_FIXTURE") {
+        let dir = std::path::Path::new(&dir);
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("composite.igs"), text).unwrap();
+        std::fs::write(dir.join("restored.step"), crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    let actual = &model.edges[(at-2)/5].curve;
+    assert!(actual.weights.iter().any(|&w| w != 1.));
+    let [lo,hi] = actual.domain();
+    for i in 0..=32 {
+        let t = i as f64 / 32.;
+        let p = original.evaluate(a+(b-a)*t).unwrap().point;
+        let q = actual.evaluate(lo+(hi-lo)*t).unwrap().point;
+        assert!(p.iter().zip(q).all(|(x,y)| (x-y).abs() < 1e-9));
+    }
 }
 
 #[test]

@@ -1,0 +1,15 @@
+{
+  "id": "NURBS-0953",
+  "testedBase": "c11c373b6400b78e3780dd32533b70645d708365",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "53132aa871f4f74fd9a5f6f19b7e735c4dc75d039c502728723d479421a9bf3d",
+    "crates/cad-step/src/iges_interchange_v2/composite_join.rs": "154b9be2e1df8c72a24129481be1512d711c4daea9b67849c935ccfba50338e4",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "82ffcb8b6e6e1406d7bb3f6ebd87d045b495f083237f76ad963dd98f9c7eab01"
+  },
+  "geometry": {
+    "step": 141.3716688561796,
+    "analytic": 141.3716694115407
+  },
+  "independentReaderScope": "OCCT validates the Rust-reconstructed STEP solid. Its direct IGES transfer of this generated test fixture returned zero solids.",
+  "fixtureCommand": "CAD_IGES_COMPOSITE_FIXTURE=/tmp/iges-composite cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib imported_composite_retains_a_split_rational_cylinder_edge"
+}
