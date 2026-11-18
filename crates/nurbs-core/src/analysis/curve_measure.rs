@@ -2357,7 +2357,7 @@ pub fn measure_planar_contour_set_oriented_box_distance(
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct PlanarContourPairDistanceReport {
+pub struct ContourPairDistanceReport {
     pub bounds: [f64; 2],
     /// Contour index and source parameter in each input set.
     pub witness_contours: [usize; 2],
@@ -2365,6 +2365,8 @@ pub struct PlanarContourPairDistanceReport {
     pub work_cells: usize,
     pub converged: bool,
 }
+
+pub type PlanarContourPairDistanceReport = ContourPairDistanceReport;
 
 /// Bound the minimum distance between two sets of closed planar NURBS
 /// contours. Every original knot-span pair receives a cell before
@@ -2378,6 +2380,28 @@ pub fn measure_planar_contour_sets_distance(
     validate(tolerance, max_cells)?;
     validate_distance_contours(first, max_cells)?;
     validate_distance_contours(second, max_cells)?;
+    measure_validated_contour_pairs(first, second, tolerance, max_cells)
+}
+
+/// Enclose the minimum 3D distance between two collections of clamped,
+/// continuous closed spatial curves, with witnesses in source parameters.
+pub fn measure_spatial_contour_sets_distance(
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize,
+) -> Result<ContourPairDistanceReport> {
+    validate(tolerance,max_cells)?;
+    for set in [first,second] {
+        check(!set.is_empty() && set.len() <= max_cells, "Expected bounded nonempty spatial contour set")?;
+        for curve in set {
+            validate_continuous_clamped_curve(curve,3)?;
+            check(curve.control_points.first()==curve.control_points.last(), "Spatial contour must be closed")?;
+        }
+    }
+    measure_validated_contour_pairs(first, second, tolerance, max_cells)
+}
+
+fn measure_validated_contour_pairs(
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize,
+) -> Result<ContourPairDistanceReport> {
     let counts = [first, second].map(|set| {
         set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
     });
@@ -3231,8 +3255,12 @@ fn measure_contour_set_distance(
 }
 
 fn validate_winding_curve(direction: &Curve) -> Result<[f64; 2]> {
+    validate_continuous_clamped_curve(direction, 2)
+}
+
+fn validate_continuous_clamped_curve(direction: &Curve, dimension: usize) -> Result<[f64; 2]> {
     direction.validate()?;
-    check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;
+    check(direction.control_points[0].len() == dimension, "Unexpected contour dimension")?;
     let domain = direction.domain();
     let degree = direction.degree;
     let last = direction.control_points.len();

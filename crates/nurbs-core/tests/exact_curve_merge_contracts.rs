@@ -13504,3 +13504,21 @@ fn spatial_wire_proves_each_original_knot_span_including_same_edge_pairs() {
     assert!(assemble(&build(0.),0,false,1_000_000,1e-8,6,1000).is_err());
     assert!(assemble(&build(1.),0,false,1_000_000,1e-8,5,1000).is_err());
 }
+
+#[test]
+fn spatial_contour_clearance_covers_all_pairs_and_preserves_source_witnesses() {
+    use nurbs_core::analysis::curve_measure::measure_spatial_contour_sets_distance as measure;
+    let triangle = |z| Curve {degree:1,knots:vec![2.,2.,3.,4.,5.,5.],
+        control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
+        weights:vec![1.;4],periodic:false};
+    let (a,b,c)=(triangle(-8.),triangle(1.),triangle(3.));
+    let r=measure(&[&a,&b],&[&c],1e-6,1000).unwrap();
+    assert!(r.converged && r.bounds[0]<=2. && r.bounds[1]>=2.);
+    assert_eq!(r.witness_contours,[1,0]);
+    let p=b.evaluate(r.witness_parameters[0]).unwrap().point;
+    let q=c.evaluate(r.witness_parameters[1]).unwrap().point;
+    assert!((p[0]-q[0]).hypot(p[1]-q[1]).hypot(p[2]-q[2])<=r.bounds[1]);
+    assert!(measure(&[&a,&b],&[&c],1e-6,17).is_err());
+    let mut open=c.clone(); open.control_points[3][2]+=1.;
+    assert!(measure(&[&a],&[&open],1e-6,1000).is_err());
+}
