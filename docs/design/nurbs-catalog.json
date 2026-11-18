@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 873,
-  "unallocatedCount": 127,
+  "specifiedCount": 874,
+  "unallocatedCount": 126,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20285,6 +20285,24 @@
       ],
       "remainingQualification": [
         "Native API only. Selected occurrences must share one source definition."
+      ]
+    },
+    {
+      "id": "NURBS-0874",
+      "name": "Интервальная оценка коэффициента торцового перекрытия внешней прямозубой пары",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::external_spur_contact_ratio_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-874-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-874-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
       ]
     }
   ],

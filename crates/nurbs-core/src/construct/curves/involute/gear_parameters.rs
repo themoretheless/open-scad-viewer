@@ -189,3 +189,42 @@ pub fn derive_gear_twist_bounds(
         .div(I::point(2.))?;
     Ok(pair(I::point(height).mul(sin.div(cos)?)?.div(pitch)?))
 }
+
+/// Transverse contact ratio for two nominal external spur gears at standard
+/// centre distance, zero backlash and standard quarter-module clearance.
+/// Uses the active involute overlap only. Root interference and manufacturing
+/// undercut require separate checks.
+pub fn external_spur_contact_ratio_bounds(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+) -> Result<[f64; 2]> {
+    let flank = |count| -> Result<(I, I, I)> {
+        let gear =
+            derive_gear_parameter_bounds(module, count, pressure_degrees, module / 4., 0., false)?;
+        check(
+            gear.half_high_angle[0] > 0.,
+            "Gear tip thickness must be positive",
+        )?;
+        let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
+        let distance = |roll: [f64; 2]| base.mul(I::new(roll[0], roll[1])?);
+        Ok((distance(gear.roll_start)?, distance(gear.roll_end)?, base))
+    };
+    let (low, high, base) = flank(teeth[0])?;
+    let (peer_low, peer_high, _) = flank(teeth[1])?;
+    let alpha = pi()?.mul(I::point(pressure_degrees))?.div(I::point(180.))?;
+    let centres = I::point(module).mul(I::point((teeth[0] + teeth[1]) as f64 / 2.))?;
+    let span = centres.mul(trig(alpha)?.0)?;
+    // Coordinates on the common tangent increase from opposite base circles.
+    let peer_start = span.sub(peer_high)?;
+    let peer_end = span.sub(peer_low)?;
+    let start = I::new(low.lo.max(peer_start.lo), low.hi.max(peer_start.hi))?;
+    let end = I::new(high.lo.min(peer_end.lo), high.hi.min(peer_end.hi))?;
+    let length = end.sub(start)?;
+    check(length.lo > 0., "No certified positive flank overlap")?;
+    let base_pitch = base
+        .mul(pi()?)?
+        .mul(I::point(2.))?
+        .div(I::point(teeth[0] as f64))?;
+    Ok(pair(length.div(base_pitch)?))
+}

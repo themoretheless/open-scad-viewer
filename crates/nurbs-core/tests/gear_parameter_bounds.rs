@@ -116,3 +116,24 @@ fn invalid_parameter_derivations_return_errors_without_point_panics() {
         assert!(derive(m, n, p, c, b, false).is_err());
     }
 }
+
+#[test]
+fn external_spur_pair_active_contact_ratio() {
+    use involute::external_spur_contact_ratio_bounds as ratio;
+    let a = 20_f64.to_radians();
+    let expected = (((11_f64).powi(2) - (10. * a.cos()).powi(2)).sqrt()
+        + ((21_f64).powi(2) - (20. * a.cos()).powi(2)).sqrt()
+        - 30. * a.sin())
+        / (std::f64::consts::PI * a.cos());
+    for (module, teeth) in [(1., [20, 40]), (3., [40, 20])] {
+        let bound = ratio(module, teeth, 20.).unwrap();
+        contains(bound, expected);
+        assert!(bound[1] - bound[0] < 1e-9);
+    }
+    // For two small gears the active involutes both terminate at their bases.
+    contains(
+        ratio(1., [8, 8], 20.).unwrap(),
+        8. * a.tan() / std::f64::consts::PI,
+    );
+    assert!(ratio(1., [20, usize::MAX], 20.).is_err());
+}

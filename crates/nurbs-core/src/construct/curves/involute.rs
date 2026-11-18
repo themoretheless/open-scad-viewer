@@ -221,7 +221,7 @@ mod quintic_certificate;
 pub use quintic_certificate::{QuinticCertificate, certify_quintic, certify_quintic_placed};
 
 mod gear_parameters;
-pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds};
+pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds, external_spur_contact_ratio_bounds};
 pub use quintic_certificate::certify_quintic_parameter_box;
 
 pub(crate) use quintic_certificate::trig as certified_trig;
