@@ -10867,3 +10867,32 @@ fn affine_synchronized_partition_brackets_contact_on_different_source_windows() 
     first.control_points[1].push(0.);
     assert!(check(&first, 128).is_err());
 }
+
+#[test]
+fn scheduled_curve_clearance_handles_partial_overlap_and_separate_durations() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, TimedMotionSegment, measure_scheduled_curve_clearance,
+    };
+    let make = |knots, points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots,
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = make(vec![0., 0., 1., 1.], [[0., 0.], [8., 0.]]);
+    let second = make(vec![10., 10., 16., 16.], [[6., 1.], [2., 1.]]);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [0., 1.], duration: 8. },
+        TimedMotionSegment { curve: &second, interval: [10., 16.], duration: 4. },
+    ];
+    let check = |starts| measure_scheduled_curve_clearance(segments, starts, [0.25; 2], 1e-5, 128);
+    assert!(check([0., 9.]).unwrap().is_none());
+    let report = check([0., 2.]).unwrap().unwrap();
+    assert_eq!(report.minimum.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_time_bounds, [4.; 2]);
+    let [lo, hi] = report.minimum.gap_bounds;
+    assert!(lo <= 0.5 && 0.5 <= hi && hi - lo <= 1e-5);
+    let instant = check([0., 8.]).unwrap().unwrap();
+    assert_eq!(instant.witness_time_bounds, [8.; 2]);
+}

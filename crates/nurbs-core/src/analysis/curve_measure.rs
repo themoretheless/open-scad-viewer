@@ -1305,6 +1305,9 @@ fn round_motion_duration(duration: &num_rational::BigRational, upper: bool) -> R
     if rounded == f64::INFINITY {
         return Ok(if upper { f64::INFINITY } else { f64::MAX });
     }
+    if rounded == f64::NEG_INFINITY {
+        return Ok(if upper { -f64::MAX } else { f64::NEG_INFINITY });
+    }
     let represented = exact_motion_operand(rounded)?;
     Ok(if upper && &represented < duration {
         rounded.next_up()
@@ -2687,6 +2690,82 @@ fn affine_clearance_gap(
     Interval::new(lo, hi)?.sub(radius)
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledCurveClearance {
+    pub minimum: SynchronizedCurveClearance,
+    /// Scheduled time of the witness, rounded outwards.
+    pub witness_time_bounds: [f64; 2],
+}
+
+/// Measure simultaneous clearance during the overlap of two scheduled
+/// traversals. Each segment moves uniformly in its own parameter window.
+/// Returns None when the closed traversal times do not overlap.
+pub fn measure_scheduled_curve_clearance(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<Option<ScheduledCurveClearance>> {
+    validate(tolerance, max_cells)?;
+    let curves = segments.map(|segment| segment.curve);
+    let windows = segments.map(|segment| segment.interval);
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    check(start_times.iter().all(|time| time.is_finite()), "Start times must be finite")?;
+    check(segments.iter().all(|segment| segment.duration.is_finite() && segment.duration > 0.),
+        "Motion segment duration must be finite and positive")?;
+    let starts = [exact_motion_operand(start_times[0])?, exact_motion_operand(start_times[1])?];
+    let durations = [
+        exact_motion_operand(segments[0].duration)?,
+        exact_motion_operand(segments[1].duration)?,
+    ];
+    let origin = starts[0].clone().max(starts[1].clone());
+    let end = (&starts[0] + &durations[0]).min(&starts[1] + &durations[1]);
+    if end < origin {
+        return Ok(None);
+    }
+    let overlap = end - &origin;
+    let mut maps = Vec::with_capacity(2);
+    for index in 0..2 {
+        let [a, b] = windows[index];
+        let a = exact_motion_operand(a)?;
+        let rate = (exact_motion_operand(b)? - &a) / &durations[index];
+        maps.push((&a + (&origin - &starts[index]) * &rate, &overlap * rate));
+    }
+    let gap = |progress: [f64; 2]| -> Result<Interval> {
+        let position = |index: usize| {
+            let (start, width) = &maps[index];
+            let lo = start + width * exact_motion_operand(progress[0])?;
+            let hi = start + width * exact_motion_operand(progress[1])?;
+            rounded_window_position(curves[index], windows[index], [&lo, &hi])
+        };
+        let (lo, hi) = box_distance(&position(0)?, &position(1)?)?;
+        Interval::new(lo, hi)?.sub(radius)
+    };
+    let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let lower = gap(domain)?.lo;
+        for progress in domain {
+            let upper = gap([progress; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, progress, 0);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance([((), [0., 1.])], 0., tolerance, max_cells, measure)?;
+    let time = origin + overlap * exact_motion_operand(witness.1)?;
+    Ok(Some(ScheduledCurveClearance {
+        minimum: SynchronizedCurveClearance {
+            gap_bounds: [lower, witness.0],
+            witness_parameter: witness.1,
+            work_cells,
+            stop_reason,
+        },
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+    }))
+}
+
 fn affine_progress_position(
     curve: &Curve,
     window: [f64; 2],
@@ -2694,12 +2773,18 @@ fn affine_progress_position(
 ) -> Result<Vec<Interval>> {
     let start = exact_motion_operand(window[0])?;
     let width = exact_motion_operand(window[1])? - &start;
-    let endpoint = |progress, upper| {
-        let parameter = &start + &width * exact_motion_operand(progress)?;
-        round_motion_duration(&parameter, upper)
-    };
-    let lo = endpoint(progress[0], false)?.max(window[0]);
-    let hi = endpoint(progress[1], true)?.min(window[1]);
+    let lo = &start + &width * exact_motion_operand(progress[0])?;
+    let hi = &start + &width * exact_motion_operand(progress[1])?;
+    rounded_window_position(curve, window, [&lo, &hi])
+}
+
+fn rounded_window_position(
+    curve: &Curve,
+    window: [f64; 2],
+    parameters: [&num_rational::BigRational; 2],
+) -> Result<Vec<Interval>> {
+    let lo = round_motion_duration(parameters[0], false)?.max(window[0]);
+    let hi = round_motion_duration(parameters[1], true)?.min(window[1]);
     if lo == hi {
         let end = lo > window[0];
         let adjacent = if end { [window[0], lo] } else { window };

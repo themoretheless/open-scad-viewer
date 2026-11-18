@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 737,
-  "unallocatedCount": 263,
+  "specifiedCount": 738,
+  "unallocatedCount": 262,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17695,6 +17695,25 @@
       "remainingQualification": [
         "Classify contact across independent affine parameter windows on shared elapsed progress.",
         "Check independent source domains, a nonmatching internal knot, both analytic contact boundaries, coarse budget and dimension refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0738",
+      "name": "Минимальный зазор NURBS-траекторий с разными временами начала и прохода",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-738-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-738-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose clearance on the exact time overlap of independently scheduled curve traversals.",
+        "Check partial overlap, unequal durations, independently parameterized curves, a single shared endpoint, and disjoint schedules.",
         "WASM and application integration are separate."
       ]
     }
