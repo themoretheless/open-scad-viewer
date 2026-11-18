@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0894",
+  "testedBase": "a109fea58f42e66e8066bc3d160397d6e2af19e4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 460,
+  "scope": [
+    "Certify ordered planar segments before exact compression. Verify shuffled square and refusal for an interior crossing or insufficient pair budget."
+  ],
+  "logSha256": "18e3f96506c904ff22eeab0ee29de34e1dae0ff42ca8720388550fea868a5f53",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "bff7de9fcc3da10290248cc8110b1fcf3b4e7360a1231c0371e0595930c07912",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "9550924ab4f9732e068a0ed47d2607dad94fd8f610eef4fbba7a5582745f3c3e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "187682d54e9d2d74d605a8545459357bb2ef7da8e476e9d5fa4beec67e339f2c"
+  }
+}

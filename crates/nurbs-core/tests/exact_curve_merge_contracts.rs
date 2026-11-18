@@ -13413,3 +13413,19 @@ fn closed_endpoint_wire_obeys_chosen_edge_direction_and_rejects_other_cycles() {
     separate.extend([edge([3.,0.],[4.,0.]),edge([4.,0.],[3.,0.])]);
     assert!(assemble(&separate,0,false,1_000_000).is_err());
 }
+
+#[test]
+fn planar_loop_assembly_requires_interior_separation_proof() {
+    use nurbs_core::editing::exact_curve_merge::assemble_simple_planar_loop as assemble;
+    let edge = |a:[f64;2], b:[f64;2]| Curve {degree:1, knots:vec![0.,0.,1.,1.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[0.,0.]; let b=[1.,0.]; let c=[1.,1.]; let d=[0.,1.];
+    let square = [edge(c,b),edge(a,b),edge(d,c),edge(a,d)];
+    let curve=assemble(&square,1,false,1_000_000,1e-8,6,10000).unwrap().curve.unwrap();
+    for (i,point) in [a,b,c,d,a].iter().enumerate() {
+        assert_eq!(curve.evaluate(i as f64).unwrap().point,point);
+    }
+    assert!(assemble(&square,1,false,1_000_000,1e-8,5,10000).is_err());
+    let crossing = [edge(a,c),edge(c,b),edge(b,d),edge(d,a)];
+    assert!(assemble(&crossing,0,false,1_000_000,1e-8,6,10000).is_err());
+}

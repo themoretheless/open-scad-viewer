@@ -18,7 +18,7 @@ pub fn assemble_open_endpoint_chain(
     start: &[f64],
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
-    assemble(sources, Anchor::Open(start), max_work)
+    assemble(sources, Anchor::Open(start), max_work, |_| Ok(()))
 }
 
 /// Assemble one closed clamped curve, preserving each local span duration.
@@ -30,7 +30,43 @@ pub fn assemble_closed_endpoint_chain(
     reversed: bool,
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
-    assemble(sources, Anchor::Closed(first_segment, reversed), max_work)
+    assemble(
+        sources,
+        Anchor::Closed(first_segment, reversed),
+        max_work,
+        |_| Ok(()),
+    )
+}
+
+/// Assemble an unordered planar contour only after proving each oriented
+/// segment injective and every pair separated except for its required joins.
+/// The simplicity proof uses separate pair/cell limits. An inconclusive
+/// proof returns an error; exact compression preserves the proved image.
+pub fn assemble_simple_planar_loop(
+    sources: &[Curve],
+    first_segment: usize,
+    reversed: bool,
+    max_work: u64,
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<GaugeMergeReport> {
+    assemble(
+        sources,
+        Anchor::Closed(first_segment, reversed),
+        max_work,
+        |ordered| {
+            let proof =
+                crate::trim_simplicity::inspect(ordered, tolerance_uv, max_pairs, max_cells)?;
+            if !proof.proven_simple {
+                return Err(crate::input(format!(
+                    "Planar loop simplicity unproven: {:?}",
+                    proof.outcome()
+                )));
+            }
+            Ok(())
+        },
+    )
 }
 
 enum Anchor<'a> {
@@ -38,7 +74,12 @@ enum Anchor<'a> {
     Closed(usize, bool),
 }
 
-fn assemble(sources: &[Curve], anchor: Anchor<'_>, max_work: u64) -> Result<GaugeMergeReport> {
+fn assemble(
+    sources: &[Curve],
+    anchor: Anchor<'_>,
+    max_work: u64,
+    verify: impl FnOnce(&[Curve]) -> Result<()>,
+) -> Result<GaugeMergeReport> {
     crate::check(
         (2..=256).contains(&sources.len()),
         "Expected 2..=256 wire segments",
@@ -141,6 +182,7 @@ fn assemble(sources: &[Curve], anchor: Anchor<'_>, max_work: u64) -> Result<Gaug
             refusal: Some(GaugeMergeRefusal::Exact(Exact::ResourceLimit)),
         });
     }
+    verify(&ordered)?;
     let mut report = compress_mixed_degree_chain(&ordered, max_work - work.used)?;
     report.work_used += work.used;
     Ok(report)
