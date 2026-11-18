@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 719,
-  "unallocatedCount": 281,
+  "specifiedCount": 720,
+  "unallocatedCount": 280,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17353,6 +17353,25 @@
       "remainingQualification": [
         "Refine the minimum swept-ball clearance against solid axis-aligned boxes.",
         "Check analytic closest corner, requested clearance tolerance, budget exhaustion and obstacle witness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0720",
+      "name": "Адаптивная оценка минимального зазора до повёрнутых коробок",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_oriented_box_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-720-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-720-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum swept-ball clearance to oriented solid boxes.",
+        "Check an analytic rotated corner minimum, certified tolerance and witness, retained coarse bounds, and skew-axis refusal.",
         "WASM and application integration are separate."
       ]
     }

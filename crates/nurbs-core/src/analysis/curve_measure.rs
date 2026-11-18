@@ -2632,8 +2632,6 @@ pub fn partition_curve_oriented_box_clearance(
     parameter_tolerance: f64,
     max_obstacle_cells: usize,
 ) -> Result<SphericalClearancePartition> {
-    use num_traits::Zero;
-
     check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_obstacle_cells)?;
     check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
@@ -2642,8 +2640,64 @@ pub fn partition_curve_oriented_box_clearance(
         return Err(resource("Clearance budget must cover every box"));
     }
     curve.validate()?;
+    let obstacles = prepare_oriented_boxes(curve, obstacles)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+/// Refine the minimum signed gap to oriented solid boxes with a certified
+/// endpoint witness. Directions follow the same rules as the partition API.
+pub fn measure_minimum_oriented_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[OrientedBoxObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_oriented_boxes(curve, obstacles)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+struct PreparedOrientedBox<'a> {
+    center: Vec<Interval>,
+    units: Vec<Vec<Interval>>,
+    minimum: Vec<f64>,
+    maximum: &'a [f64],
+}
+
+impl PreparedOrientedBox<'_> {
+    fn gap(&self, point: &[Interval], radius: f64) -> Result<Interval> {
+        let relative = point.iter().zip(&self.center).map(|(&p, &c)| p.sub(c))
+            .collect::<Result<Vec<_>>>()?;
+        let local = self.units.iter().map(|unit| project_jet(&relative, unit))
+            .collect::<Result<Vec<_>>>()?;
+        solid_box_gap(&local, &self.minimum, self.maximum, radius)
+    }
+}
+
+fn prepare_oriented_boxes<'a>(
+    curve: &Curve,
+    obstacles: &[OrientedBoxObstacle<'a>],
+) -> Result<Vec<PreparedOrientedBox<'a>>> {
+    use num_traits::Zero;
+
     let dimension = curve.control_points[0].len();
-    let obstacles = obstacles.iter().map(|obstacle| {
+    obstacles.iter().map(|obstacle| {
         check(
             obstacle.center.len() == dimension
                 && obstacle.center.iter().all(|value| value.is_finite())
@@ -2665,19 +2719,8 @@ pub fn partition_curve_oriented_box_clearance(
         }
         let center = obstacle.center.iter().copied().map(Interval::point).collect::<Vec<_>>();
         let minimum = obstacle.half_extents.iter().map(|value| -*value).collect::<Vec<_>>();
-        Ok((center, units, minimum, obstacle.half_extents))
-    }).collect::<Result<Vec<_>>>()?;
-    partition_radial_clearance(
-        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
-        |point, index| {
-            let (center, units, minimum, maximum) = &obstacles[index];
-            let relative = point.iter().zip(center).map(|(&p, &c)| p.sub(c))
-                .collect::<Result<Vec<_>>>()?;
-            let local = units.iter().map(|unit| project_jet(&relative, unit))
-                .collect::<Result<Vec<_>>>()?;
-            solid_box_gap(&local, minimum, maximum, tool_radius)
-        },
-    )
+        Ok(PreparedOrientedBox { center, units, minimum, maximum: obstacle.half_extents })
+    }).collect()
 }
 
 fn solid_box_gap(

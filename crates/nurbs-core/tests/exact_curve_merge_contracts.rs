@@ -10250,3 +10250,36 @@ fn minimum_box_clearance_refines_a_corner_approach_and_reports_the_obstacle() {
     assert_eq!(fine.witness_obstacle, 1);
     assert!((fine.witness_parameter - 3.).abs() < 0.01);
 }
+
+#[test]
+fn minimum_oriented_box_clearance_refines_rotated_corner_distance() {
+    use nurbs_core::analysis::curve_measure::{
+        OrientedBoxObstacle, StopReason, measure_minimum_oriented_box_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![-1., 7.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = OrientedBoxObstacle {
+        center: &[3., 4.],
+        axes: &[&[3., 4.], &[-4., 3.]],
+        half_extents: &[1., 1.],
+    };
+    let check = |obstacle, budget| {
+        measure_minimum_oriented_box_clearance(&curve, [2., 6.], &[obstacle], 0.5, 1e-4, budget)
+    };
+    let exact = 3. / 2_f64.sqrt() - 0.5;
+    let coarse = check(obstacle, 1).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(obstacle, 4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert!((fine.witness_parameter - 4.).abs() < 0.01);
+    let skew = OrientedBoxObstacle { axes: &[&[3., 4.], &[-4., 2.]], ..obstacle };
+    assert!(check(skew, 4096).is_err());
+}

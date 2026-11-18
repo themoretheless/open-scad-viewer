@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0720",
+  "testedBase": "769aed4d4f5a4f0c74861448be51cd869f3e3e7b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 345,
+  "scope": [
+    "Refine minimum swept-ball clearance to oriented solid boxes.",
+    "Check an analytic rotated corner minimum, certified tolerance and witness, retained coarse bounds, and skew-axis refusal."
+  ],
+  "logSha256": "c3c2838ae3694734516d15642f84d5854813a844c9e2b6745c32c94f61e53c0a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ec2c9cfe8e35ec00da9664c129e758df2566947aa2baea1dc01482ebfd668166",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4e90f45021fbbc7eb2404f6f51dd75a4fad8e31ef6a42c6ad6d6f9a7039b8ee5"
+  }
+}
