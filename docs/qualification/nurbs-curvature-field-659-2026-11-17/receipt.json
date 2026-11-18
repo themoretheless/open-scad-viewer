@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0659",
+  "testedBase": "285e8418abd1a4a04e53280eb916c71073a6e13f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 258,
+  "scope": [
+    "Enclose the static unbalance vector and magnitude by adding signed mass-weighted component offsets about an axis.",
+    "Check signed cancellation, uncertain mass, reversal and offset of the axis, and the vector and magnitude of an analytic density-weighted nested island."
+  ],
+  "logSha256": "82a5ab1e1e427a24fd10cbf09adb1e74ab0cc2ff8e754d4afc282ae50db4acf2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "ef056de9d4f4e4556edc4add1cc59ca544ff7e5cf2672d93bb9014e46af72f4e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b894e830c575d9e3b259bdcd092d9106539ee20791f9a925849db535d2329735"
+  }
+}

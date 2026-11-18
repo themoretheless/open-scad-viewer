@@ -1166,6 +1166,47 @@ pub enum BalanceTolerance {
     Undetermined,
 }
 
+/// Static unbalance in mass times length units.
+#[derive(Clone, Copy, Debug)]
+pub struct StaticUnbalanceBounds {
+    pub vector_bounds: [[f64; 2]; 3],
+    pub magnitude_bounds: [f64; 2],
+}
+
+/// Enclose the mass-weighted perpendicular displacement from a rotation axis.
+/// Signed contributions are summed before taking the magnitude.
+pub fn bound_assembly_static_unbalance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+) -> Result<StaticUnbalanceBounds> {
+    check(
+        !pieces.is_empty(),
+        "Surface mass properties require at least one piece",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let origin = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    let mut moment = [Interval::point(0.); 3];
+    for piece in pieces {
+        let mass = positive_piece_mass(piece)?;
+        let center = centroid_intervals(piece.centroid_bounds)?;
+        let offset = crate::numerics::interval_vec3::sub(center, origin)?;
+        let contribution = cross(offset, axis.components)?;
+        for (sum, component) in moment.iter_mut().zip(contribution) {
+            *sum = sum.add(component.mul(mass)?)?;
+        }
+    }
+    let vector = crate::numerics::interval_vec3::div(
+        cross(axis.components, moment)?,
+        axis.norm_squared,
+    )?;
+    let magnitude = norm(moment)?.div(plane_normal_length(&axis)?)?;
+    Ok(StaticUnbalanceBounds {
+        vector_bounds: vector.map(|entry| [entry.lo, entry.hi]),
+        magnitude_bounds: [magnitude.lo.max(0.), magnitude.hi],
+    })
+}
+
 /// Enclose the perpendicular distance from the common center of mass to an
 /// axis, then compare the entire enclosure with the allowed eccentricity.
 pub fn bound_assembly_balance_about_line(
@@ -2022,6 +2063,17 @@ impl TrimmedPatchSetDensityReport {
             *axis = find_principal_axis_from_bounds(tensor, moments, index)?;
         }
         Ok(Some(axes))
+    }
+
+    /// Enclose the density-weighted static unbalance about a rotation axis.
+    pub fn bound_static_unbalance(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<StaticUnbalanceBounds>> {
+        self.mass_properties
+            .map(|_| bound_assembly_static_unbalance(&self.weighted_components, point, direction))
+            .transpose()
     }
 
     /// Check a fixed rotation axis against the density-weighted center of mass.

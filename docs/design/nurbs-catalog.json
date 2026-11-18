@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 658,
-  "unallocatedCount": 342,
+  "specifiedCount": 659,
+  "unallocatedCount": 341,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16176,6 +16176,25 @@
         "Expose certified eccentricity and the tolerance classification for a requested rotation axis.",
         "Check analytic weighted eccentricity, tolerance classification, incomplete integration and validation through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0659",
+      "name": "Гарантированный вектор статического дисбаланса NURBS-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_static_unbalance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-659-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-659-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the static unbalance vector and magnitude by adding signed mass-weighted component offsets about an axis.",
+        "Check signed cancellation, uncertain mass, reversal and offset of the axis, and the vector and magnitude of an analytic density-weighted nested island.",
+        "WASM and application integration are separate."
       ]
     }
   ],

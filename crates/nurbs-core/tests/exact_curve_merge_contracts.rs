@@ -7984,3 +7984,46 @@ fn weighted_trim_balance_detects_offset_axis_and_incomplete_measurement() {
             .unwrap();
     assert_eq!(incomplete.bound_balance_about_line(point, direction, 0.5).unwrap(), None);
 }
+
+#[test]
+fn static_unbalance_sums_signed_component_vectors_before_taking_magnitude() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_static_unbalance,
+    };
+    let mut pieces = [(2., -3.), (3., 2.)].map(|(mass, x)| SurfaceAssemblyMassBounds {
+        mass_bounds: [mass; 2],
+        centroid_bounds: [[x; 2], [0.; 2], [4.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    let balanced = bound_assembly_static_unbalance(&pieces, [0.; 3], [0., 0., 1.]).unwrap();
+    assert_eq!(balanced.magnitude_bounds[0], 0.);
+    assert!(balanced.magnitude_bounds[1] < 1e-12);
+
+    pieces[1].mass_bounds = [4., 5.];
+    let unbalanced =
+        bound_assembly_static_unbalance(&pieces, [0., 0., 10.], [0., 0., -2.]).unwrap();
+    let [lo, hi] = unbalanced.magnitude_bounds;
+    assert!(lo <= 2. && 4. <= hi && hi - lo < 2. + 1e-12);
+    let [lo, hi] = unbalanced.vector_bounds[0];
+    assert!(lo <= 2. && 4. <= hi);
+}
+
+#[test]
+fn weighted_trim_static_unbalance_encloses_analytic_offset_vector() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+    let patches = periodic_trim_patches_with_nested_island();
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &[[2.; 2], [6.; 2]], 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let result = report
+        .bound_static_unbalance([1., 0., 0.], [0., 0., 1.])
+        .unwrap()
+        .unwrap();
+    let exact = [0.34375_f64 - 2.875, 0.375, 0.];
+    for ([lo, hi], expected) in result.vector_bounds.into_iter().zip(exact) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    let [lo, hi] = result.magnitude_bounds;
+    assert!(lo <= exact[0].hypot(exact[1]) && exact[0].hypot(exact[1]) <= hi);
+}
