@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0727",
+  "testedBase": "4d7944376be978b9bd89b4c5494c344f9069f861",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 352,
+  "scope": [
+    "Bound clearance violation duration in the traversal clock, for each obstacle and their union.",
+    "Check a clipped source clock, exact coarse total duration, overlap without double counting, and invalid duration."
+  ],
+  "logSha256": "cb5e3feb2275cc52af1565104dbef9ea137e97649b2703292a4230071efc5df5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "034ec3ab45c77598a124d65682b4f9c70aef087ea41bee4e237c0198fbd42c83",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1acb1ffa1de57103a22beaa6afdd8a9e65c3123d52b52e537cd63d3b15dda7fb"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 726,
-  "unallocatedCount": 274,
+  "specifiedCount": 727,
+  "unallocatedCount": 273,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17486,6 +17486,25 @@
       "remainingQualification": [
         "Attribute bounded arc length to individual obstacles and their union with one integration per cell.",
         "Check individual lengths, overlapping mixed obstacles, distant obstacles, union length, and shared coarse integration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0727",
+      "name": "Сертифицированная длительность нарушения зазора вдоль NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_clearance_violation_duration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-727-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-727-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound clearance violation duration in the traversal clock, for each obstacle and their union.",
+        "Check a clipped source clock, exact coarse total duration, overlap without double counting, and invalid duration.",
         "WASM and application integration are separate."
       ]
     }

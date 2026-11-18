@@ -10492,3 +10492,35 @@ fn toolpath_violation_lengths_attribute_shared_cells_to_each_obstacle() {
     assert!(coarse.by_obstacle[0][1] >= 8.);
     assert_eq!(coarse.by_obstacle[2], [0.; 2]);
 }
+
+#[test]
+fn toolpath_violation_duration_uses_time_window_and_preserves_overlap() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        measure_toolpath_clearance_violation_duration,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[3., 0.], radius: 1. }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[3., -1.], maximum: &[6., 1.] }),
+    ];
+    let segment = TimedMotionSegment { curve: &curve, interval: [2.5, 5.5], duration: 9. };
+    let check = |segment, budget| {
+        measure_toolpath_clearance_violation_duration(segment, &obstacles, 0., 0., 0.001, budget)
+    };
+    let coarse = check(segment, 2).unwrap();
+    assert_eq!(coarse.bounds, [0., 9.]);
+    let fine = check(segment, 512).unwrap();
+    for ([lo, hi], expected) in fine.by_obstacle.into_iter().zip([3., 4.5]) {
+        assert!(lo <= expected && expected <= hi && hi - lo < 0.02);
+    }
+    let [lo, hi] = fine.bounds;
+    assert!(lo <= 6. && 6. <= hi && hi - lo < 0.02);
+    assert!(check(TimedMotionSegment { duration: 0., ..segment }, 512).is_err());
+}

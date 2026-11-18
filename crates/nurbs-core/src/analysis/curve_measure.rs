@@ -1280,41 +1280,39 @@ pub fn multi_axis_motion_duration_bounds(
     tolerances: [f64; 3],
     max_cells: usize,
 ) -> Result<MultiAxisMotionDurationReport> {
-    use num_rational::BigRational;
-    use num_traits::ToPrimitive;
-
     let slowdown =
         multi_axis_motion_slowdown_bounds(curve, time_window, axes, tolerances, max_cells)?;
-    let exact = |value| {
-        BigRational::from_float(value)
-            .ok_or_else(|| crate::numeric_err("Nonfinite duration operand"))
-    };
-    let width = exact(time_window[1])? - exact(time_window[0])?;
+    let width = exact_motion_operand(time_window[1])? - exact_motion_operand(time_window[0])?;
     let duration_endpoint = |factor: f64, upper: bool| -> Result<f64> {
         if factor == f64::INFINITY {
             return Ok(f64::INFINITY);
         }
-        let duration = &width * exact(factor)?;
-        let rounded = duration
-            .to_f64()
-            .ok_or_else(|| crate::numeric_err("Cannot represent duration endpoint"))?;
-        if rounded == f64::INFINITY {
-            return Ok(if upper { f64::INFINITY } else { f64::MAX });
-        }
-        let represented = exact(rounded)?;
-        Ok(if upper && represented < duration {
-            rounded.next_up()
-        } else if !upper && represented > duration {
-            rounded.next_down()
-        } else {
-            rounded
-        })
+        round_motion_duration(&(&width * exact_motion_operand(factor)?), upper)
     };
     let duration_bounds = [
         duration_endpoint(slowdown.bounds[0], false)?,
         duration_endpoint(slowdown.bounds[1], true)?,
     ];
     Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
+fn round_motion_duration(duration: &num_rational::BigRational, upper: bool) -> Result<f64> {
+    use num_traits::ToPrimitive;
+
+    let rounded = duration
+        .to_f64()
+        .ok_or_else(|| crate::numeric_err("Cannot represent duration endpoint"))?;
+    if rounded == f64::INFINITY {
+        return Ok(if upper { f64::INFINITY } else { f64::MAX });
+    }
+    let represented = exact_motion_operand(rounded)?;
+    Ok(if upper && &represented < duration {
+        rounded.next_up()
+    } else if !upper && &represented > duration {
+        rounded.next_down()
+    } else {
+        rounded
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -2977,6 +2975,69 @@ fn measure_toolpath_violation_lengths(
             work_length_cells: max_length_cells - remaining,
         },
         by_obstacle: per_obstacle.into_iter().map(|value| [value.lo.max(0.), value.hi]).collect(),
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathViolationDuration {
+    /// Time spent at or below the required clearance from any obstacle.
+    pub bounds: [f64; 2],
+    /// Time bounds per obstacle, in input order.
+    pub by_obstacle: Vec<[f64; 2]>,
+    pub work_obstacle_cells: usize,
+}
+
+/// Bound the duration of clearance violations under a uniform parameter clock.
+/// The union counts overlapping violations once and unresolved cells only
+/// contribute to upper bounds.
+pub fn measure_toolpath_clearance_violation_duration(
+    segment: TimedMotionSegment<'_>,
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathViolationDuration> {
+    use num_rational::BigRational;
+
+    check(segment.duration.is_finite() && segment.duration > 0., "Motion segment duration must be finite and positive")?;
+    let partition = partition_toolpath_clearance_with_margin(
+        segment.curve, segment.interval, obstacles, tool_radius, margin,
+        parameter_tolerance, max_obstacle_cells,
+    )?;
+    let rate = motion_clock_factor(segment.interval, segment.duration)?;
+    let zero = [BigRational::default(), BigRational::default()];
+    let mut union = zero.clone();
+    let mut per_obstacle = vec![zero; obstacles.len()];
+    for cell in &partition.cells {
+        if cell.status == DirectionalMotionStatus::Within {
+            continue;
+        }
+        let [a, b] = cell.parameter_interval;
+        let width = exact_motion_operand(b)? - exact_motion_operand(a)?;
+        union[1] += &width;
+        if cell.status == DirectionalMotionStatus::Exceeds {
+            union[0] += &width;
+        }
+        for (total, &[lo, hi]) in per_obstacle.iter_mut().zip(&cell.gap_bounds) {
+            if lo <= 0. {
+                total[1] += &width;
+            }
+            if hi <= 0. {
+                total[0] += &width;
+            }
+        }
+    }
+    let bounds = |[lo, hi]: [BigRational; 2]| -> Result<[f64; 2]> {
+        Ok([
+            round_motion_duration(&(lo * &rate), false)?,
+            round_motion_duration(&(hi * &rate), true)?,
+        ])
+    };
+    Ok(ToolpathViolationDuration {
+        bounds: bounds(union)?,
+        by_obstacle: per_obstacle.into_iter().map(bounds).collect::<Result<Vec<_>>>()?,
+        work_obstacle_cells: partition.work_obstacle_cells,
     })
 }
 
