@@ -2867,6 +2867,60 @@ pub fn partition_toolpath_clearance_with_margin(
     )
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct ToolpathViolationLength {
+    /// Arc length of the union of all clearance violations, in model units.
+    pub bounds: [f64; 2],
+    pub work_obstacle_cells: usize,
+    pub work_length_cells: usize,
+}
+
+/// Bound arc length on the part of the curve with clearance at or below
+/// the margin. Unresolved cells contribute only to the upper bound. The
+/// length tolerance controls integration error separately from contact
+/// localization, which uses the parameter tolerance.
+pub fn measure_toolpath_clearance_violation_length(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_obstacle_cells: usize,
+    max_length_cells: usize,
+) -> Result<ToolpathViolationLength> {
+    validate(length_tolerance, max_length_cells)?;
+    let partition = partition_toolpath_clearance_with_margin(
+        curve, interval, obstacles, tool_radius, margin, parameter_tolerance, max_obstacle_cells,
+    )?;
+    let candidates = partition.cells.iter()
+        .filter(|cell| cell.status != DirectionalMotionStatus::Within)
+        .collect::<Vec<_>>();
+    if candidates.len() > max_length_cells {
+        return Err(resource("Violation length budget must cover every candidate cell"));
+    }
+    let tolerance = length_tolerance / candidates.len().max(1) as f64;
+    let mut bounds = Interval::point(0.);
+    let mut remaining = max_length_cells;
+    for (index, candidate) in candidates.iter().enumerate() {
+        let budget = remaining / (candidates.len() - index);
+        let length = measure(curve, candidate.parameter_interval, tolerance, budget)?;
+        remaining -= length.cells;
+        let lower = if candidate.status == DirectionalMotionStatus::Exceeds {
+            length.bounds[0]
+        } else {
+            0.
+        };
+        bounds = bounds.add(Interval::new(lower, length.bounds[1])?)?;
+    }
+    Ok(ToolpathViolationLength {
+        bounds: [bounds.lo.max(0.), bounds.hi],
+        work_obstacle_cells: partition.work_obstacle_cells,
+        work_length_cells: max_length_cells - remaining,
+    })
+}
+
 fn prepare_toolpath_obstacles<'a>(
     curve: &Curve,
     obstacles: &[ToolpathObstacle<'a>],

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0725",
+  "testedBase": "28e3fe0b2d6c0d0d13692e05efe6ca0d74abe185",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 350,
+  "scope": [
+    "Enclose the geometric length of the union of clearance violations.",
+    "Check physical length of overlapping violations without double counting, zero-length clear windows, and enclosure under separate work budgets."
+  ],
+  "logSha256": "e55604d94c4b1fedd67031feee3ef2d50cce9db46d495d55b4cae4f517f682be",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "8a7201f08353286cc8c2c422b9f5f52dc0a2c9f0fb10a5b289eef5e00a2f3190",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fb6439c0f91843c4135f054b3c1d89dad115757742b338ad4e7b9397f2d12027"
+  }
+}

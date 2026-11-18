@@ -10424,3 +10424,35 @@ fn toolpath_clearance_margin_detects_near_miss_before_contact() {
     let bounds = report.minimum_clearance().unwrap().gap_bounds;
     assert!(bounds[0] <= -0.25 && -0.25 <= bounds[1]);
 }
+
+#[test]
+fn toolpath_violation_length_measures_union_in_model_units() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, ToolpathObstacle, measure_toolpath_clearance_violation_length,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[3., 0.], radius: 1. }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[4., 0.], radius: 1. }),
+    ];
+    let check = |window, obstacle_budget, length_budget| {
+        measure_toolpath_clearance_violation_length(
+            &curve, window, &obstacles, 0., 0.25, 0.001, 1e-6, obstacle_budget, length_budget,
+        )
+    };
+    let fine = check([2., 3.], 512, 256).unwrap();
+    let [lo, hi] = fine.bounds;
+    assert!(lo <= 3.5 && 3.5 <= hi && hi - lo < 0.04, "{fine:?}");
+    assert!(fine.work_obstacle_cells <= 512 && fine.work_length_cells <= 256);
+    let coarse = check([2., 3.], 2, 1).unwrap();
+    assert_eq!(coarse.bounds[0], 0.);
+    assert!(coarse.bounds[1] >= 8.);
+    assert_eq!(check([2., 2.125], 2, 1).unwrap().bounds, [0.; 2]);
+    assert!(check([2., 3.], 512, 1).is_err());
+}

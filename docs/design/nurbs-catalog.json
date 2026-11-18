@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 724,
-  "unallocatedCount": 276,
+  "specifiedCount": 725,
+  "unallocatedCount": 275,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17448,6 +17448,25 @@
       "remainingQualification": [
         "Classify and localize violations of a required toolpath clearance margin.",
         "Check a collision-free near miss, analytic first margin crossing, surplus bounds, and invalid margins.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0725",
+      "name": "Сертифицированная длина участков с нарушением зазора",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_clearance_violation_length",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-725-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-725-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the geometric length of the union of clearance violations.",
+        "Check physical length of overlapping violations without double counting, zero-length clear windows, and enclosure under separate work budgets.",
         "WASM and application integration are separate."
       ]
     }
