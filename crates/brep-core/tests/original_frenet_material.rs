@@ -93,3 +93,34 @@ fn frenet_closed_material_sharp_ring_stays_explicitly_c0() {
     assert!(q.material.certified && q.volume.is_some());
     eprintln!("Frenet sharp original material remains C0; requested G1 refused: {:?}",q.reason);
 }
+
+#[test]
+fn fixed_frame_rank_obstruction_refuses_closed_material_with_valid_g2_hole() {
+    let (profiles, surface, trims) = source::material(true, false);
+    let material = LoftCap { surface, trims };
+    let mut path = frenet::periodic_path();
+    for point in &mut path.control_points {
+        point[2] = 0.;
+    }
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 0.125);
+    let sweep = MultiSweep::new(&profiles, &path, &scale, &twist, Options {
+        orientation: Orientation::Fixed, normal: [0., 0., 1.], ..options(true)
+    }).unwrap();
+    let result = certify_original_classified_closed_material(
+        &sweep, &[4, 4], &material, &[OriginalProfileClass::G2; 8],
+        projection(), 1e-8, limits(),
+    ).unwrap();
+    let OriginalClassifiedClosedMaterialAttempt::Refused(report) = result else {
+        panic!("A closed fixed transverse sweep acquired volume credit");
+    };
+    #[cfg(feature = "codec")]
+    eprintln!("closed-fixed-transverse-material-source={}", value_codec::json!({
+        "path": &path, "cap": &material.surface, "twist": &twist, "scale": &scale
+    }));
+    assert!(report.material.certified);
+    let body = &report.volume.unwrap().charts.volume;
+    assert_eq!(body.reason, Some("ideal-volume-fixed-transverse-rank-loss"));
+    assert_eq!(body.boxes, 0);
+    assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved);
+}

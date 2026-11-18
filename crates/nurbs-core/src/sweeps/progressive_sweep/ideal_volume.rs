@@ -38,6 +38,7 @@ pub(crate) mod charts;
 mod closed;
 mod exact;
 mod frenet_clock;
+mod fixed_rank;
 mod carrier_rank;
 mod contact_coincidence;
 pub(crate) mod cap_difference;
@@ -278,6 +279,15 @@ impl MultiSweep<'_> {
         } else {
             None
         };
+        // Closed premises already bound the exact same filled carrier and
+        // source positions at the endpoints. ArcMap has proved regular
+        // parameter inversion when that policy is selected.
+        if closed {
+            if let Some(reason) = fixed_rank::obstruction(s, caps[0], &mut out, max_cells, max_exact_work)? {
+                out.reason = Some(reason);
+                return Ok(out);
+            }
+        }
         let mut shared_guide = false;
         let guide_arc = if arc.is_some() {
             if let Some(guide) = s.orientation_guide {

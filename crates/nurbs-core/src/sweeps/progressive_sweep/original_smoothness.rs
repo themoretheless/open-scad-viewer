@@ -323,6 +323,33 @@ impl Sweep<'_> {
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-path-frame-mode-unproved")};
         let spatial_bishop = self.options.orientation == Orientation::RotationMinimizing
             && self.spatial_rmf_error_limits.is_some();
+        if self.options.orientation == Orientation::Fixed
+            && self.frame_laws.is_none()
+            && self.orientation_guide.is_none()
+            && path_is_closed(self.path)?
+        {
+            // The basis depends on the initial tangent only. Throughout
+            // the traversal the exact periodic twist rotates this basis.
+            if !knot_continuity(self.twist, order, &mut out.exact_work, max_exact_work)? {
+                out.reason = Some("closed-fixed-twist-knots-unproved");
+                return Ok(out);
+            }
+            let twist = super::endpoint_jets::certify(
+                self.twist, order, max_exact_work - out.exact_work,
+            )?;
+            out.exact_work += twist.exact_work;
+            if !twist.certified {
+                out.reason = Some("closed-fixed-twist-seam-unproved");
+                return Ok(out);
+            }
+            let basis = frame::certify_fixed_path(
+                self.path, self.options.normal, self.twist, [0., 0.], max_cells,
+            )?;
+            out.cells = basis.cells;
+            out.closed_source_frame_smoothness_certified = basis.status == Status::Certified;
+            out.reason = basis.reason;
+            return Ok(out);
+        }
         let periodic_frame = spatial_bishop
             || matches!(self.options.orientation, Orientation::FixedNormal | Orientation::Frenet);
         if (self.path.periodic && !periodic_frame)

@@ -1,0 +1,23 @@
+{
+  "sourceBase": "73a14348ff2835291558a67e33437e6984a91592",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "tests": {
+    "native": {
+      "file": "native.log.gz",
+      "sha256": "233459f966efd6695982b762a14c75a30bb91d1594ef875e25bbfb131dadb5e1",
+      "result": "test result: ok. 2285 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 140.50s"
+    },
+    "focused": {
+      "file": "focused.log.gz",
+      "sha256": "5e63807a4a726ed31a410c1a27c9c1d18fda594c715242a24443d0b64df9636c",
+      "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2284 filtered out; finished in 5.77s"
+    },
+    "material": {
+      "file": "material.log.gz",
+      "sha256": "75271653fbb220a8c901f0e955bb04d110913ec02cba4681c9ddce4f8b30875f",
+      "result": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 105.51s"
+    }
+  },
+  "inputs": "d306654e624d13baa2a1a69cad8ebdc97c740f8d2ca9170a355f454169b736f1",
+  "oracle": "96050d6c0ae2dd4adf5362efb8e5b6f7e631fa9efdae7ff44668eb9752173add"
+}

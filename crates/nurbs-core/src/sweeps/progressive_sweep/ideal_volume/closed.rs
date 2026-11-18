@@ -21,7 +21,7 @@ pub(super) fn uses_periodic_path(s: &Sweep<'_>, closed: bool) -> bool {
         && s.path.periodic
         && (s.frame_laws.is_some()
             || s.orientation_guide.is_some()
-            || matches!(s.options.orientation, Orientation::FixedNormal | Orientation::Frenet)
+            || matches!(s.options.orientation, Orientation::Fixed | Orientation::FixedNormal | Orientation::Frenet)
             || (s.options.orientation == Orientation::RotationMinimizing
                 && s.spatial_rmf_error_limits.is_some()))
 }
@@ -90,7 +90,7 @@ pub(super) fn premises(
         // periodic source theorem. Frenet owns its nonzero curvature cover.
         // Corrected-Frenet/implicit fallback modes
         // still require their original source derivative owners.
-        if !matches!(s.options.orientation,Orientation::FixedNormal|Orientation::Frenet)
+        if !matches!(s.options.orientation,Orientation::Fixed|Orientation::FixedNormal|Orientation::Frenet)
             && !(s.options.orientation == Orientation::RotationMinimizing
                 && s.spatial_rmf_error_limits.is_some())
         {

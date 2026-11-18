@@ -334,3 +334,67 @@ fn periodic_fixed_normal_certifies_volume_and_refuses_inexact_or_singular_frames
         }
     }
 }
+
+#[test]
+fn closed_fixed_frame_owns_c2_but_exactly_rejects_translated_volume_rank_loss() {
+    let planar = source::material(false, false);
+    let warped = source::material(true, true);
+    let scale = constant_vector_law([1.125, 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.0625, 0., 0.]).unwrap();
+    let axis = constant_vector_law([1., 0.875, 1.25]).unwrap();
+    let center = constant_vector_law([0., 0.001953125, 0.]).unwrap();
+    let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    for path in [frenet_source::path(), frenet_source::periodic_path()] {
+        for arc in [false, true] {
+            for (profiles, cap, _) in [&planar, &warped] {
+                let sweep = MultiSweep::new(profiles, &path, &scale, &twist, Options {
+                    orientation: Orientation::Fixed, normal: [0., 0., 1.], ..options(arc)
+                }).unwrap().with_affine_laws(&axis, &center).unwrap();
+                let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+                assert!(seam.closed_source_frame_smoothness_certified, "{seam:?}");
+                let body = sweep.certify_ideal_volume_atlas([cap, cap], projection, 1000000, 1000000).unwrap();
+                assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved);
+                assert_eq!(body.reason, Some("ideal-volume-fixed-translation-rank-loss"), "{body:?}");
+                assert_eq!(body.boxes, 0);
+                let short = sweep.certify_ideal_volume_atlas([cap, cap], projection, body.cells - 1, body.exact_work).unwrap();
+                assert!(!short.embedding_certified && !short.regularity_certified && !short.parameter_topology_preserved);
+                assert!(short.cells < body.cells && short.exact_work <= body.exact_work);
+                eprintln!("closed Fixed periodic={} arc={arc}: {body:?}", path.periodic);
+            }
+        }
+    }
+}
+
+#[test]
+fn closed_fixed_transverse_volume_loses_rank_with_variable_pose_laws() {
+    let (profiles, cap, _) = source::material(true, false);
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 0.125);
+    let mut axis = source::periodic(1., 1.0625);
+    for p in &mut axis.control_points {
+        p[1] = 1.125;
+        p[2] = 0.875;
+    }
+    // The first local axis is transverse; move the third (longitudinal) component.
+    let mut center = source::periodic(0., source::R / 8.);
+    for p in &mut center.control_points {
+        p.swap(0, 2);
+    }
+    let mut periodic = frenet_source::periodic_path();
+    for point in &mut periodic.control_points {
+        point[2] = 0.;
+    }
+    for path in [frenet_source::path(), periodic] {
+        for arc in [false, true] {
+            let sweep = MultiSweep::new(&profiles, &path, &scale, &twist, Options {
+                orientation: Orientation::Fixed, normal: [0., 0., 1.], ..options(arc)
+            }).unwrap().with_affine_laws(&axis, &center).unwrap();
+            let body = sweep.certify_ideal_volume_atlas(
+                [&cap, &cap], [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]], 1000000, 1000000,
+            ).unwrap();
+            assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved);
+            assert_eq!(body.reason, Some("ideal-volume-fixed-transverse-rank-loss"), "{body:?}");
+            assert_eq!(body.boxes, 0);
+        }
+    }
+}
