@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0875",
+  "testedBase": "d577060e5925e0ffa75c71c08511a441491945b9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 4,
+  "scope": [
+    "Outward-rounded nominal transverse contact ratio over the shared active involutes; checked an internal ring pair against independent tip radii equations at three scales and rejected equal, reversed and excessive tooth counts."
+  ],
+  "logSha256": "0454f2cde5d8d6c991cef83b23c7435052bb4d201c93d5e0422974ebd3e74420",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "8317ae583d7f505b408ab0f585ee4000734f84caa8d973a7f1c5045391cb9cb6",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "f273aa14e0dc31250a94138cf287b91f40947ce96f4839b484d3ad98b293e65e",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "a43d10a214a2248bc86ed52fb2537dfbbebbc2c6f7d17198ff56324f962957d5"
+  }
+}

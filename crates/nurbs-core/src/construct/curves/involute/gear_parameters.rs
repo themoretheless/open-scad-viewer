@@ -199,25 +199,58 @@ pub fn external_spur_contact_ratio_bounds(
     teeth: [usize; 2],
     pressure_degrees: f64,
 ) -> Result<[f64; 2]> {
-    let flank = |count| -> Result<(I, I, I)> {
+    spur_contact_ratio(module, teeth, pressure_degrees, false)
+}
+
+/// Active transverse involute overlap for a pinion inside a larger spur ring.
+/// Uses standard centre distance, zero backlash and quarter-module clearance.
+/// This is a flank calculation; it does not establish trochoid clearance.
+pub fn internal_spur_contact_ratio_bounds(
+    module: f64,
+    pinion_teeth: usize,
+    ring_teeth: usize,
+    pressure_degrees: f64,
+) -> Result<[f64; 2]> {
+    check(
+        ring_teeth > pinion_teeth,
+        "Ring must have more teeth than pinion",
+    )?;
+    spur_contact_ratio(module, [pinion_teeth, ring_teeth], pressure_degrees, true)
+}
+
+fn spur_contact_ratio(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    internal: bool,
+) -> Result<[f64; 2]> {
+    let flank = |count, ring| -> Result<(I, I, I)> {
         let gear =
-            derive_gear_parameter_bounds(module, count, pressure_degrees, module / 4., 0., false)?;
+            derive_gear_parameter_bounds(module, count, pressure_degrees, module / 4., 0., ring)?;
         check(
             gear.half_high_angle[0] > 0.,
-            "Gear tip thickness must be positive",
+            "Active flank angular extent must stay positive",
         )?;
         let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
         let distance = |roll: [f64; 2]| base.mul(I::new(roll[0], roll[1])?);
         Ok((distance(gear.roll_start)?, distance(gear.roll_end)?, base))
     };
-    let (low, high, base) = flank(teeth[0])?;
-    let (peer_low, peer_high, _) = flank(teeth[1])?;
+    let (low, high, base) = flank(teeth[0], false)?;
+    let (peer_low, peer_high, _) = flank(teeth[1], internal)?;
     let alpha = pi()?.mul(I::point(pressure_degrees))?.div(I::point(180.))?;
-    let centres = I::point(module).mul(I::point((teeth[0] + teeth[1]) as f64 / 2.))?;
+    let separation = if internal {
+        teeth[1] - teeth[0]
+    } else {
+        teeth[0] + teeth[1]
+    };
+    let centres = I::point(module).mul(I::point(separation as f64 / 2.))?;
     let span = centres.mul(trig(alpha)?.0)?;
-    // Coordinates on the common tangent increase from opposite base circles.
-    let peer_start = span.sub(peer_high)?;
-    let peer_end = span.sub(peer_low)?;
+    // Ring and pinion roll in the same tangent coordinate direction.
+    let (peer_start, peer_end) = if internal {
+        (peer_low.sub(span)?, peer_high.sub(span)?)
+    } else {
+        (span.sub(peer_high)?, span.sub(peer_low)?)
+    };
     let start = I::new(low.lo.max(peer_start.lo), low.hi.max(peer_start.hi))?;
     let end = I::new(high.lo.min(peer_end.lo), high.hi.min(peer_end.hi))?;
     let length = end.sub(start)?;

@@ -137,3 +137,21 @@ fn external_spur_pair_active_contact_ratio() {
     );
     assert!(ratio(1., [20, usize::MAX], 20.).is_err());
 }
+
+#[test]
+fn internal_spur_contact_uses_ring_tip_and_difference_of_pitch_radii() {
+    use involute::internal_spur_contact_ratio_bounds as ratio;
+    let alpha = 20_f64.to_radians();
+    let tip_roll_length =
+        |pitch: f64, tip: f64| (tip.powi(2) - (pitch * alpha.cos()).powi(2)).sqrt();
+    let expected = (tip_roll_length(10., 11.) - tip_roll_length(40., 39.) + 30. * alpha.sin())
+        / (std::f64::consts::PI * alpha.cos());
+    for module in [0.25, 1., 4.] {
+        let bounds = ratio(module, 20, 80, 20.).unwrap();
+        contains(bounds, expected);
+        assert!(bounds[1] - bounds[0] < 1e-9);
+    }
+    assert!(ratio(1., 20, 20, 20.).is_err());
+    assert!(ratio(1., 21, 20, 20.).is_err());
+    assert!(ratio(1., 20, usize::MAX, 20.).is_err());
+}

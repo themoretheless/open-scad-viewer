@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 874,
-  "unallocatedCount": 126,
+  "specifiedCount": 875,
+  "unallocatedCount": 125,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20300,6 +20300,24 @@
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-874-2026-11-18/receipt.json",
         "docs/qualification/nurbs-spur-contact-874-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0875",
+      "name": "Интервальная оценка коэффициента торцового перекрытия внутренней прямозубой пары",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::internal_spur_contact_ratio_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-875-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-875-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
