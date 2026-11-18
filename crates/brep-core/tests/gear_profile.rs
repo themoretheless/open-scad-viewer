@@ -117,3 +117,30 @@ fn internal_spinner_ring_packs_reverse_sectors_without_reordering_wire() {
     assert!(packed.residual_bytes() < forward.residual_bytes());
     assert!(LosslessSectorPattern::encode_bidirectional(ring,0).is_err());
 }
+
+#[test]
+fn lossless_gear_edits_are_local_even_on_the_predictor_tooth() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { teeth: 8, ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let mut expected = wires[0].clone();
+    let width = expected.len()/spec.teeth;
+    let mut packed = LosslessSectorPattern::encode_bidirectional(&expected,width).unwrap();
+    for index in [3,0,3] {
+        let sector = &mut expected[index*width..(index+1)*width];
+        sector[0].control_points[0][0] += 0.125;
+        sector[0].weights[0] *= 1.25;
+        packed.replace_sector(index,sector).unwrap();
+    }
+    let mut incompatible = packed.sector(0).unwrap();
+    incompatible[0].knots.iter_mut().for_each(|x| *x += 1.);
+    assert!(packed.replace_sector(0,&incompatible).is_err());
+    assert!(packed.replace_sector(2,&[]).is_err());
+    for (index, original) in expected.chunks_exact(width).enumerate() {
+        for (a,b) in original.iter().zip(packed.sector(index).unwrap()) {
+            let bits = |c: &nurbs_core::curve::Curve| c.control_points.iter().flatten()
+                .chain(&c.weights).chain(&c.knots).map(|v| v.to_bits()).collect::<Vec<_>>();
+            assert_eq!(bits(a),bits(&b));
+        }
+    }
+}

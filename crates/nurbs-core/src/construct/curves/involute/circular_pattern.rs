@@ -156,6 +156,7 @@ impl CircularSectorPattern {
 pub struct LosslessSectorPattern {
     pattern: CircularSectorPattern,
     residuals: Vec<SectorResidual>,
+    seed_edit: Option<SectorResidual>,
 }
 
 struct SectorResidual {
@@ -183,15 +184,32 @@ impl LosslessSectorPattern {
         let pattern = CircularSectorPattern { pieces, sector_count: count };
         let mut residuals = Vec::with_capacity(count - 1);
         for (i, sector) in segments.chunks_exact(pieces_per_sector).enumerate().skip(1) {
-            for actual in sector { actual.validate()?; }
-            let mut selected = Self::residual(&pattern, i, sector)?;
-            if bidirectional && count - i != i {
-                let reverse = Self::residual(&pattern, count - i, sector)?;
-                if reverse.bytes.len() < selected.bytes.len() { selected = reverse; }
-            }
-            residuals.push(selected);
+            residuals.push(Self::choose_residual(&pattern, i, sector, bidirectional)?);
         }
-        Ok(Self { pattern, residuals })
+        Ok(Self { pattern, residuals, seed_edit: None })
+    }
+
+    fn choose_residual(pattern: &CircularSectorPattern, index: usize, sector: &[Curve],
+        bidirectional: bool) -> Result<SectorResidual> {
+        check(sector.len() == pattern.pieces.len(), "Expected one complete replacement sector")?;
+        for actual in sector { actual.validate()?; }
+        let mut selected = Self::residual(pattern, index, sector)?;
+        let reverse_index = (pattern.sector_count - index) % pattern.sector_count;
+        if bidirectional && reverse_index != index {
+            let reverse = Self::residual(pattern, reverse_index, sector)?;
+            if reverse.bytes.len() < selected.bytes.len() { selected = reverse; }
+        }
+        Ok(selected)
+    }
+
+    /// Replace one sector atomically, retaining the predictor even when editing
+    /// sector zero. The replacement must have the same piece and knot layouts.
+    pub fn replace_sector(&mut self, index: usize, curves: &[Curve]) -> Result<()> {
+        check(index < self.pattern.sector_count, "Profile sector index outside pattern")?;
+        let replacement = Self::choose_residual(&self.pattern, index, curves, true)?;
+        if index == 0 { self.seed_edit = Some(replacement); }
+        else { self.residuals[index - 1] = replacement; }
+        Ok(())
     }
 
     fn residual(pattern: &CircularSectorPattern, predictor_index: usize, sector: &[Curve]) -> Result<SectorResidual> {
@@ -214,12 +232,14 @@ impl LosslessSectorPattern {
         Ok(SectorResidual { predictor_index, bytes })
     }
 
-    pub fn residual_bytes(&self) -> usize { self.residuals.iter().map(|s| s.bytes.len()).sum() }
+    pub fn residual_bytes(&self) -> usize { self.residuals.iter().chain(&self.seed_edit).map(|s| s.bytes.len()).sum() }
 
     pub fn sector(&self, index: usize) -> Result<Vec<Curve>> {
-        if index == 0 { return self.pattern.sector(0); }
-        check(index <= self.residuals.len(), "Profile sector index outside pattern")?;
-        let residual = &self.residuals[index-1];
+        check(index < self.pattern.sector_count, "Profile sector index outside pattern")?;
+        let residual = if index == 0 {
+            let Some(edit) = &self.seed_edit else { return self.pattern.sector(0); };
+            edit
+        } else { &self.residuals[index-1] };
         let mut sector = self.pattern.sector(residual.predictor_index)?;
         let mut bytes = residual.bytes.as_slice();
         for curve in &mut sector {
