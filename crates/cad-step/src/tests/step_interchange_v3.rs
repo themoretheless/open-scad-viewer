@@ -3926,3 +3926,21 @@ fn placed_stock_cut_uses_two_shared_cutters_and_preserves_material_volume() {
     assert!(scene.cut_stock(3, &[]).is_err());
     assert!(scene.cut_stock(0, &[1; 257]).is_err());
 }
+
+#[test]
+fn fusion_counts_overlapping_and_coincident_occurrences_once() {
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let solid = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![solid],
+        vec![placed(10.), placed(11.), placed(11.), placed(20.)]).unwrap();
+    let fused = scene.fuse_occurrences(&[1, 2, 0, 3, 0]).unwrap();
+    assert_eq!(fused.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(fused.bodies.len(), 2);
+    let volume = brep_core::analysis::mass_properties(&fused, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume - 20.).abs() < 1e-8);
+    assert!(scene.fuse_occurrences(&[]).is_err());
+    assert!(scene.fuse_occurrences(&[1, 4]).is_err());
+    assert!(scene.fuse_occurrences(&[0; 257]).is_err());
+}

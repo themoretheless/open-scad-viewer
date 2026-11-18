@@ -970,6 +970,25 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Fuse the selected occurrences in assembly coordinates, retaining disjoint material.
+    /// Repeated indices select the same material once.
+    pub fn fuse_occurrences(&self, selection: &[usize]) -> Result<Model> {
+        if selection.is_empty() || selection.len() > super::MAX_OCCURRENCES
+            || selection.iter().any(|&index| index >= self.occurrences.len()) {
+            return Err(refuse("STEP fusion requires 1 to 256 valid occurrence indices"));
+        }
+        let mut fused = self.materialize(selection[0])?;
+        let mut used = vec![false; self.occurrences.len()];
+        used[selection[0]] = true;
+        for &index in &selection[1..] {
+            if !used[index] {
+                fused = brep_core::boolean(&fused, &self.materialize(index)?, "union")?;
+                used[index] = true;
+            }
+        }
+        Ok(fused)
+    }
+
     /// Cut a placed stock solid with the selected occurrences, in assembly coordinates.
     /// Duplicate cutters are applied once. The shared source assembly stays editable.
     pub fn cut_stock(&self, stock: usize, cutters: &[usize]) -> Result<Model> {
