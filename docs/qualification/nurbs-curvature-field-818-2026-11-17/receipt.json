@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0818",
+  "testedBase": "b2dfe3e3dd0a0d8b10bd63579ed27f0b5af76aac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 168,
+  "scope": [
+    "Import three shared herringbone definitions with twenty placements and materialize one closed planet on demand.",
+    "Verify that all eighteen planet placements share one definition and that materialization preserves closed B-rep topology."
+  ],
+  "logSha256": "cec772f178a2f509b69d0a491c2efebf7601b6189b2a040947b45a5751a92a4d",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "fb79f90e59a9c96e4874ce9684abbe8e1cab41982d70dd657deb2de8232b7388",
+    "crates/cad-step/src/step_interchange_v3.rs": "c112a80282694b3b180ebb1ff1dc9ea5b60ee45ccc0f804d1d6dbb4688f2b155",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "145ee0500fd5bb1306e8214a436ba5d334565e8eda2c301bde997c65a397335f",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "ff7dcad6551a5c481c868fa9c3b1c0fd79ae925db7cdb8d4813d50d5d65538b3"
+  }
+}
