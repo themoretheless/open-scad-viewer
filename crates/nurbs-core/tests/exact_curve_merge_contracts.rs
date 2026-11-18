@@ -9452,3 +9452,50 @@ fn motion_knot_turn_proves_c1_alignment_and_preserves_stationary_uncertainty() {
     assert_eq!(report[0].cosine_bounds, None);
     assert_eq!(report[0].status, Status::Undetermined);
 }
+
+#[test]
+fn motion_join_turn_distinguishes_direction_from_position_gap() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_join_turn,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 4., 4.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line([[0., 0.], [4., 0.]]);
+    let second = line([[2., 3.], [2., 7.]]);
+    let report = classify_motion_join_turn((&first, [1., 2.]), (&second, [0., 3.]), 0.5)
+        .unwrap();
+    assert_eq!(report.turn_status, Status::Exceeds);
+    let [lo, hi] = report.position_gap_bounds;
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 1e-8);
+    let [lo, hi] = report.cosine_bounds.unwrap();
+    assert!(lo <= 0. && 0. <= hi && hi - lo < 1e-8);
+    let reversed = line([[2., 0.], [0., 0.]]);
+    let report = classify_motion_join_turn((&first, [1., 2.]), (&reversed, [0., 4.]), -0.5)
+        .unwrap();
+    assert_eq!(report.turn_status, Status::Exceeds);
+    assert_eq!(report.cosine_bounds.unwrap()[0], -1.);
+}
+
+#[test]
+fn motion_join_turn_preserves_stationary_endpoint_uncertainty() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_join_turn,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [0., 0., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let window = (&curve, [0., 1.]);
+    let report = classify_motion_join_turn(window, window, 0.).unwrap();
+    assert_eq!(report.cosine_bounds, None);
+    assert_eq!(report.turn_status, Status::Undetermined);
+    assert!(classify_motion_join_turn(window, window, 1.1).is_err());
+}

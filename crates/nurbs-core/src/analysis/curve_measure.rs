@@ -1778,28 +1778,84 @@ pub fn classify_motion_knot_turns(
         let parameter = curve.knots[right];
         let before = curve_jets::endpoint(curve, left, [curve.knots[left], parameter], true)?;
         let after = curve_jets::endpoint(curve, right, [parameter, curve.knots[right + 1]], false)?;
-        let left_norm = norm(&before[1])?;
-        let right_norm = norm(&after[1])?;
-        let cosine_bounds = if left_norm.lo <= 0. || right_norm.lo <= 0. {
-            None
-        } else if right - left < curve.degree {
-            Some([1.; 2])
-        } else {
-            let cosine = before[1].iter().zip(&after[1]).try_fold(
-                Interval::point(0.),
-                |sum, (&a, &b)| sum.add(a.div(left_norm)?.mul(b.div(right_norm)?)?),
-            )?;
-            Some([cosine.lo.max(-1.), cosine.hi.min(1.)])
-        };
-        let status = match cosine_bounds {
-            Some([lo, _]) if lo >= minimum_cosine => DirectionalMotionStatus::Within,
-            Some([_, hi]) if hi < minimum_cosine => DirectionalMotionStatus::Exceeds,
-            _ => DirectionalMotionStatus::Undetermined,
-        };
+        let (cosine_bounds, status) =
+            classify_tangent_turn(&before[1], &after[1], right - left < curve.degree, minimum_cosine)?;
         turns.push(MotionKnotTurn { parameter, cosine_bounds, status });
         left = right;
     }
     Ok(turns)
+}
+
+fn classify_tangent_turn(
+    before: &[Interval],
+    after: &[Interval],
+    same_source_derivative: bool,
+    minimum_cosine: f64,
+) -> Result<(Option<[f64; 2]>, DirectionalMotionStatus)> {
+    let left_norm = norm(before)?;
+    let right_norm = norm(after)?;
+    let cosine_bounds = if left_norm.lo <= 0. || right_norm.lo <= 0. {
+        None
+    } else if same_source_derivative {
+        Some([1.; 2])
+    } else {
+        let cosine = before.iter().zip(after).try_fold(
+            Interval::point(0.),
+            |sum, (&a, &b)| sum.add(a.div(left_norm)?.mul(b.div(right_norm)?)?),
+        )?;
+        Some([cosine.lo.max(-1.), cosine.hi.min(1.)])
+    };
+    let status = match cosine_bounds {
+        Some([lo, _]) if lo >= minimum_cosine => DirectionalMotionStatus::Within,
+        Some([_, hi]) if hi < minimum_cosine => DirectionalMotionStatus::Exceeds,
+        _ => DirectionalMotionStatus::Undetermined,
+    };
+    Ok((cosine_bounds, status))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MotionJoinTurn {
+    pub position_gap_bounds: [f64; 2],
+    /// Cosine between the tangents in traversal order.
+    pub cosine_bounds: Option<[f64; 2]>,
+    pub turn_status: DirectionalMotionStatus,
+}
+
+/// Compare the last tangent of the first window with the first tangent of the
+/// second, using increasing source parameters. The turn and gap are independent.
+pub fn classify_motion_join_turn(
+    first: (&Curve, [f64; 2]),
+    second: (&Curve, [f64; 2]),
+    minimum_cosine: f64,
+) -> Result<MotionJoinTurn> {
+    check((-1.0..=1.0).contains(&minimum_cosine), "Minimum turn cosine must be in [-1, 1]")?;
+    let endpoint = |(curve, interval): (&Curve, [f64; 2]), end| -> Result<_> {
+        curve.validate()?;
+        validate_travel_interval(curve, interval)?;
+        let (span, domain) = motion_window_endpoint(curve, interval, end)?;
+        curve_jets::endpoint(curve, span, domain, end)
+    };
+    let before = endpoint(first, true)?;
+    let after = endpoint(second, false)?;
+    check(before[0].len() == after[0].len(), "Motion join requires matching curve dimensions")?;
+    let (lo, hi) = box_distance(&before[0], &after[0])?;
+    let (cosine_bounds, turn_status) =
+        classify_tangent_turn(&before[1], &after[1], false, minimum_cosine)?;
+    Ok(MotionJoinTurn { position_gap_bounds: [lo, hi], cosine_bounds, turn_status })
+}
+
+fn motion_window_endpoint(
+    curve: &Curve,
+    interval: [f64; 2],
+    end: bool,
+) -> Result<(usize, [f64; 2])> {
+    let mut spans = active_spans(curve, interval);
+    let span = if end { spans.last() } else { spans.next() }
+        .ok_or_else(|| crate::numeric_err("Missing motion endpoint span"))?;
+    Ok((span, [
+        interval[0].max(curve.knots[span]),
+        interval[1].min(curve.knots[span + 1]),
+    ]))
 }
 
 /// A curve window traversed in increasing parameter order with a uniform clock.
@@ -1844,14 +1900,8 @@ pub fn classify_directional_motion_join(
     let [first, second] = segments;
     let unit = travel_direction(first.curve, direction)?;
     let endpoint = |segment: TimedMotionSegment<'_>, end| -> Result<_> {
-        let mut spans = active_spans(segment.curve, segment.interval);
-        let span = if end { spans.last() } else { spans.next() }
-            .ok_or_else(|| crate::numeric_err("Missing motion endpoint span"))?;
+        let (span, domain) = motion_window_endpoint(segment.curve, segment.interval, end)?;
         let [a, b] = segment.interval;
-        let domain = [
-            a.max(segment.curve.knots[span]),
-            b.min(segment.curve.knots[span + 1]),
-        ];
         let source_width = Interval::point(b).sub(Interval::point(a))?;
         let cell_width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
         let scale = source_width.div(cell_width)?.div(Interval::point(segment.duration))?;

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 699,
-  "unallocatedCount": 301,
+  "specifiedCount": 700,
+  "unallocatedCount": 300,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16973,6 +16973,25 @@
       "remainingQualification": [
         "Enclose the tangent turn cosine at interior knots and classify against an inclusive threshold.",
         "Check a rational right angle across unequal spans, exact C1 alignment, stationary uncertainty, and knot budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0700",
+      "name": "Сертифицированная проверка угла поворота на стыке NURBS-сегментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_join_turn",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-700-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-700-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check one-sided tangent alignment and spatial gap between two curve windows.",
+        "Check clipped windows, spatial gap independent of angle, right-angle and reversed tangents, stationary uncertainty, and invalid thresholds.",
         "WASM and application integration are separate."
       ]
     }
