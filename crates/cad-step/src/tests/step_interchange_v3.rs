@@ -2877,6 +2877,33 @@ fn shared_step_admission_policy() -> brep_core::closed_solid::AdmissionPolicy {
 }
 
 #[test]
+fn shared_step_ray_material_multiplicity_detects_overlaps() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let placement = |x| [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(1, placement(1.)).unwrap();
+    assembly.add_occurrence(0, placement(1.5)).unwrap();
+    assembly.add_occurrence(0, placement(10.)).unwrap();
+    let policy = shared_step_admission_policy();
+    let coverage = |count| assembly.ray_material_coverage_at_least(
+        count, [-1., 0.75, 1.25], [1., 0., 0.], 3.75, policy, 100_000, 200_000,
+    );
+    assert!(coverage(0).is_err());
+    for (count, expected) in [(2, [2., 3.75]), (3, [2.5, 3.])] {
+        let report = coverage(count).unwrap();
+        assert_eq!(report.guaranteed.len(), 1);
+        assert_eq!(report.possible.len(), 1);
+        let [inner, outer] = [report.guaranteed[0], report.possible[0]];
+        assert!(outer[0] <= expected[0] && expected[0] <= inner[0]);
+        assert!(inner[1] <= expected[1] && expected[1] <= outer[1]);
+        assert!(inner[0] - outer[0] < 1e-6 && outer[1] - inner[1] < 1e-6);
+    }
+    let beyond = coverage(4).unwrap();
+    assert!(beyond.guaranteed.is_empty() && beyond.possible.is_empty());
+}
+
+#[test]
 fn shared_step_ray_material_coverage_merges_overlapping_placed_solids() {
     let mut assembly = shared_step_scaled_cube_pair();
     let placement = |x| [

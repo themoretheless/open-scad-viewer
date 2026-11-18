@@ -1268,6 +1268,27 @@ impl StepSharedAssembly {
         max_cells_per_occurrence: usize,
         max_domain_cells_per_occurrence: usize,
     ) -> Result<StepRayMaterialCoverage> {
+        self.ray_material_coverage_at_least(
+            1, origin, direction, max_parameter, policy,
+            max_cells_per_occurrence, max_domain_cells_per_occurrence,
+        )
+    }
+
+    /// Bound the spans crossing material of at least the requested number of
+    /// distinct placed occurrences. Isolated contacts contribute no span.
+    pub fn ray_material_coverage_at_least(
+        &self,
+        count: usize,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_parameter: f64,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+        max_cells_per_occurrence: usize,
+        max_domain_cells_per_occurrence: usize,
+    ) -> Result<StepRayMaterialCoverage> {
+        if count == 0 {
+            return Err(refuse("STEP material ray coverage count must be positive"));
+        }
         if !max_parameter.is_finite() || max_parameter < 0. {
             return Err(refuse("STEP material ray needs a finite nonnegative end parameter"));
         }
@@ -1293,8 +1314,8 @@ impl StepSharedAssembly {
             }
         }
         Ok(StepRayMaterialCoverage {
-            guaranteed: merge_ray_spans(guaranteed),
-            possible: merge_ray_spans(possible),
+            guaranteed: ray_spans_at_least(guaranteed, count),
+            possible: ray_spans_at_least(possible, count),
         })
     }
 
@@ -1305,19 +1326,27 @@ impl StepSharedAssembly {
     }
 }
 
-fn merge_ray_spans(mut spans: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
-    spans.sort_by(|a, b| a[0].total_cmp(&b[0]));
-    let mut merged: Vec<[f64; 2]> = Vec::new();
-    for span in spans {
-        if let Some(last) = merged.last_mut()
-            && span[0] <= last[1]
-        {
-            last[1] = last[1].max(span[1]);
-        } else {
-            merged.push(span);
+fn ray_spans_at_least(spans: Vec<[f64; 2]>, count: usize) -> Vec<[f64; 2]> {
+    let mut events = Vec::with_capacity(2 * spans.len());
+    for [start, end] in spans {
+        events.extend([(start, 1_isize), (end, -1)]);
+    }
+    events.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut spans = Vec::new();
+    let mut active = 0_isize;
+    let mut start = 0.;
+    for group in events.chunk_by(|a, b| a.0 == b.0) {
+        let was_covered = active as usize >= count;
+        active += group.iter().map(|event| event.1).sum::<isize>();
+        let covered = active as usize >= count;
+        let parameter = group[0].0;
+        if covered && !was_covered {
+            start = parameter;
+        } else if was_covered && !covered && start < parameter {
+            spans.push([start, parameter]);
         }
     }
-    merged
+    spans
 }
 
 fn validate_ray_work(tolerance_uv: f64, max_cells: usize, max_domain_cells: usize) -> Result<()> {
