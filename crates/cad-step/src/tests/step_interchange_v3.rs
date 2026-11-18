@@ -4147,3 +4147,29 @@ fn cross_group_interference_limits_work_to_selected_interfaces() {
         assert!(scene.interferences_between(invalid, &[1], 9).is_err());
     }
 }
+
+#[test]
+fn interface_clearances_exclude_internal_pairs_and_retain_world_distance() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        [0., 1., 5., 50.].into_iter().map(placed).collect()).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry, pairs: 100, contact_pairs: 1000, cells: 100_000, domain_cells: 1_000_000,
+    };
+    let check = |minimum, budget| scene.clearances_between(&[2, 3], &[0, 1], minimum,
+        1e-5, policy.tolerance_uv, limits, budget);
+    let rows = check(2.5, 1).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].0, [2, 1]);
+    let report = rows[0].1.as_ref().unwrap();
+    assert_eq!(report.status, crate::StepClearanceStatus::BelowMinimum);
+    let [lo, hi] = report.measurement.distance_interval_mm.unwrap();
+    assert!(lo <= 2. && hi >= 2.);
+    assert!(check(1.5, 0).unwrap().is_empty());
+    assert!(check(2.5, 0).is_err());
+    assert!(check(f64::NAN, 1).is_err());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 868,
-  "unallocatedCount": 132,
+  "specifiedCount": 869,
+  "unallocatedCount": 131,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20200,6 +20200,23 @@
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0869",
+      "name": "Проверка монтажного зазора между двумя группами деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::clearances_between",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-interface-clearance-869-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-interface-clearance-869-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. A distance interval straddling the threshold is unresolved."
       ]
     }
   ],

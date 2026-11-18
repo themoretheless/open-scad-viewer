@@ -1202,14 +1202,28 @@ impl StepSharedAssembly {
         limits: brep_core::solid_distance::Limits,
         max_pairs: usize,
     ) -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
+        let pairs = self.proximity_candidates(minimum_mm)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly clearance candidate budget exceeded"));
+        }
+        self.measure_clearance_pairs(pairs, minimum_mm, tolerance_mm, tolerance_uv, limits)
+    }
+
+    /// Measure candidate clearances across a selected assembly interface.
+    pub fn clearances_between(&self, left: &[usize], right: &[usize], minimum_mm: f64,
+        tolerance_mm: f64, tolerance_uv: f64, limits: brep_core::solid_distance::Limits, max_pairs: usize)
+        -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
+        let pairs = self.cross_group_candidates(left, right, minimum_mm, max_pairs)?;
+        self.measure_clearance_pairs(pairs, minimum_mm, tolerance_mm, tolerance_uv, limits)
+    }
+
+    fn measure_clearance_pairs(&self, pairs: Vec<[usize; 2]>, minimum_mm: f64,
+        tolerance_mm: f64, tolerance_uv: f64, limits: brep_core::solid_distance::Limits)
+        -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
         if !tolerance_mm.is_finite() || tolerance_mm <= 0.
             || !tolerance_uv.is_finite() || tolerance_uv <= 0.
         {
             return Err(refuse("STEP clearance requires positive finite tolerances"));
-        }
-        let pairs = self.proximity_candidates(minimum_mm)?;
-        if pairs.len() > max_pairs {
-            return Err(refuse("STEP assembly clearance candidate budget exceeded"));
         }
         Ok(pairs.into_iter().map(|pair| {
             let checked = self.occurrence_clearance(pair, tolerance_mm, tolerance_uv, limits)
@@ -1316,25 +1330,7 @@ impl StepSharedAssembly {
     /// Return common material for positive overlaps and diagnostics for unresolved pairs.
     pub fn interferences_between(&self, left: &[usize], right: &[usize], max_pairs: usize)
         -> Result<Vec<([usize; 2], Result<Model>)>> {
-        let mut side = vec![0; self.occurrences.len()];
-        for (members, label) in [(left, 1), (right, 2)] {
-            if members.is_empty() || members.len() > side.len() {
-                return Err(refuse("STEP interference groups require nonempty occurrence selections"));
-            }
-            for &index in members {
-                let slot = side.get_mut(index).ok_or_else(|| refuse("STEP interference group index out of range"))?;
-                if *slot != 0 { return Err(refuse("STEP interference selections must be distinct and disjoint")); }
-                *slot = label;
-            }
-        }
-        let pairs: Vec<_> = self.proximity_candidates(0.)?.into_iter().filter_map(|[a, b]| {
-            match (side[a], side[b]) {
-                (1, 2) => Some([a, b]),
-                (2, 1) => Some([b, a]),
-                _ => None,
-            }
-        }).collect();
-        if pairs.len() > max_pairs { return Err(refuse("STEP cross-group candidate budget exceeded")); }
+        let pairs = self.cross_group_candidates(left, right, 0., max_pairs)?;
         let mut regions = Vec::new();
         for [a, b] in pairs {
             let result = self.intersect_occurrences(a, b);
@@ -1343,6 +1339,30 @@ impl StepSharedAssembly {
             }
         }
         Ok(regions)
+    }
+
+    fn cross_group_candidates(&self, left: &[usize], right: &[usize], distance: f64, max_pairs: usize)
+        -> Result<Vec<[usize; 2]>> {
+        let mut side = vec![0; self.occurrences.len()];
+        for (members, label) in [(left, 1), (right, 2)] {
+            if members.is_empty() || members.len() > side.len() {
+                return Err(refuse("STEP groups require nonempty occurrence selections"));
+            }
+            for &index in members {
+                let slot = side.get_mut(index).ok_or_else(|| refuse("STEP group index out of range"))?;
+                if *slot != 0 { return Err(refuse("STEP selections must be distinct and disjoint")); }
+                *slot = label;
+            }
+        }
+        let pairs: Vec<_> = self.proximity_candidates(distance)?.into_iter().filter_map(|[a, b]| {
+            match (side[a], side[b]) {
+                (1, 2) => Some([a, b]),
+                (2, 1) => Some([b, a]),
+                _ => None,
+            }
+        }).collect();
+        if pairs.len() > max_pairs { return Err(refuse("STEP cross-group candidate budget exceeded")); }
+        Ok(pairs)
     }
 
     fn interference_candidates(&self, max_pairs: usize) -> Result<Vec<[usize; 2]>> {
