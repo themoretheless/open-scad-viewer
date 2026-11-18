@@ -7906,3 +7906,31 @@ fn certified_principal_axis_distance_accounts_for_angular_error() {
     axis.sin_angle_upper = -0.5;
     assert!(bound_distance_to_principal_axis(axis, [[0.; 2]; 3], [8., 0., 0.]).is_err());
 }
+
+#[test]
+fn principal_axis_angle_sine_is_invariant_under_reversal_and_direction_scale() {
+    use nurbs_core::analysis::surface_measure::{
+        PrincipalAxisCertificate, bound_principal_axis_angle_sine,
+    };
+    let axis = PrincipalAxisCertificate { direction: [1., 0., 0.], sin_angle_upper: 0. };
+    let reference = 0.5_f64.sqrt();
+    for scale in [f64::from_bits(1), -1., f64::MAX] {
+        let [lo, hi] = bound_principal_axis_angle_sine(axis, [scale, scale, 0.]).unwrap();
+        assert!(lo <= reference && reference <= hi && hi - lo < 1e-12);
+    }
+}
+
+#[test]
+fn principal_axis_angle_sine_respects_certified_angular_uncertainty() {
+    use nurbs_core::analysis::surface_measure::{
+        PrincipalAxisCertificate, bound_principal_axis_angle_sine,
+    };
+    let axis = PrincipalAxisCertificate { direction: [1., 0., 0.], sin_angle_upper: 0.25 };
+    let [lo, hi] = bound_principal_axis_angle_sine(axis, [1., 0., 0.]).unwrap();
+    assert_eq!(lo, 0.);
+    assert!(0.25 <= hi && hi < 0.25 + 1e-12);
+    let [lo, hi] = bound_principal_axis_angle_sine(axis, [0., 1., 0.]).unwrap();
+    assert!(lo <= 0.75 && lo > 0.75 - 1e-12);
+    assert_eq!(hi, 1.);
+    assert!(bound_principal_axis_angle_sine(axis, [0.; 3]).is_err());
+}

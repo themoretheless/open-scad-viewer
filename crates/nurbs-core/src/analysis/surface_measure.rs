@@ -1528,6 +1528,27 @@ pub fn bound_distance_to_principal_axis(
     Ok([distance.lo, distance.hi])
 }
 
+/// Enclose the sine of the acute angle between a fixed direction and a
+/// certified principal axis. Either direction may be reversed or rescaled.
+pub fn bound_principal_axis_angle_sine(
+    certificate: PrincipalAxisCertificate,
+    direction: [f64; 3],
+) -> Result<[f64; 2]> {
+    let error = certificate.sin_angle_upper;
+    check(
+        (0. ..=1.).contains(&error),
+        "Principal axis sine bound must lie in [0, 1]",
+    )?;
+    let axis = InertiaAxis::new(certificate.direction)?;
+    let probe = InertiaAxis::new(direction)?;
+    let length = plane_normal_length(&axis)?.mul(plane_normal_length(&probe)?)?;
+    let sine = norm(cross(axis.components, probe.components)?)?.div(length)?;
+    // For a unit probe the sine is the norm of its perpendicular projection.
+    // Changing the axis changes the projector by at most the certificate error.
+    let bounds = sine.add(Interval::new(-error, error)?)?.intersect(0., 1.)?;
+    Ok([bounds.lo, bounds.hi])
+}
+
 /// Find and certify a direction for a selected principal moment. Candidate
 /// construction uses midpoint data, and certification uses the full intervals.
 pub fn find_certified_principal_axis(

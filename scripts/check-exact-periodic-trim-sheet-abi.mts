@@ -47,7 +47,7 @@ interface Report {
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
-  principalAxes?: ({ direction: [number, number, number]; sinAngleUpper: number } | null)[] | null
+  principalAxes?: ({ direction: [number, number, number]; sinAngleUpper: number; distanceBoundsMm?: [number, number] } | null)[] | null
   principalMomentBoundsKgMm2?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?:
@@ -589,3 +589,12 @@ assert.ok(certifiedAxes[0] && certifiedAxes[0].sinAngleUpper < 0.5 && Math.abs(c
 assert.deepEqual(certifiedAxes.slice(1), [null, null])
 assert.equal(call(request.maxWork, densityOp, { ...axisCertificateOptions, maxSurfaceCells: 1 }).principalAxes, null)
 console.log('WASM ABI returned a certified isolated principal direction.')
+
+assert.equal(certifiedAxes[0].distanceBoundsMm, undefined)
+const probedAxes = call(request.maxWork, densityOp, {
+  ...axisCertificateOptions, principalAxisProbePointMm: [1, 0, 1],
+}).principalAxes
+const axisDistance = probedAxes?.[0]?.distanceBoundsMm
+assert.ok(axisDistance && axisDistance[0] <= 0.84375 && 0.84375 <= axisDistance[1])
+assert.deepEqual(probedAxes?.slice(1), [null, null])
+console.log('WASM ABI enclosed the probe distance to a certified principal axis.')

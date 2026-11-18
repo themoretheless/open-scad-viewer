@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0654",
+  "testedBase": "880e938a612f66457a448f846ec20888c95f5dad",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 301,
+  "scope": [
+    "Attach certified distance bounds for a world-space probe to each available principal axis.",
+    "Check analytic probe distance on the isolated axis, unresolved axes, and malformed or incompatible probe options through the compiled ABI."
+  ],
+  "logSha256": "cebe0e3003a3a2f722f265264aab729413664052e1026cd659b3de92d416cd1c",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "ddd07b1e7b2af887fc710b0059f8e7f1a0bef78cd6d95554322883d73c2630e3",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "594e51d936bc5c4ca74df3e65fd750946b1936ea446ff94e20fce558ff42f822",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "e5704097399012b3dfa3f612a266130d6ab62bd84ca1884a4dc26904d68eac65"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

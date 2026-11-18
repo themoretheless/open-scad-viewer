@@ -1029,14 +1029,20 @@ fn patch_set_density_encloses_first_mass_moment_about_requested_plane() {
     );
 }
 
-#[test]
-fn patch_set_density_certifies_axis_of_separated_components() {
+fn separated_density_request() -> Value {
     let mut request = patch_set_density_request(20_000);
     request["contours"] = json!([
         [[0.125, 0.125], [0.1875, 0.125], [0.1875, 0.1875], [0.125, 0.1875], [0.125, 0.125]],
         [[0.125, 0.8125], [0.1875, 0.8125], [0.1875, 0.875], [0.125, 0.875], [0.125, 0.8125]]
     ]);
     request["componentDensities"][0]["outerContour"] = json!(1);
+    request["toleranceMm2"] = json!(1e-5);
+    request
+}
+
+#[test]
+fn patch_set_density_certifies_axis_of_separated_components() {
+    let mut request = separated_density_request();
     request["includePrincipalAxes"] = json!(true);
     assert_eq!(run(&request)["ok"], false);
     request["momentToleranceKgMm2"] = json!(1e-8);
@@ -1054,4 +1060,24 @@ fn patch_set_density_certifies_axis_of_separated_components() {
     let incomplete = run(&request);
     assert_eq!(incomplete["ok"], true, "{incomplete}");
     assert_eq!(incomplete["value"].get("principalAxes"), Some(&Value::Null));
+}
+
+#[test]
+fn patch_set_density_encloses_point_distance_to_certified_axis() {
+    let mut request = separated_density_request();
+    request["principalAxisProbePointMm"] = json!([1., 0., 1.]);
+    request["momentToleranceKgMm2"] = json!(1e-8);
+    assert_eq!(run(&request)["ok"], false);
+    request["includePrincipalAxes"] = json!(true);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let axes = &response["value"]["principalAxes"];
+    let distance = &axes[0]["distanceBoundsMm"];
+    let exact = 0.84375;
+    let lo = distance[0].as_f64().unwrap();
+    let hi = distance[1].as_f64().unwrap();
+    assert!(lo <= exact && exact <= hi && hi - lo < 0.2, "{response}");
+    assert!(axes[1].is_null() && axes[2].is_null());
+    request["principalAxisProbePointMm"] = json!([1., 0.]);
+    assert_eq!(run(&request)["ok"], false);
 }
