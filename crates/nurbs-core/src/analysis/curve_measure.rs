@@ -2650,6 +2650,24 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
     )
 }
 
+/// Also seek a rounded contact direction by solving the two most violated
+/// plane constraints together. All obstacle half-spaces are verified over
+/// the cell. The work budget reserves five vertex/plane passes per cell.
+pub fn partition_planar_rotating_profiled_hull_obstacle_skew_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4,
+    )
+}
+
 fn partition_rotating_profiled_obstacles(
     position: &Curve,
     direction: &Curve,
@@ -2810,6 +2828,23 @@ fn rounded_vertex_contacts(
                 let length = norm(&axis)?;
                 if length.lo > 0. && inside_after_displacement(axis, length.hi)? {
                     return Ok(true);
+                }
+            }
+            if witness_passes >= 4 && first_violation.is_finite() {
+                let determinant = unit[0].mul(other_unit[1])?.sub(unit[1].mul(other_unit[0])?)?;
+                if determinant.lo > 0. || determinant.hi < 0. {
+                    let sign = Interval::point(if determinant.lo > 0. { 1. } else { -1. });
+                    let weight = Interval::point(second_violation / first_violation);
+                    // Only the direction of the solution is needed. Cancel
+                    // the determinant magnitude before normalizing it.
+                    let axis = [
+                        other_unit[1].sub(unit[1].mul(weight)?)?.mul(sign)?,
+                        unit[0].mul(weight)?.sub(other_unit[0])?.mul(sign)?,
+                    ];
+                    let length = norm(&axis)?;
+                    if length.lo > 0. && inside_after_displacement(axis, length.hi)? {
+                        return Ok(true);
+                    }
                 }
             }
         }

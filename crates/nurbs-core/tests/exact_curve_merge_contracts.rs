@@ -12087,3 +12087,42 @@ fn rotating_rounded_asymmetric_contact_weights_unequal_plane_deficits() {
     assert_eq!(report.cells.len(), 1);
     assert_eq!(report.cells[0].status, Status::Exceeds);
 }
+
+#[test]
+fn rotating_rounded_skew_contact_solves_coupled_plane_deficits() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact,
+        partition_planar_rotating_profiled_hull_obstacle_skew_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.001]],
+        ..position.clone()
+    };
+    let corner = [
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.2 },
+        WorkspaceHalfSpace { normal: &[0.8, -0.6], offset: 0.75 },
+    ];
+    let profile = [(0., 0.42), (1., 0.42)];
+    let weighted = partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
+        &position, &direction, &profile, &[&corner], &[&[1., 0.]], 0.01, 500,
+    ).unwrap();
+    assert!(weighted.cells.iter().all(|cell| cell.status == Status::Undetermined));
+    let measure = |planes, budget| partition_planar_rotating_profiled_hull_obstacle_skew_contact(
+        &position, &direction, &profile, &[planes], &[&[1., 0.]], 0.01, budget,
+    );
+    assert!(measure(&corner, 9).is_err());
+    let report = measure(&corner, 10).unwrap();
+    assert_eq!(report.work_plane_cells, 10);
+    assert_eq!(report.cells.len(), 1);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+    let impossible = [corner[0], corner[1], WorkspaceHalfSpace { normal: &[0., 1.], offset: 0.3 }];
+    assert_ne!(measure(&impossible, 15).unwrap().cells[0].status, Status::Exceeds);
+}
