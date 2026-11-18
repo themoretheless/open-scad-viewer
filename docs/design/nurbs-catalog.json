@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 941,
-  "unallocatedCount": 59,
+  "specifiedCount": 942,
+  "unallocatedCount": 58,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21521,6 +21521,23 @@
       ],
       "remainingQualification": [
         "Explicit solid occurrence colours keyed by product placement and solid, in flattened assembly order. Face overrides, inherited colours and per-face editing are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0942",
+      "name": "Радиальный диапазон составной NURBS-поверхности относительно координатной оси",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::radial_bounds::piecewise_axis_radius_bounds",
+      "evidence": [
+        "crates/nurbs-foundation/src/distance/radial_bounds.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped positive rational Bezier spans, degrees 1–8, internal knot multiplicity equal to degree, within the supplied patch budget. Bounds concern entire carriers. Trim construction and Boolean sewing remain open."
       ]
     }
   ],

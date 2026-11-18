@@ -1,0 +1,15 @@
+{
+  "id": "NURBS-0942",
+  "testedBase": "0a95ad03f22f12cd422bb1a5dc1841cff018afb3",
+  "testTargets": [
+    "brep-core --test spinner_bore_boolean",
+    "nurbs-foundation --lib radial_bounds"
+  ],
+  "innerWalls": 32,
+  "outerWalls": 384,
+  "sourceSha256": {
+    "crates/nurbs-foundation/src/distance/radial_bounds.rs": "62657067fa659e391ef0dd2b17c964d331bda00a18d9015b510134af6dcff841",
+    "crates/brep-core/tests/spinner_bore_boolean.rs": "26bbe4d5f7f6f655537ae272287d87f58bdbf9f3b88c90c8d25780927f52b038"
+  },
+  "logSha256": "84f4e39ad3b1e37bdd3c794709d0b9595ff7bb548c04cf9ad4a235623c634aa9"
+}

@@ -5,6 +5,19 @@ fn spinner_bore_difference_preserves_teeth_or_reports_unproved_coverage() {
     let spec = GearSpec { module: 1.5, teeth: 32, height: 10., helix_angle_deg: -35.,
         herringbone: true, clearance: 0.1, backlash: 0.05, bore: 42., ..Default::default() };
     let sun = gear(&spec).unwrap();
+    let mut inside = 0;
+    let mut outside = 0;
+    for face in &sun.faces {
+        if !face.holes.is_empty() { continue; } // The two trimmed end caps meet the tool.
+        let bounds = nurbs_core::radial_bounds::piecewise_axis_radius_bounds(
+            &face.surface, 2, [0.;3], 256).unwrap().expect("whole wall radial certificate");
+        if bounds[1] < 22. { inside += 1; }
+        else if bounds[0] > 22. { outside += 1; }
+        else { panic!("wall could meet the cutter: {bounds:?}"); }
+    }
+    assert!(inside > 0 && outside > 0);
+    assert_eq!(inside + outside + 2, sun.faces.len());
+    eprintln!("Whole wall radial certificates: {inside} inside, {outside} outside");
     let cutter = cylinder(22., 10.).unwrap();
     let reference = gear(&GearSpec { bore: 44., ..spec }).unwrap();
     assert_eq!(reference.validate().unwrap().boundary_edge_count, 0);
