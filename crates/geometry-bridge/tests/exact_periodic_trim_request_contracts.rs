@@ -721,3 +721,46 @@ fn patch_set_mass_operation_validates_reference_point_and_withholds_unproved_ten
         request["maxWork"] = json!(1);
     }
 }
+
+#[test]
+fn patch_set_mass_operation_returns_requested_axis_radius_of_gyration() {
+    let mut request = patch_set_mass_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    let legacy = run(&request);
+    assert_eq!(legacy["ok"], true, "{legacy}");
+    assert!(legacy["value"].get("axisRadiusOfGyrationBoundsMm").is_none());
+
+    request["includeAxisRadiusOfGyration"] = json!(true);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let expected = ((83. / 768. + 49. / 12288.) / 1.3125 + 1. - 2. * 3. / 28_f64).sqrt();
+    let bounds = &report["axisRadiusOfGyrationBoundsMm"];
+    assert!(bounds[0].as_f64().unwrap() <= expected && expected <= bounds[1].as_f64().unwrap());
+    assert_eq!(
+        report["axisMomentBoundsMm4"],
+        legacy["value"]["axisMomentBoundsMm4"]
+    );
+}
+
+#[test]
+fn patch_set_mass_operation_requires_axis_and_positive_area_for_gyration_radius() {
+    let mut request = patch_set_mass_request(2);
+    request["includeAxisRadiusOfGyration"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    request["includeAxisRadiusOfGyration"] = json!("true");
+    assert_eq!(run(&request)["ok"], false);
+    request["includeAxisRadiusOfGyration"] = json!(true);
+    for status in ["workLimit", "buildRefused"] {
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["status"], status);
+        assert_eq!(
+            report.get("axisRadiusOfGyrationBoundsMm"),
+            Some(&Value::Null)
+        );
+        request["maxWork"] = json!(1);
+    }
+}

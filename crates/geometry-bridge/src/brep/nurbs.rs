@@ -1271,7 +1271,9 @@ pub fn exact_periodic_trim_patch_set_mass_request(
 ) -> Result<value_codec::Value> {
     use crate::field;
     use nurbs_core::{
-        analysis::surface_measure::periodic_trim_patch_set_central_inertia,
+        analysis::surface_measure::{
+            bound_radius_of_gyration, periodic_trim_patch_set_central_inertia,
+        },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
     };
     use value_codec::json;
@@ -1310,6 +1312,14 @@ pub fn exact_periodic_trim_patch_set_mass_request(
             Ok((point, direction))
         })
         .transpose()?;
+    let include_axis_radius = request
+        .get("includeAxisRadiusOfGyration")
+        .map(|_| field::<bool>(request, "includeAxisRadiusOfGyration"))
+        .transpose()?
+        .unwrap_or(false);
+    if include_axis_radius && inertia_axis.is_none() {
+        return Err(input("Radius of gyration requires an inertia axis"));
+    }
     if [tolerance, tolerance_uv]
         .iter()
         .any(|t| !t.is_finite() || *t <= 0.)
@@ -1338,6 +1348,9 @@ pub fn exact_periodic_trim_patch_set_mass_request(
     if reference_point.is_some() {
         response["referenceInertiaBoundsMm4"] = value_codec::Value::Null;
     }
+    if include_axis_radius {
+        response["axisRadiusOfGyrationBoundsMm"] = value_codec::Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1357,7 +1370,16 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         mass
     };
     if let Some((point, direction)) = inertia_axis {
-        response["axisMomentBoundsMm4"] = json!(mass.bound_inertia_about_line(point, direction)?);
+        let moment = mass.bound_inertia_about_line(point, direction)?;
+        response["axisMomentBoundsMm4"] = json!(moment);
+        if include_axis_radius
+            && let Some(moment) = moment
+            && let Some(area) = &mass.centroid.measure.total.area
+            && area.bounds[0] > 0.
+        {
+            response["axisRadiusOfGyrationBoundsMm"] =
+                json!(bound_radius_of_gyration(moment, area.bounds)?);
+        }
     }
     if let Some(point) = reference_point {
         response["referenceInertiaBoundsMm4"] = json!(mass.bound_inertia_about_point(point)?);

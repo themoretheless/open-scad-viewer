@@ -26,6 +26,7 @@ interface Report {
   centralInertiaBoundsMm4?: [number, number][][] | null
   withinMomentTolerance?: boolean
   referenceInertiaBoundsMm4?: [number, number][][] | null
+  axisRadiusOfGyrationBoundsMm?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
@@ -322,3 +323,14 @@ assert.deepEqual(referenceMass.axisMomentBoundsMm4, axisMass.axisMomentBoundsMm4
 const incompleteReference = call(request.maxWork, patchSetOp, { ...referenceOptions, maxSurfaceCells: 2 })
 assert.equal(incompleteReference.referenceInertiaBoundsMm4, null)
 console.log('WASM ABI enclosed the patch set tensor about a fixed reference point.')
+
+assert.equal(axisMass.axisRadiusOfGyrationBoundsMm, undefined)
+const gyrationOptions = { ...axisOptions, includeAxisRadiusOfGyration: true }
+const gyrationMass = call(request.maxWork, patchSetOp, gyrationOptions)
+const gyrationBounds = gyrationMass.axisRadiusOfGyrationBoundsMm
+const expectedGyration = Math.sqrt(expectedAxisMoment / 1.3125)
+assert.ok(gyrationBounds && gyrationBounds[0] <= expectedGyration && expectedGyration <= gyrationBounds[1])
+assert.deepEqual(gyrationMass.axisMomentBoundsMm4, axisMass.axisMomentBoundsMm4)
+const incompleteGyration = call(request.maxWork, patchSetOp, { ...gyrationOptions, maxSurfaceCells: 2 })
+assert.equal(incompleteGyration.axisRadiusOfGyrationBoundsMm, null)
+console.log('WASM ABI enclosed the patch set radius of gyration about an offset axis.')
