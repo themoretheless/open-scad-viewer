@@ -12405,3 +12405,34 @@ fn planar_angular_motion_duration_bounds_use_source_window_width() {
         .unwrap();
     assert_eq!(report.duration_bounds, [2., f64::INFINITY]);
 }
+
+#[test]
+fn planar_angular_motion_deadline_retains_independent_limit_statuses() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, check_planar_angular_motion_deadline,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let check = |deadline, budget| check_planar_angular_motion_deadline(
+        &direction, [2., 4.], limits, deadline, 0.015625, budget,
+    );
+    let short = check(3.9, 255).unwrap();
+    assert_eq!(short.status, Status::Exceeds);
+    assert_eq!(short.limit_statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    assert_eq!(check(4.1, 255).unwrap().status, Status::Within);
+    assert_eq!(check(4., 1).unwrap().status, Status::Undetermined);
+    assert!(check(f64::INFINITY, 255).is_err());
+
+    let fixed = Curve { control_points: vec![vec![1., 0.]; 2], ..direction };
+    let report = check_planar_angular_motion_deadline(&fixed, [2., 4.], limits, 1.9, 0.01, 1).unwrap();
+    assert_eq!(report.status, Status::Exceeds);
+    assert_eq!(report.limit_statuses, [Status::Within; 3]);
+    let report = check_planar_angular_motion_deadline(&fixed, [2., 4.], limits, 2., 0.01, 1).unwrap();
+    assert_eq!(report.status, Status::Within);
+}

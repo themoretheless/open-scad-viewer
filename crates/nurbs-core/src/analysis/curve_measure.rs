@@ -1590,6 +1590,22 @@ pub fn planar_angular_motion_slowdown_bounds(
     max_cells: usize,
 ) -> Result<[f64; 2]> {
     validate_motion_partition_limits([limits.speed, limits.acceleration, limits.jerk])?;
+    let (peaks, unresolved) = planar_angular_peak_bounds(
+        direction, interval, parameter_tolerance, max_cells,
+    )?;
+    let mut bounds = slowdown_from_peak_bounds(peaks, limits)?;
+    if unresolved {
+        bounds[1] = f64::INFINITY;
+    }
+    Ok(bounds)
+}
+
+fn planar_angular_peak_bounds(
+    direction: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<([[f64; 2]; 3], bool)> {
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Angular derivatives require a planar direction curve")?;
     let fixed = fixed_cardinal_rotation(direction).is_some();
@@ -1614,11 +1630,57 @@ pub fn planar_angular_motion_slowdown_bounds(
             unresolved = true;
         }
     }
-    let mut bounds = slowdown_from_peak_bounds(peaks, limits)?;
-    if unresolved {
-        bounds[1] = f64::INFINITY;
+    Ok((peaks, unresolved))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarAngularMotionDeadlineReport {
+    pub status: DirectionalMotionStatus,
+    /// Speed, acceleration and jerk in that order. The no-speedup rule
+    /// affects the overall status.
+    pub limit_statuses: [DirectionalMotionStatus; 3],
+}
+
+/// Check an inclusive deadline for a uniform traversal with slowdown only.
+/// Compare the angular derivative bounds against the proposed clock exactly.
+pub fn check_planar_angular_motion_deadline(
+    direction: &Curve,
+    time_window: [f64; 2],
+    limits: DirectionalMotionLimits,
+    deadline: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularMotionDeadlineReport> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    check(deadline.is_finite() && deadline > 0., "Deadline must be positive and finite")?;
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    let (peaks, unresolved) = planar_angular_peak_bounds(
+        direction, time_window, parameter_tolerance, max_cells,
+    )?;
+    let factor = motion_clock_factor(time_window, deadline)?;
+    let mut limit_statuses = [Undetermined; 3];
+    let mut power = factor.clone();
+    for (index, ([lo, hi], limit)) in peaks.into_iter().zip(limits).enumerate() {
+        let allowed = &power * exact_motion_operand(limit)?;
+        limit_statuses[index] = if exact_motion_operand(lo)? > allowed {
+            Exceeds
+        } else if !unresolved && exact_motion_operand(hi)? <= allowed {
+            Within
+        } else {
+            Undetermined
+        };
+        power *= &factor;
     }
-    Ok(bounds)
+    let status = if factor < exact_motion_operand(1.)? || limit_statuses.contains(&Exceeds) {
+        Exceeds
+    } else if limit_statuses.contains(&Undetermined) {
+        Undetermined
+    } else {
+        Within
+    };
+    Ok(PlanarAngularMotionDeadlineReport { status, limit_statuses })
 }
 
 #[derive(Clone, Copy, Debug)]
