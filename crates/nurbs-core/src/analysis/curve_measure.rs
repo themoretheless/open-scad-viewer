@@ -1975,13 +1975,7 @@ fn partition_curve_workspace_with_support(
                 }
                 Ok([residual.lo, residual.hi])
             }).collect::<Result<Vec<_>>>()?;
-            let status = if residuals.iter().any(|[lo, _]| *lo > 0.) {
-                DirectionalMotionStatus::Exceeds
-            } else if residuals.iter().all(|[_, hi]| *hi <= 0.) {
-                DirectionalMotionStatus::Within
-            } else {
-                DirectionalMotionStatus::Undetermined
-            };
+            let status = workspace_residual_status(&residuals);
             Ok(((residuals, status), status == DirectionalMotionStatus::Undetermined))
         },
     )?;
@@ -1989,6 +1983,55 @@ fn partition_curve_workspace_with_support(
         WorkspaceCell { parameter_interval, span, plane_residuals, status }
     }).collect();
     Ok(WorkspacePartition { cells, work_plane_cells: work_cells * planes.len() })
+}
+
+/// Check containment in closed half-spaces as the ball radius follows a
+/// continuous piecewise-linear profile in the original curve parameter.
+pub fn partition_profiled_radius_convex_workspace(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let max_cells = max_plane_cells / planes.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let dimension = curve.control_points[0].len();
+    let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, profile], domain| {
+            let radius = profiles[profile](domain)?;
+            let jets = curve_jets::enclose(curve, span, domain)?;
+            let plane_residuals = planes.iter().map(|(normal, offset, length)| {
+                let residual = project_jet(&jets[0], normal)?.sub(*offset)?.add(length.mul(radius)?)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = workspace_residual_status(&plane_residuals);
+            Ok((WorkspaceCell {
+                parameter_interval: domain, span, plane_residuals, status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    Ok(WorkspacePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * planes.len(),
+    })
+}
+
+fn workspace_residual_status(residuals: &[[f64; 2]]) -> DirectionalMotionStatus {
+    if residuals.iter().any(|[lo, _]| *lo > 0.) {
+        DirectionalMotionStatus::Exceeds
+    } else if residuals.iter().all(|[_, hi]| *hi <= 0.) {
+        DirectionalMotionStatus::Within
+    } else {
+        DirectionalMotionStatus::Undetermined
+    }
 }
 
 type PreparedWorkspacePlane = (Vec<Interval>, Interval);

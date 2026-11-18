@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 758,
-  "unallocatedCount": 242,
+  "specifiedCount": 759,
+  "unallocatedCount": 241,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18094,6 +18094,25 @@
       "remainingQualification": [
         "Refine minimum mixed-obstacle clearance across all curve and radius profile spans.",
         "Check exact witness at a nonmatching radius break, retained curve knots, certified clearance, and initial budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0759",
+      "name": "Проверка выпуклой рабочей области с кусочно-линейным радиусом инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_radius_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-759-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-759-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify containment of a spherical tool with a piecewise-linear radius against workspace planes.",
+        "Check workspace overtravel caused by an interior radius peak, analytic crossings, nonunit plane residuals and mandatory combined coverage.",
         "WASM and application integration are separate."
       ]
     }

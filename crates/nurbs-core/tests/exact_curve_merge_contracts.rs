@@ -11562,3 +11562,36 @@ fn minimum_profiled_radius_clearance_samples_a_radius_break_directly() {
     let [lo, hi] = report.gap_bounds;
     assert!(lo <= -1.5 && -1.5 <= hi && hi - lo <= 1e-8);
 }
+
+#[test]
+fn profiled_radius_workspace_detects_overtravel_between_clear_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_profiled_radius_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 9. }];
+    let check = |budget| partition_profiled_radius_convex_workspace(
+        &curve, &profile, &planes, 0.01, budget,
+    );
+    assert!(check(2).is_err());
+    let report = check(128).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [lo, hi] = cell.plane_residuals[0];
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1. && hi >= 1.
+    }));
+    for crossing in [0.45, 0.75] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
