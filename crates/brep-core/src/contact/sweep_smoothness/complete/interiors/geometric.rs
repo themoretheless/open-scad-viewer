@@ -479,6 +479,36 @@ mod tests {
         assert!(partial.unresolved_edges.contains(&0));
     }
     #[test]
+    fn g2_uses_the_exact_active_interval_of_a_bent_periodic_shore() {
+        use crate::sweep_smoothness::geometric::{Tolerances, inspect_edges_with_exact};
+        let model = single_face_torus(periodic_chart(true));
+        let mut trimmed = model.clone();
+        let range = trimmed.edges[1].curve.domain();
+        let coedge = &mut trimmed.loops[0].coedges[1];
+        *coedge = crate::Coedge::new(1, false, crate::Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 4., 4.],
+            control_points: vec![vec![3., -1.], vec![4., 0.], vec![4., 4.], vec![3., 5.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[1, 0], [1, 1]],
+        }).unwrap();
+        trimmed.validate().unwrap();
+        let report = super::super::super::inspect(&trimmed, super::super::super::Limits {
+            order: 2, exact_work: 16_000_000, agreement_work: 1_000_000, regularity_cells: 100_000,
+        }).unwrap();
+        assert!(report.g2_certified, "{:?}", report.unresolved_edges);
+        let tolerances = Tolerances { position: 0., normal: 0., curvature: 0. };
+        let selected = inspect_edges_with_exact(&trimmed, &[1], tolerances, 1, 1_000_000).unwrap();
+        assert!(selected.complete && selected.within_tolerance);
+        let limited = inspect_edges_with_exact(&trimmed, &[1], tolerances, 1, selected.exact_work - 1).unwrap();
+        assert!(!limited.within_tolerance);
+    }
+
+    #[test]
     fn selected_g2_joins_two_distinct_periodic_wall_faces() {
         use crate::sweep_smoothness::geometric::{Tolerances, inspect_edges_with_exact};
         use crate::{Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};

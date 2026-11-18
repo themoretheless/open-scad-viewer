@@ -265,7 +265,10 @@ sheet indices. A complete periodic world edge uses the original periodic
 trace proof after exact recovery of the active affine UV clock. Ordered UV
 traversal proves side coverage, and exact world-edge agreement binds it
 to the authored seam. Side recovery and chart reversal share the seam
-work allowance.
+work allowance. An exact clamped restriction can recover a complete
+natural side when the stored curve bends outside its active interval.
+Both selected and complete seam audits bind the recovered side to the
+whole original edge before comparing jets.
 
 The selected-edge G2 inspection can also replay a directed active UV
 interval on a nonperiodic chart. It stores that interval exactly on its

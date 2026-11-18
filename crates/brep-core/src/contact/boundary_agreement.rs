@@ -304,7 +304,7 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
 }
 /// The interval is bound to a complete original world edge by the caller.
 /// Exact restriction preserves the UV clock, including its traversal direction.
-fn restricted_periodic_lift(
+pub(crate) fn restricted_periodic_lift(
     curve: &crate::Curve,
     coedge: &crate::Coedge,
     surface: &crate::Surface,
