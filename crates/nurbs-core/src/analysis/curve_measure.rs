@@ -4534,6 +4534,52 @@ pub fn partition_variable_radius_spherical_clearance(
     curve.validate()?;
     validate_travel_interval(curve, interval)?;
     let obstacles = prepare_spherical_obstacles(curve, obstacles, 0.)?;
+    partition_variable_radial_clearance(
+        curve, interval, tool_radii, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+/// Check a linearly changing tool radius against a mixed obstacle scene.
+/// Every gap array follows the original obstacle order.
+pub fn partition_variable_radius_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every obstacle"));
+    }
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    partition_variable_radial_clearance(
+        curve, interval, tool_radii, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, 0.),
+    )
+}
+
+fn partition_variable_radial_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    tool_radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    base_gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalClearancePartition> {
     let radius_range = linear_tool_radius(interval, tool_radii)?;
     let initial = active_spans(curve, interval).map(|span| (span, [
         curve.knots[span].max(interval[0]),
@@ -4544,9 +4590,8 @@ pub fn partition_variable_radius_spherical_clearance(
         |span, domain| {
             let tool = radius_range(domain)?;
             let jets = curve_jets::enclose(curve, span, domain)?;
-            let gaps = obstacles.iter().map(|(center, radius)| {
-                let (lo, hi) = box_distance(&jets[0], center)?;
-                let gap = Interval::new(lo, hi)?.sub(*radius)?.sub(tool)?;
+            let gaps = (0..obstacle_count).map(|index| {
+                let gap = base_gap(&jets[0], index)?.sub(tool)?;
                 Ok([gap.lo, gap.hi])
             }).collect::<Result<Vec<_>>>()?;
             let (status, refine) = classify_radial_gaps(&gaps);
@@ -4560,7 +4605,7 @@ pub fn partition_variable_radius_spherical_clearance(
     )?;
     Ok(SphericalClearancePartition {
         cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
-        work_obstacle_cells: work_cells * obstacles.len(),
+        work_obstacle_cells: work_cells * obstacle_count,
     })
 }
 

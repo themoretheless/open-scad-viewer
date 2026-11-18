@@ -11425,3 +11425,42 @@ fn minimum_variable_radius_clearance_couples_the_witness_position_and_radius() {
     assert!(lo <= exact && exact <= hi && hi - lo < 1e-4);
     assert!((fine.witness_parameter - (0.5 + 1. / (4. * 3_f64.sqrt()))).abs() < 0.01);
 }
+
+#[test]
+fn variable_radius_mixed_clearance_tracks_sphere_and_box_contacts() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, DirectionalMotionStatus as Status, SphericalObstacle, ToolpathObstacle,
+        partition_variable_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[5., -1.], maximum: &[6., 1.] }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 0.25 }),
+    ];
+    let check = |budget| partition_variable_radius_toolpath_clearance(
+        &curve, [0., 8.], &obstacles, [0., 1.], 0.01, budget,
+    );
+    assert!(check(1).is_err());
+    let report = check(512).unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    for (parameter, obstacle) in [(2., 1), (5.5, 0)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && cell.status == Status::Exceeds
+                && cell.gap_bounds[obstacle][1] < 0.
+                && cell.gap_bounds[1 - obstacle][0] > 0.
+        }));
+    }
+    for crossing in [14. / 9., 40. / 9.] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
