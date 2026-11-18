@@ -2789,6 +2789,49 @@ pub fn measure_planar_contour_fill_central_moments(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillPrincipalMomentsReport {
+    /// Ascending principal second moments about the centroid.
+    pub principal_moment_bounds: [[f64; 2]; 2],
+    /// Bounds for the difference of the larger and smaller moments.
+    pub moment_gap_bounds: [f64; 2],
+    pub central: PlanarContourFillCentralMomentsReport,
+}
+
+/// Enclose the two principal second moments of an even-odd filled region
+/// and their separation. The interval calculation supports repeated
+/// moments, where the principal axes are not unique.
+pub fn measure_planar_contour_fill_principal_moments(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_moment_cells: usize,
+) -> Result<PlanarContourFillPrincipalMomentsReport> {
+    let central = measure_planar_contour_fill_central_moments(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_moment_cells,
+    )?;
+    let [[xx_lo, xx_hi], [xy_lo, xy_hi], [yy_lo, yy_hi]] = central.central_moment_bounds;
+    let xx = Interval::new(xx_lo, xx_hi)?;
+    let xy = Interval::new(xy_lo, xy_hi)?;
+    let yy = Interval::new(yy_lo, yy_hi)?;
+    let half = Interval::point(0.5);
+    let mean = xx.mul(half)?.add(yy.mul(half)?)?;
+    let difference = xx.mul(half)?.sub(yy.mul(half)?)?;
+    let offset = norm(&[difference, xy])?;
+    let small = mean.sub(offset)?;
+    let large = mean.add(offset)?;
+    let gap = offset.mul(Interval::point(2.))?;
+    Ok(PlanarContourFillPrincipalMomentsReport {
+        principal_moment_bounds: [[small.lo.max(0.), small.hi], [large.lo.max(0.), large.hi]],
+        moment_gap_bounds: [gap.lo.max(0.), gap.hi],
+        central,
+    })
+}
+
 fn sum_oriented_contour_integrals<const N: usize>(
     moments: Vec<[Interval; N]>,
     reversals: &[bool],

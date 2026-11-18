@@ -13142,3 +13142,32 @@ fn planar_contour_fill_central_moments_include_off_axis_hole() {
         assert!(lo <= value && value <= hi && hi - lo < 1e-6);
     }
 }
+
+#[test]
+fn planar_contour_fill_principal_moments_enclose_distinct_and_repeated_values() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_principal_moments;
+    let rectangle = |x: f64, y: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-x, -y], vec![x, -y], vec![x, y], vec![-x, y], vec![-x, -y]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let measure = |curve| measure_planar_contour_fill_principal_moments(
+        &[curve], 0.005, 1e-4, 128, 1024, 512, 4096,
+    );
+    let wide = rectangle(2., 1.);
+    let report = measure(&wide).unwrap();
+    for ([lo, hi], value) in report.principal_moment_bounds.into_iter().zip([8. / 3., 32. / 3.]) {
+        assert!(lo <= value && value <= hi && hi - lo < 0.1);
+    }
+    let [lo, hi] = report.moment_gap_bounds;
+    assert!(lo > 0. && lo <= 8. && 8. <= hi);
+
+    let square = rectangle(1., 1.);
+    let report = measure(&square).unwrap();
+    assert_eq!(report.moment_gap_bounds[0], 0.);
+    for [lo, hi] in report.principal_moment_bounds {
+        assert!(lo <= 4. / 3. && 4. / 3. <= hi && hi - lo < 0.1);
+    }
+}
