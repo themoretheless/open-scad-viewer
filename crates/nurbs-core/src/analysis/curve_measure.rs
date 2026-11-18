@@ -221,7 +221,7 @@ fn measure_with_cells(
     let span_cap = curve.control_points.len().saturating_sub(curve.degree);
     let mut heap = BinaryHeap::with_capacity(span_cap.max(8));
     let mut cells = 0;
-    for span in curve.degree..curve.control_points.len() {
+    for span in active_spans(curve, domain) {
         let a = curve.knots[span].max(domain[0]);
         let b = curve.knots[span + 1].min(domain[1]);
         if a < b {
@@ -694,7 +694,9 @@ pub fn directional_travel_by_sign(
     max_cells: usize,
 ) -> Result<DirectionalTravelReport> {
     curve.validate()?;
-    measure_signed_directional_travel(curve, curve.domain(), direction, tolerance, max_cells)
+    validate(tolerance, max_cells)?;
+    let unit = travel_direction(curve, direction)?;
+    measure_signed_directional_travel(curve, curve.domain(), &unit, tolerance, max_cells)
 }
 
 /// Enclose the positive and negative axial travel on a finite, increasing
@@ -707,34 +709,83 @@ pub fn directional_travel_on_interval(
     max_cells: usize,
 ) -> Result<DirectionalTravelReport> {
     curve.validate()?;
+    validate(tolerance, max_cells)?;
+    validate_travel_interval(curve, interval)?;
+    let unit = travel_direction(curve, direction)?;
+    measure_signed_directional_travel(curve, interval, &unit, tolerance, max_cells)
+}
+
+/// Measure an ordered batch under one cell limit. Overlapping windows are
+/// measured independently. Each window is guaranteed initial span coverage
+/// before remaining work is divided among the windows.
+pub fn directional_travel_on_intervals(
+    curve: &Curve,
+    intervals: &[[f64; 2]],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<Vec<DirectionalTravelReport>> {
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    check(
+        !intervals.is_empty() && intervals.len() <= max_cells,
+        "Directional travel batch requires at least one cell per window",
+    )?;
+    let unit = travel_direction(curve, direction)?;
+    let mut minima = Vec::with_capacity(intervals.len());
+    let mut reserve = 0;
+    for &interval in intervals {
+        validate_travel_interval(curve, interval)?;
+        let minimum = active_spans(curve, interval).count();
+        reserve += minimum;
+        if reserve > max_cells {
+            return Err(resource("Initial directional travel spans exceed the shared budget"));
+        }
+        minima.push(minimum);
+    }
+    let mut reports = Vec::with_capacity(intervals.len());
+    let mut remaining = max_cells;
+    for (index, (&interval, minimum)) in intervals.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (intervals.len() - index);
+        let report = measure_signed_directional_travel(curve, interval, &unit, tolerance, budget)?;
+        reserve -= minimum;
+        remaining -= report.total.cells;
+        reports.push(report);
+    }
+    Ok(reports)
+}
+
+fn validate_travel_interval(curve: &Curve, interval: [f64; 2]) -> Result<()> {
     let [start, end] = curve.domain();
     let [lo, hi] = interval;
     check(
         start <= lo && lo < hi && hi <= end,
         "Directional travel interval must lie inside the curve domain",
-    )?;
-    measure_signed_directional_travel(curve, interval, direction, tolerance, max_cells)
+    )
+}
+
+fn active_spans(curve: &Curve, [lo, hi]: [f64; 2]) -> impl Iterator<Item = usize> + '_ {
+    let degree = curve.degree;
+    let count = curve.control_points.len();
+    let first = degree + curve.knots[degree + 1..=count].partition_point(|&knot| knot <= lo);
+    let last = degree + curve.knots[degree..count].partition_point(|&knot| knot < hi);
+    (first..last).filter(|&span| curve.knots[span] < curve.knots[span + 1])
 }
 
 fn measure_signed_directional_travel(
     curve: &Curve,
     interval: [f64; 2],
-    direction: &[f64],
+    unit: &[Interval],
     tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalTravelReport> {
-    validate(tolerance, max_cells)?;
-    let unit = travel_direction(curve, direction)?;
-    let total = measure_directional_travel(curve, interval, &unit, tolerance, max_cells)?;
+    let total = measure_directional_travel(curve, interval, unit, tolerance, max_cells)?;
     let mut signed = Interval::point(0.);
-    for span in curve.degree..curve.control_points.len() {
+    for span in active_spans(curve, interval) {
         let domain = [
             curve.knots[span].max(interval[0]),
             curve.knots[span + 1].min(interval[1]),
         ];
-        if domain[0] >= domain[1] {
-            continue;
-        }
         let left = curve_jets::endpoint(curve, span, domain, false)?;
         let right = curve_jets::endpoint(curve, span, domain, true)?;
         let delta = right[0]
@@ -742,7 +793,7 @@ fn measure_signed_directional_travel(
             .zip(&left[0])
             .map(|(end, start)| end.sub(*start))
             .collect::<Result<Vec<_>>>()?;
-        signed = signed.add(project_jet(&delta, &unit)?)?;
+        signed = signed.add(project_jet(&delta, unit)?)?;
     }
     let absolute = Interval::new(total.bounds[0], total.bounds[1])?;
     let split = |sum: Interval| -> Result<[f64; 2]> {

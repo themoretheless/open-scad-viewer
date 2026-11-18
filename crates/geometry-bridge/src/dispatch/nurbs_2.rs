@@ -2,6 +2,7 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "nurbs_measure_curve_directional_travel",
     "brep_nurbs_exact_convex_prism_fillet",
     "brep_nurbs_exact_simple_prism_fillet",
     "brep_nurbs_exact_annular_fillet",
@@ -31,6 +32,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "nurbs_measure_curve_directional_travel" => curve_directional_travel_request(&v),
         "brep_nurbs_exact_convex_prism_fillet"
         | "brep_nurbs_exact_simple_prism_fillet"
         | "brep_nurbs_exact_annular_fillet"
@@ -163,4 +165,53 @@ fn handle(mut v: Value) -> Result<Value> {
         }
         _ => unreachable!("route admits only OPS"),
     }
+}
+
+pub(crate) fn curve_directional_travel_request(request: &Value) -> Result<Value> {
+    use nurbs_core::analysis::curve_measure::{
+        ReverseTravelStatus, StopReason, check_directional_backtracking,
+        directional_travel_on_interval,
+    };
+
+    let curve: nurbs_core::curve::Curve = field(request, "curve")?;
+    curve.validate()?;
+    let interval: [f64; 2] = if request.get("parameterInterval").is_some() {
+        field(request, "parameterInterval")?
+    } else {
+        curve.domain()
+    };
+    let direction: Vec<f64> = field(request, "direction")?;
+    let tolerance: f64 = field(request, "toleranceMm")?;
+    let max_cells: usize = field(request, "maxCells")?;
+    let (report, reverse_status) = if request.get("reverseLimitMm").is_some() {
+        let limit = field(request, "reverseLimitMm")?;
+        let (report, status) =
+            check_directional_backtracking(&curve, interval, &direction, limit, tolerance, max_cells)?;
+        let status = match status {
+            ReverseTravelStatus::Within => "within",
+            ReverseTravelStatus::Exceeds => "exceeds",
+            ReverseTravelStatus::Undetermined => "undetermined",
+        };
+        (report, Some(status))
+    } else {
+        (directional_travel_on_interval(&curve, interval, &direction, tolerance, max_cells)?, None)
+    };
+    let stop_reason = match report.total.stop_reason {
+        StopReason::Tolerance => "tolerance",
+        StopReason::WorkLimit => "workLimit",
+        StopReason::PrecisionLimit => "precisionLimit",
+        StopReason::IterationLimit => "iterationLimit",
+        StopReason::TargetUncertainty => "targetUncertainty",
+    };
+    Ok(json!({
+        "parameterInterval": interval,
+        "totalBoundsMm": report.total.bounds,
+        "forwardBoundsMm": report.forward_bounds,
+        "reverseBoundsMm": report.reverse_bounds,
+        "signedTravelBoundsMm": report.signed_travel_bounds,
+        "withinTolerance": report.total.within_tolerance,
+        "cells": report.total.cells,
+        "stopReason": stop_reason,
+        "reverseStatus": reverse_status,
+    }))
 }

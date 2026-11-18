@@ -8401,3 +8401,46 @@ fn directional_backtracking_rejects_invalid_limit_and_checks_selected_window() {
         );
     }
 }
+
+#[test]
+fn batched_directional_travel_keeps_input_order_and_counts_overlapping_windows() {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_intervals;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![4., 0.], vec![-4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let windows = [[4., 8.], [3., 7.], [2., 4.]];
+    let reports = directional_travel_on_intervals(&curve, &windows, &[1., 0.], 1e-8, 4)
+        .unwrap();
+    assert_eq!(reports.iter().map(|report| report.total.cells).sum::<usize>(), 4);
+    for (report, (forward, reverse)) in reports.iter().zip([(0., 8.), (2., 6.), (4., 0.)]) {
+        assert!(report.total.within_tolerance);
+        for ([lo, hi], exact) in [report.forward_bounds, report.reverse_bounds]
+            .into_iter()
+            .zip([forward, reverse])
+        {
+            assert!(lo <= exact && exact <= hi);
+        }
+    }
+    assert!(directional_travel_on_intervals(&curve, &windows, &[1., 0.], 1e-8, 3).is_err());
+}
+
+#[test]
+fn batched_directional_travel_reserves_coverage_from_early_refinement() {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_intervals;
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![4., 0.], vec![2., 0.]],
+        None,
+    )
+    .unwrap();
+    let reports =
+        directional_travel_on_intervals(&curve, &[[0., 1.], [0., 0.5]], &[1., 0.], 1e-7, 4)
+            .unwrap();
+    assert!(!reports[0].total.within_tolerance);
+    assert!(reports[0].total.cells + reports[1].total.cells <= 4);
+    assert!(reports[1].forward_bounds[0] <= 2.5 && 2.5 <= reports[1].forward_bounds[1]);
+    assert!(directional_travel_on_intervals(&curve, &[[0., 1.], [0., 2.]], &[1., 0.], 1e-7, 4).is_err());
+}

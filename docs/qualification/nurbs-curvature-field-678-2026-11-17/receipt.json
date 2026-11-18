@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0678",
+  "testedBase": "7540513efb600e1d4039ee7e75829772c7316927",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 280,
+  "scope": [
+    "Measure ordered and overlapping original-parameter windows under a shared cell limit with reserved initial span coverage.",
+    "Check overlapping windows in unsorted order, knots at window endpoints, minimum shared span coverage and early-window refinement limits."
+  ],
+  "logSha256": "36c6f4aff98ace0993c9fa4e7f654bf81fa9f736ac48f6590ade931af22ca28d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "2d214fcff3fbca0d72a8a5ae095b16e092f8fae3adb013cd9edd28f1049cc7d1",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4596b79854fc693da7935282cb0b279833746fac7a682febf007c182acff01de"
+  }
+}
