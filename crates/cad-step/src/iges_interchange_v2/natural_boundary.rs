@@ -23,20 +23,17 @@ impl Builder<'_> {
             (Axis::U, u0, true, [u0, v1], [u0, v0]),
         ] {
             let iso = surface.iso(axis, parameter)?;
-            if iso
+            let collapsed = iso
                 .control_points
                 .iter()
-                .all(|point| point == &iso.control_points[0])
-            {
-                return Err(trimmed_unsupported(
-                    de,
-                    "collapsed natural boundary at a surface pole",
-                ));
-            }
+                .all(|point| point == &iso.control_points[0]);
             let opposite = iso.reverse()?;
             let mut existing = None;
             for (index, edge) in self.edges.iter().enumerate() {
                 graph_work(work, iso.control_points.len())?;
+                if edge.degenerate != collapsed {
+                    continue;
+                }
                 let reversed = if edge.curve == iso {
                     false
                 } else if edge.curve == opposite {
@@ -57,14 +54,21 @@ impl Builder<'_> {
                             "natural boundary exceeds edge budget",
                         ));
                     }
-                    let (start, end) = CurveDispatcher::endpoints(&iso)?;
-                    let a = self.trimmed_vertex(de, start)?;
-                    let b = self.trimmed_vertex(de, end)?;
+                    let vertices = if collapsed {
+                        let pole = self.trimmed_vertex(de, iso.control_points[0].clone())?;
+                        [pole, pole]
+                    } else {
+                        let (start, end) = CurveDispatcher::endpoints(&iso)?;
+                        [
+                            self.trimmed_vertex(de, start)?,
+                            self.trimmed_vertex(de, end)?,
+                        ]
+                    };
                     let index = self.edges.len();
                     self.edges.push(Edge {
                         curve: iso,
-                        vertices: [a, b],
-                        degenerate: false,
+                        vertices,
+                        degenerate: collapsed,
                     });
                     self.edge_de.push(de);
                     (index, false)

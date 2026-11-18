@@ -1321,3 +1321,65 @@ fn natural_rational_patch_builds_four_edges_without_a_boundary_entity() {
     assert_eq!(model.faces[0].surface, *patch);
     assert_eq!(model.edges.iter().filter(|e| e.curve.weights.iter().any(|w| *w != 1.)).count(), 2);
 }
+
+#[test]
+fn natural_pole_faces_sew_into_a_closed_tetrahedron() {
+    let corners = [[0.,0.,0.], [2.,0.,0.], [0.,3.,0.], [0.,0.,4.]];
+    let mut writer = Writer::new();
+    let mut uses = Vec::new();
+    for [a,b,c] in [[0,2,1], [0,1,3], [0,3,2], [1,2,3]] {
+        let surface = Surface {
+            degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+            control_points: vec![vec![corners[a].to_vec(),corners[c].to_vec()],vec![corners[b].to_vec(),corners[c].to_vec()]],
+            weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+        };
+        let geometry = writer.emit(128, surface_values(&surface).unwrap());
+        let face = writer.emit(144, vec!["144".into(),geometry.to_string(),"0".into(),"0".into(),"0".into()]);
+        uses.extend([face.to_string(), "1".into()]);
+    }
+    let mut shell_data = vec!["514".into(), "4".into()];
+    shell_data.extend(uses);
+    let shell = writer.emit(514, shell_data);
+    writer.entities[(shell-1)/2].form = 2;
+    writer.emit(186, vec!["186".into(), shell.to_string(), "1".into(), "0".into()]);
+    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(model.vertices.len(), 4);
+    assert_eq!(model.edges.iter().filter(|edge| !edge.degenerate).count(), 6);
+    for face in &model.faces {
+        let poles: Vec<_> = model.loops[face.outer].coedges.iter()
+            .filter(|coedge| model.edges[coedge.edge].degenerate).collect();
+        assert_eq!(poles.len(), 1);
+        let pole = &model.edges[poles[0].edge];
+        assert_eq!(pole.vertices[0], pole.vertices[1]);
+        let (a,b) = CurveDispatcher::endpoints(&poles[0].pcurve).unwrap();
+        assert_ne!(a,b);
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_POLE_STEP") {
+        std::fs::write(path, crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+}
+
+#[test]
+fn natural_rational_cone_retains_apex_and_circular_rim() {
+    let mut patch = brep_core::cylinder(3., 5.).unwrap().faces.iter()
+        .map(|face| &face.surface)
+        .find(|s| s.weights.iter().flatten().any(|w| *w != 1.)).unwrap().clone();
+    let apex = vec![0., 0., 5.];
+    for point in patch.control_points.iter_mut().flatten() {
+        if point[2] == 5. { point.clone_from(&apex); }
+    }
+    let mut writer = Writer::new();
+    let surface = writer.emit(128, surface_values(&patch).unwrap());
+    let face = writer.emit(144, vec!["144".into(),surface.to_string(),"0".into(),"0".into(),"0".into()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 3);
+    assert_eq!(model.vertices.len(), 3);
+    let poles: Vec<_> = model.edges.iter().filter(|edge| edge.degenerate).collect();
+    assert_eq!(poles.len(), 1);
+    assert!(poles[0].curve.control_points.iter().all(|point| *point == apex));
+    assert!(poles[0].curve.weights.iter().any(|w| *w != 1.));
+    assert!(model.edges.iter().any(|edge| !edge.degenerate && edge.curve.weights.iter().any(|w| *w != 1.)));
+}
