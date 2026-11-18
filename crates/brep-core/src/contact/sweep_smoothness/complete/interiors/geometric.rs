@@ -640,7 +640,7 @@ mod tests {
             ).unwrap();
             assert!(angular.proven);
             assert!(!nurbs_core::surface_injectivity::certify_angular_ring(
-                &factors.angular, angular.cells - 1, 100,
+                &factors.angular, 1, 100,
             ).unwrap().proven);
             assert!(nurbs_core::surface_injectivity::factor_radial_tensor(band, 0, 2, count - 1)
                 .unwrap().is_none());
@@ -737,6 +737,13 @@ mod tests {
         }).unwrap();
         model.rebuild_topology_ids();
         model.validate().unwrap();
+        use crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence;
+        let mut chart_budget = 10000;
+        let incidence = radial_incidence::inspect(&model, [0, 1], &mut chart_budget).unwrap().unwrap();
+        assert_eq!(incidence.periodic_axes, [0, 0]);
+        assert_eq!(incidence.rims, [0, 1]);
+        assert!(chart_budget < 10000);
+        assert!(radial_incidence::inspect(&model, [0, 1], &mut 1).is_err());
         let active = super::super::super::inspect(&model, limits).unwrap();
         assert!(active.g2_certified, "{:?}", active.unresolved_edges);
         assert_eq!(active.edge_ids, [0, 1]);

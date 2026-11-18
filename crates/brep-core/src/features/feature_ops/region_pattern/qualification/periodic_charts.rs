@@ -3,6 +3,7 @@
 //! hole winding/containment checks remain mandatory in final qualification.
 use super::*;
 mod full;
+pub(crate) mod radial_incidence;
 use num_rational::BigRational as Q;
 use num_traits::ToPrimitive;
 fn q(x: f64) -> Q {

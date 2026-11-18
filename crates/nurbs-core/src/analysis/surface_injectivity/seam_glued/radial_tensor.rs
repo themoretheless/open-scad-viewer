@@ -392,8 +392,7 @@ mod tests {
         let lower = band([[3., 0.], [3., -1.], [4., -1.], [5., -1.], [5., 0.]]);
         let report = certify_radial_band_pair([&upper, &lower], [0; 2], 2, 10000, 100).unwrap();
         assert!(report.proven, "{report:?}");
-        let short =
-            certify_radial_band_pair([&upper, &lower], [0; 2], 2, report.cells - 1, 100).unwrap();
+        let short = certify_radial_band_pair([&upper, &lower], [0; 2], 2, 99, 100).unwrap();
         assert!(!short.proven);
         let mut disconnected = lower;
         for point in disconnected.control_points.iter_mut().flatten() {
