@@ -7665,3 +7665,44 @@ fn weighted_periodic_trim_tensor_about_point_encloses_analytic_offset_inertia() 
             .unwrap();
     assert_eq!(incomplete.bound_inertia_about_point([1., 0., 0.]).unwrap(), None);
 }
+
+#[test]
+fn assembly_first_mass_moment_preserves_signed_contributions() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_first_mass_moment_about_plane,
+    };
+    let pieces = [([1., 2.], -2.), ([3., 4.], 3.)].map(|(mass, x)| SurfaceAssemblyMassBounds {
+        mass_bounds: mass,
+        centroid_bounds: [[x; 2], [0.; 2], [0.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    for (normal, expected) in [([2., 0., 0.], [5., 10.]), ([-1., 0., 0.], [-10., -5.])] {
+        let bounds =
+            bound_assembly_first_mass_moment_about_plane(&pieces, [0.; 3], normal).unwrap();
+        assert!(bounds[0] <= expected[0] && expected[1] <= bounds[1]);
+        assert!((bounds[0] - expected[0]).abs() < 1e-12);
+        assert!((bounds[1] - expected[1]).abs() < 1e-12);
+    }
+    assert!(bound_assembly_first_mass_moment_about_plane(&pieces, [0.; 3], [0.; 3]).is_err());
+}
+
+#[test]
+fn weighted_trim_first_mass_moment_measures_oblique_balance() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2.; 2], [6.; 2]];
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &densities, 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let point = [1., 0., 0.];
+    let normal = [1., -1., 0.];
+    let [lo, hi] = report.first_mass_moment_about_plane(point, normal).unwrap().unwrap();
+    let expected = (0.34375 - 0.375 - 2.875) / 2_f64.sqrt();
+    assert!(lo <= expected && expected <= hi && hi < 0.);
+    let limited = periodic_trim_patch_set_mass_with_density(
+        &patches, &densities, 0.005, 1e-10, 2, 1_000_000,
+    )
+    .unwrap();
+    assert_eq!(limited.first_mass_moment_about_plane(point, normal).unwrap(), None);
+}

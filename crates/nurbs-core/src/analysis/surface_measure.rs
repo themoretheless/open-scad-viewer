@@ -1176,14 +1176,7 @@ pub fn bound_mass_weighted_centroid_plane_distance(
     let mut upper = Vec::with_capacity(pieces.len());
     for piece in pieces {
         positive_piece_mass(piece)?;
-        let center = centroid_intervals(piece.centroid_bounds)?;
-        let mut projection = Interval::point(0.);
-        for (i, coefficient) in axis.components.into_iter().enumerate() {
-            if coefficient != Interval::point(0.) {
-                let offset = center[i].sub(origin[i])?;
-                projection = projection.add(offset.mul(coefficient)?)?;
-            }
-        }
+        let projection = project_component_centroid(piece, origin, &axis)?;
         lower.push((projection.lo, piece.mass_bounds));
         upper.push((projection.hi, piece.mass_bounds));
     }
@@ -1191,12 +1184,51 @@ pub fn bound_mass_weighted_centroid_plane_distance(
         extremal_weighted_coordinate(&mut lower, false)?,
         extremal_weighted_coordinate(&mut upper, true)?,
     )?;
-    let norm = Interval::new(
+    let distance = projection.div(plane_normal_length(&axis)?)?;
+    Ok([distance.lo, distance.hi])
+}
+
+/// Enclose the sum of each component's mass times its signed distance
+/// from the oriented plane.
+pub fn bound_assembly_first_mass_moment_about_plane(
+    pieces: &[SurfaceAssemblyMassBounds],
+    plane_point: [f64; 3],
+    plane_normal: [f64; 3],
+) -> Result<[f64; 2]> {
+    check(!pieces.is_empty(), "Surface mass properties require at least one piece")?;
+    let axis = InertiaAxis::new(plane_normal)?;
+    let origin = centroid_intervals(plane_point.map(|value| [value; 2]))?;
+    let mut moment = Interval::point(0.);
+    for piece in pieces {
+        let weight = positive_piece_mass(piece)?;
+        let projection = project_component_centroid(piece, origin, &axis)?;
+        moment = moment.add(projection.mul(weight)?)?;
+    }
+    let signed = moment.div(plane_normal_length(&axis)?)?;
+    Ok([signed.lo, signed.hi])
+}
+
+fn project_component_centroid(
+    piece: &SurfaceAssemblyMassBounds,
+    origin: [Interval; 3],
+    axis: &InertiaAxis,
+) -> Result<Interval> {
+    let center = centroid_intervals(piece.centroid_bounds)?;
+    let mut projection = Interval::point(0.);
+    for (i, coefficient) in axis.components.into_iter().enumerate() {
+        if coefficient != Interval::point(0.) {
+            let offset = center[i].sub(origin[i])?;
+            projection = projection.add(offset.mul(coefficient)?)?;
+        }
+    }
+    Ok(projection)
+}
+
+fn plane_normal_length(axis: &InertiaAxis) -> Result<Interval> {
+    Interval::new(
         axis.norm_squared.lo.sqrt().next_down(),
         axis.norm_squared.hi.sqrt().next_up(),
-    )?;
-    let distance = projection.div(norm)?;
-    Ok([distance.lo, distance.hi])
+    )
 }
 
 fn positive_piece_mass(piece: &SurfaceAssemblyMassBounds) -> Result<Interval> {
@@ -1647,6 +1679,23 @@ impl TrimmedPatchSetDensityReport {
             self.mass_properties.map(|mass| mass.central_inertia_bounds),
             tolerance,
         )
+    }
+
+    /// Enclose the density-weighted first moment about an oriented plane.
+    pub fn first_mass_moment_about_plane(
+        &self,
+        point: [f64; 3],
+        normal: [f64; 3],
+    ) -> Result<Option<[f64; 2]>> {
+        self.mass_properties
+            .map(|_| {
+                bound_assembly_first_mass_moment_about_plane(
+                    &self.weighted_components,
+                    point,
+                    normal,
+                )
+            })
+            .transpose()
     }
 
     /// Enclose the fractional mass of each patch in input order.

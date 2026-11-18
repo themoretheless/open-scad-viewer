@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 644,
-  "unallocatedCount": 356,
+  "specifiedCount": 645,
+  "unallocatedCount": 355,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15898,6 +15898,25 @@
         "Return an opt-in radius of gyration interval using the weighted mass and fixed-axis moment.",
         "Check the radius against a weighted analytic reference and verify selected fields, required axis and missing coverage through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0645",
+      "name": "Гарантированный первый момент массы разноплотной NURBS-сборки относительно плоскости",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_first_mass_moment_about_plane",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-645-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-645-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Add signed component first mass moments about an oriented world plane before normalization.",
+        "Check signed cancellation with bounded masses, reversal of plane orientation, a weighted nested island and incomplete coverage.",
+        "WASM and application integration are separate."
       ]
     }
   ],
