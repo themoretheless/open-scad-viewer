@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0803",
+  "testedBase": "a3f264bc51ef5c2870418dbeb369a4a0de5296b2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 429,
+  "scope": [
+    "Build a nesting forest from exact span segmentation, simplicity proofs and pairwise separation.",
+    "Check immediate parents in arbitrary input order, hole depth, simplicity budget, self-crossing and coincident refusal."
+  ],
+  "logSha256": "dc76eba01d18180cd2f6313cf541342a68d0777ee321ff2412110cdc2b7cc85c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "4e5da19c3c11d3b0ef002adec6bf31f7bd2192e7821e517c02901e223fbfb641",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "edbb22916bca1b5ad145492424f04641512670f1c15d34db2da49455447112d4"
+  }
+}

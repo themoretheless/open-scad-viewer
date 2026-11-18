@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 802,
-  "unallocatedCount": 198,
+  "specifiedCount": 803,
+  "unallocatedCount": 197,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18930,6 +18930,25 @@
       "remainingQualification": [
         "Certify bidirectional nesting windings per separated contour pair under shared budgets.",
         "Check signed nested and disjoint pairs, coincident uncertainty and the shared span-pair budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0803",
+      "name": "Иерархия простых замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::certify_planar_contour_hierarchy",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-803-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-803-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build a nesting forest from exact span segmentation, simplicity proofs and pairwise separation.",
+        "Check immediate parents in arbitrary input order, hole depth, simplicity budget, self-crossing and coincident refusal.",
         "WASM and application integration are separate."
       ]
     }

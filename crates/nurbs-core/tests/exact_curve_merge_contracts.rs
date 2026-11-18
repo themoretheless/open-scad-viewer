@@ -12979,3 +12979,29 @@ fn planar_contour_nesting_reports_directional_windings_for_all_pairs() {
     assert_eq!(coincident.pairs[0].windings, [None; 2]);
     assert_eq!(coincident.winding_work_cells, 0);
 }
+
+#[test]
+fn planar_contour_hierarchy_finds_immediate_parents_and_requires_simplicity() {
+    use nurbs_core::analysis::curve_measure::certify_planar_contour_hierarchy;
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let [outer, middle, inner] = [square(4.), square(2.), square(0.5)];
+    let measure = |contours: &[&Curve], budget| certify_planar_contour_hierarchy(
+        contours, 0.02, 1e-4, budget, 4096, 512,
+    );
+    let report = measure(&[&inner, &outer, &middle], 128).unwrap();
+    assert_eq!(report.parents, [Some(2), None, Some(1)]);
+    assert_eq!(report.depths, [2, 0, 1]);
+    assert!(report.simplicity_pairs <= 128 && report.simplicity_cells <= 128);
+    assert!(measure(&[&outer, &inner], 11).is_err());
+    let mut crossing = square(1.);
+    crossing.control_points.swap(1, 2);
+    assert!(measure(&[&crossing], 128).is_err());
+    assert!(measure(&[&inner, &inner], 128).is_err());
+}

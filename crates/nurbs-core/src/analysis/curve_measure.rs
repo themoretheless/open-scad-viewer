@@ -2503,6 +2503,68 @@ pub fn analyze_planar_contour_nesting(
     Ok(report)
 }
 
+#[derive(Clone, Debug)]
+pub struct PlanarContourHierarchyReport {
+    /// Immediate containing contour in input order. Outermost contours
+    /// have no parent.
+    pub parents: Vec<Option<usize>>,
+    /// Number of containing contours. Odd depths bound holes under the
+    /// even-odd fill rule.
+    pub depths: Vec<usize>,
+    pub nesting: PlanarContourNestingReport,
+    pub simplicity_pairs: usize,
+    pub simplicity_cells: usize,
+}
+
+/// Build a nesting forest for pairwise separated simple planar contours.
+/// Exact span segmentation and the trim simplicity proof are required
+/// before winding results can establish parent relationships.
+pub fn certify_planar_contour_hierarchy(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarContourHierarchyReport> {
+    validate(distance_tolerance, max_simplicity_work)?;
+    validate_distance_contours(contours, max_simplicity_work)?;
+    let budget = max_simplicity_work / contours.len();
+    let mut simplicity_pairs = 0;
+    let mut simplicity_cells = 0;
+    for curve in contours {
+        let spans = active_spans(curve, curve.domain()).count();
+        check((2..=256).contains(&spans), "Hierarchy simplicity requires 2..256 exact span pieces")?;
+        if spans * (spans - 1) / 2 > budget {
+            return Err(resource("Hierarchy budget must cover every simplicity span pair"));
+        }
+        let pieces = crate::exact_curve_segments::inspect(curve)
+            .ok_or_else(|| resource("Contour has no certified exact span representation"))?;
+        let proof = crate::trim_simplicity::inspect(&pieces, distance_tolerance, budget, budget)?;
+        check(proof.proven_simple, "Contour simplicity is unproven")?;
+        simplicity_pairs += proof.pairs.len();
+        simplicity_cells += proof.cells;
+    }
+    let nesting = analyze_planar_contour_nesting(
+        contours, parameter_tolerance, distance_tolerance, max_winding_cells, max_distance_cells,
+    )?;
+    let mut containers = vec![Vec::new(); contours.len()];
+    for pair in &nesting.pairs {
+        let [a, b] = pair.contours;
+        match pair.windings {
+            [Some(0), Some(0)] => {}
+            [Some(1 | -1), Some(0)] => containers[a].push(b),
+            [Some(0), Some(1 | -1)] => containers[b].push(a),
+            _ => return Err(resource("Hierarchy requires separated contours with certified nesting")),
+        }
+    }
+    let depths: Vec<_> = containers.iter().map(Vec::len).collect();
+    let parents = containers.into_iter().map(|items| {
+        items.into_iter().max_by_key(|&index| depths[index])
+    }).collect();
+    Ok(PlanarContourHierarchyReport { parents, depths, nesting, simplicity_pairs, simplicity_cells })
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;
