@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 622,
-  "unallocatedCount": 378,
+  "specifiedCount": 623,
+  "unallocatedCount": 377,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15453,6 +15453,25 @@
       "remainingQualification": [
         "Enclose the Rayleigh quotient for an arbitrary nonzero axis through the tensor reference point, including the common centroid of trimmed patches.",
         "Check signed off-diagonal terms, extreme axis scales, and an oblique axis through the common centroid of a patch set with a nested island.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0623",
+      "name": "Гарантированный перенос центрального тензора инерции в заданную точку",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_inertia_about_point",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-623-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-623-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Translate a common central inertia tensor with bounded mass and centroid using the interval parallel-axis theorem.",
+        "Check interval mass and centroid, signed cross terms, a fixed-origin analytic result including a nested island, and unavailable incomplete integration.",
         "WASM and application integration are separate."
       ]
     }

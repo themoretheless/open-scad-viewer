@@ -7078,3 +7078,59 @@ fn periodic_trim_directional_inertia_includes_island_about_common_centroid() {
         periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
     assert_eq!(incomplete.bound_axis_moment([1., 1., 0.]).unwrap(), None);
 }
+
+#[test]
+fn inertia_translation_brackets_uncertain_centroid_and_preserves_symmetry() {
+    use nurbs_core::analysis::surface_measure::bound_inertia_about_point;
+
+    let central = [[2., 1., 0.], [1., 4., 0.], [0., 0., 7.]].map(|row| row.map(|x| [x; 2]));
+    let target = [1., 1., 5.];
+    let translated =
+        bound_inertia_about_point(central, [2., 3.], [[2., 3.], [-1., 0.], [5.; 2]], target)
+            .unwrap();
+    for mass in [2., 3.] {
+        for dx in [1., 2.] {
+            for dy in [-2., -1.] {
+                let shifted = [
+                    [2. + mass * dy * dy, 1. - mass * dx * dy, 0.],
+                    [1. - mass * dx * dy, 4. + mass * dx * dx, 0.],
+                    [0., 0., 7. + mass * (dx * dx + dy * dy)],
+                ];
+                for (i, row) in shifted.iter().enumerate() {
+                    for (j, &reference) in row.iter().enumerate() {
+                        let [lo, hi] = translated[i][j];
+                        assert!(lo <= reference && reference <= hi);
+                        assert_eq!(translated[i][j], translated[j][i]);
+                    }
+                }
+            }
+        }
+    }
+    let coincident = target.map(|x| [x; 2]);
+    assert_eq!(
+        bound_inertia_about_point(central, [2., 3.], coincident, target).unwrap(),
+        central
+    );
+    assert!(bound_inertia_about_point(central, [-1., 2.], coincident, target).is_err());
+    assert!(bound_inertia_about_point(central, [2., 3.], coincident, [f64::NAN; 3]).is_err());
+}
+
+#[test]
+fn periodic_trim_inertia_about_fixed_point_includes_nested_island() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let report =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
+    let translated = report.bound_inertia_about_point([0.; 3]).unwrap().unwrap();
+    let uncentered_z = 83. / 768. + 49. / 12288.;
+    assert!(translated[2][2][0] <= uncentered_z && uncentered_z <= translated[2][2][1]);
+    assert!(translated[0][1][0] <= 0. && 0. <= translated[0][1][1]);
+    assert_eq!(translated[0][1], translated[1][0]);
+
+    let incomplete =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    assert!(
+        incomplete.bound_inertia_about_point([0.; 3]).unwrap().is_none()
+    );
+}

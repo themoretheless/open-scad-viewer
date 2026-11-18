@@ -821,6 +821,55 @@ pub fn bound_directional_inertia(
     Ok([moment.lo, moment.hi])
 }
 
+/// Translate a central inertia enclosure to a fixed reference point using
+/// the parallel-axis theorem. Tensor, mass and centroid must describe the
+/// same distribution.
+pub fn bound_inertia_about_point(
+    central: [[[f64; 2]; 3]; 3],
+    mass_bounds: [f64; 2],
+    centroid_bounds: [[f64; 2]; 3],
+    point: [f64; 3],
+) -> Result<[[[f64; 2]; 3]; 3]> {
+    let matrix = symmetric_tensor_intervals(central)?;
+    let mass = Interval::new(mass_bounds[0], mass_bounds[1])?;
+    check(mass.lo >= 0., "Inertia mass bounds must be nonnegative")?;
+    check(
+        point.iter().all(|value| value.is_finite()),
+        "Inertia reference point must be finite",
+    )?;
+    let centroid = centroid_intervals(centroid_bounds)?;
+    if mass.hi == 0. || centroid_bounds == point.map(|coordinate| [coordinate; 2]) {
+        return Ok(central);
+    }
+    let mut offset = [Interval::point(0.); 3];
+    let mut squares = offset;
+    for (i, interval) in centroid.into_iter().enumerate() {
+        if interval.lo == point[i] && interval.hi == point[i] {
+            continue;
+        }
+        let delta = interval.sub(Interval::point(point[i]))?;
+        offset[i] = delta;
+        let square = delta.mul(delta)?;
+        squares[i] = square.intersect(0., square.hi)?;
+    }
+    let mut translated = central;
+    for (i, row) in matrix.iter().enumerate() {
+        let perpendicular_squared = squares[(i + 1) % 3].add(squares[(i + 2) % 3])?;
+        let correction = perpendicular_squared.mul(mass)?;
+        let diagonal = row[i].add(correction.intersect(0., correction.hi)?)?;
+        translated[i][i] = [diagonal.lo.max(row[i].lo), diagonal.hi];
+        for (j, entry) in row.iter().copied().enumerate().skip(i + 1) {
+            if offset[i] == Interval::point(0.) || offset[j] == Interval::point(0.) {
+                continue;
+            }
+            let term = entry.sub(offset[i].mul(offset[j])?.mul(mass)?)?;
+            translated[i][j] = [term.lo, term.hi];
+            translated[j][i] = translated[i][j];
+        }
+    }
+    Ok(translated)
+}
+
 fn symmetric_tensor_intervals(bounds: [[[f64; 2]; 3]; 3]) -> Result<[[Interval; 3]; 3]> {
     let mut matrix = [[Interval::point(0.); 3]; 3];
     for (i, row) in matrix.iter_mut().enumerate() {
@@ -1030,6 +1079,18 @@ impl TrimmedPatchSetCentralInertiaReport {
         self.central_inertia_bounds
             .map(|bounds| bound_directional_inertia(bounds, direction))
             .transpose()
+    }
+
+    /// Translate the common central tensor to a point in model coordinates.
+    pub fn bound_inertia_about_point(&self, point: [f64; 3]) -> Result<Option<[[[f64; 2]; 3]; 3]>> {
+        let (Some(central), Some(centroid), Some(area)) = (
+            self.central_inertia_bounds,
+            self.centroid.centroid_bounds,
+            self.centroid.measure.total.area.as_ref(),
+        ) else {
+            return Ok(None);
+        };
+        bound_inertia_about_point(central, area.bounds, centroid, point).map(Some)
     }
 
     /// Enclose the sorted principal moments of the complete patch set.

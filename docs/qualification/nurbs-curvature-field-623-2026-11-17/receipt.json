@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0623",
+  "testedBase": "b1c5fa17473ab6731d904ed2aa4d7c6e124e32a8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 217,
+  "scope": [
+    "Translate a common central inertia tensor with bounded mass and centroid using the interval parallel-axis theorem.",
+    "Check interval mass and centroid, signed cross terms, a fixed-origin analytic result including a nested island, and unavailable incomplete integration."
+  ],
+  "logSha256": "9337867bc6119247579ba90d2ac56b62a597cc69239ac0531adce8c9abf02b42",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "1b7dff255e54ecd5720608cf20a04ae603a1cceaa4b5cef09e0fae09d48edcb6",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "cb6d614bc029545c9f27f86d0326d9819dda6dc36f45e0e5723913b1ce4c7212"
+  }
+}
