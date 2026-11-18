@@ -12752,3 +12752,31 @@ fn planar_curve_fill_over_box_distinguishes_material_hole_and_crossing() {
     assert!(classify([[0.5, -0.5], [1.5, 0.5]]).is_err());
     assert!(classify([[1., -0.5], [1.5, 0.5]]).is_err());
 }
+
+#[test]
+fn planar_curve_fill_signed_distance_over_box_encloses_all_query_distances() {
+    use nurbs_core::{
+        analysis::curve_measure::measure_planar_curve_fill_signed_distance_over_box, chord_winding::FillRule,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-1., -1.], vec![1., -1.], vec![1., 1.],
+            vec![-1., 1.], vec![-1., -1.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let measure = |bounds| measure_planar_curve_fill_signed_distance_over_box(
+        &[&curve], bounds, FillRule::NonZero, 0.02, 1e-4, 512, 128,
+    );
+    let inside = measure([[-0.25, -0.25], [0.25, 0.25]]).unwrap();
+    let [lo, hi] = inside.signed_bounds;
+    assert!(lo <= -1. && -0.75 <= hi && hi < 0.);
+    assert_eq!(inside.center.fill.filled, Some(true));
+    let outside = measure([[2., -0.25], [2.5, 0.25]]).unwrap();
+    let [lo, hi] = outside.signed_bounds;
+    assert!(0. < lo && lo <= 1. && 1.5 <= hi);
+    let point = measure([[0., 0.]; 2]).unwrap();
+    assert_eq!(point.signed_bounds, point.center.signed_bounds);
+    assert!(measure([[0.9, 0.], [1.1, 0.5]]).is_err());
+}

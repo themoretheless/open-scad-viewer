@@ -2164,6 +2164,58 @@ pub fn measure_planar_curve_fill_signed_distance(
 ) -> Result<PlanarCurveSignedDistanceReport> {
     validate(distance_tolerance, max_distance_cells)?;
     let fill = classify_planar_curve_fill(contours, point, rule, parameter_tolerance, max_fill_cells)?;
+    measure_signed_contour_distance(contours, point, fill, distance_tolerance, max_distance_cells)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarCurveBoxSignedDistanceReport {
+    /// Bounds covering the signed nearest contour distance at every point
+    /// in the query box.
+    pub signed_bounds: [f64; 2],
+    pub center: PlanarCurveSignedDistanceReport,
+}
+
+/// Bound the signed nearest contour distance throughout a separated
+/// axis-aligned box. The fill is certified over the entire box. The
+/// center distance is expanded by a bound on the box's radius.
+pub fn measure_planar_curve_fill_signed_distance_over_box(
+    contours: &[&Curve],
+    bounds: [[f64; 2]; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveBoxSignedDistanceReport> {
+    validate(distance_tolerance, max_distance_cells)?;
+    let fill = classify_planar_curve_fill_over_box(contours, bounds, rule, parameter_tolerance, max_fill_cells)?;
+    let region = [Interval::new(bounds[0][0], bounds[1][0])?, Interval::new(bounds[0][1], bounds[1][1])?];
+    let point = region.map(|axis| {
+        crate::distance_bounds::midpoint(axis.lo, axis.hi).clamp(axis.lo, axis.hi)
+    });
+    let center = measure_signed_contour_distance(contours, point, fill, distance_tolerance, max_distance_cells)?;
+    let [lo, hi] = center.signed_bounds;
+    let signed_bounds = if bounds[0] == bounds[1] {
+        [lo, hi]
+    } else {
+        let (_, radius) = box_distance(&region, &point.map(Interval::point))?;
+        let expanded = Interval::new(lo, hi)?.add(Interval::new(-radius, radius)?)?;
+        match fill.filled {
+            Some(true) => [expanded.lo, expanded.hi.min(0.)],
+            Some(false) => [expanded.lo.max(0.), expanded.hi],
+            None => [expanded.lo, expanded.hi],
+        }
+    };
+    Ok(PlanarCurveBoxSignedDistanceReport { signed_bounds, center })
+}
+
+fn measure_signed_contour_distance(
+    contours: &[&Curve],
+    point: [f64; 2],
+    fill: PlanarCurveFillReport,
+    distance_tolerance: f64,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveSignedDistanceReport> {
     let point = point.map(Interval::point);
     let initial = contours.iter().enumerate().flat_map(|(index, curve)| {
         active_spans(curve, curve.domain()).map(move |span| {
