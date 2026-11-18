@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0846",
+  "testedBase": "d604909373674751f7707743bf11ef98561b14da",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 195,
+  "scope": [
+    "Order box entries and stop tracing only when the remaining entry lower bounds strictly exceed a verified crossing upper bound.",
+    "Check that a budget for one occurrence suffices when others are strictly farther, but refuses an unchecked coincident candidate."
+  ],
+  "logSha256": "d3cc653ffde835070344e22be7925405ebcfd4dbd6028c8788a66d68e07be55c",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "122eb11cd3032611db16daf593cff7c94e6a92760424641888dc1ccd93d01881",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "1b0d6f0e8ce63aa12b435d1f5bddc3732796ad00ae685d5c8286744566543896"
+  }
+}

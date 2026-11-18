@@ -1162,30 +1162,38 @@ impl StepSharedAssembly {
         max_cells: usize,
         max_domain_cells: usize,
     ) -> Result<Vec<(usize, Result<brep_core::ray_parity::Report>)>> {
-        if !tolerance_uv.is_finite() || tolerance_uv <= 0.
-            || !(1..=1_000_000).contains(&max_cells)
-            || !(1..=8_000_000).contains(&max_domain_cells)
-        {
-            return Err(refuse("STEP assembly ray requires positive tolerance and bounded work"));
-        }
-        let mut remaining_cells = max_cells;
-        let mut remaining_domain = max_domain_cells;
+        validate_ray_work(tolerance_uv, max_cells, max_domain_cells)?;
+        let mut remaining = [max_cells, max_domain_cells];
         let mut results = Vec::new();
         for (index, _) in self.ray_candidates(origin, direction)? {
-            let report = if remaining_cells == 0 || remaining_domain == 0 {
+            let report = if remaining.contains(&0) {
                 Err(refuse("STEP assembly ray work budget exhausted"))
             } else {
-                let model = self.materialize(index)?;
-                let report = brep_core::ray_parity::classify_ray(
-                    &model, origin, direction, tolerance_uv, remaining_cells, remaining_domain,
-                )?;
-                remaining_cells -= report.cells;
-                remaining_domain -= report.domain_cells;
-                Ok(report)
+                Ok(self.trace_occurrence_ray(index, origin, direction, tolerance_uv, &mut remaining)?)
             };
             results.push((index, report));
         }
         Ok(results)
+    }
+
+    fn trace_occurrence_ray(
+        &self,
+        index: usize,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        remaining: &mut [usize; 2],
+    ) -> Result<brep_core::ray_parity::Report> {
+        if remaining.contains(&0) {
+            return Err(refuse("STEP assembly ray work budget exhausted"));
+        }
+        let model = self.materialize(index)?;
+        let report = brep_core::ray_parity::classify_ray(
+            &model, origin, direction, tolerance_uv, remaining[0], remaining[1],
+        )?;
+        remaining[0] -= report.cells;
+        remaining[1] -= report.domain_cells;
+        Ok(report)
     }
 
     /// Return the first trimmed-face crossing only when its ray interval
@@ -1198,15 +1206,22 @@ impl StepSharedAssembly {
         max_cells: usize,
         max_domain_cells: usize,
     ) -> Result<Option<(usize, brep_core::ray_parity::Crossing)>> {
+        validate_ray_work(tolerance_uv, max_cells, max_domain_cells)?;
+        let mut remaining = [max_cells, max_domain_cells];
+        let mut boxes = self.ray_candidates(origin, direction)?;
+        boxes.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
         let mut candidates = Vec::new();
-        for (index, report) in self.ray_crossings(
-            origin, direction, tolerance_uv, max_cells, max_domain_cells,
-        )? {
-            let report = report?;
+        let mut earliest_upper = f64::INFINITY;
+        for (index, [entry, _]) in boxes {
+            if entry > earliest_upper {
+                break;
+            }
+            let report = self.trace_occurrence_ray(index, origin, direction, tolerance_uv, &mut remaining)?;
             if !report.unresolved.is_empty() {
                 return Err(refuse("STEP assembly ray has unresolved trimmed-face crossings"));
             }
             if let Some(crossing) = report.crossings.into_iter().next() {
+                earliest_upper = earliest_upper.min(crossing.parameter[1]);
                 candidates.push((index, crossing));
             }
         }
@@ -1226,6 +1241,16 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn validate_ray_work(tolerance_uv: f64, max_cells: usize, max_domain_cells: usize) -> Result<()> {
+    if !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        || !(1..=1_000_000).contains(&max_cells)
+        || !(1..=8_000_000).contains(&max_domain_cells)
+    {
+        return Err(refuse("STEP assembly ray requires positive tolerance and bounded work"));
+    }
+    Ok(())
 }
 
 fn ray_box_interval(

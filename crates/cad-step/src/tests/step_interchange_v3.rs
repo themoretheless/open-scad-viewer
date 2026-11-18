@@ -2875,6 +2875,30 @@ fn shared_step_ray_candidates_filter_diagonal_misses() {
 }
 
 #[test]
+fn shared_step_nearest_ray_prunes_farther_occurrences_before_budget_exhaustion() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let identity = assembly.occurrences()[0].transform;
+    let mut farther = identity;
+    farther[0][3] = 10.;
+    assembly.set_occurrence_placement(0, farther).unwrap();
+    assembly.set_occurrence_placement(1, identity).unwrap();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let near = assembly.extract_occurrences(&[1]).unwrap();
+    let baseline = near.ray_crossings(origin, direction, 1e-7, 100_000, 200_000).unwrap();
+    let budget = baseline[0].1.as_ref().unwrap();
+    let (index, crossing) = assembly.first_ray_crossing(
+        origin, direction, 1e-7, budget.cells, budget.domain_cells,
+    ).unwrap().unwrap();
+    assert_eq!(index, 1);
+    assert!(crossing.parameter[0] <= 1. && crossing.parameter[1] >= 1.);
+    assembly.add_occurrence(0, identity).unwrap();
+    assert!(assembly.first_ray_crossing(
+        origin, direction, 1e-7, budget.cells, budget.domain_cells,
+    ).is_err());
+}
+
+#[test]
 fn shared_step_first_ray_crossing_requires_unique_nearest_interval() {
     let mut assembly = shared_step_scaled_cube_pair();
     let identity = assembly.occurrences()[0].transform;

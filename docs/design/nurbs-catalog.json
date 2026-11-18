@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 845,
-  "unallocatedCount": 155,
+  "specifiedCount": 846,
+  "unallocatedCount": 154,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19772,6 +19772,25 @@
       "remainingQualification": [
         "Intersect outward-rounded slab intervals to cull diagonal ray misses before trimmed face tracing.",
         "Check diagonal rejection, forward and reverse bounds, inside origins, corner contact and zero direction refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0846",
+      "name": "Отсев дальних деталей при выборе ближайшей грани STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::first_ray_crossing",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-846-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-846-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Order box entries and stop tracing only when the remaining entry lower bounds strictly exceed a verified crossing upper bound.",
+        "Check that a budget for one occurrence suffices when others are strictly farther, but refuses an unchecked coincident candidate.",
         "WASM and application integration are separate."
       ]
     }
