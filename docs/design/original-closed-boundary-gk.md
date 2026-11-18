@@ -104,3 +104,12 @@ A failure or budget exhaustion in any stage leaves the certificate absent and
 reports the stage and unresolved entity. This pipeline starts from admitted
 original charts. An analytic loft or sweep law still needs a separate proof
 that those charts describe its full original material boundary.
+
+Source support assembly resolves the active face-local UV clock of each
+authored whole-world coedge before reconstructing a region. Exact knot
+restriction and exact traversal reversal preserve the active trace even when
+the stored pcurve extends beyond it. The assembly also checks exact face-sense
+reflection and charges these operations to its incidence allowance. A partial
+world interval remains a diagnostic window under the model contract and
+receives no whole-shell certificate. Endpoint lift metadata must match its
+authored UV traversal.
