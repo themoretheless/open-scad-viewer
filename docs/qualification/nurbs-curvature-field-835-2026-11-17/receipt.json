@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0835",
+  "testedBase": "fcc25c5f63a424c62fb76030346fa2befe10ab74",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 184,
+  "scope": [
+    "Filter pairs by conservative boxes, bound narrow-phase work by a caller-supplied candidate limit and report common material or a diagnostic for each candidate.",
+    "Check mixed overlapping, touching and distant placements, candidate budget refusal and retention of shared geometry."
+  ],
+  "logSha256": "97b099d092b9d450dd453add541e69ec7a825e80d4b21c10a70c0a6bbb136c97",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "498c25350b4fe62b342542ffccb293bac70f1fd6c580be4c195dabe5119fdf31",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "2ac6e2bb70bc79c4ded77f035c94a649eff2b409600640d2c291585a427348a9"
+  }
+}

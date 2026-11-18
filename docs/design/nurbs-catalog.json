@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 834,
-  "unallocatedCount": 166,
+  "specifiedCount": 835,
+  "unallocatedCount": 165,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19558,6 +19558,25 @@
       "remainingQualification": [
         "Materialize only the selected pair and evaluate their regularized B-rep intersection.",
         "Check closed 3 cubic millimetre prism overlap, empty regularized contact and separation, and invalid occurrence selection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0835",
+      "name": "Пакетная проверка объёмных пересечений деталей STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::check_interferences",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-835-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-835-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Filter pairs by conservative boxes, bound narrow-phase work by a caller-supplied candidate limit and report common material or a diagnostic for each candidate.",
+        "Check mixed overlapping, touching and distant placements, candidate budget refusal and retention of shared geometry.",
         "WASM and application integration are separate."
       ]
     }

@@ -904,6 +904,21 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Check overlapping occurrence boxes for common material. Each result
+    /// retains the pair indices and any diagnostic from materialization or CSG.
+    /// If there are more candidates than allowed, no CSG work is performed.
+    pub fn check_interferences(&self, max_pairs: usize) -> Result<Vec<([usize; 2], Result<bool>)>> {
+        let pairs = self.proximity_candidates(0.)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly interference candidate budget exceeded"));
+        }
+        Ok(pairs.into_iter().map(|[first, second]| {
+            let result = self.intersect_occurrences(first, second)
+                .map(|common| !common.bodies.is_empty());
+            ([first, second], result)
+        }).collect())
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
