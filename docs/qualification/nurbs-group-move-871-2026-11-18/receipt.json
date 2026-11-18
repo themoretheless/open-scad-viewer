@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0871",
+  "testedBase": "48f1f51d4f4ec5488f4b250e380a3bc879e65119",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 218,
+  "scope": [
+    "Apply a world-space rigid motion atomically to selected shared occurrences.",
+    "Validate rotation and translation after STEP round trip, reflected and scaled placement, retained prototype sharing, an unaffected occurrence and rollback on invalid selection."
+  ],
+  "logSha256": "af67e0e9f496c0593832c00b5519138cb81b692b53986f6442c6c5d762278cfe",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "bde217e3374fa348f80db5a4b8774cec5bab363f0a37be3b4fab19c2f44137d5",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "bbc264729a366b609b00c3ece674c0fa7f21380bdc4f6a3c577bc78fbc7d61d2"
+  }
+}

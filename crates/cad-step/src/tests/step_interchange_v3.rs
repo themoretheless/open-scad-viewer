@@ -4196,3 +4196,27 @@ fn closest_interface_pair_preserves_orientation_and_budget_bounds() {
     assert!(bounded.upper_bound_mm.is_none());
     assert!(scene.minimum_clearance_between(&[0], &[0], 1e-5, policy.tolerance_uv, limits, 1).is_err());
 }
+
+#[test]
+fn group_move_round_trips_scaled_shared_placements_and_rejects_partial_changes() {
+    let block = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let placed = |x, scale| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [scale, 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let mut scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(1., 1.), placed(4., -2.), placed(8., 1.)]).unwrap();
+    let motion = [[0., -1., 0., 3.], [1., 0., 0., 5.], [0., 0., 1., 0.], [0., 0., 0., 1.]];
+    assert!(scene.move_occurrences(&[0, 3], motion).is_err());
+    assert!(scene.move_occurrences(&[0, 0], motion).is_err());
+    assert!(scene.move_occurrences(&[0], [[0.; 4]; 4]).is_err());
+    assert_eq!(scene.occurrences()[0].transform, placed(1., 1.).transform);
+    scene.move_occurrences(&[1, 0], motion).unwrap();
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 1);
+    assert_eq!(back.occurrences()[2].transform, placed(8., 1.).transform);
+    for (index, y, scale) in [(0, 6., 1.), (1, 9., -2.)] {
+        let transform = back.occurrences()[index].transform;
+        assert_eq!(transform[0], [0., -1., 0., 3.]);
+        assert_eq!(transform[1], [scale, 0., 0., y]);
+    }
+}

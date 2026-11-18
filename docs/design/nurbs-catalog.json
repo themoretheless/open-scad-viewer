@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 870,
-  "unallocatedCount": 130,
+  "specifiedCount": 871,
+  "unallocatedCount": 129,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20234,6 +20234,23 @@
       ],
       "remainingQualification": [
         "Native API only. A partial search may yield only a lower bound."
+      ]
+    },
+    {
+      "id": "NURBS-0871",
+      "name": "Совместный поворот и перенос выбранных экземпляров STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::move_occurrences",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-group-move-871-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-group-move-871-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. Applied motion must be proper rigid; existing orthogonal scaling and reflection are retained."
       ]
     }
   ],

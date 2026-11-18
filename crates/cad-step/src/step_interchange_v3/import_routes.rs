@@ -771,6 +771,32 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Apply one assembly-space rigid motion to selected occurrences, atomically.
+    /// Preserve existing scales and reflections and keep local definitions shared.
+    pub fn move_occurrences(&mut self, selection: &[usize], motion: [[f64; 4]; 4]) -> Result<()> {
+        if selection.is_empty() || selection.len() > self.occurrences.len()
+            || !super::is_proper_rigid_placement(motion) {
+            return Err(refuse("STEP group move requires a nonempty selection and a finite rigid motion"));
+        }
+        let mut seen = vec![false; self.occurrences.len()];
+        let mut updates = Vec::with_capacity(selection.len());
+        for &index in selection {
+            let occurrence = self.occurrences.get(index)
+                .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+            if seen[index] { return Err(refuse("STEP group move contains a duplicate occurrence")); }
+            seen[index] = true;
+            let transform = mul(motion, occurrence.transform);
+            if super::orthogonal_placement_scales(transform).is_none() {
+                return Err(refuse("STEP group move produced an invalid placement"));
+            }
+            updates.push((index, transform));
+        }
+        for (index, transform) in updates {
+            self.occurrences[index].transform = transform;
+        }
+        Ok(())
+    }
+
     /// Replace an occurrence's local-to-assembly rigid placement in millimetres.
     pub fn set_occurrence_placement(&mut self, index: usize, transform: [[f64; 4]; 4]) -> Result<()> {
         let occurrence = self.occurrences.get_mut(index)
