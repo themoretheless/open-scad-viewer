@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 973,
-  "unallocatedCount": 27,
+  "specifiedCount": 974,
+  "unallocatedCount": 26,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22142,6 +22142,26 @@
       ],
       "remainingQualification": [
         "Counts face carrier grids per referenced definition and per placement. Excludes edge and trim curves. Counts are structural, not serialized bytes."
+      ]
+    },
+    {
+      "id": "NURBS-0974",
+      "name": "Точное сжатие выбранных обрезанных граней тела с сохранением параметризации и топологии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Упрощение геометрии",
+      "nativeApi": "brep_core::Model::compress_face_surfaces",
+      "evidence": [
+        "crates/brep-core/src/model.rs",
+        "crates/brep-core/src/model/face_compression.rs",
+        "crates/brep-core/tests/face_compression.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/contracts.log.gz",
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic tensor carriers. Only redundant knots and degrees accepted by the exact homogeneous proofs are removed. Existing face count and trimming topology are preserved."
       ]
     }
   ],

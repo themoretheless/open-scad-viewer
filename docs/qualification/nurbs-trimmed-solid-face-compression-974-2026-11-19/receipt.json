@@ -1,0 +1,16 @@
+{
+  "id": "NURBS-0974",
+  "testedBase": "b40ebe05ff21849065da0eb1214d19ec43a31b62",
+  "sourceSha256": {
+    "crates/brep-core/src/model.rs": "500203618f368ab0920de48b9f567cb58903837b6c896b766ff6fb59b4d6e789",
+    "crates/brep-core/src/model/face_compression.rs": "1d00c6c0affb933ed04ea6d67f7d839c7d560acce34093b5798b840cc50ce3ea",
+    "crates/brep-core/tests/face_compression.rs": "625807d7542623a519115461b33a3f19336a2799da3c7c4d9dc6e6e42a7a104c",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs": "c439978861b92fa3e3445e0a79ec13714aa87fe83d6fe0d218cd378548e492b8"
+  },
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --test face_compression --test spinner_bore_boolean",
+  "cases": [
+    "Two refined end caps of the bored 32-tooth herringbone sun recover complete original B-rep",
+    "Subset preserves unselected refined face and topology IDs",
+    "Insufficient proof budget returns no partial solid"
+  ]
+}
