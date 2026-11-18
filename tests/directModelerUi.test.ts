@@ -13176,15 +13176,13 @@ it('copies with a base point and pastes at a target point', async () => {
   const cube = ui.doc().bodies.find(b => b.name === 'Cube')!.id
   await ui.click('Pivot: origin')
   await ui.click('Copy with base point')
-  await flushClearance()
-  expect(ui.text(ui.all()[0])).toContain('Copied with base point 0, 0, 0 mm')
+  await vi.waitFor(() => expect(ui.text(ui.all()[0])).toContain('Copied with base point 0, 0, 0 mm'))
   ui.all()
     .find(n => n.tag === 'input' && n.props['aria-label'] === 'Paste point X')!
     .props['onUpdate:modelValue']('50')
   await flushClearance()
   await ui.click('Paste')
-  await flushClearance()
-  expect(ui.doc().bodies).toHaveLength(count + 1)
+  await vi.waitFor(() => expect(ui.doc().bodies).toHaveLength(count + 1))
   const pasted = ui.doc().bodies.at(-1)!.id
   expect(pasted).not.toBe(cube)
   expect(Math.min(...xs(pasted)) - Math.min(...xs(cube))).toBeCloseTo(50, 6)
