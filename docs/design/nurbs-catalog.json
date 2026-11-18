@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 654,
-  "unallocatedCount": 346,
+  "specifiedCount": 655,
+  "unallocatedCount": 345,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16096,6 +16096,25 @@
         "Attach certified distance bounds for a world-space probe to each available principal axis.",
         "Check analytic probe distance on the isolated axis, unresolved axes, and malformed or incompatible probe options through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0655",
+      "name": "Гарантированный угол между заданным направлением и главной осью инерции",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_axis_angle_sine",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-655-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-655-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the sine of the acute angle to a certified principal axis.",
+        "Check exact oblique alignment, extreme scale and sign invariance, a nonzero angular certificate and degenerate directions.",
+        "WASM and application integration are separate."
       ]
     }
   ],

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0655",
+  "testedBase": "61aee23170f86743a630308b18612ae1da9cff80",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 254,
+  "scope": [
+    "Enclose the sine of the acute angle to a certified principal axis.",
+    "Check exact oblique alignment, extreme scale and sign invariance, a nonzero angular certificate and degenerate directions."
+  ],
+  "logSha256": "e4c76285b31a73943c09ee45a7a084547be4484b61e3618ffff9abaaa1a6ae3f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "e084e898838e672a18c093b44f78e898b8d54f038c7b95768c977dfa2fdf3103",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "223b735abd902d55819154bfc91fed12840374790f4cea15211b9bcb5f3818d9"
+  }
+}
