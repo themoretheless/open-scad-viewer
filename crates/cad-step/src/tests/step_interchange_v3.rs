@@ -3862,7 +3862,7 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     assert_eq!(first_planet.faces.len(), planets.prototype().faces.len());
     assert_eq!(first_planet.validate().unwrap().boundary_edge_count, 0);
 
-    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec }).unwrap();
+    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec.clone() }).unwrap();
     assert!(imported.replace_definition(usize::MAX, edited.clone()).is_err());
     imported.replace_definition(planet_index, edited).unwrap();
     let exported = crate::export_step_shared_assembly(&imported).unwrap();
@@ -3885,6 +3885,42 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
         assert!((maximum_z(&reopened.definitions()[index])
             - maximum_z(&imported.definitions()[index])).abs() < 1e-10);
     }
+    // Edit the bore and regroup all placements before exporting the complete spinner.
+    let edited_sun = brep_core::gear(&brep_core::GearSpec {
+        teeth: 32, bore: 42., helix_angle_deg: -35., ..spec
+    }).unwrap();
+    let sun_definition = imported.occurrences()[0].definition;
+    imported.replace_definition(sun_definition, edited_sun.clone()).unwrap();
+    let groups: Vec<_> = (0..20).map(|index| Some(usize::from(index >= 2))).collect();
+    let grouped = crate::export_grouped_step_assembly(&imported, &["Central gears", "Planets"], &groups).unwrap();
+    let result = crate::import_step_shared_assembly(&grouped).unwrap();
+    assert_eq!(result.definitions().len(), 3);
+    assert_eq!(result.occurrences().len(), 20);
+    let sun = &result.definitions()[result.occurrences()[0].definition];
+    let bore_radius = sun.vertices.iter().map(|v| v.point[0].hypot(v.point[1])).fold(f64::INFINITY, f64::min);
+    assert!((bore_radius - 21.).abs() < 1e-8);
+    assert_eq!(sun.edges.len(), edited_sun.edges.len());
+    for (edge, original) in sun.edges.iter().zip(&edited_sun.edges) {
+        assert_eq!(edge.curve.degree, original.curve.degree);
+        assert_eq!(edge.curve.control_points.len(), original.curve.control_points.len());
+        assert_eq!(edge.curve.weights.len(), original.curve.weights.len());
+        assert_eq!(edge.curve.knots.len(), original.curve.knots.len());
+        for (a, b) in edge.curve.weights.iter().chain(&edge.curve.knots)
+            .zip(original.curve.weights.iter().chain(&original.curve.knots)) {
+            assert!((a-b).abs() < 1e-12);
+        }
+        for (a, b) in edge.curve.control_points.iter().flatten().zip(original.curve.control_points.iter().flatten()) {
+            assert!((a-b).abs() < 1e-10);
+        }
+    }
+    let shared_planet = result.occurrences()[2].definition;
+    for (actual, expected) in result.occurrences()[2..].iter().zip(imported.occurrences()[2..].iter()) {
+        assert_eq!(actual.definition, shared_planet);
+        for (a, b) in actual.transform.iter().flatten().zip(expected.transform.iter().flatten()) {
+            assert!((a-b).abs() < 1e-10);
+        }
+    }
+
 }
 
 #[test]
