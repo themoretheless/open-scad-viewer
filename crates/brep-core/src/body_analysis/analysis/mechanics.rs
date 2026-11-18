@@ -118,6 +118,55 @@ pub struct AssemblyMass {
     pub inertia: [[f64; 3]; 3],
 }
 impl AssemblyMass {
+    /// Combine the assembly with a point mass at a world-space location.
+    /// Intrinsic inertia of the added weight is assumed negligible.
+    pub fn with_point_mass(&self, position: [f64; 3], added_mass: f64) -> Result<Self> {
+        if !self.mass.is_finite()
+            || self.mass <= 0.
+            || !added_mass.is_finite()
+            || added_mass < 0.
+            || position
+                .iter()
+                .chain(&self.centroid)
+                .chain(self.inertia.iter().flatten())
+                .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Invalid assembly or point mass"));
+        }
+        if added_mass == 0. {
+            return Ok(self.clone());
+        }
+        let mass = self.mass + added_mass;
+        let delta: [f64; 3] = std::array::from_fn(|i| position[i] - self.centroid[i]);
+        let centroid =
+            std::array::from_fn(|i| (added_mass / mass).mul_add(delta[i], self.centroid[i]));
+        let reduced = self.mass.min(added_mass) * (self.mass.max(added_mass) / mass);
+        let scaled = delta.map(|v| v * reduced.sqrt());
+        let inertia = std::array::from_fn(|i| {
+            std::array::from_fn(|j| {
+                let shift = if i == j {
+                    scaled[(i + 1) % 3].powi(2) + scaled[(i + 2) % 3].powi(2)
+                } else {
+                    -scaled[i] * scaled[j]
+                };
+                self.inertia[i][j] + shift
+            })
+        });
+        if !mass.is_finite()
+            || centroid
+                .iter()
+                .chain(inertia.iter().flatten())
+                .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Non-finite point mass combination"));
+        }
+        Ok(Self {
+            mass,
+            centroid,
+            inertia,
+        })
+    }
+
     /// Mass moment in kg mm² for a world-space axis when mass is in kg
     /// and positions are in mm. Axis direction need not be normalized.
     pub fn moment_about_axis(&self, point: [f64; 3], direction: [f64; 3]) -> Result<f64> {

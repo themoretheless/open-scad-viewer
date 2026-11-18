@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 992,
-  "unallocatedCount": 8,
+  "specifiedCount": 993,
+  "unallocatedCount": 7,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22529,6 +22529,25 @@
       ],
       "remainingQualification": [
         "Two independent transverse sites on each of two planes. Nonnegative additive weights only. OCCT confirms the four fixed point masses cancel static and couple unbalance."
+      ]
+    },
+    {
+      "id": "NURBS-0993",
+      "name": "Пересчёт масс-инерционных характеристик NURBS-сборки с установленными точечными противовесами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::with_point_mass",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Point weights with negligible intrinsic inertia in world coordinates. Exact and rounded correction masses checked against OCCT aggregate mass properties and residual corrections."
       ]
     }
   ],

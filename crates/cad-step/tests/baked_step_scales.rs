@@ -406,6 +406,35 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
             assert!((actual - wanted).abs() < 1e-10);
         }
     }
+    for (rounded, expected) in [
+        (false, [[0.; 3]; 2]),
+        (true, [[0.036, -0.012, 0.], [0.012, -0.024, 0.]]),
+    ] {
+        let mut fitted = mass.clone();
+        for (plane, pair) in loads.iter().enumerate() {
+            for (index, &value) in pair.iter().enumerate() {
+                let [x, y, z] = sites[plane][index];
+                let kg = if rounded {
+                    (value * 100.).round() / 100.
+                } else {
+                    value
+                };
+                fitted = fitted
+                    .with_point_mass([5. + x, 4. + y, 12. * plane as f64 + z], kg)
+                    .unwrap();
+            }
+        }
+        let residual = fitted
+            .two_plane_balance_corrections([5., 4., 0.], [0., 0., 1.], [0., 12.])
+            .unwrap();
+        for (row, want) in residual.iter().zip(expected) {
+            for (a, b) in row.iter().zip(want) {
+                assert!((a - b).abs() < 1e-10);
+            }
+        }
+    }
+    assert_eq!(mass.with_point_mass([0.; 3], 0.).unwrap(), mass);
+    assert!(mass.with_point_mass([0.; 3], -1.).is_err());
     let oblique = [[[-6., -3., 0.], [0., -8., 0.]]; 2];
     let split = mass
         .balance_at_fixed_sites([5., 4., 0.], [0., 0., 1.], [0., 12.], oblique)

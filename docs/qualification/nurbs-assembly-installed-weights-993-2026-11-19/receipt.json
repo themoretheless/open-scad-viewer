@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0993",
+  "testedBase": "fb280d368ef507ef5dc9f1900f2b6b3f2c77356e",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "75448509ba0387bb7fabd61df1ec482ef74e84ccb3f9ca8ff74b88a350f5eec4",
+    "crates/cad-step/tests/baked_step_scales.rs": "b418b805a54f370608f52cc9c04923279b7179a37b8fe4635bb347757bbc92c9"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv993.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Installed mass kg: 0.274 remaining kg mm: [ 0.036 -0.012] [ 0.012 -0.024]"
+}
