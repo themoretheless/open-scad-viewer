@@ -6,7 +6,7 @@
   "packageManager": "npm@10.9.9",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/verify-dist.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/verify-dist.mjs && npm run test:shared-step-dist",
     "mcp": "node --import tsx --import ./src/mcp/registerRawSourceImports.mjs src/mcp/server.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.mcp.json",
@@ -75,6 +75,7 @@
     "premcp": "npm run build:geometry",
     "build:vr": "node scripts/build-vr.mjs",
     "build:geometry": "node scripts/build-vr.mjs && node scripts/build-geometry-kernels.mjs && node scripts/build-language-kernel.mjs && node scripts/build-photogrammetry.mjs && node scripts/pack-harfbuzz.mjs",
+    "test:shared-step-dist": "tsx scripts/check-shared-step-export-wasm.mts dist/wasm/geometry-kernel.wasm",
     "test:geometry": "npm run build:geometry && cargo test --locked --manifest-path crates/Cargo.toml --workspace && vitest run tests/nurbsCurve.test.ts tests/nurbsCurveDistance.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/rushGraphNurbs.test.ts tests/rushGraphNurbsMcp.test.ts tests/geometryInterop.test.ts",
     "build:photogrammetry": "node scripts/build-photogrammetry.mjs",
     "build:cuda-kernels": "node scripts/build-cuda-kernels.mjs",
