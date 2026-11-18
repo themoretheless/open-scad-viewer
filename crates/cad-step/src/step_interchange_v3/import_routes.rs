@@ -694,6 +694,22 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Place an existing definition again. Returns the new occurrence index.
+    pub fn add_occurrence(&mut self, definition: usize, transform: [[f64; 4]; 4]) -> Result<usize> {
+        if definition >= self.definitions.len() {
+            return Err(refuse("STEP assembly definition index out of range"));
+        }
+        if self.occurrences.len() >= super::MAX_OCCURRENCES {
+            return Err(refuse("STEP assembly exceeds the limit of 256 occurrences"));
+        }
+        if !super::is_proper_rigid_placement(transform) {
+            return Err(refuse("STEP assembly placement must be a finite proper rigid transform"));
+        }
+        let index = self.occurrences.len();
+        self.occurrences.push(StepAssemblyOccurrence { definition, transform });
+        Ok(index)
+    }
+
     /// Remove one placement and discard its definition when it becomes unused.
     /// Indices after the removed occurrence or definition are compacted.
     pub fn remove_occurrence(&mut self, index: usize) -> Result<()> {
