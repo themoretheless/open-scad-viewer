@@ -25,6 +25,7 @@ interface Report {
   centroidBoundsMm?: [number, number][] | null
   centralInertiaBoundsMm4?: [number, number][][] | null
   withinMomentTolerance?: boolean
+  referenceInertiaBoundsMm4?: [number, number][][] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
@@ -309,3 +310,15 @@ assert.ok(axisBounds && axisBounds[0] <= expectedAxisMoment && expectedAxisMomen
 assert.equal(axisMass.principalMomentBoundsMm4?.length, 3)
 assert.equal(call(request.maxWork, patchSetOp, { ...axisOptions, maxSurfaceCells: 2 }).axisMomentBoundsMm4, null)
 console.log('WASM ABI enclosed the patch set moment about an offset axis.')
+
+assert.equal(patchSet.referenceInertiaBoundsMm4, undefined)
+const referenceOptions = { ...axisOptions, inertiaReferencePointMm: [1, 0, 0] }
+const referenceMass = call(request.maxWork, patchSetOp, referenceOptions)
+const referenceTensor = referenceMass.referenceInertiaBoundsMm4
+assert.ok(referenceTensor)
+assert.deepEqual(referenceTensor[0][1], referenceTensor[1][0])
+assert.ok(referenceTensor[2][2][0] <= expectedAxisMoment && expectedAxisMoment <= referenceTensor[2][2][1])
+assert.deepEqual(referenceMass.axisMomentBoundsMm4, axisMass.axisMomentBoundsMm4)
+const incompleteReference = call(request.maxWork, patchSetOp, { ...referenceOptions, maxSurfaceCells: 2 })
+assert.equal(incompleteReference.referenceInertiaBoundsMm4, null)
+console.log('WASM ABI enclosed the patch set tensor about a fixed reference point.')

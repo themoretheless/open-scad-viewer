@@ -1287,6 +1287,16 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         .get("momentToleranceMm4")
         .map(|_| principal_moment_tolerance(request))
         .transpose()?;
+    let reference_point = request
+        .get("inertiaReferencePointMm")
+        .map(|_| -> Result<[f64; 3]> {
+            let point: [f64; 3] = field(request, "inertiaReferencePointMm")?;
+            if !point.iter().all(|x| x.is_finite()) {
+                return Err(input("Inertia reference point must be finite"));
+            }
+            Ok(point)
+        })
+        .transpose()?;
     let inertia_axis = request
         .get("inertiaAxis")
         .map(|axis| -> Result<_> {
@@ -1325,6 +1335,9 @@ pub fn exact_periodic_trim_patch_set_mass_request(
     if inertia_axis.is_some() {
         response["axisMomentBoundsMm4"] = value_codec::Value::Null;
     }
+    if reference_point.is_some() {
+        response["referenceInertiaBoundsMm4"] = value_codec::Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1345,6 +1358,9 @@ pub fn exact_periodic_trim_patch_set_mass_request(
     };
     if let Some((point, direction)) = inertia_axis {
         response["axisMomentBoundsMm4"] = json!(mass.bound_inertia_about_line(point, direction)?);
+    }
+    if let Some(point) = reference_point {
+        response["referenceInertiaBoundsMm4"] = json!(mass.bound_inertia_about_point(point)?);
     }
     let measure = mass.centroid.measure;
     let components = patches

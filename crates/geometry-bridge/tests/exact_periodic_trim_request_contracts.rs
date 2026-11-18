@@ -673,3 +673,51 @@ fn patch_set_mass_operation_rejects_malformed_axes_and_withholds_unproved_moment
         request["maxWork"] = json!(1);
     }
 }
+
+#[test]
+fn patch_set_mass_operation_returns_tensor_about_fixed_reference_point() {
+    let mut request = patch_set_mass_request(20_000);
+    let legacy = run(&request);
+    assert_eq!(legacy["ok"], true, "{legacy}");
+    assert!(legacy["value"].get("referenceInertiaBoundsMm4").is_none());
+    request["inertiaReferencePointMm"] = json!([1., 0., 0.]);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let tensor = &report["referenceInertiaBoundsMm4"];
+    assert_eq!(
+        report["centralInertiaBoundsMm4"],
+        legacy["value"]["centralInertiaBoundsMm4"]
+    );
+    let expected_zz = 83. / 768. + 49. / 12288. + 1.3125 * (1. - 2. * 3. / 28.);
+    let expected_xy = 1.3125 / 7.;
+    for (interval, expected) in [
+        (&tensor[2][2], expected_zz),
+        (&tensor[0][1], expected_xy),
+        (&report["axisMomentBoundsMm4"], expected_zz),
+    ] {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    assert_eq!(tensor[0][1], tensor[1][0]);
+}
+
+#[test]
+fn patch_set_mass_operation_validates_reference_point_and_withholds_unproved_tensor() {
+    let mut request = patch_set_mass_request(2);
+    for invalid in [json!(null), json!([0., 0.]), json!([0., 0., "0"])] {
+        request["inertiaReferencePointMm"] = invalid;
+        assert_eq!(run(&request)["ok"], false);
+    }
+    request["inertiaReferencePointMm"] = json!([0., 0., 0.]);
+    for status in ["workLimit", "buildRefused"] {
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["status"], status);
+        assert_eq!(report.get("referenceInertiaBoundsMm4"), Some(&Value::Null));
+        request["maxWork"] = json!(1);
+    }
+}
