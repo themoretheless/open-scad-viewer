@@ -10351,3 +10351,43 @@ fn minimum_toolpath_clearance_measures_mixed_obstacles_in_input_order() {
     obstacles.swap(1, 3);
     assert_eq!(check(&obstacles, 8192).unwrap().witness_obstacle, 3);
 }
+
+#[test]
+fn mixed_toolpath_partition_reports_separated_contacts_in_one_grid() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, DirectionalMotionStatus as Status, FirstToolpathContact,
+        SphericalObstacle, ToolpathObstacle, partition_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[5., -1.], maximum: &[7., 1.] }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 0.5 }),
+    ];
+    let check = |budget| partition_toolpath_clearance(&curve, [0., 1.], &obstacles, 0.25, 0.01, budget);
+    assert!(check(1).is_err());
+    let report = check(512).unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    let FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } =
+        report.first_contact()
+    else {
+        panic!("expected a confirmed contact");
+    };
+    assert_eq!(obstacle_index, 1);
+    assert!(lo <= 1.25 / 8. && hi >= 1.25 / 8. && hi - lo < 0.02);
+    for (parameter, status) in [(0.5, Status::Within), (0.75, Status::Exceeds)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && cell.status == status
+                && cell.gap_bounds[1][0] > 0.
+        }));
+    }
+    for pair in report.cells.windows(2) {
+        assert_eq!(pair[0].parameter_interval[1], pair[1].parameter_interval[0]);
+    }
+}

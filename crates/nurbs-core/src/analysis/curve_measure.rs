@@ -2814,7 +2814,44 @@ pub fn measure_minimum_toolpath_clearance(
     if active_spans(curve, interval).count() > max_cells {
         return Err(resource("Clearance budget must cover every initial obstacle cell"));
     }
-    let obstacles = obstacles.iter().map(|obstacle| {
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, tool_radius)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+/// Classify clearance for a spherical tool in a mixed obstacle scene.
+/// The gap arrays preserve scene order, including on unresolved cells.
+pub fn partition_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every obstacle"));
+    }
+    curve.validate()?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, tool_radius)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+fn prepare_toolpath_obstacles<'a>(
+    curve: &Curve,
+    obstacles: &[ToolpathObstacle<'a>],
+    tool_radius: f64,
+) -> Result<Vec<PreparedToolpathObstacle<'a>>> {
+    obstacles.iter().map(|obstacle| {
         Ok(match obstacle {
             ToolpathObstacle::Sphere(sphere) => PreparedToolpathObstacle::Sphere(
                 prepare_spherical_obstacles(curve, std::slice::from_ref(sphere), tool_radius)?.remove(0),
@@ -2830,11 +2867,7 @@ pub fn measure_minimum_toolpath_clearance(
                 prepare_oriented_boxes(curve, std::slice::from_ref(bounds))?.remove(0),
             ),
         })
-    }).collect::<Result<Vec<_>>>()?;
-    measure_minimum_radial_clearance(
-        curve, interval, tolerance, max_cells, obstacles.len(),
-        |point, index| obstacles[index].gap(point, tool_radius),
-    )
+    }).collect()
 }
 
 fn solid_box_gap(
