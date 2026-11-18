@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0704",
+  "testedBase": "eea580a25fe1e5c242458fa8eed49946a2f90985",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 327,
+  "scope": [
+    "Classify position, speed, acceleration and jerk on a common multi-axis subdivision.",
+    "Check independent position and motion violations, cross-axis results, budget exhaustion, and invalid derivative limits."
+  ],
+  "logSha256": "88986544b907b098beea51bca63dca76840b60f0cee712e7898c6ee5b5dbae61",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "63e8526bbb969281c2225609c6ebae5301fc785f5b69e6646dd5cabc4ff0d3d7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0597fe8f942c3c64c12788f2f659b3235d0e8330a5dabbb860d78c827b886b93"
+  }
+}

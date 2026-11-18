@@ -9640,3 +9640,47 @@ fn multi_axis_position_partition_aligns_distinct_limit_crossings() {
         assert_eq!(adjacent[0].parameter_interval[1], adjacent[1].parameter_interval[0]);
     }
 }
+
+#[test]
+fn trajectory_limit_partition_preserves_independent_position_and_motion_results() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, PositionAxis,
+        TrajectoryAxis, partition_trajectory_limits,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.5], vec![0., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut axes = [
+        TrajectoryAxis {
+            position: PositionAxis { direction: &[1., 0.], allowed: [-1., 0.75] },
+            motion: DirectionalMotionLimits { speed: 3., acceleration: 9., jerk: 1. },
+        },
+        TrajectoryAxis {
+            position: PositionAxis { direction: &[0., 1.], allowed: [-1., 2.] },
+            motion: DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. },
+        },
+    ];
+    let check = |axes: &[TrajectoryAxis<'_>], cells| {
+        partition_trajectory_limits(&curve, [0., 1.], axes, 0.01, cells)
+    };
+    let coarse = check(&axes, 2).unwrap();
+    assert_eq!(coarse.work_axis_cells, 2);
+    assert_eq!(coarse.cells[0].axes[0].position.status, Status::Undetermined);
+    assert_eq!(coarse.cells[0].axes[1].motion[0], Status::Exceeds);
+    let report = check(&axes, 256).unwrap();
+    assert!(report.work_axis_cells <= 256);
+    let first = report.cells.first().unwrap();
+    assert_eq!(first.axes[0].position.status, Status::Within);
+    assert_eq!(first.axes[0].motion[0], Status::Exceeds);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.axes[0].position.status == Status::Exceeds
+            && cell.axes[0].motion == [Status::Within; 3]
+    }));
+    axes[1].motion.jerk = -1.;
+    assert!(check(&axes, 256).is_err());
+}

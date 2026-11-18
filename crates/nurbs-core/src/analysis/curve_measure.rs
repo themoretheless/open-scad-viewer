@@ -1712,6 +1712,80 @@ pub fn partition_multi_axis_position_ranges(
     Ok(MultiAxisPositionPartition { cells, work_axis_cells: work_cells * axes.len() })
 }
 
+/// Signed position range and absolute derivative limits for one axis.
+#[derive(Clone, Copy, Debug)]
+pub struct TrajectoryAxis<'a> {
+    pub position: PositionAxis<'a>,
+    pub motion: DirectionalMotionLimits,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TrajectoryAxisResult {
+    pub position: AxisPositionBounds,
+    /// Speed, acceleration and jerk, measured in the original parameter clock.
+    pub motion: [DirectionalMotionStatus; 3],
+}
+
+#[derive(Clone, Debug)]
+pub struct TrajectoryLimitCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    pub axes: Vec<TrajectoryAxisResult>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TrajectoryLimitPartition {
+    pub cells: Vec<TrajectoryLimitCell>,
+    pub work_axis_cells: usize,
+}
+
+/// Classify position and derivative limits together. All axes share one
+/// subdivision and one enclosure of the curve per cell.
+pub fn partition_trajectory_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[TrajectoryAxis<'_>],
+    parameter_tolerance: f64,
+    max_axis_cells: usize,
+) -> Result<TrajectoryLimitPartition> {
+    validate(parameter_tolerance, max_axis_cells)?;
+    check(!axes.is_empty(), "Trajectory partition requires at least one axis")?;
+    let max_cells = max_axis_cells / axes.len();
+    if max_cells == 0 {
+        return Err(resource("Trajectory partition budget must cover every axis"));
+    }
+    curve.validate()?;
+    let axes = axes.iter().map(|axis| {
+        let allowed = axis.position.allowed;
+        let limits = [axis.motion.speed, axis.motion.acceleration, axis.motion.jerk];
+        validate_position_range(allowed)?;
+        validate_motion_partition_limits(limits)?;
+        Ok((travel_direction(curve, axis.position.direction)?, allowed, limits))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            let results = axes.iter().map(|(unit, allowed, limits)| {
+                let (position, status) = classify_position(&jets[0], unit, *allowed)?;
+                let motion = classify_motion_cell(jets, width, unit, *limits)?;
+                Ok(TrajectoryAxisResult {
+                    position: AxisPositionBounds { bounds: [position.lo, position.hi], status },
+                    motion,
+                })
+            }).collect::<Result<Vec<_>>>()?;
+            let refine = results.iter().any(|axis| {
+                axis.position.status == DirectionalMotionStatus::Undetermined
+                    || axis.motion.contains(&DirectionalMotionStatus::Undetermined)
+            });
+            Ok((results, refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, axes)| {
+        TrajectoryLimitCell { parameter_interval, span, axes }
+    }).collect();
+    Ok(TrajectoryLimitPartition { cells, work_axis_cells: work_cells * axes.len() })
+}
+
 fn validate_position_range(allowed: [f64; 2]) -> Result<()> {
     check(
         allowed.iter().all(|value| value.is_finite()) && allowed[0] <= allowed[1],

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 703,
-  "unallocatedCount": 297,
+  "specifiedCount": 704,
+  "unallocatedCount": 296,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17049,6 +17049,25 @@
       "remainingQualification": [
         "Classify multiple signed position ranges on a shared subdivision with one work budget.",
         "Check distinct crossings on a shared grid, signed direction, continuous window coverage, and initial budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0704",
+      "name": "Совместная проверка диапазонов положения и производных NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_trajectory_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-704-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-704-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify position, speed, acceleration and jerk on a common multi-axis subdivision.",
+        "Check independent position and motion violations, cross-axis results, budget exhaustion, and invalid derivative limits.",
         "WASM and application integration are separate."
       ]
     }
