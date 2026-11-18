@@ -1,0 +1,35 @@
+{
+  "sourceBase": "8ed4165a6fe3691ea3b435f4824b11895a2ef46b",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Prove strict containment of a hole trim whose original control hull overhangs the chart. Boundary tangency and one-short budget refuse. Includes shared contact and original shell regression suites.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib exact_subdivision_proves_strict_hole_containment",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s",
+      "file": "native-v2.log.gz",
+      "sha256": "99f84f62c2fcd7620c878c45d9b1bae462b48529a69897869b03fc0f0239045b"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2043 filtered out; finished in 1.18s",
+      "file": "brep.log.gz",
+      "sha256": "d9e9cec7ce8d5ce68a22bc5c2b9f89c1d41b90b47d151d3e82d04bba25a16a2f"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2003 filtered out; finished in 13.27s",
+      "file": "shell.log.gz",
+      "sha256": "7df48760659f5a2cf09c4bf9fda58797dce806a1fe307f489a38d699d46f89cc"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "3f5a55e272e62782e20366e5231d5207a106dc0a4e7c488fddd5a05738d0a9fc",
+    "count": 4918
+  }
+}

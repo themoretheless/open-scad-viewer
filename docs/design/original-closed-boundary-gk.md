@@ -233,8 +233,10 @@ chain must be contiguous and opposite. Removing them leaves one
 projected exterior to certify. The contact certificate lists every
 edge of the chain and bounds their original world-space geometry.
 
-A hole may subtract material from either natural chart when its rational
-trim control points lie strictly inside the chart rectangle. The exact
-domain audit already verifies each hole's lift, winding and nesting.
-Strict containment keeps each hole away from the shared natural boundary.
-The contact proof charges the hole control point census to its budget.
+A hole may subtract material from either natural chart when its entire
+rational trim lies strictly inside the chart rectangle. The audit checks
+the original control hull first and can use exact subdivision to prove
+containment on all smaller hulls. The exact domain audit verifies each
+hole's lift, winding and nesting. Strict containment keeps each hole
+away from the shared natural boundary. Control point checks and exact
+subdivision share the contact proof's budget.

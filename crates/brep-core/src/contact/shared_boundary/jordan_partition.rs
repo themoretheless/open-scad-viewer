@@ -7,6 +7,7 @@ use num_rational::BigRational;
 use num_traits::ToPrimitive;
 use nurbs_core::{
     curve::Curve,
+    editing::exact_knot_insertion,
     editing::exact_projective::affine_curve_clock,
     surface_injectivity::{certify_chart, certify_jordan_projection},
 };
@@ -145,19 +146,34 @@ fn interior_holes(
     for &hole in holes {
         charge(cells, limit, 1)?;
         for use_ in &model.loops[hole].coedges {
-            let curve = &use_.pcurve;
-            charge(cells, limit, curve.control_points.len())?;
-            // Positive rational weights keep the whole trace in this
-            // strict interior box. The exact-domain audit owns the lift,
-            // simple loops, orientation and nesting.
-            if !curve
-                .control_points
-                .iter()
-                .all(|p| (0..2).all(|axis| lower[axis] < p[axis] && p[axis] < upper[axis]))
-            {
-                return None;
-            }
+            interior_curve(&use_.pcurve, [lower, upper], 12, cells, limit)?;
         }
+    }
+    Some(())
+}
+
+fn interior_curve(
+    curve: &Curve,
+    [lower, upper]: [[f64; 2]; 2],
+    depth: u8,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    charge(cells, limit, curve.control_points.len())?;
+    // Positive weights place each exact restriction in its control hull.
+    let inside = |p: &[f64]| (0..2).all(|axis| lower[axis] < p[axis] && p[axis] < upper[axis]);
+    if curve.control_points.iter().all(|p| inside(p)) {
+        return Some(());
+    }
+    let remaining = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+    if depth == 0 || remaining == 0 || curve.periodic {
+        return None;
+    }
+    let [start, end] = curve.domain();
+    let report = exact_knot_insertion::split(curve, start * 0.5 + end * 0.5, remaining).ok()?;
+    charge(cells, limit, report.work_used as usize)?;
+    for piece in report.pieces? {
+        interior_curve(&piece, [lower, upper], depth - 1, cells, limit)?;
     }
     Some(())
 }
@@ -415,4 +431,29 @@ fn edge_certificate(
         polar_join: None,
         source_join: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exact_subdivision_proves_strict_hole_containment_when_the_hull_overhangs() {
+        let mut curve = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0.25, 0.25], vec![-0.125, 0.375], vec![0.25, 0.5]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let bounds = [[0., 0.], [1., 1.]];
+        let split = exact_knot_insertion::split(&curve, 0.5, 100_000).unwrap();
+        assert!(split.pieces.is_some(), "{:?}", split.refusal);
+        let mut used = 0;
+        assert!(interior_curve(&curve, bounds, 12, &mut used, 100_000).is_some());
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, used - 1).is_none());
+        // This change puts the exact midpoint on the outer boundary.
+        curve.control_points[1][0] = -0.25;
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, 100_000).is_none());
+    }
 }
