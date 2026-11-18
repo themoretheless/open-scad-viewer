@@ -181,6 +181,9 @@ Complete natural edges with clamped knots can use different active parameter
 intervals. The audit forms the exact rational union of their normalized
 along-edge knots and pulls the partition back into each authored interval.
 Each pulled-back knot must be exactly representable. The original charts
-prove continuity across their internal knots, and each pair of closed edge
-pieces proves position and geometric jets. Missing pieces, failed exact
-insertion and insufficient work withhold the whole-edge certificate.
+prove continuity across their internal knots. When their parameter
+derivatives jump, the audit can prove geometric continuity on the internal
+knot lines using the same work allowance. Each pair of closed edge pieces
+then proves position and geometric jets. A physical crease, missing pieces,
+failed exact insertion or insufficient work withholds the whole-edge
+certificate at the requested order.

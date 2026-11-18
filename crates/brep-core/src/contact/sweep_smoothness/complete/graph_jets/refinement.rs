@@ -151,6 +151,7 @@ pub(super) fn inspect(
     boundaries: [&str; 2],
     order: usize,
     work: u64,
+    chart_proof: ChartProof,
 ) -> Result<(bool, u64)> {
     let [Some(a), Some(b)] = std::array::from_fn(|i| layout(surfaces[i], boundaries[i])) else {
         return Ok((false, 0));
@@ -174,7 +175,15 @@ pub(super) fn inspect(
         let raw = surface_continuity::qualify(surface, order, 4096, work - used)?;
         used += raw.exact_work;
         if raw.certificate.is_none() {
-            return Ok((false, used));
+            if matches!(chart_proof, ChartProof::Parametric) {
+                return Ok((false, used));
+            }
+            let (joins, _, spent) =
+                super::super::interiors::geometric_joins(surface, order, 4096, work - used)?;
+            used += spent;
+            if joins.is_none() {
+                return Ok((false, used));
+            }
         }
         let (tiles, tile_work) = edge_tiles(surface, layout, &partition, work - used)?;
         used += tile_work;

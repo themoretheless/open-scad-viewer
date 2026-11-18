@@ -123,6 +123,23 @@ pub(super) fn qualify(
     seams: &[ProjectiveSeam],
     work: u64,
 ) -> Result<ProjectiveSeamCollectionReport> {
+    qualify_with_chart_proof(patches, seams, work, ChartProof::Geometric)
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum ChartProof {
+    Geometric,
+    Parametric,
+}
+
+// Interior knot proofs already operate on an extracted chart partition.
+// A further refinement there may use parametric continuity on its pieces.
+pub(super) fn qualify_with_chart_proof(
+    patches: &[Surface],
+    seams: &[ProjectiveSeam],
+    work: u64,
+    chart_proof: ChartProof,
+) -> Result<ProjectiveSeamCollectionReport> {
     let mut proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
         patches,
         seams,
@@ -143,7 +160,7 @@ pub(super) fn qualify(
             }
             inspect(surfaces, boundaries, seam.order, budget)?
         } else {
-            refinement::inspect(surfaces, boundaries, seam.order, budget)?
+            refinement::inspect(surfaces, boundaries, seam.order, budget, chart_proof)?
         };
         proof.exact_work += used;
         result.work += used;
@@ -168,6 +185,78 @@ pub(super) fn qualify(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn whole_edge_requires_geometric_gluing_at_chart_knot_crossings() {
+        // Tangential acceleration jumps at the interior knot. Each side
+        // of that knot describes the same physical saddle when bend is zero.
+        let chart = |rows: &[[f64; 3]], knots_u: Vec<f64>, knots_v: Vec<f64>, bend: f64| Surface {
+            degree_u: rows.len() - 1,
+            degree_v: 2,
+            knots_u,
+            knots_v,
+            control_points: rows
+                .iter()
+                .map(|&[x, y_scale, z_scale]| {
+                    [0., 0.5, 1., 1.5, 3.]
+                        .into_iter()
+                        .map(|y| vec![x, y_scale * y, z_scale * y + if y > 1. { bend } else { 0. }])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 5]; rows.len()],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let charts = |bend| {
+            // The right chart has y = (1 + 3u²/8)y(v), adding
+            // tangential acceleration to the second cross-edge derivative.
+            [
+                chart(
+                    &[[-2., 1., -0.25], [-1., 1., -0.125], [0., 1., 0.]],
+                    vec![0., 0., 0., 1., 1., 1.],
+                    vec![0., 0., 0., 0.5, 0.5, 1., 1., 1.],
+                    bend,
+                ),
+                chart(
+                    &[
+                        [0., 1., 0.],
+                        [1., 1., 1. / 8.],
+                        [2., 9. / 8., 1. / 4.],
+                        [3., 11. / 8., 33. / 64.],
+                    ],
+                    vec![0., 0., 0., 0., 1., 1., 1., 1.],
+                    vec![-9., -9., -9., -5., -5., -1., -1., -1.],
+                    bend,
+                ),
+            ]
+        };
+        let seam = ProjectiveSeam {
+            patches: [0, 1],
+            boundaries: ["uMax".into(), "uMin".into()],
+            order: 2,
+            normal_scale: 1.,
+        };
+        let seams = std::slice::from_ref(&seam);
+        let smooth = charts(0.);
+        let raw =
+            qualify_with_chart_proof(&smooth, seams, 1_000_000, ChartProof::Parametric).unwrap();
+        assert!(!raw.certified);
+        let full = qualify(&smooth, seams, 1_000_000).unwrap();
+        assert!(full.certified, "{}", full.seams[0].reason);
+        assert_eq!(full.certified_order, Some(2));
+        assert!(
+            !qualify(&smooth, seams, full.exact_work - 1)
+                .unwrap()
+                .certified
+        );
+
+        // The adjoining patches still describe the same graph on each
+        // subspan, but a physical crease lies across their internal knot.
+        let creased = charts(0.25);
+        let tangent = ProjectiveSeam { order: 1, ..seam };
+        assert!(!qualify(&creased, &[tangent], 1_000_000).unwrap().certified);
+    }
 
     fn cap(right: bool) -> Surface {
         Surface {
