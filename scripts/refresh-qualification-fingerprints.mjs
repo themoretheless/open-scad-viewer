@@ -12,6 +12,11 @@ export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v111-g1-v128-refreeze-review.md'
 export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v86.json'
 const RUNTIME_EVIDENCE_PATHS = [
+  'docs/qualification/runtime-provider-71294e3370d7-2026-11-18.json',
+  'docs/qualification/runtime-direct-api-71294e-2026-11-18/runtime-api-baseline.json',
+  'docs/qualification/runtime-direct-api-71294e-2026-11-18/runtime-binding.json',
+  'docs/qualification/runtime-direct-api-71294e-2026-11-18/node.json',
+  'docs/qualification/runtime-direct-api-71294e-2026-11-18/report.json',
   'src/core/currentRuntimeGeometryEvidence.ts',
   'src/core/runtimeGeometryEvidenceV13.ts',
   'src/core/runtimeGeometryEvidenceV14.ts',
@@ -37,6 +42,10 @@ const RUNTIME_EVIDENCE_PATHS = [
   'docs/qualification/runtime-direct-api-5c5f9b-2026-11-18/report.json',
 ]
 const INTEGRATION_INPUT_PATHS = [
+  'crates/brep-core/src/contact/shared_boundary/jordan_partition.rs',
+  'crates/nurbs-core/src/analysis/surface_injectivity/rational_jordan.rs',
+  'crates/nurbs-core/src/editing/exact_knot_insertion/strict_box.rs',
+  'tests/directModelerUi.test.ts',
   'crates/brep-core/src/contact/sweep_smoothness/complete/graph_jets.rs',
   'crates/brep-core/src/contact/sweep_smoothness/complete/graph_jets/refinement.rs',
   'crates/brep-core/src/contact/sweep_smoothness/complete.rs',

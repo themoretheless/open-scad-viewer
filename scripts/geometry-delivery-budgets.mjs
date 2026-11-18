@@ -136,6 +136,15 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/workerHandlerRuntime-DjZK5xjP.js':114_700}),
   }),
+  // v23 measured 19,016,254 raw WASM bytes, 6,781,272 packed geometry bytes,
+  // and 12,868,831 total asset bytes after merging main and the Jordan certificates.
+  '71294e3370d75ca6b9b1a162b2ef1b2ab9d1957b3059e60c1859ce2170f6b49a':Object.freeze({
+    version:23,geometryChunkBytes:6_791_000,totalAssetBytes:12_878_000,rawGeometryBytes:19_026_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/workerHandlerRuntime-B6B-VcZM.js':114_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

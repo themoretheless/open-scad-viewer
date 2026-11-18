@@ -4,7 +4,7 @@
   "fingerprintId": "g0-toolchain-fingerprints-v111",
   "recordedAt": "2026-11-18",
   "previousFingerprintId": "g0-toolchain-fingerprints-v110",
-  "purpose": "Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime.",
+  "purpose": "Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work.",
   "claimBoundary": {
     "includes": [
       "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
@@ -3235,8 +3235,8 @@
     {
       "id": "geometry-v3-source-653",
       "path": "crates/nurbs-core/src/analysis/curve_measure.rs",
-      "sha256": "6a53267f643064dc757cf3e28094272b412d5d2194e08013f5a8b0755f554eff",
-      "byteLength": 97535
+      "sha256": "a1f896bfdbeb6a902215d585b2c781165b2c36d8b6bfb165c9584437aac5cde5",
+      "byteLength": 217618
     },
     {
       "id": "geometry-v3-source-654",
@@ -3331,14 +3331,14 @@
     {
       "id": "geometry-v3-source-670",
       "path": "crates/nurbs-core/src/analysis/surface_injectivity.rs",
-      "sha256": "d0a3faf85455f34553ab0c7abb4cfb0625f6f73707b2118e037c7a3991cf56fb",
-      "byteLength": 37135
+      "sha256": "9e6564a410c45b0a2d1e70b42c674daaf653216bb929e384abe159ac8196a92d",
+      "byteLength": 37720
     },
     {
       "id": "geometry-v3-source-671",
       "path": "crates/nurbs-core/src/analysis/surface_linear_monotonicity.rs",
-      "sha256": "205bbb6b4cff7c23e46cdd1c93d83aa896252c49236237a4ff4b1087e6462765",
-      "byteLength": 30658
+      "sha256": "004053da6dc3d752bb49e01bc1b723ec276aaf111d17506492bb97e00cbed428",
+      "byteLength": 30680
     },
     {
       "id": "geometry-v3-source-672",
@@ -5527,8 +5527,8 @@
     {
       "id": "geometry-v3-source-1060",
       "path": "scripts/refresh-qualification-fingerprints.mjs",
-      "sha256": "436d5555d81e22d8cfd651d789c387e00826e8f46a823ed60a16b6f9c2f7d76e",
-      "byteLength": 27013
+      "sha256": "f012b0e09918c659955a604fadfb99797873449df728c082444dc94fe9d93aad",
+      "byteLength": 27646
     },
     {
       "id": "geometry-v3-source-1061",
@@ -5569,8 +5569,8 @@
     {
       "id": "geometry-v3-source-1067",
       "path": "scripts/verify-dist.mjs",
-      "sha256": "e39cdd3d82ba7b656e67393070ca2b5b925d40c64decb58a99b439e3168d290c",
-      "byteLength": 34072
+      "sha256": "d3a4e3fc22b52db7666609a2d52fe4d06d9fcd953d987f457e00c85f0cc48811",
+      "byteLength": 34179
     },
     {
       "id": "geometry-v3-source-1068",
@@ -5731,8 +5731,8 @@
     {
       "id": "geometry-v3-source-1097",
       "path": "tests/directModelerUi.test.ts",
-      "sha256": "f84c3995b46f02d096e5b4127aeee3fcc1006681cc3744fc44b71076598efa6a",
-      "byteLength": 585184
+      "sha256": "2627d4a58e79dfd0e680c41ae36c5470d71d3808255d05969f212226ed88cbfe",
+      "byteLength": 585311
     },
     {
       "id": "geometry-v3-source-1098",
@@ -6163,14 +6163,14 @@
     {
       "id": "geometry-v3-source-1167",
       "path": "docs/design/nurbs-api-map.md",
-      "sha256": "d75ea5b28bd236133b5a777c4adaef41e589bf1d37304c921bfb17dd832eb43d",
-      "byteLength": 646661
+      "sha256": "a8af145bc87c8757fb6bb12aa28cbf75b402e14b71d0f7ad2c10e482f86b2bdb",
+      "byteLength": 687101
     },
     {
       "id": "geometry-v3-source-1168",
       "path": "docs/design/nurbs-catalog.json",
-      "sha256": "0a312d5389a10ec966a55d002e00c4d7619db12ec1d7f32c85b4726fd1a0fa7d",
-      "byteLength": 949178
+      "sha256": "23aa32778b902fe7b484952d056e1f870b821caa25673dc76342ef7506ac93f8",
+      "byteLength": 1007060
     },
     {
       "id": "geometry-v3-source-1169",
@@ -6283,7 +6283,7 @@
     {
       "id": "geometry-v3-source-1186",
       "path": "architecture-baseline.json",
-      "sha256": "18276bcf8bba1cd6f55a48943e7fe0841302a8f63bea8aab4bbc6393e5081c83",
+      "sha256": "b040453c2f757d16fed2b4e4d0303a60826077870726c6d81e011399cb415501",
       "byteLength": 45272
     },
     {
@@ -13921,8 +13921,8 @@
     {
       "id": "geometry-v3-source-3374",
       "path": "src/kernel/solidBodyEdit.ts",
-      "sha256": "977e3c4b4a9a255305c11c71c90a154392679489fdfaa12d6fdbd1ceecd8f277",
-      "byteLength": 2161
+      "sha256": "99be6c23486f3f1e36ff1a21bb39f7b920cee71db9b506ff8bb41fcc2525070a",
+      "byteLength": 2045
     },
     {
       "id": "geometry-v3-source-3375",
@@ -17275,8 +17275,8 @@
     {
       "id": "geometry-v3-source-3986",
       "path": "src/features/directModeler/useAdvancedPreview.ts",
-      "sha256": "df8fd03c708a44458f264f4ca375e8121228905bbe812c190197bb4c0b878ba7",
-      "byteLength": 18199
+      "sha256": "9a832fae41e75dcd4ccfc32b0f0bce60c58dadc381ff64228bb315a743209974",
+      "byteLength": 18208
     },
     {
       "id": "geometry-v3-source-3987",
@@ -31363,8 +31363,8 @@
     {
       "id": "geometry-v3-source-6799",
       "path": "src/core/currentRuntimeGeometryEvidence.ts",
-      "sha256": "44a05754e47a24193ffaa64bf9835ba7edbbf992df6458286fa3869de95791db",
-      "byteLength": 634
+      "sha256": "67f92978f7d93005d1d0bc49c30e268f51db188a733c6fe2a265c4fa786b3001",
+      "byteLength": 645
     },
     {
       "id": "geometry-v3-source-6800",
@@ -36319,8 +36319,8 @@
     {
       "id": "geometry-v3-source-7683",
       "path": "scripts/geometry-delivery-budgets.mjs",
-      "sha256": "e7d3d4c02286c50a480384fc2182ed55d84d072fdf34eb91d04ac2fb6fba7cd9",
-      "byteLength": 9134
+      "sha256": "c01de7408d136d883cb7b082d7ab185b3d4e1dbf82ad3e398ea7e3abb7303f6d",
+      "byteLength": 9718
     },
     {
       "id": "geometry-v3-source-7684",
@@ -37015,8 +37015,8 @@
     {
       "id": "geometry-v3-source-7793",
       "path": "crates/brep-core/src/contact/shared_boundary/jordan_partition.rs",
-      "sha256": "4b8024cb61f242995baf75115515a46882d5168a5705095c11f2634fe302d6ed",
-      "byteLength": 7054
+      "sha256": "829bc256c4ddd5624efbb34650014e52b570af99b50354e4a964902bce0c7b1a",
+      "byteLength": 18873
     },
     {
       "id": "geometry-v3-source-7794",
@@ -37033,8 +37033,8 @@
     {
       "id": "geometry-v3-source-7796",
       "path": "crates/nurbs-core/src/analysis/surface_injectivity/rational_jordan.rs",
-      "sha256": "1c3f5e495d8f983e4bf80a775d0d4a935611c659c29bae0bf6f09ff44b0a7a7f",
-      "byteLength": 9783
+      "sha256": "1dbdb08e00666edd8e358b745bd6cc17351cc7dfeb46c0419c7866c75b5f23d5",
+      "byteLength": 17130
     },
     {
       "id": "geometry-v3-source-7797",
@@ -37093,8 +37093,8 @@
     {
       "id": "geometry-v3-source-7806",
       "path": "src/features/DirectModeler.svt",
-      "sha256": "66c0a426a9e7e855e6dd2ef93cc746a1814e15001397187ea50555e91336d307",
-      "byteLength": 465898
+      "sha256": "9d01a48f079ce2adecc98dc9af9512c0791d7147af7ce8c9b46acec183e58d89",
+      "byteLength": 450718
     },
     {
       "id": "geometry-v3-source-7807",
@@ -37111,8 +37111,8 @@
     {
       "id": "geometry-v3-source-7809",
       "path": "crates/brep-core/src/contact/sweep_smoothness/complete/interiors/geometric.rs",
-      "sha256": "d1cb219ea77c2d983bddd2298e428b5e08ff0911c916e05100f1b7db2ec130a0",
-      "byteLength": 15805
+      "sha256": "0f4d3d6261070b007296459bd3f761aa0ebba4cf90a0a484f2cf821bd527cffd",
+      "byteLength": 15897
     },
     {
       "id": "geometry-v3-source-7810",
@@ -37122,117 +37122,163 @@
     },
     {
       "id": "geometry-v3-source-7811",
-      "path": "crates/brep-core/src/contact/sweep_smoothness/complete/graph_jets.rs",
-      "sha256": "195160f7635436dceb03c2ec5fd64b5a1319fb658bb4c187c6125be819c2eaeb",
-      "byteLength": 11514
+      "path": "crates/nurbs-core/src/editing/exact_knot_insertion/strict_box.rs",
+      "sha256": "ea2fe4a6a0618f725a29cd141757099293bb1edb5271580bd4683c131378ae22",
+      "byteLength": 4094
     },
     {
       "id": "geometry-v3-source-7812",
+      "path": "crates/brep-core/src/contact/sweep_smoothness/complete/graph_jets.rs",
+      "sha256": "afa18134f439c6680cad1e5c8add4dba6f833dbaa57a392d50e06989fb1852b9",
+      "byteLength": 15385
+    },
+    {
+      "id": "geometry-v3-source-7813",
       "path": "crates/brep-core/src/contact/sweep_smoothness/complete/graph_jets/refinement.rs",
-      "sha256": "158757d7e39fe0296befa72babe9645635a02ba4c036db1538f29734601df725",
-      "byteLength": 5561
+      "sha256": "2ecf6ebe84fe9d05a820fc7c770c10672d6041074a8582a3edbba6684b08a217",
+      "byteLength": 8347
     }
   ],
   "knownDrift": [
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-github-workflow",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-github-harness",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-clean-fragment-selector",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-ubuntu-selector",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-653",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-670",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-671",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1058",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1060",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-1067",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1097",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1099",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1100",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1167",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1168",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-1186",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-3374",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-3986",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4401",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5425",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6799",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7683",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-7793",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
+      "bindingId": "geometry-v3-source-7796",
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7806",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7807",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7808",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7809",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the integrated Rust loft and sweep sources, Solid retry regression and rebuilt geometry runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged main, remaining Rust Jordan and seam proofs, Solid clipboard regression, and verified geometry runtime; preserve historical archives and reset clean G1 work."
     }
   ],
   "previousFingerprintSha256": "af264f92743fdfc879d957056c9e0a28bcf50ed3c56cee87da1a6cd7efc4b7ea"
