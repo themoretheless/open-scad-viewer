@@ -2802,6 +2802,30 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_round_trips_per_definition_uncertainties() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let mut gear = assembly.definitions()[0].clone();
+    gear.tolerance_mm = 2e-6;
+    assembly.replace_definition(0, gear).unwrap();
+    let mut solid = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    solid.tolerance_mm = 5e-6;
+    let placement = assembly.occurrences()[0].transform;
+    assembly.insert_solid(solid, placement).unwrap();
+    let step = crate::export_step_shared_assembly(&assembly).unwrap();
+    let back = crate::import_step_shared_assembly(&step).unwrap();
+    assert_eq!(back.definitions().len(), 2);
+    assert_eq!(back.occurrences().len(), 3);
+    for (index, tolerance) in [2e-6, 2e-6, 5e-6].into_iter().enumerate() {
+        let definition = back.occurrences()[index].definition;
+        assert_eq!(back.definitions()[definition].tolerance_mm, tolerance);
+        assert_eq!(back.materialize(index).unwrap().tolerance_mm, tolerance);
+    }
+}
+
+#[test]
 fn shared_step_extracts_only_selected_occurrences_and_definitions() {
     let spec = brep_core::GearSpec { teeth: 4, height: 10., ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 120., 240.]).unwrap();

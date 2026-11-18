@@ -274,13 +274,18 @@ fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
     }
 }
 
+struct AssemblyExport<'a> {
+    placements: &'a [(usize, [[f64; 4]; 4])],
+    definition_tolerances: &'a [f64],
+}
+
 fn export_step_direct_impl(
     model: &Model,
     ap242_composition: bool,
     allow_degenerate: bool,
     capability: &'static str,
     semantic: Option<&StepSemanticMetadata>,
-    assembly_placements: Option<&[(usize, [[f64; 4]; 4])]>,
+    assembly: Option<AssemblyExport<'_>>,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
     if let Some(semantic) = semantic {
         semantic.presentation.validate_for_model(model)?;
@@ -304,7 +309,7 @@ fn export_step_direct_impl(
         return Err(refuse("STEP /9 export requires a solid body or open shell"));
     }
     let mut w = Writer::new();
-    if assembly_placements.is_some() {
+    if assembly.is_some() {
         w.shared_points = Some(BTreeMap::new());
     }
     let mut vertex_entities = Vec::new();
@@ -553,15 +558,24 @@ fn export_step_direct_impl(
         .collect::<Vec<_>>();
     let unit = w.emit("(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.))".into());
     if ap242_composition {
-        let uncertainty = w.emit(format!(
-            "UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({}),#{unit},'distance_accuracy_value','')",
-            floats(std::slice::from_ref(&model.tolerance_mm))
-        ));
-        let context = w.emit(format!(
-            "(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#{uncertainty}))GLOBAL_UNIT_ASSIGNED_CONTEXT((#{unit}))REPRESENTATION_CONTEXT('','3D'))"
-        ));
+        let mut contexts = BTreeMap::new();
+        let mut context_for = |writer: &mut Writer, tolerance: f64| {
+            *contexts.entry(tolerance.to_bits()).or_insert_with(|| {
+                let uncertainty = writer.emit(format!(
+                    "UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({}),#{unit},'distance_accuracy_value','')",
+                    floats(&[tolerance])
+                ));
+                writer.emit(format!(
+                    "(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#{uncertainty}))GLOBAL_UNIT_ASSIGNED_CONTEXT((#{unit}))REPRESENTATION_CONTEXT('','3D'))"
+                ))
+            })
+        };
+        let context = context_for(&mut w, model.tolerance_mm);
+        let definition_context_id = assembly.as_ref().map_or(context, |assembly| {
+            context_for(&mut w, assembly.definition_tolerances[0])
+        });
         let mut items = body_entities.clone();
-        if assembly_placements.is_some() {
+        if assembly.is_some() {
             items.truncate(1);
         } else {
             items.extend(surface_models.iter().copied());
@@ -572,7 +586,7 @@ fn export_step_direct_impl(
             "ADVANCED_BREP_SHAPE_REPRESENTATION"
         };
         let representation = w.emit(format!(
-            "{representation_type}('',({}),#{context})",
+            "{representation_type}('',({}),#{definition_context_id})",
             refs_text(&items)
         ));
         let application =
@@ -607,7 +621,7 @@ fn export_step_direct_impl(
         w.emit(format!(
             "SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"
         ));
-        if let Some(placements) = assembly_placements {
+        if let Some(assembly) = assembly {
             let assembly_product = w.emit(format!(
                 "PRODUCT('planet-set','Planet gear set','',(#{product_context}))"
             ));
@@ -633,6 +647,7 @@ fn export_step_direct_impl(
                 let definition = w.emit(format!(
                     "PRODUCT_DEFINITION('design','',#{formation},#{definition_context})"
                 ));
+                let context = context_for(&mut w, assembly.definition_tolerances[index]);
                 let representation = w.emit(format!(
                     "ADVANCED_BREP_SHAPE_REPRESENTATION('',(#{body}),#{context})"
                 ));
@@ -640,7 +655,7 @@ fn export_step_direct_impl(
                 w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"));
                 definitions.push((representation, definition));
             }
-            for (index, (body, matrix)) in placements.iter().enumerate() {
+            for (index, (body, matrix)) in assembly.placements.iter().enumerate() {
                 let (representation, definition) = definitions[*body];
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
                 let axes = [0, 1, 2].map(|column| {
@@ -826,7 +841,7 @@ pub fn export_planet_gear_occurrences_step(
     let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(&placements),
+        None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[assembly.prototype().tolerance_mm] }),
     )?;
     Ok(text)
 }
@@ -853,7 +868,7 @@ pub fn export_planetary_gear_set_step(
     let mut placements = vec![(0, identity), (1, identity)];
     placements.extend(planets.placements().iter().copied().map(|matrix| (2, matrix)));
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(&placements),
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[sun.tolerance_mm, ring.tolerance_mm, planets.prototype().tolerance_mm] }),
     )?;
     Ok(text)
 }
@@ -878,8 +893,9 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
         Ok((occurrence.definition, matrix))
     }).collect::<Result<Vec<_>>>()?;
     let model = crate::compose_step_v7_occurrences(definitions)?;
+    let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(&placements),
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }),
     )?;
     Ok(text)
 }

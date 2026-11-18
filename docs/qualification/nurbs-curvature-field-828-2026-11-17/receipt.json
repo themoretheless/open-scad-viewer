@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0828",
+  "testedBase": "2f1d0d180c19905682f149911adf5380ebea5b61",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 177,
+  "scope": [
+    "Write definition-specific AP242 uncertainty contexts and reuse the same context for equal tolerances.",
+    "Check distinct tolerances for a repeated gear and a second solid, with both local definitions and materialized models retaining their own tolerances after STEP round-trip."
+  ],
+  "logSha256": "219b6e177b2eb0fe4b9b8b0241f1540bf568e9f62ecc9820e93b9245f62c3939",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "de80f9d8358c2b106dda26f973c9214ee141b2132e8b51105795181ff663b5f5",
+    "crates/cad-step/src/step_v3_export.rs": "048500ef6252c3e01ff265d5bd1883ddcaf57849f863ab9e2c2e235a1ca2ce9a",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "1a0da2049c0662ae12da78b3bb9df0a28f36015fc4b385ea76ee13c0d4303a17"
+  }
+}

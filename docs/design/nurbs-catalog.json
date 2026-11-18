@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 827,
-  "unallocatedCount": 173,
+  "specifiedCount": 828,
+  "unallocatedCount": 172,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19420,6 +19420,26 @@
       "remainingQualification": [
         "Extract an ordered selection with its original placements and only the definitions it uses.",
         "Check empty, duplicate and out-of-range selections, reversed output order, compact shared definitions and closed materialized solids after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0828",
+      "name": "Сохранение индивидуальных допусков деталей при обмене STEP-сборкой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::export_step_shared_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-828-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-828-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Write definition-specific AP242 uncertainty contexts and reuse the same context for equal tolerances.",
+        "Check distinct tolerances for a repeated gear and a second solid, with both local definitions and materialized models retaining their own tolerances after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }
