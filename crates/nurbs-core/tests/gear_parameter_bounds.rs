@@ -293,3 +293,30 @@ fn mounted_ring_backlash_uses_ring_space_minus_pinion_tooth() {
         assert!(gap(1., teeth, 20., [0.; 2], d).is_err());
     }
 }
+
+#[test]
+fn mounting_tolerance_encloses_continuous_signed_backlash() {
+    use involute::{SpurMesh, spur_backlash_over_mounting_range as range};
+    let a = 20_f64.to_radians();
+    for (mesh, teeth, sign) in [
+        (SpurMesh::External, [20, 40], 1.),
+        (SpurMesh::Internal, [20, 80], -1.),
+    ] {
+        let bounds = range(1., teeth, 20., [0.03, 0.02], mesh, [29.8, 30.3]).unwrap();
+        for i in 0..=100 {
+            let d = 29.8 + 0.5 * f64::from(i) / 100.;
+            let w = (30. * a.cos() / d).acos();
+            contains(
+                bounds,
+                d / 30. * 0.05 + sign * 2. * d * ((w.tan() - w) - (a.tan() - a)),
+            );
+        }
+        assert!(bounds[1] - bounds[0] < 0.5);
+        let fixed = range(1., teeth, 20., [0.03, 0.02], mesh, [30.; 2]).unwrap();
+        contains(fixed, 0.05);
+        assert!(fixed[1] - fixed[0] < 1e-9);
+        for invalid in [[31., 30.], [30., 40.], [0., 30.]] {
+            assert!(range(1., teeth, 20., [0.; 2], mesh, invalid).is_err());
+        }
+    }
+}

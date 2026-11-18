@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 881,
-  "unallocatedCount": 119,
+  "specifiedCount": 882,
+  "unallocatedCount": 118,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20429,6 +20429,24 @@
       ],
       "remainingQualification": [
         "Internal spur ring pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0882",
+      "name": "Границы бокового зазора во всём допуске на межосевое расстояние",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_backlash_over_mounting_range",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-882-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-882-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External and internal spur pairs. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
       ]
     }
   ],

@@ -544,3 +544,33 @@ fn spur_backlash(
         .div(count)?;
     Ok(pair(pitch.sub(widths[0].add(widths[1])?)?))
 }
+
+/// Enclose signed transverse circular backlash throughout a continuous centre
+/// distance tolerance. Both endpoint working circles must be on active flanks.
+/// Dividing backlash by distance removes the working-radius scale: the
+/// remaining variable term is +/- twice the working involute function, which
+/// increases with pressure angle. Thus the two endpoints enclose the normalized
+/// backlash even when the dimensional backlash has an interior extremum.
+pub fn spur_backlash_over_mounting_range(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    thinning: [f64; 2],
+    mesh: SpurMesh,
+    centre_distance: [f64; 2],
+) -> Result<[f64; 2]> {
+    let distance = I::new(centre_distance[0], centre_distance[1])?;
+    let evaluate = match mesh {
+        SpurMesh::External => mounted_spur_backlash_bounds,
+        SpurMesh::Internal => mounted_internal_spur_backlash_bounds,
+    };
+    let normalized = |d: f64| -> Result<I> {
+        let b = evaluate(module, teeth, pressure_degrees, thinning, d)?;
+        I::new(b[0], b[1])?.div(I::point(d))
+    };
+    let low = normalized(distance.lo)?;
+    let high = normalized(distance.hi)?;
+    Ok(pair(
+        distance.mul(I::new(low.lo.min(high.lo), low.hi.max(high.hi))?)?,
+    ))
+}

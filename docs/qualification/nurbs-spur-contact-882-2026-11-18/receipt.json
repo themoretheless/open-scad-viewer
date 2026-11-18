@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0882",
+  "testedBase": "13d93b2473fd87a6ae410fab80a5d64d8b835542",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 11,
+  "scope": [
+    "Continuous mounting tolerance using monotonic normalized backlash, checked against 101 independent samples for each mesh, point intervals and invalid ranges."
+  ],
+  "logSha256": "1df81d6e60c244f60a6f4a96ad8e5c409f7f7bae168631acd87605ff17077bb2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "eafdc16c6310fb3537615194ca17227bd2734e62f35f8a84edc9884c2b189632",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "38804662db866886ca43960ce312c8a244035c36bee75cdeae87ab5e97e53e39",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "c979c63acff491992125791bfda6cbe022974a86cfad1b47e82686ca1388150d"
+  }
+}
