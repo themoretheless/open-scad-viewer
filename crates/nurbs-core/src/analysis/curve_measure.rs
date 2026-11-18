@@ -1036,6 +1036,29 @@ pub fn locate_directional_peak_acceleration(
     })
 }
 
+/// Enclose all locations that can attain the peak absolute axial jerk.
+/// A knot is included when either one-sided derivative can attain the peak.
+pub fn locate_directional_peak_jerk(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakLocations<DirectionalPeakJerkReport>> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 3,
+    )?;
+    Ok(DirectionalPeakLocations {
+        peak: DirectionalPeakJerkReport {
+            bounds: report.peak.bounds,
+            cells: report.peak.cells,
+            stop_reason: report.peak.stop_reason,
+        },
+        parameter_intervals: report.parameter_intervals,
+    })
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],
