@@ -2286,6 +2286,24 @@ pub fn measure_planar_contour_set_disk_distance(
     })
 }
 
+/// Bound the minimum unsigned distance between a closed capsule and a
+/// set of planar NURBS contours. A capsule consists of a segment and
+/// its fixed-radius disk expansion. A zero upper bound certifies contact.
+pub fn measure_planar_contour_set_capsule_distance(
+    contours: &[&Curve],
+    capsule: CapsuleObstacle<'_>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    validate_distance_contours(contours, max_cells)?;
+    let prepared = prepare_capsules(contours[0], &[capsule], 0.)?;
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        let gap = prepared[0].gap(cell)?;
+        Interval::new(gap.lo.max(0.), gap.hi.max(0.))
+    })
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;

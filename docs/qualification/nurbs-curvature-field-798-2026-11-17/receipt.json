@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0798",
+  "testedBase": "cf46d6ce16c624617b4458007ab253250651dba9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 424,
+  "scope": [
+    "Bound capsule-to-contour distance globally, including degenerate segments and overlap.",
+    "Check nearest contour, segment projection, overlap, collapsed capsule and invalid radius."
+  ],
+  "logSha256": "43c6013ac92f8adb933276818a2b62343e57a8ef82131d57c1f68682e51c1958",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d8cbcf2ffed8ba60d26c4924a25284a6da1b5b1760d66696895d5a941ff15f6f",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0975f7b2e9cf1e9ebef8c06eaac1133cc2401fe88a16f0f9ba23f19583097994"
+  }
+}

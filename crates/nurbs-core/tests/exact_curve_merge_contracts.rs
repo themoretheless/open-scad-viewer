@@ -12834,3 +12834,36 @@ fn planar_contour_set_disk_distance_reports_nearest_loop_and_disk_overlap() {
     assert_eq!(overlap.witness_contour, 1);
     assert!(measure(-1., 128).is_err());
 }
+
+#[test]
+fn planar_contour_set_capsule_distance_checks_segment_projection_and_overlap() {
+    use nurbs_core::analysis::curve_measure::{
+        CapsuleObstacle, measure_planar_contour_set_capsule_distance,
+        measure_planar_contour_set_disk_distance,
+    };
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let contours = [&outer, &inner];
+    let measure = |endpoints, radius| measure_planar_contour_set_capsule_distance(
+        &contours, CapsuleObstacle { endpoints, radius }, 1e-5, 256,
+    );
+    let report = measure([&[1.5, -0.5], &[1.5, 0.5]], 0.25).unwrap();
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.25 && 0.25 <= hi && hi - lo <= 1e-5);
+    assert_eq!(report.witness_contour, 1);
+    let overlap = measure([&[0.5, 0.], &[1.5, 0.]], 0.1).unwrap();
+    assert_eq!(overlap.bounds, [0.; 2]);
+    let point = [1.5, 0.];
+    let collapsed = measure([&point, &point], 0.25).unwrap();
+    let disk = measure_planar_contour_set_disk_distance(&contours, point, 0.25, 1e-5, 256).unwrap();
+    assert!(collapsed.bounds[0] <= disk.bounds[1] && disk.bounds[0] <= collapsed.bounds[1]);
+    assert!(measure([&[0., 0.], &[1., 1.]], -0.1).is_err());
+}
