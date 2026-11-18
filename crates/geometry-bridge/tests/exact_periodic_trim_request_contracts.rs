@@ -1127,3 +1127,27 @@ fn patch_set_density_classifies_eccentricity_of_requested_balance_axis() {
     request["axisBalanceToleranceMm"] = json!(-1.);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_returns_static_unbalance_about_requested_axis() {
+    let mut request = patch_set_density_request(20_000);
+    request["includeStaticUnbalance"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., -2.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let unbalance = &response["value"]["staticUnbalance"];
+    let exact = [0.34375_f64 - 2.875, 0.375, 0.];
+    let vector = unbalance["vectorBoundsKgMm"].as_array().unwrap();
+    assert_eq!(vector.len(), 3);
+    for (interval, expected) in vector.iter().zip(exact) {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    let magnitude = &unbalance["magnitudeBoundsKgMm"];
+    let expected = exact[0].hypot(exact[1]);
+    assert!(magnitude[0].as_f64().unwrap() <= expected && expected <= magnitude[1].as_f64().unwrap());
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("staticUnbalance"), Some(&Value::Null));
+}

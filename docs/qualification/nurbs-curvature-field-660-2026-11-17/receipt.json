@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0660",
+  "testedBase": "9d9bd3c56dd9a2b3140e2b37ed19584481010188",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 310,
+  "scope": [
+    "Return opt-in static unbalance vector and magnitude intervals referenced to the supplied rotation axis.",
+    "Check analytic vector and magnitude, coexistence with axis balance, invalid axis requests and incomplete integration through the compiled ABI."
+  ],
+  "logSha256": "645b4672e28950ce159f2ff80fa0e26461607afa16e9a457f6216eb3d77f1876",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "98874b25d2dd152caffdb28d65b62716c2590246b95cd9e719220c7eeadc99ee",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "7ff7fa6e384d0c34bce72464a82f7255c485d474a7165643f488c6df72ddd38b",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "df4ca0529e8c7cfb1dfa582c11753bc40265533a634cf37ba1e8829da985e4c9"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

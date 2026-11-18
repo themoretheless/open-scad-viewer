@@ -38,6 +38,7 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  staticUnbalance?: { vectorBoundsKgMm: [number, number][]; magnitudeBoundsKgMm: [number, number] } | null
   axisBalance?: { eccentricityBoundsMm: [number, number]; status: string } | null
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
@@ -496,3 +497,19 @@ assert.ok(balance && balance.eccentricityBoundsMm[0] <= expectedEccentricity
 assert.equal(balance.status, 'outside')
 assert.equal(call(request.maxWork, densityOp, { ...balanceOptions, maxSurfaceCells: 2 }).axisBalance, null)
 console.log('WASM ABI classified certified eccentricity against the balance tolerance.')
+
+assert.equal(weightedAxis.staticUnbalance, undefined)
+const unbalanceOptions = { ...balanceOptions, includeStaticUnbalance: true }
+const unbalanceResult = call(request.maxWork, densityOp, unbalanceOptions)
+const unbalance = unbalanceResult.staticUnbalance
+const expectedUnbalance = [0.34375 - 2.875, 0.375, 0]
+assert.ok(unbalance)
+for (const [index, exact] of expectedUnbalance.entries()) {
+  const [lo, hi] = unbalance.vectorBoundsKgMm[index]
+  assert.ok(lo <= exact && exact <= hi)
+}
+const [unbalanceLo, unbalanceHi] = unbalance.magnitudeBoundsKgMm
+assert.ok(unbalanceLo <= Math.hypot(...expectedUnbalance) && Math.hypot(...expectedUnbalance) <= unbalanceHi)
+assert.deepEqual(unbalanceResult.axisBalance, balance)
+assert.equal(call(request.maxWork, densityOp, { ...unbalanceOptions, maxSurfaceCells: 2 }).staticUnbalance, null)
+console.log('WASM ABI enclosed the static unbalance vector and magnitude.')

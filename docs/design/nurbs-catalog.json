@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 659,
-  "unallocatedCount": 341,
+  "specifiedCount": 660,
+  "unallocatedCount": 340,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16195,6 +16195,27 @@
         "Enclose the static unbalance vector and magnitude by adding signed mass-weighted component offsets about an axis.",
         "Check signed cancellation, uncertain mass, reversal and offset of the axis, and the vector and magnitude of an analytic density-weighted nested island.",
         "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0660",
+      "name": "Вектор и величина статического дисбаланса NURBS-сборки через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "docs/qualification/nurbs-curvature-field-660-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-660-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return opt-in static unbalance vector and magnitude intervals referenced to the supplied rotation axis.",
+        "Check analytic vector and magnitude, coexistence with axis balance, invalid axis requests and incomplete integration through the compiled ABI.",
+        "Editor and production delivery qualification remain."
       ]
     }
   ],
