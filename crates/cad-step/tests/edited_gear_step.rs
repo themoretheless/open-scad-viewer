@@ -332,6 +332,15 @@ fn exchanged_spinner_cylindrical_replacement_is_a_closed_single_body() {
     let cutter = brep_core::cylinder(22., 10.).unwrap();
     let result = brep_core::boolean(&source, &cutter, "difference").unwrap();
     let (text,..) = cad_step::export_step_v9(&result).unwrap();
+    // Each coedge keeps a representation on its own carrier. Identical 2D
+    // splines may be referenced by several of these representations.
+    let curve_refs: Vec<_> = text.lines().filter_map(|line| {
+        let (_, tail) = line.split_once("=DEFINITIONAL_REPRESENTATION('',(#")?;
+        tail.split_once("),#").map(|(curve, _)| curve)
+    }).collect();
+    assert_eq!(curve_refs.len(), result.loops.iter().map(|l| l.coedges.len()).sum::<usize>());
+    let unique: std::collections::BTreeSet<_> = curve_refs.iter().collect();
+    assert!(unique.len() * 2 < curve_refs.len());
     let (read,..) = cad_step::import_step_v9(&text).unwrap();
     assert_eq!(read.bodies.len(), 1);
     assert_eq!(read.validate().unwrap().boundary_edge_count, 0);

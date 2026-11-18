@@ -361,6 +361,7 @@ fn export_step_direct_impl(
     let mut pcurves_by_edge = vec![Vec::<usize>::new(); model.edges.len()];
     let mut pcurve_surfaces_by_edge = vec![Vec::<usize>::new(); model.edges.len()];
     let mut coedge_pcurve = BTreeMap::new();
+    let mut uv_curves = BTreeMap::new();
     for (li, loop_) in model.loops.iter().enumerate() {
         for (ci, c) in loop_.coedges.iter().enumerate() {
             let face = model
@@ -368,7 +369,10 @@ fn export_step_direct_impl(
                 .iter()
                 .position(|f| f.outer == li || f.holes.contains(&li))
                 .ok_or_else(|| refuse("Loop has no owning face"))?;
-            let curve2 = if ap242_composition {
+            // Share the immutable UV spline while retaining each use's carrier and orientation.
+            let curve2 = if capability == STEP_INTERCHANGE_V9_CAPABILITY {
+                *uv_curves.entry(format!("{:?}", c.pcurve)).or_insert_with(|| emit_curve_v5(&mut w, &c.pcurve))
+            } else if ap242_composition {
                 emit_curve_v5(&mut w, &c.pcurve)
             } else {
                 emit_curve(&mut w, &c.pcurve)

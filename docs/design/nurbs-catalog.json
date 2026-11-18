@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 947,
-  "unallocatedCount": 53,
+  "specifiedCount": 948,
+  "unallocatedCount": 52,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21634,6 +21634,23 @@
       ],
       "remainingQualification": [
         "Single closed shell with selected horizontal affine end caps and separated walls. Canonical coaxial cylinder starts at the lower cap and reaches or exceeds the upper cap. Other cutter representations and general embedding remain outside this qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0948",
+      "name": "Общие определения одинаковых UV-сплайнов при экспорте STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен STEP",
+      "nativeApi": "cad_step::export_step_v9",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Direct STEP v9 B-rep writer. Each PCURVE keeps its surface and each coedge retains its own use. Curves with different stored spline data remain separate."
       ]
     }
   ],
