@@ -836,3 +836,29 @@ fn patch_set_density_reports_each_component_mass_by_contour() {
     assert_eq!(incomplete["value"]["componentMasses"], json!([]));
     assert_eq!(incomplete["value"]["massBoundsKg"], Value::Null);
 }
+
+#[test]
+fn patch_set_density_reports_fraction_intervals_by_outer_contour() {
+    let mut request = patch_set_density_request(20_000);
+    request["componentDensities"][0]["densityBoundsKgPerMm2"] = json!([6., 8.]);
+    request["componentDensities"][1]["densityBoundsKgPerMm2"] = json!([2., 3.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let components = response["value"]["componentMasses"].as_array().unwrap();
+    assert_eq!(components.len(), 2);
+    let references = [
+        (0, [2.5 / 3., 3.75 / 4.125]),
+        (2, [0.375 / 4.125, 0.5 / 3.]),
+    ];
+    for (component, (contour, [minimum, maximum])) in components.iter().zip(references) {
+        assert_eq!(component["outerContour"], contour);
+        let fraction = &component["massFractionBounds"];
+        let lo = fraction[0].as_f64().unwrap();
+        let hi = fraction[1].as_f64().unwrap();
+        assert!(0. <= lo && lo <= minimum && maximum <= hi && hi <= 1.);
+    }
+    request["maxSurfaceCells"] = json!(2);
+    let incomplete = run(&request);
+    assert_eq!(incomplete["ok"], true, "{incomplete}");
+    assert_eq!(incomplete["value"]["componentMasses"], json!([]));
+}

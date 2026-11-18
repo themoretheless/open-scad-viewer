@@ -27,7 +27,11 @@ interface Report {
   withinMomentTolerance?: boolean
   referenceInertiaBoundsMm4?: [number, number][][] | null
   axisRadiusOfGyrationBoundsMm?: [number, number] | null
-  componentMasses?: { outerContour: number; boundsKg: [number, number] }[]
+  componentMasses?: {
+    outerContour: number
+    boundsKg: [number, number]
+    massFractionBounds: [number, number] | null
+  }[]
   massBoundsKg?: [number, number] | null
   centerOfMassBoundsMm?: [number, number][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
@@ -370,3 +374,9 @@ for (const [component, expected] of [[0, 2.5], [1, 0.375]]) {
 }
 assert.deepEqual(call(request.maxWork, densityOp, { ...densityOptions, maxSurfaceCells: 2 }).componentMasses, [])
 console.log('WASM ABI enclosed the mass of each retained component.')
+
+for (const [component, expected] of [[0, 20 / 23], [1, 3 / 23]]) {
+  const fraction = densityMass.componentMasses?.[component]?.massFractionBounds
+  assert.ok(fraction && 0 <= fraction[0] && fraction[0] <= expected && expected <= fraction[1] && fraction[1] <= 1)
+}
+console.log('WASM ABI enclosed the mass fraction of each retained component.')

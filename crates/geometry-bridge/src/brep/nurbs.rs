@@ -1496,10 +1496,18 @@ pub fn exact_periodic_trim_patch_set_density_request(
         max_trim,
     )?;
     response["massBoundsKg"] = json!(report.total_mass_bounds);
+    let fractions = report.component_mass_fractions()?;
     let component_masses = patches
         .iter()
         .zip(report.component_mass_bounds)
-        .map(|(patch, bounds)| json!({"outerContour": patch.trim.contours[0], "boundsKg": bounds}))
+        .enumerate()
+        .map(|(index, (patch, bounds))| {
+            json!({
+                "outerContour": patch.trim.contours[0],
+                "boundsKg": bounds,
+                "massFractionBounds": fractions.as_ref().map(|bounds| bounds[index]),
+            })
+        })
         .collect::<Vec<_>>();
     response["componentMasses"] = json!(component_masses);
     if let Some(properties) = report.mass_properties {
