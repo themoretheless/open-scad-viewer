@@ -146,8 +146,14 @@ impl Inspection<'_> {
                 self.out.smooth_edges.push(edge);
                 continue;
             }
-            let left = carrier.clone();
-            let mut right = self.model.faces[*b].surface.clone();
+            let Some([left, mut right]) = periodic_uses::open_pair(
+                [carrier, &self.model.faces[*b].surface],
+                &mut self.out.exact_work,
+                self.limits.exact_work,
+            )? else {
+                self.out.reason = "classified-boundary-periodic-opening-unproven";
+                return Ok(None);
+            };
             if ad != bd {
                 let budget = self.limits.exact_work - self.out.exact_work;
                 let (accepted, used) = reverse_along(&mut right, bb, budget)?;

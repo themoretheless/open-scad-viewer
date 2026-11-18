@@ -525,6 +525,89 @@ mod tests {
             Some(nurbs_core::surface_g2::Orientation::Same));
         assert!(!inspect_edges_with_exact(&model, &[1], t, 1, report.exact_work - 1)
             .unwrap().within_tolerance);
+        let limits = super::super::super::Limits {
+            order: 2, exact_work: 1_000_000, agreement_work: 1_000_000, regularity_cells: 100_000,
+        };
+        let complete = super::super::super::inspect(&model, limits).unwrap();
+        let index = complete.edge_ids.iter().position(|&edge| edge == 1).unwrap();
+        assert!(complete.proof.seams[index].certified);
+        assert!(complete.parameter_work > 0);
+        assert!(!complete.extraction_complete, "the two end rims are open");
+        let zero = super::super::super::inspect(&model, super::super::super::Limits {
+            exact_work: 0, ..limits
+        }).unwrap();
+        assert!(zero.unresolved_edges.contains(&1));
+
+    }
+
+    #[test]
+    fn full_and_classified_g2_join_a_closed_torus_of_two_periodic_bands() {
+        use crate::{Body, Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};
+        use nurbs_core::{editing::{exact_periodic_surface::open_exact_periodic_surface_axis,
+            exact_surface_knot_insertion::split_tensor_surface}, surface::Axis};
+        let native = periodic_chart(true);
+        let opened = open_exact_periodic_surface_axis(&native, Axis::V, 1_000_000)
+            .unwrap().surface.unwrap();
+        let [lower, upper] = split_tensor_surface(&opened, Axis::V, 2., 1_000_000)
+            .unwrap().parts.unwrap();
+        let make_rim = |s: &Surface| Curve {
+            degree: s.degree_u, knots: s.knots_u.clone(),
+            control_points: s.control_points.iter().map(|r| r[0].clone()).collect(),
+            weights: s.weights.iter().map(|r| r[0]).collect(),
+            periodic: true,
+        };
+        let make_wrap = |s: &Surface| Curve {
+            degree: s.degree_v, knots: s.knots_v.clone(),
+            control_points: s.control_points[1].clone(), weights: s.weights[1].clone(),
+            periodic: false,
+        };
+        let edges: Vec<_> = [
+            (make_rim(&lower), [0, 0]), (make_rim(&upper), [1, 1]),
+            (make_wrap(&lower), [0, 1]), (make_wrap(&upper), [1, 0]),
+        ].into_iter().map(|(curve, vertices)| Edge { curve, vertices, degenerate: false }).collect();
+        let wire = |i: usize, lo, hi| Loop {
+            coedges: [
+                (i, false, [0., lo], [4., lo]), (i + 2, false, [4., lo], [4., hi]),
+                (1 - i, true, [4., hi], [0., hi]), (i + 2, true, [0., hi], [0., lo]),
+            ].map(|(edge, rev, a, b)| Coedge::new(edge, rev, crate::line(a.to_vec(), b.to_vec()))).to_vec(),
+        };
+        let vertices = [&lower, &upper].map(|s| {
+            let p = &s.control_points[1][0];
+            Vertex { point: [p[0], p[1], p[2]] }
+        }).to_vec();
+        let mut model = crate::Model(brep_topology::Model {
+            vertices, edges, loops: vec![wire(0, 0., 2.), wire(1, 2., 4.)],
+            faces: vec![
+                Face { surface: lower, outer: 0, holes: vec![] },
+                Face { surface: upper, outer: 1, holes: vec![] },
+            ],
+            shells: vec![Shell { closed: true, faces: vec![
+                FaceUse { face: 0, reversed: false }, FaceUse { face: 1, reversed: false },
+            ] }],
+            bodies: vec![Body { outer_shell: 0, inner_shells: vec![] }], tolerance_mm: 1e-8,
+        }, crate::TopologyIds::default());
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        let limits = super::super::super::Limits {
+            order: 2, exact_work: 16_000_000, agreement_work: 1_000_000, regularity_cells: 100_000,
+        };
+        let complete = super::super::super::inspect(&model, limits).unwrap();
+        assert!(complete.g2_certified, "unresolved={:?} seams={:?}", complete.unresolved_edges,
+            complete.proof.unresolved_seams);
+        assert_eq!(complete.edge_ids, [0, 1]);
+        assert_eq!(complete.periodic_edge_ids, [2, 3]);
+        use super::super::super::classified::{self, Class};
+        let classes = [Class::G2; 4];
+        let classified_limits = classified::Limits {
+            incidence_steps: 100, exact_work: limits.exact_work,
+            agreement_work: limits.agreement_work, regularity_cells: limits.regularity_cells,
+        };
+        let classified = classified::inspect(&model, &classes, classified_limits).unwrap();
+        assert!(classified.certified, "{}", classified.reason);
+        assert_eq!(classified.smooth_edges, [0, 1, 2, 3]);
+        assert!(!classified::inspect(&model, &classes, classified::Limits {
+            exact_work: classified.exact_work - 1, ..classified_limits
+        }).unwrap().certified);
     }
 
     #[test]

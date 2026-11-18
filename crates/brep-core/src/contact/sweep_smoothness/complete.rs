@@ -113,8 +113,14 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
             }
             continue;
         }
-        let left = model.faces[*a].surface.clone();
-        let mut right = model.faces[*b].surface.clone();
+        let Some([left, mut right]) = periodic_uses::open_pair(
+            [&model.faces[*a].surface, &model.faces[*b].surface],
+            &mut parameter_work,
+            limits.exact_work,
+        )? else {
+            unresolved_edges.push(edge);
+            continue;
+        };
         if ad != bd {
             let (reversed, work) =
                 reverse_along(&mut right, bb, limits.exact_work - parameter_work)?;

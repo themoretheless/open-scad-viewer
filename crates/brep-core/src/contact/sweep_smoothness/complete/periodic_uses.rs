@@ -122,15 +122,17 @@ pub(crate) fn selected_periodic_join(
         entry.exact = Some(exact);
     }
     let exact_work = *work - first_work;
-    let (left, used) = open(surfaces[0], limit - *work)?;
-    *work += used;
-    let Some(left) = left else { return Ok(None) };
-    let mut patches = vec![left.into_owned()];
-    if !same_face {
-        let (right, used) = open(surfaces[1], limit - *work)?;
+    let patches = if same_face {
+        let (opened, used) = open(surfaces[0], limit - *work)?;
         *work += used;
-        let Some(right) = right else { return Ok(None) };
-        let mut right = right.into_owned();
+        let Some(opened) = opened else {
+            return Ok(None);
+        };
+        vec![opened.into_owned()]
+    } else {
+        let Some([left, mut right]) = open_pair(surfaces, work, limit)? else {
+            return Ok(None);
+        };
         if ad != bd {
             let (proved, used) = super::reverse_along(&mut right, b, limit - *work)?;
             *work += used;
@@ -138,8 +140,8 @@ pub(crate) fn selected_periodic_join(
                 return Ok(None);
             }
         }
-        patches.push(right);
-    }
+        vec![left, right]
+    };
     let seams = [ProjectiveSeam {
         patches: [0, usize::from(!same_face)],
         boundaries: [a.into(), b.into()],
@@ -189,6 +191,19 @@ pub(super) fn open(surface: &Surface, budget: u64) -> Result<(Option<Cow<'_, Sur
         chart = Cow::Owned(surface);
     }
     Ok((Some(chart), work))
+}
+
+pub(super) fn open_pair(
+    surfaces: [&Surface; 2],
+    work: &mut u64,
+    limit: u64,
+) -> Result<Option<[Surface; 2]>> {
+    let (left, used) = open(surfaces[0], limit - *work)?;
+    *work += used;
+    let Some(left) = left else { return Ok(None) };
+    let (right, used) = open(surfaces[1], limit - *work)?;
+    *work += used;
+    Ok(right.map(|right| [left.into_owned(), right.into_owned()]))
 }
 
 pub(super) fn opposite_sides(surface: &Surface, a: &str, b: &str) -> bool {
