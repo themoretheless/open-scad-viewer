@@ -55,3 +55,14 @@ if (directory / "filled.step").exists():
     residual = result + volume(read(directory / "sleeve.step")) - original - volume(cylinder)
     assert abs(residual) < 0.01
     print(json.dumps(dict(filled=result, reference=reference, balance=residual)))
+
+if (directory / "bore.step").exists():
+    bore = read(directory / "bore.step")
+    cylinder = BRepPrimAPI_MakeCylinder(22., cutter_height).Shape()
+    cavity = BRepAlgoAPI_Cut(cylinder, before)
+    assert cavity.IsDone() and BRepCheck_Analyzer(bore).IsValid()
+    result, reference = volume(bore), volume(cavity.Shape())
+    assert result > 0 and abs(result - reference) < 0.01
+    residual = result + volume(read(directory / "sleeve.step")) - volume(cylinder)
+    assert abs(residual) < 0.01
+    print(json.dumps(dict(bore=result, reference=reference, balance=residual)))

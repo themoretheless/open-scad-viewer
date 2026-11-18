@@ -79,7 +79,8 @@ pub(super) fn boolean_impl(
             Err(error) if proof_refusal(error.code) => {
                 use crate::body_analysis::through_wall_cylinder::{Region, try_boolean};
                 let cylindrical = match operation {
-                    "difference" => try_boolean(a, b, Region::Outside),
+                    "difference" => try_boolean(a, b, Region::Outside)
+                        .or_else(|| try_boolean(b, a, Region::Bore)),
                     "union" => try_boolean(a, b, Region::Filled)
                         .or_else(|| try_boolean(b, a, Region::Filled)),
                     "intersection" => try_boolean(a, b, Region::Inside)

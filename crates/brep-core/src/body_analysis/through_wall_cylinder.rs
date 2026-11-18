@@ -16,10 +16,11 @@ pub(crate) enum Region {
     Inside,
     Outside,
     Filled,
+    Bore,
 }
 
 fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64, region: Region) -> Result<Model> {
-    let keep_exterior = region != Region::Inside;
+    let keep_exterior = matches!(region, Region::Outside | Region::Filled);
     let refuse = || {
         Error::new(
             "BREP_CYLINDRICAL_WALL_UNPROVED",
@@ -103,6 +104,24 @@ fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64
             removed_faces.insert(index);
             removed_loops.extend(std::iter::once(f.outer).chain(f.holes.iter().copied()));
         }
+    }
+    if region == Region::Bore {
+        let mut stage = source.clone();
+        for cap in caps {
+            let face = &source.faces[cap];
+            let hole = face.holes[0];
+            stage.loops[hole] = plane::pullback::stored_affine_loop(
+                source, hole, &face.surface, true, source.tolerance_mm,
+            )?;
+            stage.faces[cap].outer = hole;
+            stage.faces[cap].holes.clear();
+        }
+        for usage in &mut stage.shells[0].faces {
+            if wall.contains(&usage.face) {
+                usage.reversed = !usage.reversed;
+            }
+        }
+        return compact_region(source, &stage, &removed_faces, &removed_loops);
     }
     if region == Region::Filled {
         let mut stage = source.clone();
@@ -211,7 +230,7 @@ pub(crate) fn try_boolean(stock: &Model, tool: &Model, region: Region) -> Option
         }
     }
     let caps = [caps[0]?, caps[1]?];
-    if carrier_top > stock_height || (region == Region::Filled && height != stock_height) {
+    if carrier_top > stock_height || (matches!(region, Region::Filled | Region::Bore) && height != stock_height) {
         return None;
     }
     let canonical = crate::cylinder(radius, height).ok()?;
