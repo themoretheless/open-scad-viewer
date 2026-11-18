@@ -77,3 +77,75 @@ fn material_body_owns_all_original_face_ranks_with_one_budget() {
     }
     assert_eq!(body.definition().unwrap(), original);
 }
+
+#[test]
+fn embedded_original_body_owns_a_geometric_face_clock_change() {
+    let mut model = crate::cuboid([0.; 3], [2.; 3]).unwrap();
+    let source = &mut model.faces[0].surface;
+    let first = source.control_points[0][0].clone();
+    let u = source.control_points[1][0].clone();
+    let v = source.control_points[0][1].clone();
+    // Greville controls reproduce the original affine map on every side.
+    // One interior control changes only the speed along the first axis.
+    source.control_points = [0., 0.25, 0.75, 1.]
+        .into_iter()
+        .enumerate()
+        .map(|(i, t)| {
+            [0., 0.5, 1.]
+                .into_iter()
+                .enumerate()
+                .map(|(j, r)| {
+                    let t = t + if i == 1 && j == 1 { 1. / 16. } else { 0. };
+                    (0..3)
+                        .map(|k| first[k] + t * (u[k] - first[k]) + r * (v[k] - first[k]))
+                        .collect()
+                })
+                .collect()
+        })
+        .collect();
+    source.degree_u = 2;
+    source.degree_v = 2;
+    source.knots_u = vec![0., 0., 0., 0.5, 1., 1., 1.];
+    source.knots_v = vec![0., 0., 0., 1., 1., 1.];
+    source.weights = vec![vec![1.; 3]; 4];
+    let assembly = prepare_projective(&model, limits()).unwrap();
+    let shell = assembly.shell.expect(assembly.reason);
+    let geometry =
+        crate::source_shell_geometry::qualify_projective(shell, geometry_limits()).unwrap();
+    let geometry = geometry.geometry.expect(geometry.reason);
+    let volume = source_volume::qualify(
+        geometry,
+        source_volume::Limits {
+            axis: 0,
+            origin: 0.,
+            absolute_error: 0.01,
+            tolerance_uv: 1e-8,
+            cells: 10000,
+            spans: 100000,
+            domain_cells: 100000,
+        },
+    )
+    .unwrap();
+    let body = volume.body.expect(volume.reason);
+    let before = body.definition().unwrap();
+    let rank = regularity::qualify(&body, 100000).unwrap();
+    let rank = rank.certificate.expect(rank.reason);
+    let smooth = regularity::smooth::qualify(&rank, 2, 100000, 1000000).unwrap();
+    let (cells, work) = (smooth.cells, smooth.exact_work);
+    let faces = smooth
+        .certificate
+        .expect("The clock changes speed on one planar face");
+    let surface = body.geometry().shell().faces()[0][0].edges()[0].surface();
+    assert!(std::ptr::eq(faces.faces()[0].source(), surface));
+    assert_eq!(faces.faces()[0].geometric_joins(), 1);
+    assert!(
+        nurbs_core::analysis::surface_continuity::qualify(surface, 2, 100000, 1000000)
+            .unwrap()
+            .certificate
+            .is_none()
+    );
+    let short = regularity::smooth::qualify(&rank, 2, cells, work - 1).unwrap();
+    assert!(short.certificate.is_none());
+    assert!(short.exact_work < work);
+    assert_eq!(body.definition().unwrap(), before);
+}

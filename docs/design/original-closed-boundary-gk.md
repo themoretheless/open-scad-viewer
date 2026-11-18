@@ -144,3 +144,24 @@ of a periodic chart. It opens the original tensor chart exactly and checks
 each wrap at the order assigned to that edge. The same coefficient budget
 covers exact opening, clock alignment and seam jets. The existing material
 and topology proofs remain independent of this edge audit.
+
+The regular original material body also accepts exact geometric continuity
+inside its source faces. The face proof compares raw one-sided jets first.
+If that comparison gives no certificate, a bounded exact partition can
+prove geometric joins across the original knot lines and periodic wraps.
+The proof retains the original face and shares the same cell and exact-work
+allowances with the raw comparison. Source embedding, differential rank,
+edge classifications and physical vertex neighborhoods remain independently
+qualified.
+
+Source edge ownership can bind a multispan chart when the canonical world
+edge and original pcurve agree for the entire normalized traversal. This
+route checks chart inclusion and exact equality. It covers both directions
+of the full affine traversal. General projective and partial traversals
+continue to require their own exact composition evidence.
+
+An embedded regular face can use exact planarity when all source controls
+have the same coordinate on one axis and its internal knot multiplicities
+ensure position continuity. Its physical interior neighborhoods lie in that
+plane even when raw second derivatives jump. This case consumes work for
+the control and knot census and does not classify the face's boundary edges.

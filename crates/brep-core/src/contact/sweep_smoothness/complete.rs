@@ -26,7 +26,7 @@ pub struct Report {
     pub exact_work: u64,
     pub parameter_work: u64,
 }
-mod interiors;
+pub(crate) mod interiors;
 mod periodic_uses;
 pub use interiors::InteriorReport;
 mod reversal;
