@@ -13541,7 +13541,7 @@ fn closest_spatial_pair_skips_diagonal_and_keeps_coincident_members() {
 }
 
 #[test]
-fn clearance_inspection_retains_violations_safe_and_unresolved_pairs() {
+fn clearance_inspection_retains_violations_safe_and_exact_boundary_pairs() {
     use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
     let triangle = |z| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],
         control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
@@ -13550,8 +13550,21 @@ fn clearance_inspection_retains_violations_safe_and_unresolved_pairs() {
     let set=[&a,&b,&c];
     let r=inspect(&set,2.,1e-7,27).unwrap();
     assert_eq!(r.iter().map(|p|(p.contours,p.decision)).collect::<Vec<_>>(),
-        [([0,1],BelowMinimum),([0,2],MeetsMinimum),([1,2],Unresolved)]);
+        [([0,1],BelowMinimum),([0,2],MeetsMinimum),([1,2],MeetsMinimum)]);
     assert_eq!(r.iter().map(|p|p.cells).sum::<usize>(),27);
     assert!(inspect(&set,2.,1e-7,26).is_err());
     assert!(inspect(&set,f64::NAN,1e-7,27).is_err());
+}
+
+#[test]
+fn exact_box_clearance_resolves_diagonal_equality_without_snapping() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let tri = |p:Vec<Vec<f64>>| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],control_points:p,
+        weights:vec![1.,2.,3.,1.],periodic:false};
+    let a=tri(vec![vec![0.,0.,0.],vec![-1.,0.,0.],vec![0.,-1.,0.],vec![0.,0.,0.]]);
+    let b=tri(vec![vec![3.,4.,0.],vec![4.,4.,0.],vec![3.,5.,0.],vec![3.,4.,0.]]);
+    let exact=inspect(&[&a,&b],5.,1e-7,1000).unwrap();
+    assert_eq!(exact[0].decision,MeetsMinimum);
+    assert_eq!(exact[0].bounds[0],5.);
+    assert_ne!(inspect(&[&a,&b],5_f64.next_up(),1e-7,1000).unwrap()[0].decision,MeetsMinimum);
 }

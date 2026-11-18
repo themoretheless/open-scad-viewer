@@ -2479,6 +2479,31 @@ pub struct ContourClearanceCheck {
     pub decision: ClearanceDecision,
 }
 
+// Positive-weight rational curves stay inside the box of their Cartesian
+// poles. Compare squared box separation in exact binary64-input arithmetic
+// so that an inclusive clearance can be certified even at equality.
+fn spatial_control_box(curve: &Curve) -> [[f64;2];3] {
+    std::array::from_fn(|axis| curve.control_points.iter().fold(
+        [f64::INFINITY, f64::NEG_INFINITY],
+        |[lo,hi], pole| [lo.min(pole[axis]), hi.max(pole[axis])],
+    ))
+}
+
+fn box_proves_clearance(a: &[[f64;2];3], b: &[[f64;2];3], minimum: f64) -> bool {
+    use num_rational::BigRational;
+    // Validation of the curves and threshold guarantees finite inputs.
+    let exact = |x| BigRational::from_float(x).expect("validated finite coordinate");
+    let mut squared = exact(0.);
+    for (left,right) in a.iter().zip(b) {
+        let gap = if left[1] < right[0] {exact(right[0])-exact(left[1])}
+            else if right[1] < left[0] {exact(left[0])-exact(right[1])}
+            else {continue};
+        squared += &gap * &gap;
+    }
+    let threshold = exact(minimum);
+    squared >= &threshold * &threshold
+}
+
 /// Check every distinct pair, in index order, against an inclusive minimum.
 /// An interval straddling the threshold is explicitly unresolved.
 pub fn inspect_spatial_contour_clearances(
@@ -2488,9 +2513,13 @@ pub fn inspect_spatial_contour_clearances(
     check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative minimum clearance")?;
     check(contours.len() >= 2, "Clearance inspection requires at least two contours")?;
     validate_spatial_distance_set(contours,max_cells)?;
+    let boxes: Vec<_> = contours.iter().map(|c| spatial_control_box(c)).collect();
     let mut checks = Vec::new();
     visit_contour_pairs(contours,contours,tolerance,max_cells,true,|indices,distance| {
-        let [lo,hi] = distance.distance_interval_mm;
+        let [mut lo,hi] = distance.distance_interval_mm;
+        if lo < minimum && minimum <= hi && box_proves_clearance(&boxes[indices[0]], &boxes[indices[1]], minimum) {
+            lo = minimum;
+        }
         let decision = if lo >= minimum { ClearanceDecision::MeetsMinimum }
             else if hi < minimum { ClearanceDecision::BelowMinimum }
             else { ClearanceDecision::Unresolved };
