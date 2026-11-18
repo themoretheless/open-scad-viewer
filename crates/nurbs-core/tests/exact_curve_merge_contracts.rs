@@ -9169,3 +9169,54 @@ fn multi_axis_motion_partition_budget_covers_all_axes_and_spans() {
     assert_eq!(report.cells[1].axis_statuses[0][0], Status::Within);
     assert_eq!(report.cells[1].axis_statuses[1][0], Status::Exceeds);
 }
+
+#[test]
+fn motion_knot_jump_uses_original_span_widths_and_signed_axis() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        classify_directional_motion_knot_jumps,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 3., 3.],
+        control_points: [0., 1., 7.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 1.5, acceleration: 1., jerk: 1. };
+    let check = |domain, budget| {
+        classify_directional_motion_knot_jumps(&curve, domain, &[-2., 0.], limits, budget)
+    };
+    assert!(check([0.75, 2.], 0).is_err());
+    assert!(check([1., 2.], 0).unwrap().is_empty());
+    let jumps = check([0.75, 2.], 1).unwrap();
+    assert_eq!(jumps.len(), 1);
+    assert_eq!(jumps[0].parameter, 1.);
+    assert_eq!(jumps[0].statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    let [lo, hi] = jumps[0].jump_bounds[0];
+    assert!(lo <= -2. && -2. <= hi && hi - lo < 1e-8);
+}
+
+#[test]
+fn motion_knot_jump_proves_c2_continuity_and_detects_cubic_jerk_jump() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        classify_directional_motion_knot_jumps,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 2., 2., 2., 2.],
+        control_points: [0., 0., 0., 0., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0., acceleration: 0., jerk: 5. };
+    let report = classify_directional_motion_knot_jumps(
+        &curve, [0., 2.], &[1., 0.], limits, 1,
+    )
+    .unwrap();
+    assert_eq!(report[0].jump_bounds[..2], [[0.; 2]; 2]);
+    assert_eq!(report[0].statuses, [Status::Within, Status::Within, Status::Exceeds]);
+    let [lo, hi] = report[0].jump_bounds[2];
+    assert!(lo <= 6. && 6. <= hi && hi - lo < 1e-8);
+}

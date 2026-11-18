@@ -1569,15 +1569,19 @@ fn classify_motion_cell<const N: usize>(
         for _ in 0..=index {
             derivative = derivative.div(width)?;
         }
-        *status = if derivative.lo.abs().max(derivative.hi.abs()) <= limit {
-            DirectionalMotionStatus::Within
-        } else if derivative.lo.max(-derivative.hi) > limit {
-            DirectionalMotionStatus::Exceeds
-        } else {
-            DirectionalMotionStatus::Undetermined
-        };
+        *status = classify_absolute_limit(derivative, limit);
     }
     Ok(statuses)
+}
+
+fn classify_absolute_limit(value: Interval, limit: f64) -> DirectionalMotionStatus {
+    if value.lo.abs().max(value.hi.abs()) <= limit {
+        DirectionalMotionStatus::Within
+    } else if value.lo.max(-value.hi) > limit {
+        DirectionalMotionStatus::Exceeds
+    } else {
+        DirectionalMotionStatus::Undetermined
+    }
 }
 
 fn partition_motion_cells<T>(
@@ -1624,6 +1628,68 @@ fn partition_motion_cells<T>(
     }
     cells.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
     Ok((cells, work_cells))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalMotionKnotJump {
+    pub parameter: f64,
+    /// Signed right-minus-left jumps in speed, acceleration and jerk.
+    pub jump_bounds: [[f64; 2]; 3],
+    /// Classifications against the inclusive absolute jump limits.
+    pub statuses: [DirectionalMotionStatus; 3],
+}
+
+/// Classify jumps of the signed axial derivatives at every interior knot
+/// of the requested window. Derivatives guaranteed continuous by the knot
+/// multiplicity have exact zero jump. Other jumps use one-sided enclosures.
+pub fn classify_directional_motion_knot_jumps(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    max_knots: usize,
+) -> Result<Vec<DirectionalMotionKnotJump>> {
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    check(max_knots <= 100_000, "Motion jump budget must be at most 100000 knots")?;
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    let unit = travel_direction(curve, direction)?;
+    let mut jumps = Vec::new();
+    let mut spans = active_spans(curve, interval);
+    let mut left = spans.next().ok_or_else(|| crate::numeric_err("Missing motion span coverage"))?;
+    for right in spans {
+        if jumps.len() == max_knots {
+            return Err(resource("Interior motion knots exceed the work budget"));
+        }
+        let continuity = curve.degree.saturating_sub(right - left);
+        let parameter = curve.knots[right];
+        let mut jump_bounds = [[0.; 2]; 3];
+        let mut statuses = [DirectionalMotionStatus::Within; 3];
+        if continuity < 3 {
+            let left_domain = [curve.knots[left], parameter];
+            let right_domain = [parameter, curve.knots[right + 1]];
+            let left_jets = curve_jets::endpoint(curve, left, left_domain, true)?;
+            let right_jets = curve_jets::endpoint(curve, right, right_domain, false)?;
+            let left_width = Interval::point(parameter).sub(Interval::point(left_domain[0]))?;
+            let right_width = Interval::point(right_domain[1]).sub(Interval::point(parameter))?;
+            for (index, limit) in limits.into_iter().enumerate().skip(continuity) {
+                let order = index + 1;
+                let mut before = project_jet(&left_jets[order], &unit)?;
+                let mut after = project_jet(&right_jets[order], &unit)?;
+                for _ in 0..order {
+                    before = before.div(left_width)?;
+                    after = after.div(right_width)?;
+                }
+                let jump = after.sub(before)?;
+                jump_bounds[index] = [jump.lo, jump.hi];
+                statuses[index] = classify_absolute_limit(jump, limit);
+            }
+        }
+        jumps.push(DirectionalMotionKnotJump { parameter, jump_bounds, statuses });
+        left = right;
+    }
+    Ok(jumps)
 }
 
 fn measure_directional_derivative_peak(

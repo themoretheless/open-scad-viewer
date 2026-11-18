@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 693,
-  "unallocatedCount": 307,
+  "specifiedCount": 694,
+  "unallocatedCount": 306,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16859,6 +16859,25 @@
       "remainingQualification": [
         "Classify speed, acceleration and jerk on one subdivision for every axis under a shared axis-cell budget.",
         "Check two axes with distinct crossing times, a normalized negative direction, one-sided limit changes, and shared work reservation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0694",
+      "name": "Сертифицированная проверка скачков производных в узлах NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_knot_jumps",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-694-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-694-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed axial derivative jumps at interior knots and classify against absolute limits.",
+        "Check a negative speed jump across unequal source spans, exact C2 zero jumps, cubic jerk discontinuity, window boundaries and the knot work limit.",
         "WASM and application integration are separate."
       ]
     }
