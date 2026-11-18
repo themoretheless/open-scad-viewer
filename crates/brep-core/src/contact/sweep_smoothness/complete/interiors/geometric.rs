@@ -593,6 +593,29 @@ mod tests {
         }).unwrap();
         assert!(zero.unresolved_edges.contains(&1));
 
+        let range = model.edges[1].curve.domain();
+        model.loops[1].coedges[0] = Coedge::new(1, false, Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 4., 4.],
+            control_points: vec![vec![-1., 0.25], vec![0., 0.], vec![4., 0.], vec![5., 0.25]],
+            weights: vec![1.; 4],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0, 0], [1, 0]],
+        }).unwrap();
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        let active = inspect_edges_with_exact(&model, &[1], t, 1, 1_000_000).unwrap();
+        assert!(active.complete && active.within_tolerance);
+        assert_eq!(active.seams[0].faces, [0, 1]);
+        assert_eq!(active.seams[0].inspection.as_ref().unwrap().orientation,
+            Some(nurbs_core::surface_g2::Orientation::Same));
+        let complete = super::super::super::inspect(&model, limits).unwrap();
+        let index = complete.edge_ids.iter().position(|&edge| edge == 1).unwrap();
+        assert!(complete.proof.seams[index].certified);
+        assert!(!complete.extraction_complete);
     }
 
     #[test]
