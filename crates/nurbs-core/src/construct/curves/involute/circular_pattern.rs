@@ -48,3 +48,37 @@ impl CircularProfilePattern {
         Ok((curve, error))
     }
 }
+
+impl CircularProfilePattern {
+    /// Compress ordered, equally spaced segments with the same rational basis.
+    /// The bound compares each stored input with the actual reconstructed curve
+    /// at the same parameter. A zero tolerance requires identical pole coordinates.
+    pub fn compress(segments: &[Curve], tolerance: f64) -> Result<Option<(Self, f64)>> {
+        check(tolerance.is_finite() && tolerance >= 0., "Expected finite nonnegative tolerance")?;
+        check((1..=65536).contains(&segments.len()), "Expected 1..65536 profile segments")?;
+        let seed = &segments[0];
+        let pattern = Self::new(seed.clone(), segments.len())?;
+        for segment in segments { segment.validate()?; }
+        let mut maximum: f64 = 0.;
+        for (index, segment) in segments.iter().enumerate().skip(1) {
+            if segment.degree != seed.degree || segment.knots != seed.knots ||
+                segment.weights != seed.weights || segment.periodic != seed.periodic ||
+                segment.control_points[0].len() != seed.control_points[0].len() {
+                return Ok(None);
+            }
+            let (reconstructed, _) = pattern.instance(index)?;
+            for (a, b) in reconstructed.control_points.iter().zip(&segment.control_points) {
+                let mut displacement = I::point(0.);
+                for (&x, &y) in a.iter().zip(b) {
+                    if x == y { continue; }
+                    if tolerance == 0. { return Ok(None); }
+                    let delta = I::point(x).sub(I::point(y))?;
+                    displacement = displacement.add(I::point(delta.lo.abs().max(delta.hi.abs())))?;
+                }
+                maximum = maximum.max(displacement.hi);
+                if maximum > tolerance { return Ok(None); }
+            }
+        }
+        Ok(Some((pattern, maximum)))
+    }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0918",
+  "testedBase": "44bdb7b32d876fc0e69876703f6430b9d831fd40",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 479,
+  "scope": [
+    "Seven nonquadrantal instances reconstruct exactly. Perturbed Z pole requires positive tolerance. Reject incompatible weights and empty input."
+  ],
+  "logSha256": "8757e691ef3962287351ea26d8f4a8d15b432e643e0d180e4774a79715ee5852",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "77dfa5aea863524da72ca17b4ba9de64df2131bdf651cc5196cd876e3bf08804",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "d87e179c8b39c9af98593308b3c6d66ae62aa86891476656910c5d0d9dd3962c",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "43bc9b9def9ca0141ebcb606fcf619eb63b134edc2b8f0012880b8870f342422"
+  }
+}

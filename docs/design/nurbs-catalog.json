@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 917,
-  "unallocatedCount": 83,
+  "specifiedCount": 918,
+  "unallocatedCount": 82,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21063,6 +21063,24 @@
       ],
       "remainingQualification": [
         "One seed segment rotated about the origin Z axis. Error bound covers rotation of the stored curve. Seed fitting and B-rep stitching are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0918",
+      "name": "Свёртка развёрнутых круговых NURBS-сегментов с контролем погрешности восстановления",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::CircularProfilePattern::compress",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered equally spaced copies about Z with a shared rational basis. Conservative pole bound controls actual reconstruction at equal parameters. No automatic face ordering or B-rep rewriting."
       ]
     }
   ],

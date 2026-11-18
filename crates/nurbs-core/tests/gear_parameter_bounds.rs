@@ -478,3 +478,23 @@ fn circular_profile_instances_preserve_rational_shape_with_bounded_rotation_erro
     assert!(pattern.instance(32).is_err());
     assert!(CircularProfilePattern::new(seed,0).is_err());
 }
+
+#[test]
+fn compresses_ordered_profile_segments_and_bounds_actual_reconstruction() {
+    use involute::CircularProfilePattern as Pattern;
+    let seed = nurbs_core::curve::Curve::from_polyline(vec![vec![3.,1.,0.], vec![4.,2.,0.]]).unwrap();
+    let original = Pattern::new(seed, 7).unwrap();
+    let mut segments: Vec<_> = (0..7).map(|i| original.instance(i).unwrap().0).collect();
+    let (compressed, error) = Pattern::compress(&segments,0.).unwrap().unwrap();
+    assert_eq!(error,0.);
+    for (i,segment) in segments.iter().enumerate() {
+        assert_eq!(compressed.instance(i).unwrap().0.control_points,segment.control_points);
+    }
+    segments[3].control_points[1][2] = 0.125;
+    assert!(Pattern::compress(&segments,0.).unwrap().is_none());
+    let (_, error) = Pattern::compress(&segments,0.126).unwrap().unwrap();
+    assert!((0.125..=0.126).contains(&error));
+    segments[3].weights[1] = 2.;
+    assert!(Pattern::compress(&segments,1.).unwrap().is_none());
+    assert!(Pattern::compress(&[],0.).is_err());
+}
