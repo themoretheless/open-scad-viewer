@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0781",
+  "testedBase": "0e35e9142280a3d5d27b6eadf106eb832690c8fc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 407,
+  "scope": [
+    "Enclose the minimum uniform time dilation meeting planar angular derivative limits.",
+    "Check analytic factor two and withheld feasibility at a zero orientation."
+  ],
+  "logSha256": "406d849b0fcbee67aff79fbf9a947c8abb5b9bd0d1ad8219e14f7049d3165c92",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "df04cdfac54ea655f8a326168ca3f320a2627c39c99393adde88feaec5eacad4",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "259a8ea05dd800d96b73c8ae587ebe48646aa90f1e911dcb72c25ca021e7893d"
+  }
+}

@@ -12349,3 +12349,30 @@ fn planar_angular_motion_limits_share_cells_and_report_independent_results() {
         .unwrap();
     assert_eq!(coarse.cells[0].statuses, [Status::Undetermined, Status::Within, Status::Undetermined]);
 }
+
+#[test]
+fn planar_angular_motion_slowdown_bounds_enclose_required_time_dilation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, planar_angular_motion_slowdown_bounds,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let [lo, hi] = planar_angular_motion_slowdown_bounds(
+        &direction, [2., 4.], limits, 0.015625, 255,
+    ).unwrap();
+    assert!(lo <= 2. && 2. <= hi && hi - lo < 0.002);
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction
+    };
+    let bounds = planar_angular_motion_slowdown_bounds(
+        &singular, [2., 4.], limits, 0.015625, 255,
+    ).unwrap();
+    assert_eq!(bounds[1], f64::INFINITY);
+}

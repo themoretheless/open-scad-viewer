@@ -1142,18 +1142,23 @@ fn slowdown_from_motion_report(
     report: &DirectionalMotionReport,
     limits: DirectionalMotionLimits,
 ) -> Result<[f64; 2]> {
+    slowdown_from_peak_bounds(
+        [report.speed.bounds, report.acceleration.bounds, report.jerk.bounds],
+        limits,
+    )
+}
+
+fn slowdown_from_peak_bounds(
+    bounds: [[f64; 2]; 3],
+    limits: DirectionalMotionLimits,
+) -> Result<[f64; 2]> {
     use num_rational::BigRational;
 
     let exact = |value| {
         BigRational::from_float(value)
             .ok_or_else(|| crate::numeric_err("Nonfinite motion bound"))
     };
-    let constraints = [
-        (report.speed.bounds, limits.speed),
-        (report.acceleration.bounds, limits.acceleration),
-        (report.jerk.bounds, limits.jerk),
-    ]
-    .into_iter()
+    let constraints = bounds.into_iter().zip([limits.speed, limits.acceleration, limits.jerk])
     .map(|([lo, hi], limit)| Ok(([exact(lo)?, exact(hi)?], exact(limit)?)))
     .collect::<Result<Vec<_>>>()?;
 
@@ -1544,37 +1549,12 @@ fn partition_planar_angular_derivatives<const N: usize>(
             if fixed {
                 return Ok(([Within; N], false));
             }
-            let length = norm(&jets[0])?;
-            let squared = length.mul(length)?;
-            if squared.lo <= 0. || width.lo <= 0. {
+            let Some(values) = planar_angular_jets(jets, width, order)? else {
                 return Ok(([Undetermined; N], true));
-            }
-            let cross = |a: usize, b: usize| {
-                jets[a][0].mul(jets[b][1])?.sub(jets[a][1].mul(jets[b][0])?)
             };
-            let twice = Interval::point(2.);
-            let speed = cross(0, 1)?.div(squared)?;
-            let mut values = [speed, Interval::point(0.), Interval::point(0.)];
-            if order >= 2 {
-                let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(twice)?;
-                let acceleration = cross(0, 2)?.sub(speed.mul(squared_derivative)?)?.div(squared)?;
-                values[1] = acceleration;
-                if order == 3 {
-                    let squared_second = project_jet(&jets[1], &jets[1])?
-                        .add(project_jet(&jets[0], &jets[2])?)?.mul(twice)?;
-                    // Differentiate |v|² times angular speed twice.
-                    values[2] = cross(1, 2)?.add(cross(0, 3)?)?
-                        .sub(acceleration.mul(squared_derivative)?.mul(twice)?)?
-                        .sub(speed.mul(squared_second)?)?.div(squared)?;
-                }
-            }
             let mut statuses = [Undetermined; N];
             for ((status, order), limit) in statuses.iter_mut().zip(orders).zip(limits) {
-                let mut value = values[order - 1];
-                // The jets use a cell-local clock.
-                for _ in 0..order {
-                    value = value.div(width)?;
-                }
+                let value = values[order - 1];
                 let upper = value.lo.abs().max(value.hi.abs());
                 let lower = value.lo.max(-value.hi).max(0.);
                 *status = if upper <= limit {
@@ -1592,6 +1572,87 @@ fn partition_planar_angular_derivatives<const N: usize>(
         DirectionalMotionLimitCell { parameter_interval, span, statuses }
     }).collect();
     Ok((cells, work_cells))
+}
+
+/// Enclose the minimum uniform parameter dilation satisfying all three
+/// angular limits. A finite upper bound certifies feasibility, while an
+/// infinite upper bound can indicate unresolved orientation or an
+/// unattainable limit. Jumps between knot spans are outside this check.
+pub fn planar_angular_motion_slowdown_bounds(
+    direction: &Curve,
+    interval: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<[f64; 2]> {
+    validate_motion_partition_limits([limits.speed, limits.acceleration, limits.jerk])?;
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Angular derivatives require a planar direction curve")?;
+    let fixed = fixed_cardinal_rotation(direction).is_some();
+    let (cells, _) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            if fixed {
+                return Ok((Some([Interval::point(0.); 3]), false));
+            }
+            Ok((planar_angular_jets(jets, width, 3)?, true))
+        },
+    )?;
+    let mut peaks = [[0_f64; 2]; 3];
+    let mut unresolved = false;
+    for (_, _, values) in cells {
+        if let Some(values) = values {
+            for (peak, value) in peaks.iter_mut().zip(values) {
+                peak[0] = peak[0].max(value.lo.max(-value.hi));
+                peak[1] = peak[1].max(value.lo.abs().max(value.hi.abs()));
+            }
+        } else {
+            unresolved = true;
+        }
+    }
+    let mut bounds = slowdown_from_peak_bounds(peaks, limits)?;
+    if unresolved {
+        bounds[1] = f64::INFINITY;
+    }
+    Ok(bounds)
+}
+
+fn planar_angular_jets(
+    jets: &[Vec<Interval>],
+    width: Interval,
+    order: usize,
+) -> Result<Option<[Interval; 3]>> {
+    let length = norm(&jets[0])?;
+    let squared = length.mul(length)?;
+    if squared.lo <= 0. || width.lo <= 0. {
+        return Ok(None);
+    }
+    let cross = |a: usize, b: usize| {
+        jets[a][0].mul(jets[b][1])?.sub(jets[a][1].mul(jets[b][0])?)
+    };
+    let twice = Interval::point(2.);
+    let speed = cross(0, 1)?.div(squared)?;
+    let mut values = [speed, Interval::point(0.), Interval::point(0.)];
+    if order >= 2 {
+        let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(twice)?;
+        let acceleration = cross(0, 2)?.sub(speed.mul(squared_derivative)?)?.div(squared)?;
+        values[1] = acceleration;
+        if order == 3 {
+            let squared_second = project_jet(&jets[1], &jets[1])?
+                .add(project_jet(&jets[0], &jets[2])?)?.mul(twice)?;
+            // Differentiate |v|² times angular speed twice.
+            values[2] = cross(1, 2)?.add(cross(0, 3)?)?
+                .sub(acceleration.mul(squared_derivative)?.mul(twice)?)?
+                .sub(speed.mul(squared_second)?)?.div(squared)?;
+        }
+    }
+    // The jets use a cell-local clock.
+    for (index, value) in values.iter_mut().take(order).enumerate() {
+        for _ in 0..=index {
+            *value = value.div(width)?;
+        }
+    }
+    Ok(Some(values))
 }
 
 #[derive(Clone, Copy, Debug)]
