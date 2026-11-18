@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 977,
-  "unallocatedCount": 23,
+  "specifiedCount": 978,
+  "unallocatedCount": 22,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22224,6 +22224,27 @@
       ],
       "remainingQualification": [
         "Rigid proper placements in a flat procedural gear assembly. OCCT verifies all 18 local-to-world planet frames. External nonuniform and reflected placement qualification is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0978",
+      "name": "Экспорт неравномерно масштабированных и зеркальных деталей через общие NURBS-определения STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::StepSharedAssembly::export_step_with_baked_scales",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "crates/brep-core/src/model/transform.rs",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/shared.log.gz",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/verify.py",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/occt.log",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat orthogonal placements. Distinct linear maps become local definitions, with shared geometry for translation-only differences. OCCT checks reflected rational elliptic cylinder volume and three placed box variants."
       ]
     }
   ],

@@ -1913,6 +1913,41 @@ impl StepSharedAssembly {
         Ok(sections)
     }
 
+    /// Export using rigid assembly placements only. Bake the linear part of
+    /// scaled or reflected placements into local geometry once per distinct
+    /// source definition and linear map. Keep translations on the occurrences.
+    pub fn export_step_with_baked_scales(&self) -> Result<String> {
+        let identity = [[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]];
+        let mut definitions = Vec::new();
+        let mut occurrences = Vec::new();
+        let mut variants = BTreeMap::new();
+        for occurrence in self.occurrences() {
+            let mut placement = occurrence.transform;
+            let mut linear = identity;
+            if !super::is_proper_rigid_placement(placement) {
+                for row in 0..3 {
+                    linear[row][..3].copy_from_slice(&placement[row][..3]);
+                    placement[row][..3].copy_from_slice(&identity[row][..3]);
+                }
+            }
+            let key = (occurrence.definition, linear.map(|row| row.map(f64::to_bits)));
+            let definition = match variants.entry(key) {
+                std::collections::btree_map::Entry::Occupied(entry) => *entry.get(),
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    let source = &self.definitions[occurrence.definition];
+                    let index = definitions.len();
+                    definitions.push(if linear == identity { source.clone() } else {
+                        brep_core::transform::affine(source, linear)?
+                    });
+                    entry.insert(index);
+                    index
+                }
+            };
+            occurrences.push(StepAssemblyOccurrence { definition, transform: placement });
+        }
+        crate::export_step_shared_assembly(&Self::from_placed_solids(definitions, occurrences)?)
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
