@@ -1236,6 +1236,19 @@ impl StepSharedAssembly {
         Ok(first)
     }
 
+    /// Prove material ownership for one placed occurrence in assembly coordinates.
+    /// The returned solid owns the proved geometry and can answer repeated queries.
+    pub fn qualify_occurrence(
+        &self,
+        index: usize,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+    ) -> Result<brep_core::closed_solid::QualifiedClosedSolid> {
+        let model = self.materialize(index)?;
+        brep_core::closed_solid::qualify(model, policy)?.into_solid().ok_or_else(|| {
+            Error::new("BREP_CLOSED_SOLID_UNPROVED", "STEP occurrence material ownership is unproved")
+        })
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

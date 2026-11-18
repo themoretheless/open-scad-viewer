@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 848,
-  "unallocatedCount": 152,
+  "specifiedCount": 849,
+  "unallocatedCount": 151,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19831,6 +19831,26 @@
       "remainingQualification": [
         "Clip qualified material intervals to a finite ray segment and enclose the total physical length with outward rounding.",
         "Check a cavity, segment ends before and within material, non-unit ray direction, invalid ends and work exhaustion.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0849",
+      "name": "Квалификация размещённой STEP-детали для повторных измерений материала",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::qualify_occurrence",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "crates/brep-core/src/model/closed_solid.rs",
+        "docs/qualification/nurbs-curvature-field-849-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-849-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Validate material ownership in assembly coordinates and return an immutable qualified occurrence for repeated measurements.",
+        "Check two world ray lengths from one qualified scaled reflected occurrence, re-verification, invalid index and retained sharing.",
         "WASM and application integration are separate."
       ]
     }

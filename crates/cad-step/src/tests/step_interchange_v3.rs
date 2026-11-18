@@ -2848,6 +2848,48 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_qualifies_placed_occurrence_for_material_queries() {
+    let assembly = shared_step_scaled_cube_pair();
+    let policy = brep_core::closed_solid::AdmissionPolicy {
+        tolerance_uv: 1e-8,
+        max_linear_cells: 100_000,
+        geometry: brep_core::volume_validity::Limits {
+            boundary: brep_core::boundary_embedding::Limits {
+                exact_work: 1_000_000,
+                trim_pairs: 1000,
+                trim_cells: 10_000,
+                trim_domain_cells: 100_000,
+                spans: 100,
+                contacts: brep_core::face_contacts::Limits {
+                    pairs: 1000,
+                    cells: 10_000,
+                    domain_cells: 100_000,
+                    cells_per_pair: 16,
+                    domain_cells_per_pair: 1000,
+                },
+            },
+            nesting_pairs: 100,
+            nesting_cells: 10_000,
+            nesting_domain_cells: 100_000,
+            orientation_cells: 10_000,
+            orientation_domain_cells: 100_000,
+            orientation_spans: 100,
+        },
+    };
+    assert!(assembly.qualify_occurrence(2, policy).is_err());
+    let owned = assembly.qualify_occurrence(1, policy).unwrap();
+    let origin = [18., -6., 36.];
+    let direction = [1., 0., 0.];
+    for (end, expected) in [(3., 2.), (10., 6.)] {
+        let [lo, hi] = owned.ray_material_length_mm(origin, direction, end, 100_000, 200_000).unwrap();
+        assert!(lo <= expected && expected <= hi);
+        assert!(hi - lo < 1e-6);
+    }
+    owned.reverify().unwrap();
+    assert_eq!((assembly.definitions().len(), assembly.occurrences().len()), (1, 2));
+}
+
+#[test]
 fn shared_step_ray_candidates_filter_diagonal_misses() {
     let mut assembly = shared_step_scaled_cube_pair();
     let identity = assembly.occurrences()[0].transform;
