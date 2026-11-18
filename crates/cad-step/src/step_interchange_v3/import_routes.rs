@@ -2024,6 +2024,24 @@ fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
 /// Import an AP242 assembly without expanding all of its placements into
 /// a single B-rep. Each distinct definition is built and validated once.
 pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
+    Ok(read_shared_products(text, false)?.0)
+}
+
+/// Shared geometry and product labels resolved through the selected STEP graph.
+pub struct NamedStepAssembly {
+    pub assembly: StepSharedAssembly,
+    pub name: String,
+    /// Labels indexed by the definition referenced by each occurrence.
+    pub definition_names: Vec<String>,
+}
+
+pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
+    let (assembly, labels) = read_shared_products(text, true)?;
+    let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
+    Ok(NamedStepAssembly { assembly, name, definition_names })
+}
+
+fn read_shared_products(text: &str, named: bool) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {
     validate_exchange_structure(text)?;
     let entities = parse(data_payload(text)?)?;
     let route = DirectImportRoute {
@@ -2034,6 +2052,25 @@ pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
     if placements.is_empty() {
         return Err(refuse("Selected placement graph contains no manifold B-rep occurrence"));
     }
+    let mut labels = if named {
+        let (_, shapes, _) = step_xde::product_graph(&entities)?;
+        let mut products = BTreeMap::new();
+        for entity in entities.values() {
+            if let Value::Call(kind,args) = &entity.value
+                && kind == "SHAPE_DEFINITION_REPRESENTATION" && args.len() == 2
+                && let Some(&product) = shapes.get(&one_ref(&args[0], "product shape")?) {
+                let rep = one_ref(&args[1], "product representation")?;
+                if products.insert(rep, product).is_some_and(|prior| prior != product) {
+                    return Err(refuse("Ambiguous representation product"));
+                }
+            }
+        }
+        let root = placements[0].path.first().copied().ok_or_else(|| refuse("Missing assembly root"))?;
+        if placements.iter().any(|p| p.path.first() != Some(&root)) {
+            return Err(refuse("Named assembly requires one selected root"));
+        }
+        Some((products, root, Vec::new()))
+    } else { None };
     let mut definition_indices = BTreeMap::new();
     let mut definitions = Vec::new();
     let mut occurrences = Vec::with_capacity(placements.len());
@@ -2051,6 +2088,9 @@ pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
                 restore_identity(&entities, &identity, &mut model)?;
                 model.validate()?;
                 let index = definitions.len();
+                if let Some((_, _, representations)) = &mut labels {
+                    representations.push(placement.representation);
+                }
                 definitions.push(model);
                 definition_indices.insert(key, index);
                 index
@@ -2058,7 +2098,16 @@ pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
         };
         occurrences.push(StepAssemblyOccurrence { definition, transform: placement.transform });
     }
-    Ok(StepSharedAssembly { definitions, occurrences })
+    let names = if let Some((products, root, representations)) = labels {
+        let name = |rep| -> Result<String> {
+            let id = products.get(&rep).ok_or_else(|| refuse("Selected representation has no product"))?;
+            let (kind, args) = call(&entities, *id)?;
+            if kind != "PRODUCT" || args.len() < 2 { return Err(refuse("Malformed named product")); }
+            step_xde::decode_step_string(&string_value(&args[1], "product name")?)
+        };
+        Some((name(root)?, representations.into_iter().map(name).collect::<Result<_>>()?))
+    } else { None };
+    Ok((StepSharedAssembly { definitions, occurrences }, names))
 }
 
 fn import_step_direct_impl(

@@ -116,3 +116,21 @@ fn named_assembly_writes_one_product_for_repeated_parts() {
     assert_ne!(restored.occurrences()[1].transform,restored.occurrences()[2].transform);
     assert!(export_named_step_assembly(&assembly,"Spinner A",&["Sun"]).is_err());
 }
+
+#[test]
+fn imports_product_names_by_representation_after_step_rows_are_reordered() {
+    use cad_step::{export_named_step_assembly, import_named_step_assembly, StepAssemblyOccurrence, StepSharedAssembly};
+    let placed = |definition, x| StepAssemblyOccurrence { definition, transform:
+        [[1.,0.,0.,x],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]] };
+    let parts = vec![brep_core::cuboid([0.;3],[1.,2.,3.]).unwrap(),brep_core::cuboid([0.;3],[3.,2.,1.]).unwrap()];
+    let assembly = StepSharedAssembly::from_placed_solids(parts, vec![placed(1,8.),placed(0,3.),placed(1,12.)]).unwrap();
+    let original = export_named_step_assembly(&assembly,"Сборка",&["Pin 'A'","Колесо"]).unwrap();
+    let (header, data) = original.split_once("DATA;\n").unwrap();
+    let (rows, tail) = data.split_once("ENDSEC;").unwrap();
+    let reordered = format!("{header}DATA;\n{}\nENDSEC;{tail}",rows.lines().rev().collect::<Vec<_>>().join("\n"));
+    let read = import_named_step_assembly(&reordered).unwrap();
+    assert_eq!(read.name,"Сборка");
+    for occurrence in read.assembly.occurrences() {
+        assert_eq!(read.definition_names[occurrence.definition], if occurrence.transform[0][3] == 3. { "Pin 'A'" } else { "Колесо" });
+    }
+}

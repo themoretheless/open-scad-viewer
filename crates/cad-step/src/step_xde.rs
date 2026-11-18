@@ -222,7 +222,7 @@ pub fn encode_step_string(input: &str) -> String {
     output
 }
 
-fn product_graph(
+pub(super) fn product_graph(
     entities: &BTreeMap<usize, Entity>,
 ) -> Result<(
     BTreeMap<usize, usize>,

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 931,
-  "unallocatedCount": 69,
+  "specifiedCount": 932,
+  "unallocatedCount": 68,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21321,6 +21321,26 @@
       ],
       "remainingQualification": [
         "One name per part definition. Names are written to PRODUCT records; the native shared geometry reader returns definitions and placements."
+      ]
+    },
+    {
+      "id": "NURBS-0932",
+      "name": "Импорт имён сборки STEP и общих определений деталей по связям геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::import_named_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_xde.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single selected assembly root with unambiguous product links. Imports root and part definition labels, not occurrence-specific labels."
       ]
     }
   ],
