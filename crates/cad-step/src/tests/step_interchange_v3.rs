@@ -2802,6 +2802,34 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_material_volume_accounts_for_scale_and_reflection() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = brep_core::extrude_polygon(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.]], 0., 2.).unwrap();
+    assembly.replace_definition(0, solid).unwrap();
+    let rigid = [
+        [1., 0., 0., 4.], [0., 1., 0., -8.], [0., 0., 1., 40.], [0., 0., 0., 1.],
+    ];
+    let reflected = [
+        [0., -3., 0., 4.], [2., 0., 0., -8.], [0., 0., -4., 40.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(0, rigid).unwrap();
+    assembly.set_occurrence_orthogonal_placement(1, reflected).unwrap();
+    let mut overlapping = rigid;
+    overlapping[0][3] += 1.;
+    assembly.add_occurrence(0, overlapping).unwrap();
+    assert!(assembly.material_volume_mm3(1e-8, 0).is_err());
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    let back = crate::import_step_shared_assembly(&exported).unwrap();
+    assert_eq!(back.definitions().len(), 1);
+    assert_eq!(back.occurrences().len(), 3);
+    let volume = back.material_volume_mm3(1e-8, 100_000).unwrap();
+    assert!((volume - 8. * (1. + 24. + 1.)).abs() < 1e-8);
+}
+
+#[test]
 fn shared_step_interference_batch_distinguishes_overlap_and_touching() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

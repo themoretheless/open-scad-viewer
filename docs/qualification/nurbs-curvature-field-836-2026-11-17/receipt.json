@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0836",
+  "testedBase": "7d1a3a73ef5a36572abd646d28bed5cfc1160d67",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 185,
+  "scope": [
+    "Estimate summed occurrence volume using one mass integration per definition and absolute linear determinants for placements.",
+    "Check one shared cube, overlapping placements, a reflected scaled placement, invalid budget and 208 cubic millimetres after STEP round-trip."
+  ],
+  "logSha256": "ca7cb2311d811c12732de771311bc7e2491bb7bdcf97d917874ea5779fce6350",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3.rs": "a402a3800595b52c85b9bd35d12ec306d8c31b8d5c56bcc2ca8dc1a81da99df8",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "94e035af10c2cf7af0f4b1db0b759e9e9b0e2531b04f65421b70ef1e08c50016",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "772a0de5d68c064ac547c1934f5554c07fe2c65680e1ea6f57d94c1d09e78c26"
+  }
+}

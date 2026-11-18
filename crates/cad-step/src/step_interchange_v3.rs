@@ -1290,6 +1290,12 @@ fn cartesian_operator_3d(
         [0., 0., 0., 1.],
     ])
 }
+fn placement_determinant(m: [[f64; 4]; 4]) -> f64 {
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+}
+
 fn cartesian_operator_affine(
     entities: &BTreeMap<usize, Entity>,
     id: usize,
@@ -1403,9 +1409,7 @@ fn cartesian_operator_affine(
         ],
         [0., 0., 0., 1.],
     ];
-    let determinant = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
-        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
-        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    let determinant = placement_determinant(m);
     if !determinant.is_finite() || determinant.abs() <= 1e-14 {
         return Err(refuse("Affine transformation is singular"));
     }

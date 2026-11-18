@@ -919,6 +919,32 @@ impl StepSharedAssembly {
         }).collect())
     }
 
+    /// Estimate total material volume in mm³, counting each occurrence.
+    /// Intersecting parts contribute their individual volumes in full.
+    /// The integration budget and convergence target apply per definition.
+    pub fn material_volume_mm3(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<f64> {
+        let volumes = self.definitions.iter().map(|model| {
+            brep_core::analysis::mass_properties(model, relative_tolerance, max_evaluations_per_definition)
+                .map(|mass| mass.signed_volume_mm3)
+        }).collect::<Result<Vec<_>>>()?;
+        let mut total = 0.;
+        for occurrence in &self.occurrences {
+            let scale = placement_determinant(occurrence.transform).abs();
+            if !scale.is_finite() || scale == 0. {
+                return Err(refuse("STEP assembly volume requires finite nonsingular placements"));
+            }
+            total += scale * volumes[occurrence.definition];
+        }
+        if !total.is_finite() || total <= 0. {
+            return Err(refuse("STEP assembly volume is outside the finite positive range"));
+        }
+        Ok(total)
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
