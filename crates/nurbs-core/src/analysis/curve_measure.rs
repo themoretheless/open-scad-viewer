@@ -1919,6 +1919,24 @@ pub fn partition_curve_obstacle_clearance(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<ObstacleClearancePartition> {
+    partition_curve_ball_obstacle_clearance(
+        curve, interval, obstacles, 0., parameter_tolerance, max_plane_cells,
+    )
+}
+
+/// Certify clearance for a closed ball centered on the curve. A strictly
+/// separating plane must leave room for the radius. A cell is classified
+/// as colliding when every center in it lies in an obstacle. Other possible
+/// contacts, including at edges and corners, may remain undetermined.
+pub fn partition_curve_ball_obstacle_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_plane_cells)?;
     check(!obstacles.is_empty(), "Obstacle clearance requires at least one obstacle")?;
     let mut plane_count = 0;
@@ -1931,18 +1949,25 @@ pub fn partition_curve_obstacle_clearance(
     }
     curve.validate()?;
     let dimension = curve.control_points[0].len();
-    let obstacles = obstacles.iter()
-        .map(|planes| prepare_workspace_planes(planes, dimension))
-        .collect::<Result<Vec<_>>>()?;
+    let obstacles = obstacles.iter().map(|planes| {
+        prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+            let margin = if radius == 0. {
+                0.
+            } else {
+                norm(&normal)?.mul(Interval::point(radius))?.hi
+            };
+            Ok((normal, offset, margin))
+        }).collect::<Result<Vec<_>>>()
+    }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_plane_cells / plane_count,
         |jets, _| {
             let mut clearance = Vec::with_capacity(obstacles.len());
             for obstacle in &obstacles {
                 let mut status = DirectionalMotionStatus::Exceeds;
-                for (normal, offset) in obstacle {
+                for (normal, offset, margin) in obstacle {
                     let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
-                    if residual.lo > 0. {
+                    if residual.lo > *margin {
                         status = DirectionalMotionStatus::Within;
                         break;
                     }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 706,
-  "unallocatedCount": 294,
+  "specifiedCount": 707,
+  "unallocatedCount": 293,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17106,6 +17106,25 @@
       "remainingQualification": [
         "Locate occupied, clear and unresolved intervals against a union of closed convex obstacles.",
         "Check two independent obstacles, all four analytic crossings, clear space between obstacles, and input budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0707",
+      "name": "Сертифицированный зазор сферического инструмента до выпуклых препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_ball_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-707-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-707-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separation for a swept ball with plane-normal scaling and conservative contact classification.",
+        "Check radius-aware separation with a non-unit plane normal, tangency uncertainty, known collision and invalid radius.",
         "WASM and application integration are separate."
       ]
     }

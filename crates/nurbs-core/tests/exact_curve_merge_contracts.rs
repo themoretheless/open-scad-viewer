@@ -9768,3 +9768,27 @@ fn obstacle_clearance_partition_distinguishes_two_separated_obstacles() {
         }));
     }
 }
+
+#[test]
+fn ball_obstacle_clearance_respects_tool_radius_and_normal_scale() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_curve_ball_obstacle_clearance,
+    };
+    let line = |height| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., height], vec![2., height]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = [WorkspaceHalfSpace { normal: &[0., 4.], offset: 0. }];
+    let check = |curve: &Curve, radius| {
+        partition_curve_ball_obstacle_clearance(&curve, [0., 1.], &[&obstacle], radius, 0.01, 1)
+    };
+    assert_eq!(check(&line(0.25), 0.125).unwrap().cells[0].status, Status::Within);
+    assert_eq!(check(&line(0.25), 0.25).unwrap().cells[0].status, Status::Undetermined);
+    assert_eq!(check(&line(0.25), 0.5).unwrap().cells[0].status, Status::Undetermined);
+    assert_eq!(check(&line(-0.25), 0.5).unwrap().cells[0].status, Status::Exceeds);
+    assert!(check(&line(0.25), -1.).is_err());
+}
