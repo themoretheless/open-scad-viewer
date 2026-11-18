@@ -265,7 +265,8 @@ proves the complete G2 join under the shared budget.
 
 The complete and classified boundary audits use the same exact opening
 on both incident charts before comparing their jets. Opening and any
-traversal reversal debit the audit's shared work allowance. C0 edges
+traversal reversal debit the audit's shared work allowance once per
+prepared chart and clock direction. C0 edges
 remain outside the smooth-seam stage of the classified audit.
 
 The common boundary can be an authored chain of edges. The audit checks

@@ -206,6 +206,67 @@ pub(super) fn open_pair(
     Ok(right.map(|right| [left.into_owned(), right.into_owned()]))
 }
 
+/// Prepared charts for one immutable-model audit. A reflected entry is
+/// keyed by the free axis, so either side on that axis uses the same chart.
+pub(super) struct Charts {
+    indices: Vec<[Option<usize>; 3]>,
+    pub(super) patches: Vec<Surface>,
+}
+
+impl Charts {
+    pub(super) fn new(faces: usize) -> Self {
+        Self {
+            indices: vec![[None; 3]; faces],
+            patches: Vec::new(),
+        }
+    }
+
+    pub(super) fn native(
+        &mut self,
+        model: &Model,
+        face: usize,
+        work: &mut u64,
+        limit: u64,
+    ) -> Result<Option<usize>> {
+        if let Some(index) = self.indices[face][0] {
+            return Ok(Some(index));
+        }
+        let (opened, used) = open(&model.faces[face].surface, limit - *work)?;
+        *work += used;
+        let Some(opened) = opened else {
+            return Ok(None);
+        };
+        let index = self.patches.len();
+        self.patches.push(opened.into_owned());
+        self.indices[face][0] = Some(index);
+        Ok(Some(index))
+    }
+
+    pub(super) fn reflected(
+        &mut self,
+        face: usize,
+        native: usize,
+        side: &str,
+        work: &mut u64,
+        limit: u64,
+    ) -> Result<Option<usize>> {
+        let slot = if side.starts_with('u') { 1 } else { 2 };
+        if let Some(index) = self.indices[face][slot] {
+            return Ok(Some(index));
+        }
+        let mut patch = self.patches[native].clone();
+        let (proved, used) = super::reverse_along(&mut patch, side, limit - *work)?;
+        *work += used;
+        if !proved {
+            return Ok(None);
+        }
+        let index = self.patches.len();
+        self.patches.push(patch);
+        self.indices[face][slot] = Some(index);
+        Ok(Some(index))
+    }
+}
+
 pub(super) fn opposite_sides(surface: &Surface, a: &str, b: &str) -> bool {
     match (a, b) {
         ("uMin", "uMax") | ("uMax", "uMin") => surface.periodic_u,

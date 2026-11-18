@@ -95,7 +95,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
             }
         }
     }
-    let mut patches = Vec::new();
+    let mut charts = periodic_uses::Charts::new(model.faces.len());
     let mut seams = Vec::new();
     let mut edge_ids = Vec::new();
     let mut unresolved_edges = Vec::new();
@@ -113,28 +113,25 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
             }
             continue;
         }
-        let Some([left, mut right]) = periodic_uses::open_pair(
-            [&model.faces[*a].surface, &model.faces[*b].surface],
-            &mut parameter_work,
-            limits.exact_work,
-        )? else {
+        let Some(left) = charts.native(model, *a, &mut parameter_work, limits.exact_work)? else {
+            unresolved_edges.push(edge);
+            continue;
+        };
+        let Some(mut right) = charts.native(model, *b, &mut parameter_work, limits.exact_work)? else {
             unresolved_edges.push(edge);
             continue;
         };
         if ad != bd {
-            let (reversed, work) =
-                reverse_along(&mut right, bb, limits.exact_work - parameter_work)?;
-            parameter_work += work;
-            if !reversed {
+            let Some(reflected) = charts.reflected(
+                *b, right, bb, &mut parameter_work, limits.exact_work,
+            )? else {
                 unresolved_edges.push(edge);
                 continue;
-            }
+            };
+            right = reflected;
         }
-        let start = patches.len();
-        patches.push(left);
-        patches.push(right);
         seams.push(ProjectiveSeam {
-            patches: [start, start + 1],
+            patches: [left, right],
             boundaries: [(*ab).into(), (*bb).into()],
             order: limits.order,
             normal_scale: 1.,
@@ -158,7 +155,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         && correspondence
             .as_ref()
             .is_some_and(|p| p.all_equal && p.all_joins_exact);
-    let proof = graph_jets::qualify(&patches, &seams, limits.exact_work - parameter_work)?;
+    let proof = graph_jets::qualify(&charts.patches, &seams, limits.exact_work - parameter_work)?;
     let seam_work = parameter_work + proof.exact_work;
     let face_interiors = interiors::inspect(
         model,

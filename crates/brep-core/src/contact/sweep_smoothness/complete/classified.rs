@@ -101,10 +101,8 @@ impl Inspection<'_> {
         Ok(Some(uses))
     }
     fn smooth_seams(&mut self, uses: &[Vec<EdgeUse>]) -> Result<Option<SmoothSeams>> {
-        let mut smooth = SmoothSeams {
-            patches: Vec::new(),
-            seams: Vec::new(),
-        };
+        let mut charts = periodic_uses::Charts::new(self.model.faces.len());
+        let mut seams = Vec::new();
         for ((edge, owned), &class) in uses.iter().enumerate().zip(self.classes) {
             self.out.uncertain_edge = Some(edge);
             if !step(&mut self.out, self.limits.incidence_steps) {
@@ -123,51 +121,29 @@ impl Inspection<'_> {
                 return Ok(None);
             };
             let carrier = &self.model.faces[*a].surface;
-            if a == b && periodic_uses::opposite_sides(carrier, ab, bb) {
-                if ad != bd || ar == br {
-                    self.out.reason = "classified-boundary-wrap-orientation-unproven";
-                    return Ok(None);
-                }
-                let (opened, used) =
-                    periodic_uses::open(carrier, self.limits.exact_work - self.out.exact_work)?;
-                self.out.exact_work += used;
-                let Some(opened) = opened else {
-                    self.out.reason = "classified-boundary-periodic-opening-unproven";
-                    return Ok(None);
-                };
-                let patch = smooth.patches.len();
-                smooth.patches.push(opened.into_owned());
-                smooth.seams.push(ProjectiveSeam {
-                    patches: [patch, patch],
-                    boundaries: [(*ab).into(), (*bb).into()],
-                    order: class.order(),
-                    normal_scale: 1.,
-                });
-                self.out.smooth_edges.push(edge);
-                continue;
+            if a == b && periodic_uses::opposite_sides(carrier, ab, bb) && (ad != bd || ar == br) {
+                self.out.reason = "classified-boundary-wrap-orientation-unproven";
+                return Ok(None);
             }
-            let Some([left, mut right]) = periodic_uses::open_pair(
-                [carrier, &self.model.faces[*b].surface],
-                &mut self.out.exact_work,
-                self.limits.exact_work,
-            )? else {
+            let work = &mut self.out.exact_work;
+            let limit = self.limits.exact_work;
+            let Some(left) = charts.native(self.model, *a, work, limit)? else {
+                self.out.reason = "classified-boundary-periodic-opening-unproven";
+                return Ok(None);
+            };
+            let Some(mut right) = charts.native(self.model, *b, work, limit)? else {
                 self.out.reason = "classified-boundary-periodic-opening-unproven";
                 return Ok(None);
             };
             if ad != bd {
-                let budget = self.limits.exact_work - self.out.exact_work;
-                let (accepted, used) = reverse_along(&mut right, bb, budget)?;
-                self.out.exact_work += used;
-                if !accepted {
+                let Some(reflected) = charts.reflected(*b, right, bb, work, limit)? else {
                     self.out.reason = "classified-boundary-clock-unproven";
                     return Ok(None);
-                }
+                };
+                right = reflected;
             }
-            let start = smooth.patches.len();
-            smooth.patches.push(left);
-            smooth.patches.push(right);
-            smooth.seams.push(ProjectiveSeam {
-                patches: [start, start + 1],
+            seams.push(ProjectiveSeam {
+                patches: [left, right],
                 boundaries: [(*ab).into(), (*bb).into()],
                 order: class.order(),
                 normal_scale: 1.,
@@ -175,7 +151,7 @@ impl Inspection<'_> {
             self.out.smooth_edges.push(edge);
         }
         self.out.uncertain_edge = None;
-        Ok(Some(smooth))
+        Ok(Some(SmoothSeams { patches: charts.patches, seams }))
     }
     /// World/UV agreement, vertex links and face regularity, in that order.
     fn c0_obligations(&mut self) -> Result<bool> {

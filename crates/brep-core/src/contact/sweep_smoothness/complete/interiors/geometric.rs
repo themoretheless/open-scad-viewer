@@ -596,6 +596,13 @@ mod tests {
             complete.proof.unresolved_seams);
         assert_eq!(complete.edge_ids, [0, 1]);
         assert_eq!(complete.periodic_edge_ids, [2, 3]);
+        let opening_work = model.faces.iter().map(|face| {
+            periodic_uses::open(&face.surface, limits.exact_work).unwrap().1
+        }).sum::<u64>();
+        assert!(opening_work > 0);
+        // Each band participates in both shared rims. Its chart is opened once.
+        assert_eq!(complete.parameter_work, opening_work);
+
         use super::super::super::classified::{self, Class};
         let classes = [Class::G2; 4];
         let classified_limits = classified::Limits {
