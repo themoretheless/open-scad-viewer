@@ -659,6 +659,13 @@ pub struct StepSharedAssembly {
     occurrences: Vec<StepAssemblyOccurrence>,
 }
 
+/// Inner and outer unions of positive-length material spans in ray parameters.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StepRayMaterialCoverage {
+    pub guaranteed: Vec<[f64; 2]>,
+    pub possible: Vec<[f64; 2]>,
+}
+
 impl StepSharedAssembly {
     pub fn definitions(&self) -> &[Model] {
         &self.definitions
@@ -1249,11 +1256,68 @@ impl StepSharedAssembly {
         })
     }
 
+    /// Bound the union of material along a finite forward ray segment.
+    /// Admission and ray budgets apply to each occurrence whose box overlaps the segment.
+    /// If a relevant occurrence cannot be checked, the entire query returns an error.
+    pub fn ray_material_coverage(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_parameter: f64,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+        max_cells_per_occurrence: usize,
+        max_domain_cells_per_occurrence: usize,
+    ) -> Result<StepRayMaterialCoverage> {
+        if !max_parameter.is_finite() || max_parameter < 0. {
+            return Err(refuse("STEP material ray needs a finite nonnegative end parameter"));
+        }
+        validate_ray_work(policy.tolerance_uv, max_cells_per_occurrence, max_domain_cells_per_occurrence)?;
+        let mut guaranteed = Vec::new();
+        let mut possible = Vec::new();
+        for (index, [lower, _]) in self.ray_candidates(origin, direction)? {
+            if lower >= max_parameter {
+                continue;
+            }
+            let solid = self.qualify_occurrence(index, policy)?;
+            for [entry, exit] in solid.ray_material_intervals(
+                origin, direction, max_cells_per_occurrence, max_domain_cells_per_occurrence,
+            )? {
+                let inner_exit = exit[0].min(max_parameter);
+                if entry[1] < inner_exit {
+                    guaranteed.push([entry[1], inner_exit]);
+                }
+                let outer_exit = exit[1].min(max_parameter);
+                if entry[0] < outer_exit {
+                    possible.push([entry[0], outer_exit]);
+                }
+            }
+        }
+        Ok(StepRayMaterialCoverage {
+            guaranteed: merge_ray_spans(guaranteed),
+            possible: merge_ray_spans(possible),
+        })
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn merge_ray_spans(mut spans: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
+    spans.sort_by(|a, b| a[0].total_cmp(&b[0]));
+    let mut merged: Vec<[f64; 2]> = Vec::new();
+    for span in spans {
+        if let Some(last) = merged.last_mut()
+            && span[0] <= last[1]
+        {
+            last[1] = last[1].max(span[1]);
+        } else {
+            merged.push(span);
+        }
+    }
+    merged
 }
 
 fn validate_ray_work(tolerance_uv: f64, max_cells: usize, max_domain_cells: usize) -> Result<()> {

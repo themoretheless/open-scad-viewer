@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 849,
-  "unallocatedCount": 151,
+  "specifiedCount": 850,
+  "unallocatedCount": 150,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19851,6 +19851,27 @@
       "remainingQualification": [
         "Validate material ownership in assembly coordinates and return an immutable qualified occurrence for repeated measurements.",
         "Check two world ray lengths from one qualified scaled reflected occurrence, re-verification, invalid index and retained sharing.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0850",
+      "name": "Покрытие конечного луча объединением материала STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::ray_material_coverage",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-850-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-850-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build guaranteed inner and possible outer parameter unions from qualified placed solids, counting common material once.",
+        "Check overlapping and disjoint placed solids, finite segment clipping, conservative endpoint bounds, early box exclusion and budget refusal.",
         "WASM and application integration are separate."
       ]
     }

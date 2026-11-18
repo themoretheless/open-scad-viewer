@@ -2847,10 +2847,8 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
     crate::import_step_shared_assembly(&exported).unwrap()
 }
 
-#[test]
-fn shared_step_qualifies_placed_occurrence_for_material_queries() {
-    let assembly = shared_step_scaled_cube_pair();
-    let policy = brep_core::closed_solid::AdmissionPolicy {
+fn shared_step_admission_policy() -> brep_core::closed_solid::AdmissionPolicy {
+    brep_core::closed_solid::AdmissionPolicy {
         tolerance_uv: 1e-8,
         max_linear_cells: 100_000,
         geometry: brep_core::volume_validity::Limits {
@@ -2875,7 +2873,40 @@ fn shared_step_qualifies_placed_occurrence_for_material_queries() {
             orientation_domain_cells: 100_000,
             orientation_spans: 100,
         },
-    };
+    }
+}
+
+#[test]
+fn shared_step_ray_material_coverage_merges_overlapping_placed_solids() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let placement = |x| [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(1, placement(1.)).unwrap();
+    assembly.add_occurrence(0, placement(5.)).unwrap();
+    let policy = shared_step_admission_policy();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let coverage = assembly.ray_material_coverage(origin, direction, 7., policy, 100_000, 200_000).unwrap();
+    assert_eq!(coverage.guaranteed.len(), 2);
+    assert_eq!(coverage.possible.len(), 2);
+    for ((inner, outer), expected) in coverage.guaranteed.into_iter().zip(coverage.possible)
+        .zip([[1., 4.], [6., 7.]])
+    {
+        assert!(outer[0] <= expected[0] && expected[0] <= inner[0]);
+        assert!(inner[1] <= expected[1] && expected[1] <= outer[1]);
+        assert!((inner[0] - outer[0]).abs() < 1e-6);
+        assert!((outer[1] - inner[1]).abs() < 1e-6);
+    }
+    let short = assembly.ray_material_coverage(origin, direction, 0.5, policy, 1, 1).unwrap();
+    assert!(short.guaranteed.is_empty() && short.possible.is_empty());
+    assert!(assembly.ray_material_coverage(origin, direction, 7., policy, 1, 1).is_err());
+}
+
+#[test]
+fn shared_step_qualifies_placed_occurrence_for_material_queries() {
+    let assembly = shared_step_scaled_cube_pair();
+    let policy = shared_step_admission_policy();
     assert!(assembly.qualify_occurrence(2, policy).is_err());
     let owned = assembly.qualify_occurrence(1, policy).unwrap();
     let origin = [18., -6., 36.];

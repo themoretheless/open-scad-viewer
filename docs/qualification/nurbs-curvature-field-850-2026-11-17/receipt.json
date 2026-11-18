@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0850",
+  "testedBase": "26fd4a24a4c5ee740f27191fc1697c71f4a3e18f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 197,
+  "scope": [
+    "Build guaranteed inner and possible outer parameter unions from qualified placed solids, counting common material once.",
+    "Check overlapping and disjoint placed solids, finite segment clipping, conservative endpoint bounds, early box exclusion and budget refusal."
+  ],
+  "logSha256": "bdb49b06af67d66add8c6463da3bca8f51912c1f280a7a54a2ee67b792f4c893",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "a735c3def89cec189596b3f264e5024ef337c406fc8fe972dd5dbe0f5544cac8",
+    "crates/cad-step/src/step_interchange_v3.rs": "1362e3124c475f4bde54ede2582e1b781803bc792135cc87a9b218638c997f7a",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "c9b1a5896b07ad9d27b94e203a4908ff514ff79296f41b2b74e9616281bdf143",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "12a4270d14f462fcffaac7ce6fe02812f4d981987b8d887c77795a22bbfce20c"
+  }
+}
