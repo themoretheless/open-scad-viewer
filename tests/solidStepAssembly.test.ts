@@ -56,3 +56,18 @@ it('refuses partial exports and duplicate identities', async () => {
   })
   await expect(exportSolidStepAssembly(sketches)).rejects.toThrow('body-only')
 })
+
+it('shares a linked Solid body across named placements and separates a detached copy', async () => {
+  const { createSolidInstance, detachSolidInstances } = await import('../src/kernel/solidInstances')
+  const source = scene().bodies[0]
+  delete source.group
+  delete source.material
+  const matrix = [[1,0,0,17],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+  const doc = createSolidInstance({ version: 1, sketches: [], bodies: [source] }, source.id, 'copy', matrix)
+  doc.bodies[1].name = "Copy 'A'"
+  const shared = await exportSolidStepAssembly(doc)
+  expect(shared.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(1)
+  expect(shared).toContain("NEXT_ASSEMBLY_USAGE_OCCURRENCE('copy','Copy ''A'''")
+  const detached = await exportSolidStepAssembly(detachSolidInstances(doc, ['copy']))
+  expect(detached.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(2)
+})

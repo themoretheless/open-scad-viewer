@@ -39,4 +39,10 @@ const result = request<{ text: string }>({
 })
 assert.equal(result.text.match(/=MANIFOLD_SOLID_BREP\(/g)?.length, 1)
 assert.equal(result.text.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)?.length, 2)
-console.log('Shared STEP export verified on WASM: one definition and two placements.')
+const reopened = request<{
+  model: { bodies: unknown[]; vertices: { point: number[] }[] }
+}>({ op: 'brep_nurbs_import_step_v9', text: result.text })
+assert.equal(reopened.model.bodies.length, 2)
+const xCoordinates = reopened.model.vertices.map(vertex => vertex.point[0])
+assert.deepEqual([...new Set(xCoordinates)].sort((a, b) => a - b), [0, 2, 17, 19])
+console.log('Shared STEP round trip verified on WASM: two blocks placed 17 mm apart.')

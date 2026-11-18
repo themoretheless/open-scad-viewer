@@ -25,6 +25,22 @@ function remap(text: string, offset: number) {
   )
 }
 
+/** Attach Solid identifiers to the native writer's flat assembly records. */
+function labelSharedAssembly(text: string, definitions: DirectDocument['bodies'], bodies: DirectDocument['bodies']) {
+  return text.replace(
+    /^(#\d+=)(?:PRODUCT\('(?:model|gear-(\d+))','(?:model|Gear \d+)'|PRODUCT\('planet-set','Planet gear set'|NEXT_ASSEMBLY_USAGE_OCCURRENCE\('gear-occurrence-(\d+)','Gear occurrence \d+')/gm,
+    (record, prefix: string, definition: string | undefined, occurrence: string | undefined) => {
+      if (occurrence !== undefined) {
+        const body = bodies[Number(occurrence)]!
+        return prefix + `NEXT_ASSEMBLY_USAGE_OCCURRENCE(${quoted(body.id)},${quoted(body.name)}`
+      }
+      if (record.includes("'planet-set'")) return prefix + "PRODUCT('solid-scene','Solid scene'"
+      const body = definitions[Number(definition ?? 0)]!
+      return prefix + `PRODUCT(${quoted(body.id)},${quoted(body.name)}`
+    },
+  )
+}
+
 /** Current Solid hierarchy: root → flat groups → bodies, including all hidden bodies.
  * Sketches/curves/surfaces are refused rather than silently omitted.
  */
@@ -45,7 +61,25 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
   const missing = snapshot.bodies.filter(body => !body.brep)
   if (missing.length) throw Error(`STEP assembly requires exact B-rep geometry: ${missing.map(b => b.name).join(', ')}`)
   await warmGeometryKernel()
-  const { exportDirectStepV9 } = await import('./cadNurbsStep')
+  const { exportDirectStepV9, exportSharedStepAssembly } = await import('./cadNurbsStep')
+  if (!snapshot.groups?.length && snapshot.bodies.some(body => body.instance)
+      && snapshot.bodies.every(body => !body.group && !body.material)) {
+    const definitions = snapshot.bodies.filter(body => !body.instance)
+    const indices = new Map(definitions.map((body, i) => [body.id, i]))
+    const identity = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    const placements = snapshot.bodies.map(body => ({
+      definition: indices.get(body.instance?.sourceId ?? body.id) ?? -1,
+      transform: body.instance?.matrix ?? identity,
+    }))
+    let shared: string | undefined
+    try {
+      shared = exportSharedStepAssembly(definitions.map(body => body.brep!), placements)
+    } catch {
+      // Open shells, shear and other unsupported placements can still export
+      // through the independently materialized current bodies below.
+    }
+    if (shared) return labelSharedAssembly(shared, definitions, snapshot.bodies)
+  }
   const rows: string[] = []
   let next = 1
   const emit = (row: string) => {

@@ -160,6 +160,15 @@ const profiles=Object.freeze({
       index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
     }),
   }),
+  // Shared STEP export build. Measured raw kernel 18,907,780 bytes,
+  // packed geometry 6,741,729 bytes and distribution assets 12,831,417 bytes.
+  '087654c90fa17d70d73bb3aeab3f79179bf865393575ee55cc85a367bcbbab4f':Object.freeze({
+    version:20,geometryChunkBytes:6_750_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_916_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
