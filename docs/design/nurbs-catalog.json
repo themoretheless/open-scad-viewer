@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 723,
-  "unallocatedCount": 277,
+  "specifiedCount": 724,
+  "unallocatedCount": 276,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17429,6 +17429,25 @@
       "remainingQualification": [
         "Partition the full sweep by obstacle clearance using a shared mixed-scene grid.",
         "Check separated contacts for different obstacle geometries, clear space between them, first-contact order, and contiguous grid coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0724",
+      "name": "Проверка запаса зазора вдоль NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_toolpath_clearance_with_margin",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-724-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-724-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify and localize violations of a required toolpath clearance margin.",
+        "Check a collision-free near miss, analytic first margin crossing, surplus bounds, and invalid margins.",
         "WASM and application integration are separate."
       ]
     }

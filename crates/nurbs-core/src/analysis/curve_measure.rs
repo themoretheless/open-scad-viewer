@@ -2831,6 +2831,24 @@ pub fn partition_toolpath_clearance(
     parameter_tolerance: f64,
     max_obstacle_cells: usize,
 ) -> Result<SphericalClearancePartition> {
+    partition_toolpath_clearance_with_margin(
+        curve, interval, obstacles, tool_radius, 0., parameter_tolerance, max_obstacle_cells,
+    )
+}
+
+/// Classify a required clearance margin in the same units as the tool radius.
+/// Gap bounds express surplus over the margin. A nonpositive surplus is a
+/// violation, and `first_contact` reports the first possible such violation.
+pub fn partition_toolpath_clearance_with_margin(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(margin.is_finite() && margin >= 0., "Clearance margin must be finite and nonnegative")?;
     check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_obstacle_cells)?;
     check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
@@ -2842,7 +2860,10 @@ pub fn partition_toolpath_clearance(
     let obstacles = prepare_toolpath_obstacles(curve, obstacles, tool_radius)?;
     partition_radial_clearance(
         curve, interval, parameter_tolerance, max_cells, obstacles.len(),
-        |point, index| obstacles[index].gap(point, tool_radius),
+        |point, index| {
+            let gap = obstacles[index].gap(point, tool_radius)?;
+            if margin == 0. { Ok(gap) } else { gap.sub(Interval::point(margin)) }
+        },
     )
 }
 

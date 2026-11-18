@@ -10391,3 +10391,36 @@ fn mixed_toolpath_partition_reports_separated_contacts_in_one_grid() {
         assert_eq!(pair[0].parameter_interval[1], pair[1].parameter_interval[0]);
     }
 }
+
+#[test]
+fn toolpath_clearance_margin_detects_near_miss_before_contact() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathContact, SphericalObstacle, ToolpathObstacle,
+        partition_toolpath_clearance_with_margin,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![2., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[0., 0.], radius: 0.25,
+    })];
+    let check = |margin| {
+        partition_toolpath_clearance_with_margin(&curve, [0., 1.], &obstacles, 0.25, margin, 0.01, 128)
+    };
+    assert_eq!(check(0.).unwrap().first_contact(), FirstToolpathContact::Clear);
+    assert!(check(-0.1).is_err());
+    let report = check(0.5).unwrap();
+    let FirstToolpathContact::Confirmed { parameter_bounds: [a, b], obstacle_index: 0 } =
+        report.first_contact()
+    else {
+        panic!("expected confirmed margin violation");
+    };
+    let crossing = 0.5 - 7_f64.sqrt() / 16.;
+    assert!(a <= crossing && crossing <= b && b - a < 0.02);
+    let bounds = report.minimum_clearance().unwrap().gap_bounds;
+    assert!(bounds[0] <= -0.25 && -0.25 <= bounds[1]);
+}

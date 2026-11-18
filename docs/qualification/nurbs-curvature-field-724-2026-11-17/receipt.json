@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0724",
+  "testedBase": "51bf2bd90a3d0c5ed2fbda77973e3f06b2003afb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 349,
+  "scope": [
+    "Classify and localize violations of a required toolpath clearance margin.",
+    "Check a collision-free near miss, analytic first margin crossing, surplus bounds, and invalid margins."
+  ],
+  "logSha256": "b64f4d57b41994f4a1ce5dad47371ea377165eebeaac698c11497c1f9d467c38",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "e51cdee8fa234b82f12408d701e0ade129e9555e77c10000046679f79fe1beb6",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1358a9e44f5eecbcf9f41431ab2a595b7bedea2340670418ad4f320b06c7b931"
+  }
+}
