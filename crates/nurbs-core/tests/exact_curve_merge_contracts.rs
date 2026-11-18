@@ -7228,3 +7228,67 @@ fn periodic_trim_line_radius_of_gyration_encloses_offset_axis_with_nested_island
         None
     );
 }
+
+#[test]
+fn combined_surface_mass_properties_account_for_separated_centers() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceMassPropertiesBounds, combine_surface_mass_properties,
+    };
+    let pieces = [(2., 0.), (1., 3.)].map(|(area, x)| SurfaceMassPropertiesBounds {
+        area_bounds: [area; 2],
+        centroid_bounds: [[x; 2], [0.; 2], [0.; 2]],
+        central_inertia_bounds: [[1., 0., 0.], [0., 2., 0.], [0., 0., 3.]]
+            .map(|row| row.map(|x| [x; 2])),
+    });
+    let combined = combine_surface_mass_properties(&pieces).unwrap();
+    for (interval, expected) in [
+        (combined.area_bounds, 3.),
+        (combined.centroid_bounds[0], 1.),
+        (combined.central_inertia_bounds[0][0], 2.),
+        (combined.central_inertia_bounds[1][1], 10.),
+        (combined.central_inertia_bounds[2][2], 12.),
+    ] {
+        assert!(interval[0] <= expected && expected <= interval[1]);
+        assert!(interval[1] - interval[0] < 1e-12);
+    }
+    assert!(combine_surface_mass_properties(&[]).is_err());
+    let mut bad = pieces;
+    bad[1].area_bounds[0] = 0.;
+    assert!(combine_surface_mass_properties(&bad).is_err());
+}
+
+#[test]
+fn combine_periodic_trim_reports_preserves_island_mass_properties() {
+    use nurbs_core::analysis::surface_measure::{
+        combine_surface_mass_properties, periodic_trim_patch_set_central_inertia,
+    };
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let pieces = patches
+        .iter()
+        .map(|patch| {
+            periodic_trim_patch_set_central_inertia(
+                std::slice::from_ref(patch),
+                0.005,
+                1e-10,
+                20_000,
+                1_000_000,
+            )
+            .unwrap()
+            .mass_properties_bounds()
+            .unwrap()
+        })
+        .collect::<Vec<_>>();
+    let combined = combine_surface_mass_properties(&pieces).unwrap();
+    let expected_zz = 83. / 768. + 49. / 12288. - 75. / 1792.;
+    for (interval, expected) in [
+        (combined.area_bounds, 1.3125),
+        (combined.centroid_bounds[0], 3. / 28.),
+        (combined.central_inertia_bounds[2][2], expected_zz),
+    ] {
+        assert!(interval[0] <= expected && expected <= interval[1]);
+    }
+    let incomplete =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    assert!(incomplete.mass_properties_bounds().is_none());
+}

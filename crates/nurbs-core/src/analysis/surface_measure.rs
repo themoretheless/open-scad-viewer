@@ -942,27 +942,36 @@ pub fn bound_inertia_about_point(
     centroid_bounds: [[f64; 2]; 3],
     point: [f64; 3],
 ) -> Result<[[[f64; 2]; 3]; 3]> {
-    let matrix = symmetric_tensor_intervals(central)?;
     let mass = Interval::new(mass_bounds[0], mass_bounds[1])?;
     check(mass.lo >= 0., "Inertia mass bounds must be nonnegative")?;
-    check(
-        point.iter().all(|value| value.is_finite()),
-        "Inertia reference point must be finite",
-    )?;
     let centroid = centroid_intervals(centroid_bounds)?;
-    if mass.hi == 0. || centroid_bounds == point.map(|coordinate| [coordinate; 2]) {
+    let reference = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    translate_inertia(central, mass, centroid, reference)
+}
+
+fn translate_inertia(
+    central: [[[f64; 2]; 3]; 3],
+    mass: Interval,
+    centroid: [Interval; 3],
+    reference: [Interval; 3],
+) -> Result<[[[f64; 2]; 3]; 3]> {
+    let matrix = symmetric_tensor_intervals(central)?;
+    if mass.hi == 0. {
         return Ok(central);
     }
     let mut offset = [Interval::point(0.); 3];
     let mut squares = offset;
     for (i, interval) in centroid.into_iter().enumerate() {
-        if interval.lo == point[i] && interval.hi == point[i] {
+        if interval.lo == interval.hi && interval == reference[i] {
             continue;
         }
-        let delta = interval.sub(Interval::point(point[i]))?;
+        let delta = interval.sub(reference[i])?;
         offset[i] = delta;
         let square = delta.mul(delta)?;
         squares[i] = square.intersect(0., square.hi)?;
+    }
+    if offset == [Interval::point(0.); 3] {
+        return Ok(central);
     }
     let mut translated = central;
     for (i, row) in matrix.iter().enumerate() {
@@ -980,6 +989,75 @@ pub fn bound_inertia_about_point(
         }
     }
     Ok(translated)
+}
+
+/// Area and inertia at unit areal density in a shared Cartesian frame.
+#[derive(Clone, Copy, Debug)]
+pub struct SurfaceMassPropertiesBounds {
+    pub area_bounds: [f64; 2],
+    pub centroid_bounds: [[f64; 2]; 3],
+    pub central_inertia_bounds: [[[f64; 2]; 3]; 3],
+}
+
+/// Add the measures of complete surface pieces, counting each piece once.
+/// Each input must certify strictly positive area.
+pub fn combine_surface_mass_properties(
+    pieces: &[SurfaceMassPropertiesBounds],
+) -> Result<SurfaceMassPropertiesBounds> {
+    check(
+        !pieces.is_empty(),
+        "Surface mass properties require at least one piece",
+    )?;
+    let first = &pieces[0];
+    let first_centroid = centroid_intervals(first.centroid_bounds)?;
+    let origin = first_centroid.map(|coordinate| {
+        Interval::point(crate::distance_bounds::midpoint(coordinate.lo, coordinate.hi))
+    });
+    let mut hull = first_centroid;
+    let mut area = Interval::point(0.);
+    let mut first_moments = [Interval::point(0.); 3];
+    for piece in pieces {
+        let weight = Interval::new(piece.area_bounds[0], piece.area_bounds[1])?;
+        check(
+            weight.lo > 0.,
+            "Each surface piece must have strictly positive area",
+        )?;
+        let summed_area = area.add(weight)?;
+        area = summed_area.intersect(area.lo.max(weight.lo), summed_area.hi)?;
+        let centroid = centroid_intervals(piece.centroid_bounds)?;
+        for i in 0..3 {
+            hull[i].lo = hull[i].lo.min(centroid[i].lo);
+            hull[i].hi = hull[i].hi.max(centroid[i].hi);
+            let local = centroid[i].sub(origin[i])?;
+            first_moments[i] = first_moments[i].add(local.mul(weight)?)?;
+        }
+    }
+
+    let mut centroid = origin;
+    for i in 0..3 {
+        centroid[i] = origin[i]
+            .add(first_moments[i].div(area)?)?
+            .intersect(hull[i].lo, hull[i].hi)?;
+    }
+    let mut inertia = [[Interval::point(0.); 3]; 3];
+    for piece in pieces {
+        let translated = translate_inertia(
+            piece.central_inertia_bounds,
+            Interval::new(piece.area_bounds[0], piece.area_bounds[1])?,
+            centroid_intervals(piece.centroid_bounds)?,
+            centroid,
+        )?;
+        for (i, row) in inertia.iter_mut().enumerate() {
+            for (value, [lo, hi]) in row.iter_mut().zip(translated[i]) {
+                *value = value.add(Interval::new(lo, hi)?)?;
+            }
+        }
+    }
+    Ok(SurfaceMassPropertiesBounds {
+        area_bounds: [area.lo, area.hi],
+        centroid_bounds: centroid.map(|coordinate| [coordinate.lo, coordinate.hi]),
+        central_inertia_bounds: inertia.map(|row| row.map(|value| [value.lo, value.hi])),
+    })
 }
 
 fn symmetric_tensor_intervals(bounds: [[[f64; 2]; 3]; 3]) -> Result<[[Interval; 3]; 3]> {
@@ -1186,6 +1264,16 @@ pub struct TrimmedPatchSetPrincipalInertiaReport {
 }
 
 impl TrimmedPatchSetCentralInertiaReport {
+    /// Extract complete bounds for assembly with other surface pieces.
+    pub fn mass_properties_bounds(&self) -> Option<SurfaceMassPropertiesBounds> {
+        let area_bounds = self.centroid.measure.total.area.as_ref()?.bounds;
+        (area_bounds[0] > 0.).then_some(SurfaceMassPropertiesBounds {
+            area_bounds,
+            centroid_bounds: self.centroid.centroid_bounds?,
+            central_inertia_bounds: self.central_inertia_bounds?,
+        })
+    }
+
     /// Enclose the moment about an axis through the common area centroid.
     pub fn bound_axis_moment(&self, direction: [f64; 3]) -> Result<Option<[f64; 2]>> {
         self.central_inertia_bounds

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0629",
+  "testedBase": "cabc05b913aa74128ee1e94d811f697d4abdceaa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 223,
+  "scope": [
+    "Combine independently bounded surface pieces by area-weighted centroid and interval parallel-axis recentering.",
+    "Check separated centroids, nested-island measurement assembled from independent reports, and refusal of missing or nonpositive area."
+  ],
+  "logSha256": "a5a349bbd3f360064926cf8c9a8f3d5a9976674f2e4aa3ee9aeaf19a69ebac3e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "8cb3c6c8c959c0e9ab0755cde45a7fa137d19a8b59274796d9dabf2ab984460e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "37339dad82f9db774d25d34fe110af165a89018cddfac3fce088feb74cd9f374"
+  }
+}
