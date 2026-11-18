@@ -869,6 +869,24 @@ pub enum ReverseTravelStatus {
     Undetermined,
 }
 
+impl DirectionalTravelReport {
+    /// Compare the certified reverse travel enclosure against an inclusive limit.
+    pub fn reverse_status(&self, limit: f64) -> Result<ReverseTravelStatus> {
+        check(
+            limit.is_finite() && limit >= 0.,
+            "Reverse travel limit must be finite and nonnegative",
+        )?;
+        let [lo, hi] = self.reverse_bounds;
+        Ok(if hi <= limit {
+            ReverseTravelStatus::Within
+        } else if lo > limit {
+            ReverseTravelStatus::Exceeds
+        } else {
+            ReverseTravelStatus::Undetermined
+        })
+    }
+}
+
 /// Check reverse travel on an original-parameter interval. Classification
 /// remains valid on budget exhaustion if the bounds separate from the limit.
 pub fn check_directional_backtracking(
@@ -890,13 +908,6 @@ pub fn check_directional_backtracking(
         measurement_tolerance,
         max_cells,
     )?;
-    let [lo, hi] = travel.reverse_bounds;
-    let status = if hi <= reverse_limit {
-        ReverseTravelStatus::Within
-    } else if lo > reverse_limit {
-        ReverseTravelStatus::Exceeds
-    } else {
-        ReverseTravelStatus::Undetermined
-    };
+    let status = travel.reverse_status(reverse_limit)?;
     Ok((travel, status))
 }

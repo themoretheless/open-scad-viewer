@@ -3,6 +3,7 @@ use crate::*;
 
 const OPS: &[&str] = &[
     "nurbs_measure_curve_directional_travel",
+    "nurbs_measure_curve_directional_travel_batch",
     "brep_nurbs_exact_convex_prism_fillet",
     "brep_nurbs_exact_simple_prism_fillet",
     "brep_nurbs_exact_annular_fillet",
@@ -33,6 +34,7 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "nurbs_measure_curve_directional_travel" => curve_directional_travel_request(&v),
+        "nurbs_measure_curve_directional_travel_batch" => curve_directional_travel_batch_request(&v),
         "brep_nurbs_exact_convex_prism_fillet"
         | "brep_nurbs_exact_simple_prism_fillet"
         | "brep_nurbs_exact_annular_fillet"
@@ -168,10 +170,7 @@ fn handle(mut v: Value) -> Result<Value> {
 }
 
 pub(crate) fn curve_directional_travel_request(request: &Value) -> Result<Value> {
-    use nurbs_core::analysis::curve_measure::{
-        ReverseTravelStatus, StopReason, check_directional_backtracking,
-        directional_travel_on_interval,
-    };
+    use nurbs_core::analysis::curve_measure::directional_travel_on_interval;
 
     let curve: nurbs_core::curve::Curve = field(request, "curve")?;
     curve.validate()?;
@@ -183,19 +182,57 @@ pub(crate) fn curve_directional_travel_request(request: &Value) -> Result<Value>
     let direction: Vec<f64> = field(request, "direction")?;
     let tolerance: f64 = field(request, "toleranceMm")?;
     let max_cells: usize = field(request, "maxCells")?;
-    let (report, reverse_status) = if request.get("reverseLimitMm").is_some() {
-        let limit = field(request, "reverseLimitMm")?;
-        let (report, status) =
-            check_directional_backtracking(&curve, interval, &direction, limit, tolerance, max_cells)?;
-        let status = match status {
+    let reverse_limit = reverse_travel_limit(request)?;
+    let report = directional_travel_on_interval(&curve, interval, &direction, tolerance, max_cells)?;
+    directional_travel_response(interval, &report, reverse_limit)
+}
+
+fn curve_directional_travel_batch_request(request: &Value) -> Result<Value> {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_intervals;
+
+    let curve = field(request, "curve")?;
+    let intervals: Vec<[f64; 2]> = field(request, "parameterIntervals")?;
+    let direction: Vec<f64> = field(request, "direction")?;
+    let tolerance = field(request, "toleranceMm")?;
+    let max_cells = field(request, "maxCells")?;
+    let reverse_limit = reverse_travel_limit(request)?;
+    let reports = directional_travel_on_intervals(&curve, &intervals, &direction, tolerance, max_cells)?;
+    let cells = reports.iter().map(|report| report.total.cells).sum::<usize>();
+    let intervals = intervals
+        .into_iter()
+        .zip(&reports)
+        .map(|(interval, report)| directional_travel_response(interval, report, reverse_limit))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(json!({"cells": cells, "intervals": intervals}))
+}
+
+fn reverse_travel_limit(request: &Value) -> Result<Option<f64>> {
+    request
+        .get("reverseLimitMm")
+        .map(|_| {
+            let limit: f64 = field(request, "reverseLimitMm")?;
+            if !limit.is_finite() || limit < 0. {
+                return Err(input("Reverse travel limit must be finite and nonnegative"));
+            }
+            Ok(limit)
+        })
+        .transpose()
+}
+
+fn directional_travel_response(
+    interval: [f64; 2],
+    report: &nurbs_core::analysis::curve_measure::DirectionalTravelReport,
+    reverse_limit: Option<f64>,
+) -> Result<Value> {
+    use nurbs_core::analysis::curve_measure::{ReverseTravelStatus, StopReason};
+    let reverse_status = reverse_limit
+        .map(|limit| report.reverse_status(limit))
+        .transpose()?
+        .map(|status| match status {
             ReverseTravelStatus::Within => "within",
             ReverseTravelStatus::Exceeds => "exceeds",
             ReverseTravelStatus::Undetermined => "undetermined",
-        };
-        (report, Some(status))
-    } else {
-        (directional_travel_on_interval(&curve, interval, &direction, tolerance, max_cells)?, None)
-    };
+        });
     let stop_reason = match report.total.stop_reason {
         StopReason::Tolerance => "tolerance",
         StopReason::WorkLimit => "workLimit",

@@ -11,6 +11,8 @@ interface Kernel extends WebAssembly.Exports {
 }
 
 interface Report {
+  parameterInterval: [number, number]
+  cells: number
   forwardBoundsMm: [number, number]
   reverseBoundsMm: [number, number]
   reverseStatus: string | null
@@ -21,7 +23,7 @@ const file = process.argv[2]
 assert.ok(file, 'Pass the path to geometry_wasm.wasm')
 const kernel = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(file))).exports as Kernel
 
-function measure(overrides = {}): Report {
+function measure<T = Report>(overrides = {}): T {
   const bytes = encodeBinary({
     op: 'nurbs_measure_curve_directional_travel',
     curve: {
@@ -40,7 +42,7 @@ function measure(overrides = {}): Report {
   assert.ok(pointer)
   try {
     const packed = kernel.abi_request(0, pointer, bytes.length)
-    const result = decodePacked<{ ok: true; value: Report } | { ok: false; error: unknown }>(
+    const result = decodePacked<{ ok: true; value: T } | { ok: false; error: unknown }>(
       kernel.memory, kernel.abi_free, packed,
     )
     assert.ok(result.ok, JSON.stringify(result))
@@ -60,3 +62,15 @@ const coarse = measure({ reverseLimitMm: 0.7, maxCells: 1 })
 assert.equal(coarse.reverseStatus, 'undetermined')
 assert.equal(coarse.stopReason, 'workLimit')
 console.log('WASM ABI enclosed signed directional travel and classified reverse travel.')
+
+const batch = measure<{ cells: number; intervals: Report[] }>({
+  op: 'nurbs_measure_curve_directional_travel_batch',
+  parameterIntervals: [[0.875, 1], [0, 0.5], [0, 1]],
+  reverseLimitMm: 0.6,
+  maxCells: 3,
+})
+assert.equal(batch.cells, 3)
+assert.deepEqual(batch.intervals.map(report => report.parameterInterval), [[0.875, 1], [0, 0.5], [0, 1]])
+assert.deepEqual(batch.intervals.map(report => report.reverseStatus), ['within', 'within', 'undetermined'])
+assert.equal(batch.intervals[2].stopReason, 'workLimit')
+console.log('WASM ABI measured ordered directional travel windows under one work limit.')
