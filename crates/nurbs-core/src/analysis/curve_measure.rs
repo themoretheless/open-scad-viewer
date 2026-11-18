@@ -1495,63 +1495,103 @@ fn partition_planar_angular_limit(
     max_cells: usize,
     order: usize,
 ) -> Result<DirectionalSpeedLimitPartition> {
+    let (cells, work_cells) = partition_planar_angular_derivatives(
+        direction, interval, [limit], [order], parameter_tolerance, max_cells,
+    )?;
+    let cells = cells.into_iter().map(|cell| DirectionalSpeedLimitCell {
+        parameter_interval: cell.parameter_interval,
+        span: cell.span,
+        status: cell.statuses[0],
+    }).collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+/// Classify absolute angular speed, acceleration and jerk on one shared
+/// subdivision, in units of the original parameter. Subdivision continues
+/// while any limit is unresolved. One-sided derivatives apply at knots.
+pub fn partition_planar_angular_motion_limits(
+    direction: &Curve,
+    interval: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalMotionLimitPartition> {
+    let (cells, work_cells) = partition_planar_angular_derivatives(
+        direction, interval, [limits.speed, limits.acceleration, limits.jerk],
+        [1, 2, 3], parameter_tolerance, max_cells,
+    )?;
+    Ok(DirectionalMotionLimitPartition { cells, work_cells })
+}
+
+fn partition_planar_angular_derivatives<const N: usize>(
+    direction: &Curve,
+    interval: [f64; 2],
+    limits: [f64; N],
+    orders: [usize; N],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<(Vec<DirectionalMotionLimitCell<N>>, usize)> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
-    check(limit.is_finite() && limit >= 0., "Angular derivative limit must be finite and nonnegative")?;
+    validate_motion_partition_limits(limits)?;
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Angular derivatives require a planar direction curve")?;
     let fixed = fixed_cardinal_rotation(direction).is_some();
+    let order = orders.into_iter().max().unwrap_or(1);
     let (cells, work_cells) = partition_motion_cells(
         direction, interval, parameter_tolerance, max_cells,
         |jets, width| {
             if fixed {
-                return Ok((Within, false));
+                return Ok(([Within; N], false));
             }
             let length = norm(&jets[0])?;
             let squared = length.mul(length)?;
             if squared.lo <= 0. || width.lo <= 0. {
-                return Ok((Undetermined, true));
+                return Ok(([Undetermined; N], true));
             }
             let cross = |a: usize, b: usize| {
                 jets[a][0].mul(jets[b][1])?.sub(jets[a][1].mul(jets[b][0])?)
             };
             let twice = Interval::point(2.);
             let speed = cross(0, 1)?.div(squared)?;
-            let mut value = speed;
+            let mut values = [speed, Interval::point(0.), Interval::point(0.)];
             if order >= 2 {
                 let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(twice)?;
                 let acceleration = cross(0, 2)?.sub(speed.mul(squared_derivative)?)?.div(squared)?;
-                value = acceleration;
+                values[1] = acceleration;
                 if order == 3 {
                     let squared_second = project_jet(&jets[1], &jets[1])?
                         .add(project_jet(&jets[0], &jets[2])?)?.mul(twice)?;
                     // Differentiate |v|² times angular speed twice.
-                    value = cross(1, 2)?.add(cross(0, 3)?)?
+                    values[2] = cross(1, 2)?.add(cross(0, 3)?)?
                         .sub(acceleration.mul(squared_derivative)?.mul(twice)?)?
                         .sub(speed.mul(squared_second)?)?.div(squared)?;
                 }
             }
-            // Jets use a cell-local clock. Apply the source-width factor
-            // once per derivative order.
-            for _ in 0..order {
-                value = value.div(width)?;
+            let mut statuses = [Undetermined; N];
+            for ((status, order), limit) in statuses.iter_mut().zip(orders).zip(limits) {
+                let mut value = values[order - 1];
+                // The jets use a cell-local clock.
+                for _ in 0..order {
+                    value = value.div(width)?;
+                }
+                let upper = value.lo.abs().max(value.hi.abs());
+                let lower = value.lo.max(-value.hi).max(0.);
+                *status = if upper <= limit {
+                    Within
+                } else if lower > limit {
+                    Exceeds
+                } else {
+                    Undetermined
+                };
             }
-            let upper = value.lo.abs().max(value.hi.abs());
-            let lower = value.lo.max(-value.hi).max(0.);
-            let status = if upper <= limit {
-                Within
-            } else if lower > limit {
-                Exceeds
-            } else {
-                Undetermined
-            };
-            Ok((status, status == Undetermined))
+            Ok((statuses, statuses.contains(&Undetermined)))
         },
     )?;
-    let cells = cells.into_iter().map(|(span, parameter_interval, status)| {
-        DirectionalSpeedLimitCell { parameter_interval, span, status }
+    let cells = cells.into_iter().map(|(span, parameter_interval, statuses)| {
+        DirectionalMotionLimitCell { parameter_interval, span, statuses }
     }).collect();
-    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+    Ok((cells, work_cells))
 }
 
 #[derive(Clone, Copy, Debug)]

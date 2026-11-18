@@ -12320,3 +12320,32 @@ fn planar_angular_jerk_limit_detects_interior_peak_in_original_parameter() {
     let coarse = partition_planar_angular_jerk_limit(&direction, [2., 4.], 1.5, 0.005, 1).unwrap();
     assert_eq!(coarse.cells[0].status, Status::Undetermined);
 }
+
+#[test]
+fn planar_angular_motion_limits_share_cells_and_report_independent_results() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, partition_planar_angular_motion_limits,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.75, acceleration: 0.55, jerk: 1.5 };
+    let report = partition_planar_angular_motion_limits(&direction, [2., 4.], limits, 0.005, 511)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().statuses, [Status::Within; 3]);
+    assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.statuses == [Status::Exceeds, Status::Within, Status::Exceeds]
+    }));
+    assert!(report.cells.iter().any(|cell| cell.statuses[1] == Status::Exceeds));
+    assert!(report.work_cells <= 511);
+    let limits = DirectionalMotionLimits { acceleration: 100., ..limits };
+    let coarse = partition_planar_angular_motion_limits(&direction, [2., 4.], limits, 0.005, 1)
+        .unwrap();
+    assert_eq!(coarse.cells[0].statuses, [Status::Undetermined, Status::Within, Status::Undetermined]);
+}

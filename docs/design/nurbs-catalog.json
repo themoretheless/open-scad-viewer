@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 779,
-  "unallocatedCount": 221,
+  "specifiedCount": 780,
+  "unallocatedCount": 220,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18493,6 +18493,25 @@
       "remainingQualification": [
         "Certify angular jerk limits from planar rational direction jets in the original parameter clock.",
         "Check a scaled-clock interior angular jerk peak and the unresolved single-cell budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0780",
+      "name": "Совместная проверка угловой скорости, ускорения и рывка",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-780-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-780-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify all three planar angular motion limits on a shared adaptive partition.",
+        "Check shared subdivision, independent angular status at the interior peak and coarse mixed results.",
         "WASM and application integration are separate."
       ]
     }
