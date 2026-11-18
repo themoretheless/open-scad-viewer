@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { importDirectStepV9 } from '../src/kernel/cadNurbsStep'
 import { exportSolidStepAssembly } from '../src/kernel/solidStepAssembly'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
@@ -74,6 +75,31 @@ describe('exact solids from source', () => {
     expect(extent.max[2]).toBeCloseTo(5, 6)
     expect(extent.max[0]).toBeCloseTo(14, 1)
   }, 30000)
+
+  it('exports the spinner sun after enlarging its bore with Rush subtraction', async () => {
+    const source = readFileSync(new URL('../examples/rush-frontend/spinner-bore-edit.r', import.meta.url), 'utf8')
+    const evaluated = await evaluate(source)
+    const plan = evaluated.exactSolids!
+    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+    expect(bodies).toHaveLength(1)
+    const step = await exportSolidStepAssembly({ version: 1, sketches: [], bodies })
+    const { model } = importDirectStepV9(step)
+    expect(model.bodies).toHaveLength(1)
+    expect(model.faces).toHaveLength(390)
+    const minRadius = Math.min(...model.vertices.map(({ point }) => Math.hypot(point[0], point[1])))
+    expect(minRadius).toBeCloseTo(22, 7)
+    const fixtureDirectory = process.env.CAD_STEP_EDITED_SPINNER_FIXTURE
+    if (fixtureDirectory) {
+      mkdirSync(fixtureDirectory, { recursive: true })
+      writeFileSync(join(fixtureDirectory, 'after.step'), step)
+      const before = await evaluate(source.replace('show sun.subtract(cylinder(diameter / 2, 10mm))', 'show sun'))
+      const original = before.exactSolids!
+      const stock = buildExactSolidBodies(original.nodes, original.roots)
+      writeFileSync(join(fixtureDirectory, 'before.step'), await exportSolidStepAssembly({
+        version: 1, sketches: [], bodies: stock,
+      }))
+    }
+  }, 60000)
 
   it('builds and exports the planetary spinner as twenty exact herringbone gears', async () => {
     // The spinner used to be a sampled polygon prototype; its gears are now
