@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0883",
+  "testedBase": "9809487a25739d2276e0d2761ef8b99c776496c4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "Continuous active overlap via four limiting lengths. Verified analytic interior maximum and endpoints for an external pair, internal mesh and refusal on loss of tangent or overlap."
+  ],
+  "logSha256": "d5658c8a259c978ae9410023f1d54d184b26fa99c8a9d38b66138530c2cd3f17",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "5b684b697da87abbf93a32d26a86f810de6fe29cec7ae96f6fdb430ef813970b",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "fc52708dd67165877bf4793c611ac350d558fbf1fb4667cb63d7e89b3ac7095b",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "35a6eb08c6cea1713d450c505502f5f339616fad5ef6562e6d6be967ed0befa9"
+  }
+}

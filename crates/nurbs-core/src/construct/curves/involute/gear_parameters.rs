@@ -242,22 +242,34 @@ pub fn mounted_spur_contact_ratio_bounds(
     mesh: SpurMesh,
     centre_distance: f64,
 ) -> Result<[f64; 2]> {
-    check(
-        centre_distance.is_finite() && centre_distance > 0.,
-        "Expected positive finite centre distance",
-    )?;
+    spur_contact_ratio_over_mounting_range(
+        module,
+        teeth,
+        pressure_degrees,
+        mesh,
+        [centre_distance; 2],
+    )
+}
+
+/// Enclose the active contact ratio for every centre distance in the interval.
+/// The overlap of two translated active flank intervals can peak strictly
+/// inside the tolerance. Bounds account for both cross distances and both
+/// interval widths, including changes of limiting flank within the tolerance.
+pub fn spur_contact_ratio_over_mounting_range(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    mesh: SpurMesh,
+    centre_distance: [f64; 2],
+) -> Result<[f64; 2]> {
+    let centres = I::new(centre_distance[0], centre_distance[1])?;
+    check(centres.lo > 0., "Expected positive finite centre distance")?;
     let internal = matches!(mesh, SpurMesh::Internal);
     check(
         !internal || teeth[1] > teeth[0],
         "Ring must have more teeth than pinion",
     )?;
-    spur_contact_ratio(
-        module,
-        teeth,
-        pressure_degrees,
-        internal,
-        Some(centre_distance),
-    )
+    spur_contact_ratio(module, teeth, pressure_degrees, internal, Some(centres))
 }
 
 fn spur_contact_ratio(
@@ -265,7 +277,7 @@ fn spur_contact_ratio(
     teeth: [usize; 2],
     pressure_degrees: f64,
     internal: bool,
-    mounted: Option<f64>,
+    mounted: Option<I>,
 ) -> Result<[f64; 2]> {
     let flank = |count, ring| -> Result<(I, I, I)> {
         let gear =
@@ -280,13 +292,12 @@ fn spur_contact_ratio(
     };
     let (low, high, base) = flank(teeth[0], false)?;
     let (peer_low, peer_high, peer_base) = flank(teeth[1], internal)?;
-    let span = if let Some(value) = mounted {
+    let span = if let Some(centres) = mounted {
         let offset = if internal {
             peer_base.sub(base)?
         } else {
             peer_base.add(base)?
         };
-        let centres = I::point(value);
         let gap = centres.sub(offset)?;
         check(
             gap.lo > 0.,
@@ -309,9 +320,21 @@ fn spur_contact_ratio(
     } else {
         (span.sub(peer_high)?, span.sub(peer_low)?)
     };
-    let start = I::new(low.lo.max(peer_start.lo), low.hi.max(peer_start.hi))?;
-    let end = I::new(high.lo.min(peer_end.lo), high.hi.min(peer_end.hi))?;
-    let length = end.sub(start)?;
+    // min(endpoints) - max(starts) equals the smallest of the four
+    // pairwise differences. Keep each flank's translation-invariant width.
+    let limits = [
+        high.sub(low)?,
+        peer_high.sub(peer_low)?,
+        high.sub(peer_start)?,
+        peer_end.sub(low)?,
+    ];
+    let length = limits
+        .into_iter()
+        .reduce(|a, b| I {
+            lo: a.lo.min(b.lo),
+            hi: a.hi.min(b.hi),
+        })
+        .unwrap();
     check(length.lo > 0., "No certified positive flank overlap")?;
     let base_pitch = base
         .mul(pi()?)?

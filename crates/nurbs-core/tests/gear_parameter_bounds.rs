@@ -320,3 +320,31 @@ fn mounting_tolerance_encloses_continuous_signed_backlash() {
         }
     }
 }
+
+#[test]
+fn contact_tolerance_captures_an_interior_peak_and_ring_overlap() {
+    use involute::{SpurMesh, spur_contact_ratio_over_mounting_range as range};
+    let cosine = 20_f64.to_radians().cos();
+    let base = 4. * cosine;
+    let extent = (25. - base * base).sqrt();
+    let peak = extent / (std::f64::consts::PI * cosine);
+    let bounds = range(1., [8, 8], 20., SpurMesh::External, [7.8, 8.4]).unwrap();
+    contains(bounds, peak);
+    assert!(bounds[1] - peak < 1e-9);
+    for d in [7.8, 8.4] {
+        let span = (d * d - 4. * base * base).sqrt();
+        let end = (extent - (span - extent).abs()) / (std::f64::consts::PI * cosine);
+        contains(bounds, end);
+        assert!(end < peak - 0.05);
+    }
+    let ring = range(1., [20, 80], 20., SpurMesh::Internal, [30., 30.2]).unwrap();
+    for i in 0..=20 {
+        let d = 30. + f64::from(i) * 0.01;
+        let b =
+            involute::mounted_spur_contact_ratio_bounds(1., [20, 80], 20., SpurMesh::Internal, d)
+                .unwrap();
+        contains(ring, (b[0] + b[1]) / 2.);
+    }
+    assert!(range(1., [8, 8], 20., SpurMesh::External, [7., 8.]).is_err());
+    assert!(range(1., [8, 8], 20., SpurMesh::External, [8., 12.]).is_err());
+}
