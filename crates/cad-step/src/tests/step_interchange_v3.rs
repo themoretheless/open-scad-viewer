@@ -3886,3 +3886,22 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
             - maximum_z(&imported.definitions()[index])).abs() < 1e-10);
     }
 }
+
+#[test]
+fn authored_shared_solids_reject_missing_definitions_and_split_local_edits() {
+    let solid = freeform_cuboid_solid([0.; 3], [1., 2., 3.]).unwrap();
+    let placed = crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [0., -1., 0., 8.], [1., 0., 0., 2.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let build = crate::StepSharedAssembly::from_placed_solids;
+    assert!(build(vec![solid.clone()], vec![placed; 257]).is_err());
+    assert!(build(vec![solid.clone()], vec![crate::StepAssemblyOccurrence { definition: 1, ..placed }]).is_err());
+    assert!(build(vec![solid.clone(), solid.clone()], vec![placed; 2]).is_err());
+    assert!(build(vec![solid.clone()], vec![crate::StepAssemblyOccurrence { transform: [[0.; 4]; 4], ..placed }]).is_err());
+    let mut scene = build(vec![solid], vec![placed; 2]).unwrap();
+    scene.replace_occurrence_geometry(1, freeform_cuboid_solid([0.; 3], [2.; 3]).unwrap()).unwrap();
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 2);
+    assert_ne!(back.occurrences()[0].definition, back.occurrences()[1].definition);
+    assert_eq!(back.occurrences()[1].transform, placed.transform);
+}

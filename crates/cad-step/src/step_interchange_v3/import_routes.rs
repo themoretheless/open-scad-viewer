@@ -692,6 +692,34 @@ pub struct StepMinimumClearance {
 }
 
 impl StepSharedAssembly {
+    /// Build a shared assembly directly from authored local solids and placements.
+    pub fn from_placed_solids(definitions: Vec<Model>, occurrences: Vec<StepAssemblyOccurrence>) -> Result<Self> {
+        if occurrences.is_empty() || occurrences.len() > super::MAX_OCCURRENCES
+            || definitions.is_empty() || definitions.len() > occurrences.len()
+        {
+            return Err(refuse("STEP assembly requires 1 to 256 placed solids"));
+        }
+        let mut used = vec![false; definitions.len()];
+        for occurrence in &occurrences {
+            let slot = used.get_mut(occurrence.definition)
+                .ok_or_else(|| refuse("STEP assembly definition index out of range"))?;
+            if super::orthogonal_placement_scales(occurrence.transform).is_none() {
+                return Err(refuse("STEP assembly requires finite nonsingular orthogonal placements"));
+            }
+            *slot = true;
+        }
+        if used.contains(&false) {
+            return Err(refuse("STEP assembly contains an unplaced definition"));
+        }
+        for model in &definitions {
+            if model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed) {
+                return Err(refuse("STEP assembly requires one closed solid per definition"));
+            }
+            model.validate()?;
+        }
+        Ok(Self { definitions, occurrences })
+    }
+
     pub fn definitions(&self) -> &[Model] {
         &self.definitions
     }
