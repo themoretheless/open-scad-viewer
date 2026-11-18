@@ -149,6 +149,35 @@ impl AssemblyMass {
         })
     }
 
+    /// Transform a measured mass distribution at unchanged material density.
+    /// The affine map may include shear, reflection and nonuniform scale.
+    pub fn affine_at_constant_density(&self, matrix: [[f64; 4]; 4]) -> Result<Self> {
+        if matrix[3] != [0., 0., 0., 1.] || matrix.iter().flatten().any(|v| !v.is_finite()) {
+            return Err(indeterminate("Expected finite affine placement"));
+        }
+        let j = std::array::from_fn(|i| std::array::from_fn(|k| matrix[i][k]));
+        let scale = dot(j[0], cross(j[1], j[2])).abs();
+        let mass = self.mass * scale;
+        let centroid = std::array::from_fn(|i| matrix[i][3] + dot(j[i], self.centroid));
+        let inertia = affine_inertia(self.inertia, j, scale);
+        if mass <= 0.
+            || !mass.is_finite()
+            || centroid
+                .iter()
+                .chain(inertia.iter().flatten())
+                .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate(
+                "Affine mass properties singular or outside finite range",
+            ));
+        }
+        Ok(Self {
+            mass,
+            centroid,
+            inertia,
+        })
+    }
+
     /// Combine the assembly with a point mass at a world-space location.
     /// Intrinsic inertia of the added weight is assumed negligible.
     pub fn with_point_mass(&self, position: [f64; 3], added_mass: f64) -> Result<Self> {
@@ -341,6 +370,34 @@ fn axial_moment(
     Ok(moment)
 }
 
+fn affine_inertia(local: [[f64; 3]; 3], j: [[f64; 3]; 3], density_scale: f64) -> [[f64; 3]; 3] {
+    // Second moments transform by J C Jᵀ. Convert to and from the
+    // inertia tensor I = trace(C) Id - C around the affine map.
+    let half_trace = (local[0][0] + local[1][1] + local[2][2]) * 0.5;
+    let second: [[f64; 3]; 3] = std::array::from_fn(|i| {
+        std::array::from_fn(|k| {
+            let mut value = 0.;
+            for p in 0..3 {
+                for q in 0..3 {
+                    let entry = (if p == q { half_trace } else { 0. }) - local[p][q];
+                    value += j[i][p] * entry * j[k][q];
+                }
+            }
+            density_scale * value
+        })
+    });
+    let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+        std::array::from_fn(|k| {
+            if i == k {
+                second[(i + 1) % 3][(i + 1) % 3] + second[(i + 2) % 3][(i + 2) % 3]
+            } else {
+                -second[i][k]
+            }
+        })
+    });
+    inertia
+}
+
 /// Composite properties of instances under nonsingular affine maps.
 pub fn assembly_mass(components: &[AssemblyComponent<'_>]) -> Result<AssemblyMass> {
     if components.is_empty() || components.len() > 4096 {
@@ -371,31 +428,7 @@ pub fn assembly_mass(components: &[AssemblyComponent<'_>]) -> Result<AssemblyMas
         let m = c.properties.signed_volume_mm3 * scale * c.density;
         let center: [f64; 3] =
             std::array::from_fn(|i| c.transform[i][3] + dot(j[i], c.properties.centroid));
-        // Second moments transform by J C Jᵀ. Convert to and from the
-        // inertia tensor I = trace(C) Id - C around the affine map.
-        let local = c.properties.inertia_mm5;
-        let half_trace = (local[0][0] + local[1][1] + local[2][2]) * 0.5;
-        let second: [[f64; 3]; 3] = std::array::from_fn(|i| {
-            std::array::from_fn(|k| {
-                let mut value = 0.;
-                for p in 0..3 {
-                    for q in 0..3 {
-                        let entry = (if p == q { half_trace } else { 0. }) - local[p][q];
-                        value += j[i][p] * entry * j[k][q];
-                    }
-                }
-                scale * c.density * value
-            })
-        });
-        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
-            std::array::from_fn(|k| {
-                if i == k {
-                    second[(i + 1) % 3][(i + 1) % 3] + second[(i + 2) % 3][(i + 2) % 3]
-                } else {
-                    -second[i][k]
-                }
-            })
-        });
+        let inertia = affine_inertia(c.properties.inertia_mm5, j, scale * c.density);
         mass += m;
         for k in 0..3 {
             first[k] += m * center[k];

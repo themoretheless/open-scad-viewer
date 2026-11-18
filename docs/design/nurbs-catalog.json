@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 995,
-  "unallocatedCount": 5,
+  "specifiedCount": 996,
+  "unallocatedCount": 4,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22588,6 +22588,25 @@
       ],
       "remainingQualification": [
         "Proper rigid motions with translation. Full rotated central tensor compared against remeasurement of moved STEP geometry and OCCT. Nonuniform scale refused."
+      ]
+    },
+    {
+      "id": "NURBS-0996",
+      "name": "Аффинный пересчёт инерции измеренной NURBS-подсборки при постоянной плотности",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::affine_at_constant_density",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Constant-density nonsingular affine map. Direct reintegration includes shear, nonuniform scaling and reflection; independent OCCT checks the reflected elliptic cylinder tensor."
       ]
     }
   ],

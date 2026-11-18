@@ -50,6 +50,27 @@ fn reflected_elliptic_cylinder_retains_rational_surface_weights() {
         [0., 0., -4., 13.],
         [0., 0., 0., 1.],
     ];
+    let props = brep_core::analysis::mass_properties(&cylinder, 1e-7, 200_000).unwrap();
+    let measured = brep_core::analysis::AssemblyMass {
+        mass: props.signed_volume_mm3,
+        centroid: props.centroid,
+        inertia: props.inertia_mm5,
+    };
+    for shear in [0., 0.5] {
+        let mut map = transform;
+        map[0][1] = shear;
+        let placed = measured.affine_at_constant_density(map).unwrap();
+        let body = brep_core::transform::affine(&cylinder, map).unwrap();
+        let direct = brep_core::analysis::mass_properties(&body, 1e-7, 200_000).unwrap();
+        assert!((placed.mass - direct.signed_volume_mm3).abs() < 1e-5);
+        for i in 0..3 {
+            assert!((placed.centroid[i] - direct.centroid[i]).abs() < 1e-8);
+            for j in 0..3 {
+                assert!((placed.inertia[i][j] - direct.inertia_mm5[i][j]).abs() < 1e-4);
+            }
+        }
+    }
+    assert!(measured.affine_at_constant_density([[0.; 4]; 4]).is_err());
     let assembly = StepSharedAssembly::from_placed_solids(
         vec![cylinder],
         vec![StepAssemblyOccurrence {
