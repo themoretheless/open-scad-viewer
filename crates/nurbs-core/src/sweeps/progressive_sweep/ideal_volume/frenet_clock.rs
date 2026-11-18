@@ -28,7 +28,8 @@ fn condition(path: &Curve, spent: &mut usize, max: usize) -> Option<Curve> {
     }
     let first = exponent(*path.weights.first()?)?;
     let last = exponent(*path.weights.last()?)?;
-    if (last - first).abs() < degree {
+    // A multispan loop may gain and then lose the same exponent.
+    if path.weights.len() == path.degree + 1 && (last - first).abs() < degree {
         return None;
     }
     let charge = path.weights.len().checked_add(path.knots.len())?;
@@ -121,6 +122,13 @@ mod tests {
         assert_eq!(normalized.knots, path.knots);
         assert_eq!(normalized.control_points, path.control_points);
         normalized.validate().unwrap();
+
+        let mut returning_clock = path.clone();
+        returning_clock.weights = vec![1., 2., 4., 2., 1.];
+        let mut spent = 0;
+        let normalized = condition(&returning_clock, &mut spent, charge).unwrap();
+        assert_eq!(normalized.weights, vec![1.; 5]);
+        assert_eq!(spent, charge);
 
         let mut wider_basis = path.clone();
         wider_basis.knots[4] = 2.;
