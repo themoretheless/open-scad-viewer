@@ -106,3 +106,23 @@ fn clearance_inspection_uses_interior_uv_witness_and_whole_patch_support() {
     assert_eq!(inspect(&c,&s,3.1,1e-6,1000).unwrap().0,BelowMinimum);
     assert!(inspect(&c,&s,-1.,1e-6,1000).is_err());
 }
+
+#[test]
+fn crossing_curve_measures_to_retained_hole_wall() {
+    use nurbs_core::{trim_domain::TrimDomain, trimmed_surface_distance::curve_distance};
+    let rect = |u: [f64;2], v: [f64;2]| Curve::from_polyline(vec![
+        vec![u[0],v[0]], vec![u[1],v[0]], vec![u[1],v[1]], vec![u[0],v[1]], vec![u[0],v[0]]
+    ]).unwrap();
+    let outer = rect([1.,8.],[-4.,2.]);
+    let hole = rect([3.25,5.75],[-2.,0.]).reverse().unwrap();
+    let region = TrimDomain::new(&[vec![outer],vec![hole]],1e-8).unwrap();
+    let mut c = line([2.,2.,-1.],[2.,2.,1.]);
+    c.weights = vec![1.,2.];
+    let report = curve_distance(&c,&panel(),&region,0.05,20000,1000000).unwrap();
+    let upper = report.upper_bound_mm.unwrap();
+    assert!(report.lower_bound_mm <= 1. && upper >= 1. && upper - report.lower_bound_mm <= 0.05, "{report:?}");
+    let [[t,_],[u,v]] = report.parameters.unwrap();
+    assert!(-2. < t && t < 5.);
+    assert!(!(3.25..5.75).contains(&u) || !(-2.0..0.).contains(&v));
+    assert!(curve_distance(&c,&panel(),&region,0.,100,1000).is_err());
+}

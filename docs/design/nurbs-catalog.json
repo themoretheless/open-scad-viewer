@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 909,
-  "unallocatedCount": 91,
+  "specifiedCount": 910,
+  "unallocatedCount": 90,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20923,6 +20923,23 @@
       ],
       "remainingQualification": [
         "Trimmed positive-weight tensor surfaces with oriented UV loops. An admitted witness is required on each face. Unproved threshold decisions remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0910",
+      "name": "Границы расстояния от пространственной NURBS-кривой до обрезанной поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::trimmed_surface_distance::curve_distance",
+      "evidence": [
+        "crates/nurbs-core/src/trim/trimmed_surface_distance.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Spatial curve and positive-weight tensor surface with oriented UV loops. Upper bound requires an admitted witness. Work limits can leave a wider interval."
       ]
     }
   ],
