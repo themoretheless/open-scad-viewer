@@ -1629,3 +1629,30 @@ pub fn partition_exact_periodic_curve(
         refusal: None,
     })
 }
+
+/// Join an ordered mixed-degree chain on its original parameter intervals,
+/// then remove provably redundant knots and degrees from the complete profile.
+/// Only a completed result is emitted. Every intermediate representation must
+/// fit the storage limits and the same shared proof budget.
+pub fn compress_mixed_degree_chain(sources: &[Curve], max_work: u64) -> Result<GaugeMergeReport> {
+    crate::check((2..=256).contains(&sources.len()), "Expected 2..=256 curve segments")?;
+    crate::check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Invalid chain compression work limit")?;
+    for source in sources { source.validate()?; }
+    let exhausted = |work_used| GaugeMergeReport {
+        curve: None, work_used, refusal: Some(GaugeMergeRefusal::Exact(super::rational_factor::Refusal::ResourceLimit)),
+    };
+    let mut current = sources[0].clone();
+    let mut used = 0;
+    for next in &sources[1..] {
+        if used == max_work { return Ok(exhausted(used)); }
+        let mut join = merge_with_exact_degree_elevation(&current, next, max_work - used)?;
+        used += join.work_used;
+        let Some(curve) = join.curve.take() else { join.work_used = used; return Ok(join); };
+        current = curve;
+    }
+    if used == max_work { return Ok(exhausted(used)); }
+    let compressed = super::exact_knot_removal::compress_curve(&current, max_work - used)?;
+    used += compressed.work_used;
+    if !compressed.completed { return Ok(exhausted(used)); }
+    Ok(GaugeMergeReport { curve: Some(compressed.curve), work_used: used, refusal: None })
+}

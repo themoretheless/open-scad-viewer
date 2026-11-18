@@ -13315,3 +13315,22 @@ fn planar_contour_fill_boundary_distance_ignores_inactive_loops() {
     assert!(lo <= 1. && 1. <= hi && hi - lo <= 1e-5);
     assert!(measure([1., 0.], FillRule::EvenOdd).is_err());
 }
+
+#[test]
+fn mixed_degree_profile_compression_eliminates_both_artificial_seams() {
+    use nurbs_core::editing::exact_curve_merge::compress_mixed_degree_chain;
+    let segment = |degree:usize, start:f64, weight:f64| Curve {
+        degree, knots:[vec![start;degree+1],vec![start+2.;degree+1]].concat(),
+        control_points:(0..=degree).map(|i| vec![start+2.*i as f64/degree as f64, 1.]).collect(),
+        weights:vec![weight;degree+1], periodic:false,
+    };
+    let mut profile = [segment(1,-2.,2.),segment(2,0.,4.),segment(1,2.,1.)];
+    let report = compress_mixed_degree_chain(&profile,1_000_000).unwrap();
+    let result = report.curve.unwrap();
+    assert_eq!(result.degree,1);
+    assert_eq!(result.knots,[-2.,-2.,4.,4.]);
+    assert_eq!(result.control_points,[vec![-2.,1.],vec![4.,1.]]);
+    assert!(compress_mixed_degree_chain(&profile,report.work_used-1).unwrap().curve.is_none());
+    profile[2].control_points[0][1] = 1_f64.next_up();
+    assert!(compress_mixed_degree_chain(&profile,1_000_000).unwrap().curve.is_none());
+}
