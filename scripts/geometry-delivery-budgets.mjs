@@ -118,6 +118,15 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // v21 measured 18,961,944 raw WASM bytes, 6,759,159 packed geometry bytes,
+  // and 12,861,112 total asset bytes for the loft integration.
+  '516fa1bfeb9005d388792b6e7ba6a996c8236d5ccaec82ade454eea191050fd6':Object.freeze({
+    version:21,geometryChunkBytes:6_768_100,totalAssetBytes:12_870_100,rawGeometryBytes:18_971_500,
+    namedJsChunkBytes:Object.freeze({
+      index: 271_900, DirectModeler: 545_700, geometryBuildEngine: 339_000, wasmStreaming: 220_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/workerHandlerRuntime-BYRGBGGQ.js':114_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
