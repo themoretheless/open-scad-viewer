@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 677,
-  "unallocatedCount": 323,
+  "specifiedCount": 678,
+  "unallocatedCount": 322,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16553,6 +16553,25 @@
       "remainingQualification": [
         "Expose signed and absolute axial travel on the original parameter interval with optional reverse-limit classification.",
         "Check exact axial bounds and all three reverse classifications through the compiled ABI and validate selected windows.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0678",
+      "name": "Пакетное измерение осевого хода NURBS-кривой с общим лимитом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_intervals",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-678-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-678-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Measure ordered and overlapping original-parameter windows under a shared cell limit with reserved initial span coverage.",
+        "Check overlapping windows in unsorted order, knots at window endpoints, minimum shared span coverage and early-window refinement limits.",
         "WASM and application integration are separate."
       ]
     }
