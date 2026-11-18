@@ -7,6 +7,7 @@ import { RUNTIME_GEOMETRY_EVIDENCE_V10 } from './runtimeGeometryEvidenceV10'
 import { RUNTIME_GEOMETRY_EVIDENCE_V11 } from './runtimeGeometryEvidenceV11'
 import { RUNTIME_GEOMETRY_EVIDENCE_V12 } from './runtimeGeometryEvidenceV12'
 import { RUNTIME_GEOMETRY_EVIDENCE_V13 } from './runtimeGeometryEvidenceV13'
+import { RUNTIME_GEOMETRY_EVIDENCE_V14 } from './runtimeGeometryEvidenceV14'
 import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from './currentRuntimeGeometryEvidence'
 import { RUNTIME_GEOMETRY_EVIDENCE_V3 } from './runtimeGeometryEvidenceV3'
 import { RUNTIME_GEOMETRY_EVIDENCE_V4 } from './runtimeGeometryEvidenceV4'
@@ -522,16 +523,31 @@ const ownRustCadRuntimeV14 = bindCurrentRuntime(
   ownRustCadManifestV1,
   'own-rust-node-v14',
   'own-rust-cad-v14',
-  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+  RUNTIME_GEOMETRY_EVIDENCE_V14,
 )
 const brepClosedRuntimeV14 = bindCurrentRuntime(
   brepClosedManifestV1,
   'brep-closed-v14',
   'rust-brep-closed-v14',
+  RUNTIME_GEOMETRY_EVIDENCE_V14,
+)
+
+const ownRustCadRuntimeV15 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v15',
+  'own-rust-cad-v15',
+  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+)
+const brepClosedRuntimeV15 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v15',
+  'rust-brep-closed-v15',
   CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
 )
 
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v15': ownRustCadRuntimeV15,
+  'brep-closed-v15': brepClosedRuntimeV15,
   'own-rust-node-v14': ownRustCadRuntimeV14,
   'brep-closed-v14': brepClosedRuntimeV14,
   'own-rust-node-v13': ownRustCadRuntimeV13,
@@ -616,8 +632,8 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v14',
-  brep: 'brep-closed-v14',
+  mesh: 'own-rust-node-v15',
+  brep: 'brep-closed-v15',
 } as const)
 
 export type GeometryProviderAdmissionMode = 'legacy-grandfathered' | 'qualified' | 'denied'
