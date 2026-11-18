@@ -2372,6 +2372,34 @@ pub fn import_step_product_paths(text: &str) -> Result<(NamedStepAssembly, Vec<V
     Ok((NamedStepAssembly { assembly, name, definition_names }, paths))
 }
 
+/// Quantities of one shared definition inside a branch and elsewhere in the assembly.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepBranchPartQuantity {
+    pub definition: usize,
+    pub name: String,
+    pub inside: usize,
+    pub outside: usize,
+}
+
+/// Report selected definitions in source-definition order. Coincident placements
+/// count separately. Equal product labels do not merge distinct geometry.
+pub fn step_branch_parts_list(text: &str, prefix: &[&str]) -> Result<Vec<StepBranchPartQuantity>> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    if indices.is_empty() { return Err(refuse("No occurrence matches the STEP product path")); }
+    let mut counts = vec![0; scene.definition_names.len()];
+    for i in indices {
+        counts[scene.assembly.occurrences()[i].definition] += 1;
+    }
+    Ok(scene.parts_list()?.into_iter().filter_map(|part| {
+        let inside = counts[part.definition];
+        (inside > 0).then(|| StepBranchPartQuantity {
+            definition: part.definition, name: part.name.to_owned(), inside, outside: part.quantity - inside,
+        })
+    }).collect())
+}
+
 /// Export all leaves below a product-name prefix as a flat shared assembly.
 /// Matching sibling labels select all matching branches. Placements remain in
 /// the source assembly coordinates and explicit occurrence RGB values survive.

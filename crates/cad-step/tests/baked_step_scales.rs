@@ -357,3 +357,63 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
         std::fs::write(path, result).unwrap();
     }
 }
+
+#[test]
+fn branch_bill_counts_coincident_instances_by_definition() {
+    let item = |definition, x| StepAssemblyOccurrence {
+        definition,
+        transform: [
+            [1., 0., 0., x],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    };
+    let scene = cad_step::NamedStepAssembly {
+        name: "Drive".into(),
+        definition_names: vec!["Pin".into(), "Pin".into(), "Plate".into()],
+        assembly: StepSharedAssembly::from_placed_solids(
+            vec![
+                brep_core::cylinder(1., 2.).unwrap(),
+                brep_core::cylinder(2., 3.).unwrap(),
+                brep_core::cuboid([0.; 3], [1.; 3]).unwrap(),
+            ],
+            vec![
+                item(0, 0.),
+                item(0, 0.),
+                item(1, 5.),
+                item(0, 20.),
+                item(2, 30.),
+            ],
+        )
+        .unwrap(),
+    };
+    let step = cad_step::export_named_styled_step_assembly(
+        &scene,
+        &["Feed"],
+        &[Some(0), Some(0), Some(0), None, None],
+        &[None, None, None, None, None],
+    )
+    .unwrap();
+    let rows = cad_step::step_branch_parts_list(&step, &["Drive", "Feed"]).unwrap();
+    let mut counts: Vec<_> = rows
+        .iter()
+        .map(|r| (r.name.as_str(), r.inside, r.outside))
+        .collect();
+    counts.sort();
+    assert_eq!(counts, [("Pin", 1, 0), ("Pin", 2, 1)]);
+    assert_ne!(rows[0].definition, rows[1].definition);
+    assert_eq!(
+        cad_step::step_branch_parts_list(&step, &["Drive"])
+            .unwrap()
+            .iter()
+            .map(|r| r.inside)
+            .sum::<usize>(),
+        5
+    );
+    assert!(cad_step::step_branch_parts_list(&step, &["Feed"]).is_err());
+    assert!(cad_step::step_branch_parts_list(&step, &[]).is_err());
+    if let Some(path) = std::env::var_os("CAD_BRANCH_BOM_FIXTURE") {
+        std::fs::write(path, step).unwrap();
+    }
+}

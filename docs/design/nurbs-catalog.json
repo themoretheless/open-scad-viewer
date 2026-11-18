@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 985,
-  "unallocatedCount": 15,
+  "specifiedCount": 986,
+  "unallocatedCount": 14,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22389,6 +22389,27 @@
       ],
       "remainingQualification": [
         "Assembly-space rigid motion by named path prefix. Exports one group level with identity group frames. XDE confirms shared product identity, three volumes, world centroids, colours and group membership."
+      ]
+    },
+    {
+      "id": "NURBS-0986",
+      "name": "Спецификация ветви STEP с учётом общих деталей внутри и за пределами подсборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_branch_parts_list",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Named path prefix. Quantities grouped by definition identity. Includes coincident placements; verifies inside and outside counts independently with XDE."
       ]
     }
   ],

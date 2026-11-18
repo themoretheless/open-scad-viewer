@@ -1,0 +1,13 @@
+{
+  "id": "NURBS-0986",
+  "testedBase": "c1fd7c9d20fbc08c2d11dea29a6d23f0bebdc688",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "199f30d62abeed95e0e246614aee3cac86b9b4312516c1aecbc2b0f2cdf62835",
+    "crates/cad-step/src/step_interchange_v3.rs": "a914f9d483f419324248a8eac287097c79b0cb75eaeec56d08ac0235cad5f120",
+    "crates/cad-step/src/lib.rs": "45a9fd88382c35c4e86cc41238e552bddeb8a5abab59a2fb9d8151c5e2ffff59",
+    "crates/cad-step/tests/baked_step_scales.rs": "c05ebc118cb00f7c254179b2048f36527f48ad85c6ee80e9e565e6f3c3770c6a"
+  },
+  "fixtureSha256": "9a5805bc192756517d2b60b09d865cc2e3e0949cfea901fd569cbb89284c9c12",
+  "command": "CAD_BRANCH_BOM_FIXTURE=/tmp/osv986.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Feed: shared Pin 2 inside, 1 outside; distinct Pin 1 inside, 0 outside; Plate outside only"
+}
