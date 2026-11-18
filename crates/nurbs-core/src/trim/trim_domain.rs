@@ -297,6 +297,11 @@ impl TrimDomain {
         }
         best
     }
+    /// Enclosure of the first actual boundary point of a prepared single loop.
+    pub(crate) fn first_endpoint_box(&self) -> Rectangle {
+        self.curves[0].pieces[0].ends[0].bounds.map(|p| [p.lo, p.hi])
+    }
+
     /// A determinate result applies to every point of the rectangle. A band,
     /// precision or work stop never admits the rectangle as inside or outside.
     /// Classify a UV point using the same conservative tolerance band and

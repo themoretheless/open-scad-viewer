@@ -16,22 +16,39 @@ pub fn certify_frenet_cover(path:&Curve,twist:&Curve,max_cells:usize)->Result<Re
 pub fn certify_frenet_path(path:&Curve,twist:&Curve,traversal:[f64;2],max_cells:usize)->Result<Report>{
     super::super::validate_law(twist,false)?;
     let p=vector_certificate::certify_fourth_traversal(path,traversal,max_cells)?;
+    let out=from_fourth(path,p)?;
+    if out.status!=Status::Certified {return Ok(out);}
+    apply_twist(out,twist,traversal,max_cells)
+}
+
+fn from_fourth(path:&Curve,p:vector_certificate::FourthReport)->Result<Report> {
     let mut out=Report {status:Status::Unresolved,cells:p.base.cells,longitudinal:None,transverse:None,binormal:None,
         single_span:false,reason:p.base.reason};
     if p.base.status!=Status::Certified {return Ok(out);}
     let position=jet(path,&p.base)?;let [a,b]=path.domain();let width=I::point(b).sub(I::point(a))?;
     let w2=width.mul(width)?;let w3=w2.mul(width)?;let w4=w3.mul(width)?;
     let jerk=mul(decode(p.third.unwrap())?,w3)?;let snap=mul(decode(p.fourth.unwrap())?,w4)?;
-    let velocity=Jet {v:position.d,d:position.dd,dd:jerk};
-    let acceleration=Jet {v:position.dd,d:jerk,dd:snap};
     out.reason=Some("frenet-path-tangent-unresolved");
-    let Some(t)=normalize(velocity)? else {return Ok(out);};
+    let Some(t)=super::phase::source_tangent(position.d,position.dd,jerk)? else {return Ok(out);};
+    // C=V×A, C'=V×J and C''=A×J+V×Snap. Eliminate A×A and
+    // opposite cross terms before interval arithmetic, then normalize using
+    // angular derivatives. Raw clock acceleration parallel to V or C must
+    // not create a permanent geometric frame-rate uncertainty floor.
+    let c=cross(position.d,position.dd)?;
+    let cd=cross(position.d,jerk)?;
+    let cdd=add(cross(position.dd,jerk)?,cross(position.d,snap)?)?;
     out.reason=Some("frenet-curvature-direction-unresolved");
-    let Some(b)=normalize(cross_jet(velocity,acceleration)?)? else {return Ok(out);};
+    let Some(b)=super::phase::source_tangent(c,cd,cdd)? else {return Ok(out);};
     let n=cross_jet(b,t)?;
     out.status=Status::Certified;out.reason=None;out.single_span=p.base.single_span;
     out.longitudinal=Some(encode(t));out.transverse=Some(encode(n));out.binormal=Some(encode(b));
-    apply_twist(out,twist,traversal,max_cells)
+    Ok(out)
+}
+/// Private original-span enclosure. It carries no source continuity premise.
+pub(crate) fn certify_frenet_span(path:&Curve,span:usize,region:[f64;2],max:usize)->Result<(Report,Option<[[I;3];2]>)> {
+    let p=vector_certificate::certify_fourth_span(path,span,region,max)?;
+    let position=if p.base.status==Status::Certified {let j=jet(path,&p.base)?;Some([j.d,j.dd])}else{None};
+    Ok((from_fourth(path,p)?,position))
 }
 
 pub fn certify_frenet_control_trajectories(

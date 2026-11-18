@@ -56,12 +56,12 @@ impl ProjectiveUse {
     }
     /// Unclipped inverse: unsupported canonical tails remain visible to the
     /// caller. Clipping here would hide missing retained-domain coverage.
-    pub fn inverse_normalized_unclipped(&self,canonical:I)->Result<I> {
-        let a=I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
-        let b=I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
-        let q=canonical.sub(a)?.div_signed(b.sub(a)?)?;
-        let t=inverse_interval::fraction(q,self.weights)?;
-        let d=self.fragment.curve().domain();
+    pub fn inverse_normalized_unclipped(&self, canonical: I) -> Result<I> {
+        let a = I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
+        let b = I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
+        let q = canonical.sub(a)?.div_signed(b.sub(a)?)?;
+        let t = inverse_interval::fraction(q, self.weights)?;
+        let d = self.fragment.curve().domain();
         I::point(d[0]).add(t.mul(I::point(d[1]).sub(I::point(d[0]))?)?)
     }
     /// Outward enclosures only: root expressions and original domains remain
@@ -104,20 +104,48 @@ pub fn qualify(
         exact_work: 0,
         reason: "source-projective-layout-unproven",
     };
-    let Some(r) = nurbs_core::curve_surface_affine::verify_projective_algebraic(
+    let budget = max_work.min(cad_predicates::MAX_WORK);
+    let exact = nurbs_core::curve_surface_affine::verify_projective_algebraic(
         world,
         fragment.curve(),
         fragment.surface(),
         range,
         weights,
-        max_work.min(cad_predicates::MAX_WORK),
-    )?
-    else {
-        return Ok(out);
+        budget,
+    )?;
+    let (outcome, used) = if let Some(exact) = exact {
+        (exact.outcome, exact.work_used)
+    } else {
+        // The full affine traversal has a common normalized clock. Prove
+        // the original restriction directly, including its chart inclusion
+        // and any interior knot lines. Partial and nonlinear maps still need
+        // their exact projective composition.
+        let [[a, da], [b, db]] = range;
+        if !(da > 0. && db > 0. && weights[0] > 0. && weights[0] == weights[1]) {
+            return Ok(out);
+        }
+        let reversed = if a == 0. && b == db {
+            false
+        } else if a == da && b == 0. {
+            true
+        } else {
+            return Ok(out);
+        };
+        let Some(exact) = nurbs_core::curve_surface_agreement::verify_exact(
+            world,
+            fragment.curve(),
+            fragment.surface(),
+            reversed,
+            budget,
+        )?
+        else {
+            return Ok(out);
+        };
+        (exact.outcome, exact.work_used)
     };
-    out.exact_work += r.work_used;
+    out.exact_work += used;
     out.reason = "source-projective-composition-unproven";
-    if r.outcome != BezierIdentity::Equal {
+    if outcome != BezierIdentity::Equal {
         return Ok(out);
     }
     out.reason = "source-projective-orientation-unproven";

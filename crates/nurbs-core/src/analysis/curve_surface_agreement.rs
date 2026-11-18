@@ -336,7 +336,7 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=affine_bspline_lift::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
-        if s.periodic_u || s.periodic_v {
+        if s.periodic_u || s.periodic_v || !trimmed_boundary::uv_clamped(p) {
             if let Some(identity) = trimmed_boundary::verify(c, p, s, reversed, c.domain(), p.domain(), max_work)? {
                 return Ok(Some(identity));
             }

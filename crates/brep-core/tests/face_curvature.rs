@@ -46,6 +46,58 @@ fn full_plane_cover_admits_but_a_hint_does_not_replace_cover() {
     );
 }
 #[test]
+fn curvature_cover_uses_the_reversed_active_part_of_a_multispan_pcurve() {
+    use brep_core::Coedge;
+    use brep_topology::CoedgeTrim;
+    use nurbs_core::curve::Curve;
+
+    let mut model = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let outer = model.faces[0].outer;
+    let original = &model.loops[outer].coedges[0];
+    let start = &original.pcurve.control_points[0];
+    let end = &original.pcurve.control_points[1];
+    let pcurve = Curve {
+        degree: 1,
+        knots: vec![-1., -1., 0., 0.5, 1., 2., 2.],
+        control_points: [-1., 0., 0.5, 1., 2.]
+            .iter()
+            .map(|&t| {
+                (0..2)
+                    .map(|axis| end[axis] + t * (start[axis] - end[axis]))
+                    .collect()
+            })
+            .collect(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let mut curve_parameter = model.edges[original.edge].curve.domain();
+    if original.reversed {
+        curve_parameter.reverse();
+    }
+    model.loops[outer].coedges[0] = Coedge::new(original.edge, original.reversed, pcurve)
+        .with_trim(CoedgeTrim {
+            curve_parameter,
+            pcurve_parameter: [1., 0.],
+            periodic_lift: [[0; 2]; 2],
+        })
+        .unwrap();
+    model.validate().unwrap();
+
+    let report = c::inspect(&model, 0, 1e-6, 1e-8, work(), &[]).unwrap();
+    assert_eq!(report.decision, Decision::Within);
+    assert!(report.absolute_curvature_upper.unwrap() <= 1e-6);
+
+    // Shortening the same active pcurve must leave an open loop.
+    let coedge = model.loops[outer].coedges[0].clone();
+    let trim = CoedgeTrim {
+        pcurve_parameter: [0.75, 0.],
+        ..coedge.trim().unwrap()
+    };
+    model.loops[outer].coedges[0] = coedge.with_trim(trim).unwrap();
+    assert!(c::inspect(&model, 0, 1e-6, 1e-8, work(), &[]).is_err());
+}
+
+#[test]
 fn rational_cylinder_has_a_whole_face_bound_and_a_certified_excess() {
     let m = cylinder();
     let before = m.clone();

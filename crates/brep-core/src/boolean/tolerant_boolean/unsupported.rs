@@ -264,6 +264,9 @@ pub(super) struct BoundaryHit {
     pub(super) operand: usize,
     pub(super) edge: usize,
     pub(super) t: f64,
+    /// Set only when the tracer evaluated this exact original vertex on the
+    /// other surface and the endpoint belongs to the active coedge trim.
+    pub(super) original_vertex: Option<usize>,
     pub(super) point: [f64; 3],
     pub(super) a: [f64; 2],
     pub(super) b: [f64; 2],

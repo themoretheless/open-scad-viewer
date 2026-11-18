@@ -344,12 +344,13 @@ fn piecewise_bezier_tangent(curve:&Curve,endpoints:bool,max_work:u64,spent:&mut 
  Some(Report{certified:true,exact_work:work})
 }
 pub(super) fn certify_direction(curve:&Curve,order:usize,endpoints:bool,arc_length:bool,max_work:u64)->Result<Report>{
- check(matches!(order,0|1|2)&&max_work<=1000000,"Invalid direction jet limits")?;
+ check(matches!(order,0|1|2|3)&&max_work<=1000000,"Invalid direction jet limits")?;
  curve.validate()?;
- if curve.periodic{return Ok(Report{certified:false,exact_work:0});}
+ // The exact predicate works on the active one-sided basis at each
+ // requested knot. Periodic exterior storage does not change that basis.
  check(curve.control_points.iter().all(|p|p.len()==3),"Direction jets require XYZ source")?;
  let mut spent=0;
- if order==0 {if let Some(proof)=piecewise_bezier_tangent(curve,endpoints,max_work,&mut spent){return Ok(proof);}}
+ if order==0 && !curve.periodic {if let Some(proof)=piecewise_bezier_tangent(curve,endpoints,max_work,&mut spent){return Ok(proof);}}
  use cad_predicates::{AuthoredScalar,BezierIdentity,Limits,PredicateContext,SourceArena,ToleranceContext,rational_bspline_direction_jet_identity};
  let mut values=curve.control_points.iter().zip(&curve.weights).flat_map(|(p,w)|[p[0],p[1],p[2],*w]).collect::<Vec<_>>();
  let start=values.len();values.extend_from_slice(&curve.knots);

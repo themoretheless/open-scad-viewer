@@ -311,6 +311,17 @@ fn results_chain_into_further_booleans() {
         2e-3,
         "second cut identity",
     );
+    let s3 = translate(&sphere(1.5).unwrap(), [0.3, 2.5, 7.]);
+    let third_intersection = candidate_boolean(&twice, &s3, "intersection").unwrap();
+    let three_times = candidate_boolean(&twice, &s3, "difference").unwrap();
+    three_times.validate().unwrap();
+    audit_tolerance(&three_times);
+    near(
+        volume(&three_times),
+        volume(&twice) - volume(&third_intersection),
+        2e-3,
+        "third cut identity",
+    );
 }
 
 #[test]
@@ -358,13 +369,45 @@ fn short_cylinder_with_a_wall_sphere_as_in_the_solid_workspace() {
 }
 
 #[test]
-fn an_operand_vertex_on_the_other_surface_is_refused_not_guessed() {
-    // The sphere's +y vertex lies exactly on the cylinder wall
-    // (2.4² + 1.8² = 9): the intersection passes through a vertex.
+fn a_transverse_operand_vertex_on_the_other_surface_is_shared_by_the_imprint() {
+    // The sphere's +z pole lies exactly on the cylinder wall
+    // (2.4² + 1.8² = 9). Its vertical normal is transverse to the wall.
     let c = cylinder(3., 10.).unwrap();
-    let s = translate(&sphere(1.5).unwrap(), [-2.4, 0.3, 3.]);
-    let err = candidate_boolean(&c, &s, "difference").unwrap_err();
-    assert_eq!(err.code, "BREP_UNSUPPORTED_OPERATION");
+    let s = translate(&sphere(1.5).unwrap(), [-2.4, 1.8, 3.]);
+    let contact = [-2.4, 1.8, 4.5];
+    for (a, b, what) in [(&c, &s, "forward"), (&s, &c, "swapped")] {
+        let results = identities(a, b, what);
+        for result in &results {
+            assert_eq!(result.bodies.len(), 1, "{what}: one closed body");
+            let at_contact = result
+                .vertices
+                .iter()
+                .filter(|v| {
+                    (0..3)
+                        .map(|k| (v.point[k] - contact[k]).powi(2))
+                        .sum::<f64>()
+                        .sqrt()
+                        <= 1e-5
+                })
+                .count();
+            assert_eq!(
+                at_contact, 1,
+                "{what}: each result must retain exactly one shared contact vertex"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_tangential_operand_vertex_remains_an_explicit_refusal() {
+    // The sphere's +z pole touches the cylinder cap from below. Both surface
+    // normals are vertical there, so this is a tangency, not a transverse arc.
+    let c = cylinder(3., 10.).unwrap();
+    let s = translate(&sphere(1.5).unwrap(), [1., 0., 8.5]);
+    for (a, b) in [(&c, &s), (&s, &c)] {
+        let err = candidate_boolean(a, b, "difference").unwrap_err();
+        assert_eq!(err.code, "BREP_UNSUPPORTED_OPERATION");
+    }
 }
 
 #[test]

@@ -67,6 +67,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
   } = options
 
   const saveError = ref(false)
+  let saveErrorMessage = ''
   const savePending = ref(false)
   const draftConflict = ref(false)
   const loadingLatestDraft = ref(false)
@@ -271,6 +272,8 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
         stored = persistedReference = result.pointer
         saveError.value = false
         draftConflict.value = false
+        if (error.value === saveErrorMessage) error.value = ''
+        saveErrorMessage = ''
       },
     })
       .catch(e => {
@@ -279,23 +282,24 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
           const detail = e instanceof Error ? e.message : String(e)
           if (detail === 'DRAFT_CONFLICT') {
             draftConflict.value = true
-            error.value = draftConflictMessage()
+            saveErrorMessage = draftConflictMessage()
           } else if (e instanceof Error && e.name === 'QuotaExceededError')
-            error.value = label(
+            saveErrorMessage = label(
               'Хранилище заполнено. Скачайте JSON, освободите место и повторите сохранение.',
               'Storage is full. Download JSON, free space and retry saving.',
             )
           else if (detail === 'DRAFT_REFERENCE_FAILED')
-            error.value = label(
+            saveErrorMessage = label(
               'Документ записан в IndexedDB, но не удалось обновить указатель и уведомить другие вкладки. Скачайте JSON и повторите сохранение.',
               'Document saved to IndexedDB, but its reference and other tabs could not be updated. Download JSON and retry saving.',
             )
           else if (detail === 'DRAFT_CORRUPT')
-            error.value = label(
+            saveErrorMessage = label(
               'Сохранённая версия повреждена. Скачайте локальный JSON через меню «Файл».',
               'Saved version is corrupt. Download local JSON from File.',
             )
-          else error.value = label('Не удалось сохранить черновик: ', 'Could not save draft: ') + detail
+          else saveErrorMessage = label('Не удалось сохранить черновик: ', 'Could not save draft: ') + detail
+          error.value = saveErrorMessage
         }
       })
       .finally(() => {

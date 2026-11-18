@@ -177,7 +177,7 @@ fn complete_owner_accounts_for_multispan_reversal_without_promoting_sharp_caps()
     assert!(!report.g1_certified && !report.g2_certified);
     assert_eq!(
         report.exact_work,
-        report.parameter_work + report.proof.exact_work
+        report.parameter_work + report.proof.exact_work + report.face_interiors.exact_work
     );
     assert!(report.exact_work <= limits.exact_work);
     let short = inspect(

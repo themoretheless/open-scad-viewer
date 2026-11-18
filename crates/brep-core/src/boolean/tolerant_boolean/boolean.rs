@@ -332,13 +332,18 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     // Network: hit vertices shared through (operand, edge, t), chains as
     // network edges (closed chains split in two at a midpoint vertex).
     let mut asm = Assembler::new(a, b, operation)?;
-    let hit_vertex = |asm: &mut Assembler, h: &BoundaryHit| -> usize {
+    let hit_vertex = |asm: &mut Assembler, h: &BoundaryHit| -> VKey {
+        // Only the tracer may grant original-vertex identity, after checking
+        // the exact endpoint residual and the active coedge trim.
+        if let Some(vertex) = h.original_vertex {
+            return VKey::Orig(h.operand, vertex);
+        }
         if let Some(id) = asm.split_at(h.operand, h.edge, h.t, 1e-7) {
-            return id;
+            return VKey::Special(id);
         }
         let id = asm.special(h.point);
         asm.attach_edge(id, h.operand, h.edge, h.t);
-        id
+        VKey::Special(id)
     };
     // Per face: (net edge, pcurve on that face).
     let mut pieces_a: Vec<Vec<(usize, Curve)>> = vec![Vec::new(); a.faces.len()];
@@ -368,10 +373,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         };
         let v0 = hit_vertex(&mut asm, &start);
         let v1 = hit_vertex(&mut asm, &end);
-        let k = asm.push_net(
-            [VKey::Special(v0), VKey::Special(v1)],
-            t.fitted.curve.clone(),
-        );
+        let k = asm.push_net([v0, v1], t.fitted.curve.clone());
         pieces_a[t.fa].push((k, t.fitted.pcurve_a.clone()));
         pieces_b[t.fb].push((k, t.fitted.pcurve_b.clone()));
     }

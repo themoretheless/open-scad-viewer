@@ -1,0 +1,35 @@
+{
+  "sourceBase": "9484c159b3c1ab990eb23dbbff6fdaf9c9a7b876",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Closed UV box containment for a stored carrier that leaves the chart outside its active interval. Tests the joint projected pair proof, a whole chart side with zero margins, exterior excursion rejection and one-short refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 0.94s",
+      "file": "brep.log.gz",
+      "sha256": "5b5458f4b2360fde96185b41d586ab169d7eaf5f2666b4c172b614615aca323e"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2007 filtered out; finished in 11.31s",
+      "file": "shell.log.gz",
+      "sha256": "31204d2028167604540d9d39de9b453d9e8b8039e4f5b0dd3a2e5753841746f3"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib shared_boundary::jordan_partition",
+      "result": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2057 filtered out; finished in 0.00s",
+      "file": "domain.log.gz",
+      "sha256": "0933a8d54203eadc0fcef44dfa32c2f2fa42290548a06d849906c7e9b1947abb"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "bbda0fdd3aa342dd7356309337dff10b5db7562f5f7c37c571fadeb40ce86640",
+    "count": 4919
+  }
+}

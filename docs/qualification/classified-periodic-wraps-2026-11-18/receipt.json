@@ -1,0 +1,29 @@
+{
+  "sourceBase": "4c9a06b22cef07adef3621d9958c51dfcca132c7",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Explicit G1 and G2 on opposite full coedge uses of a doubly periodic rational BRep face, including shared-budget refusal and classified closed sweep regressions.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2033 filtered out; finished in 0.19s",
+      "file": "native.log.gz",
+      "sha256": "54711fa70874a01767b8208fd0ce3cfa2ac3850cc66f7f745c6c028beb09fe78"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed::classified",
+      "result": "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2026 filtered out; finished in 18.33s",
+      "file": "closed.log.gz",
+      "sha256": "dd82df4e36517cc14a6ac6063c0359f8709c3308abd88c3c271767690b75d50b"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "d51cec0888fb44687670878ef6832836ca28834cc1e722060ae24b1aa132926f",
+    "count": 4916
+  }
+}

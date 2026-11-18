@@ -16,6 +16,7 @@ pub(super) const OPS: &[&str] = &[
     "brep_fibered_source_audit",
     "brep_implicit_sphere_source_construct",
     "brep_implicit_sphere_source_audit",
+    "brep_implicit_affine_sphere_source_audit",
     "brep_nurbs_gear",
     "brep_nurbs_torus",
     "brep_nurbs_cylinder",
@@ -82,6 +83,7 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "brep_fibered_source_audit" => cad_fibered_body::run(v, true),
         "brep_implicit_sphere_source_construct" => cad_implicit_body::sphere(v, false),
         "brep_implicit_sphere_source_audit" => cad_implicit_body::sphere(v, true),
+        "brep_implicit_affine_sphere_source_audit" => cad_implicit_body::affine_sphere(v),
         "brep_nurbs_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,

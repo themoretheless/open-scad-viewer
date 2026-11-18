@@ -1,7 +1,7 @@
 import { catalogStatsSchema, idSchema, modelMetadataSchema, sourceSchema } from '../../createServer'
 import { MAX_MODEL_NAME_LENGTH, isWellFormedUnicode } from '../../modelStore'
 import type { StoredModel, StoredModelRevision } from '../../modelStore'
-import { ModelNotFoundError } from '../../publicError'
+import { InvalidToolInputError, ModelNotFoundError } from '../../publicError'
 import { modelRevisionToWire, modelToWire, toolOutputSchema } from '../officialToolInputSchema'
 import { errorResult, textResult } from '../persistedFailureStatus'
 import { z } from 'zod/v4'
@@ -135,6 +135,37 @@ export function registerCatalogTools(ctx: McpServerContext): void {
             },
           },
         })
+      } catch (error) {
+        return errorResult(error)
+      }
+    },
+  )
+
+  registerDeleteModelTool(ctx)
+}
+
+function registerDeleteModelTool(ctx: McpServerContext): void {
+  const { store, server, notifyResourceListChanged } = ctx
+  server.registerTool(
+    'openscad_delete_model',
+    {
+      title: 'Delete OpenSCAD model',
+      description:
+        'Delete a saved OpenSCAD model and its associated revisions, build records, and artifacts from DuckDB.',
+      inputSchema: z.object({ model_id: idSchema }).strict(),
+      outputSchema: toolOutputSchema(z.object({ model_id: idSchema, deleted: z.boolean() })),
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ model_id }) => {
+      try {
+        if (!store.deleteModel) {
+          throw new InvalidToolInputError('The configured model store does not support deleting models.', {
+            code: 'capability_unavailable',
+          })
+        }
+        const deleted = await store.deleteModel(model_id)
+        if (deleted) notifyResourceListChanged()
+        return textResult({ model_id, deleted })
       } catch (error) {
         return errorResult(error)
       }

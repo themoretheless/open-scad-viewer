@@ -175,6 +175,26 @@ fn different_nonplanar_caps_bind_the_same_hollow_material_and_exact_wall_jets() 
             );
         }
     }
+    for (end, bindings) in body.bindings().into_iter().enumerate() {
+        let spans = body.transverse_cap_wall_spans(end).unwrap();
+        assert_eq!(spans.len(), bindings.len());
+        for (span, source) in spans.zip(bindings) {
+            assert_eq!(span.endpoint(), end);
+            assert!(std::ptr::eq(span.binding(), source));
+        }
+    }
+    assert!(body.transverse_cap_wall_spans(2).is_none());
+    #[cfg(feature = "codec")]
+    eprintln!("original-cap-wall-source={}", value_codec::json!({
+        "path": &path,
+        "scale": &scale,
+        "twist": &twist,
+        "axis": &axis,
+        "normal": &normal,
+        "caps": caps.iter().map(|cap| value_codec::json!({
+            "surface": &cap.surface, "trims": &cap.trims
+        })).collect::<Vec<_>>()
+    }));
     assert_eq!(body.boundary_classes(), classes);
     assert_eq!(body.cap_wall_continuity(), "C0");
     let work = body.work();

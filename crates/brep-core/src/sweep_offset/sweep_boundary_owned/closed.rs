@@ -739,7 +739,8 @@ mod capped_material;
 pub use capped_material::{
     OriginalClassifiedCappedMaterial, OriginalClassifiedCappedMaterialAttempt,
     OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
-    OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material,
+    OriginalClassifiedCappedMaterialWork, OriginalTransverseCapWallSpan,
+    certify_original_classified_capped_material,
 };
 
 mod classified;

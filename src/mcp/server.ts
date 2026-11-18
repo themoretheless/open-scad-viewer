@@ -13,10 +13,12 @@ import {
   OfficialOpenScadRuntimeSupervisor,
   type OfficialOpenScadRuntimeService,
 } from './officialOpenScadRuntimeService'
+import { MCP_TOOLSET_PROFILES, parseMcpToolsetProfiles, type McpToolsetProfile } from './toolsetProfiles'
 
 export interface McpCliOptions {
   databasePath: string
   showHelp: boolean
+  toolsetProfiles?: ReadonlySet<McpToolsetProfile>
 }
 
 interface ClosableModelStore extends ModelStore {
@@ -52,6 +54,7 @@ export function parseMcpCliOptions(
     ? resolve(cwd, environment.OPENSCAD_VIEWER_DUCKDB)
     : resolve(cwd, '.open-scad-viewer.duckdb')
   let showHelp = false
+  let rawProfiles = environment.OPENSCAD_VIEWER_MCP_PROFILES
 
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index]
@@ -61,27 +64,38 @@ export function parseMcpCliOptions(
       const value = argv[++index]
       if (!value) throw new TypeError('--db requires a file path')
       databasePath = value === ':memory:' ? value : resolve(cwd, value)
+    } else if (argument === '--profiles') {
+      const value = argv[++index]
+      if (!value) throw new TypeError('--profiles requires a comma-separated list or "all"')
+      rawProfiles = value
     } else if (argument === '--help' || argument === '-h') {
       showHelp = true
     } else {
       throw new TypeError(`Unknown argument: ${argument}`)
     }
   }
-  return { databasePath, showHelp }
+  const toolsetProfiles = rawProfiles !== undefined ? parseMcpToolsetProfiles(rawProfiles) : undefined
+  return {
+    databasePath,
+    showHelp,
+    ...(toolsetProfiles !== undefined ? { toolsetProfiles } : {}),
+  }
 }
 
 function helpText(): string {
   return `OpenSCAD Viewer MCP server
 
-Usage: npm run --silent mcp -- [--db PATH | --memory]
+Usage: npm run --silent mcp -- [--db PATH | --memory] [--profiles LIST]
 
 Options:
-  --db PATH   DuckDB file (default: .open-scad-viewer.duckdb)
-  --memory    Use an ephemeral in-memory DuckDB database
-  -h, --help  Show this help
+  --db PATH        DuckDB file (default: .open-scad-viewer.duckdb)
+  --memory         Use an ephemeral in-memory DuckDB database
+  --profiles LIST  "all" (default) or comma-separated: ${MCP_TOOLSET_PROFILES.join(',')}
+  -h, --help       Show this help
 
 Environment:
-  OPENSCAD_VIEWER_DUCKDB  Alternate DuckDB path
+  OPENSCAD_VIEWER_DUCKDB        Alternate DuckDB path
+  OPENSCAD_VIEWER_MCP_PROFILES  Default --profiles value
 `
 }
 
@@ -125,6 +139,7 @@ export async function runMcpServer(
           geometry,
           officialRuntime: activeOfficialRuntime,
           localEditor: true,
+          ...(options.toolsetProfiles !== undefined ? { toolsetProfiles: options.toolsetProfiles } : {}),
           onRequestSettled: requestId => activeTransport.settleRequest(requestId),
           onRequestCancelled: requestId => activeTransport.cancelRequest(requestId),
         }),

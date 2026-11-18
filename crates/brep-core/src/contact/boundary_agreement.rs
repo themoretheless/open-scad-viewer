@@ -234,15 +234,17 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
                 .collect::<Vec<_>>();
             // The authored lift describes the endpoint's sheet. Literal joins
             // in the same chart need no periodic equivalence proof.
-            let closed = if curves.iter().zip(&ranges).all(|(c, r)| c.domain() == *r) {
-                nurbs_core::trim_domain::exact_loop_joins(&curves)?
-            } else {
+            let mut closed = None;
+            if curves.iter().zip(&ranges).all(|(c, r)| c.domain() == *r) {
+                closed = nurbs_core::trim_domain::exact_loop_joins(&curves)?;
+            }
+            if closed.is_none() {
                 let joins = nurbs_core::trim_domain::exact_trimmed_loop_joins(
                     &curves, &ranges, max_work - report.work,
                 )?;
                 report.work += joins.work_used;
-                joins.closed
-            };
+                closed = joins.closed;
+            }
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));
             for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
@@ -413,6 +415,27 @@ mod tests {
         assert!(!partial.all_equal);
         assert!(partial.work <= needed - 1);
         assert_eq!(partial.uses.len(), 24);
+    }
+    #[test]
+    fn exact_closure_uses_native_endpoints_of_an_unclamped_use() {
+        let mut model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let outer = model.faces[0].outer;
+        let pcurve = &mut model.0.loops[outer].coedges[0].pcurve;
+        let a = &pcurve.control_points[0];
+        let b = &pcurve.control_points[1];
+        pcurve.control_points = [-0.25, 0.25, 0.75, 1.25].map(|t| {
+            a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+        }).to_vec();
+        pcurve.degree = 2;
+        pcurve.knots = vec![-2., -1., 0., 1., 2., 3., 4.];
+        pcurve.weights = vec![1.; 4];
+        model.validate().unwrap();
+
+        let report = verify_exact(&model, 1_000_000).unwrap();
+        assert!(report.all_joins_exact);
+        let short = verify_exact(&model, 1).unwrap();
+        assert!(!short.all_joins_exact);
+        assert!(short.work <= 1);
     }
     #[test]
     fn exact_closure_distinguishes_a_subtolerance_gap_and_keeps_every_use() {

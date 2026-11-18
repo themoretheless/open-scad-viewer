@@ -54,14 +54,16 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static st
     {
         return None;
     }
+    boundary_from_endpoints(s, &p.control_points[0], &p.control_points[1], axis)
+}
+
+fn boundary_from_endpoints(s: &Surface, a: &[f64], b: &[f64], axis: Axis) -> Option<&'static str> {
     let coordinate = usize::from(axis == Axis::Station);
     let other = 1 - coordinate;
     let domains = [
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
     ];
-    let a = &p.control_points[0];
-    let b = &p.control_points[1];
     if a[coordinate] != b[coordinate]
         || !((a[other] == domains[other][0] && b[other] == domains[other][1])
             || (a[other] == domains[other][1] && b[other] == domains[other][0]))

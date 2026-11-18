@@ -1,0 +1,29 @@
+{
+  "sourceBase": "ebe9e19940d07c45c9fc0d44e4d9f8abc25e22bf",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact single and double periodic source tensor opening, interior interface G2, wrap interface G2, and refusal of a periodic kink or exhausted budget.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 2033 filtered out; finished in 0.04s",
+      "file": "complete.log.gz",
+      "sha256": "2d8d20683eef3226d6b710e3a29c25d8b3712433c8986a48762e27cafa899774"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed",
+      "result": "test result: ok. 72 passed; 0 failed; 0 ignored; 0 measured; 1974 filtered out; finished in 92.45s",
+      "file": "closed.log.gz",
+      "sha256": "e50dae6c61eb2cd3874ade03716fecb7eeb52d54253f9ebe5d3787ca6d396d41"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "420e74923621e2ec32668420585e4e69b32e521d3b3c8911a583657d0ff2ace3",
+    "count": 4916
+  }
+}

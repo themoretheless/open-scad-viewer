@@ -1,0 +1,11 @@
+{
+  "sourceBase": "108a64e4bbae10f83a8de20863fe66be87ddcf32",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "native": {
+    "file": "native.log.gz",
+    "sha256": "95fc961b9e2eef138ef4d49c197c9b2d6ec42a881c4fc526662ad5c640d4ce71",
+    "result": "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 2301 filtered out; finished in 404.47s"
+  },
+  "inputs": "578a182cb76d73119d497ca459a224cccd135a807f17a25ba557466a6180d8e2",
+  "oracle": "02e64d975e125d6af8d97c83733cc4b526ee7aab91f9c3940d39b2265547c1da"
+}

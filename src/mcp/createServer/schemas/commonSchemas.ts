@@ -9,9 +9,11 @@ import {
   type ModelStore,
 } from '../../modelStore'
 import { type OfficialOpenScadRuntimeService } from '../../officialOpenScadRuntimeService'
+import { type McpToolsetProfile } from '../../toolsetProfiles'
 
 export interface CreateOpenScadMcpServerOptions {
   readonly localEditor?: boolean
+  readonly toolsetProfiles?: ReadonlySet<McpToolsetProfile>
   store: ModelStore
   additionalInstructions?: string
   geometry?: McpGeometryService

@@ -162,3 +162,18 @@ export async function listArtifactsDirect(db: DuckDbExecutor, limit: number): Pr
   )
   return rows.map(artifactSummaryFromRow)
 }
+
+export async function deleteModelDirect(db: DuckDbExecutor, id: string): Promise<boolean> {
+  const existing = await getModelDirect(db, id)
+  if (!existing) return false
+  // DuckDB ART foreign-key validation cannot see uncommitted child deletes in the
+  // same transaction, so callers serialize these bottom-up auto-commit steps.
+  await db.run(
+    'DELETE FROM mcp_artifacts WHERE model_id = $id OR build_id IN (SELECT id FROM mcp_builds WHERE model_id = $id)',
+    { id },
+  )
+  await db.run('DELETE FROM mcp_builds WHERE model_id = $id', { id })
+  await db.run('DELETE FROM mcp_model_revisions WHERE model_id = $id', { id })
+  await db.run('DELETE FROM mcp_models WHERE id = $id', { id })
+  return true
+}

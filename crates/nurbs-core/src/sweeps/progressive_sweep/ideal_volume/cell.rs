@@ -235,6 +235,7 @@ impl Context<'_, '_> {
                     transport: self.transport.as_ref(),
                     shared_guide: self.shared_guide,
                     zero,
+                    length: self.arc.as_ref().map(|map| map.length()),
                 },
                 max_cells - out.cells,
             )?

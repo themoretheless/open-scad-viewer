@@ -300,11 +300,10 @@ fn inspect_mode(
     for wire in
         std::iter::once(model.faces[face].outer).chain(model.faces[face].holes.iter().copied())
     {
-        let curves = model.loops[wire]
-            .coedges
-            .iter()
-            .map(|c| c.pcurve.clone())
-            .collect::<Vec<_>>();
+        let mut curves = Vec::new();
+        for coedge in &model.loops[wire].coedges {
+            curves.extend(crate::profile::pcurve_trim::active_pcurves(coedge)?);
+        }
         check(
             nurbs_core::trim_domain::exact_loop_joins(&curves)? == Some(true),
             "Curvature coverage needs exact closed authored UV loops",

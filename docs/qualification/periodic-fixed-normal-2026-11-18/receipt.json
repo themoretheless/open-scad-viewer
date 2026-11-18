@@ -1,0 +1,145 @@
+{
+  "sourceBase": "bba06fe1a27a7a74a0c6f15b6cf1981c770968b4",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "tests": {
+    "native": {
+      "file": "native.log.gz",
+      "sha256": "92a0b9c3a7eca2fddc74e38536921959907cf02555c6475441e42b57f210908a",
+      "result": "test result: ok. 2283 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 141.26s"
+    },
+    "focused": {
+      "file": "focused.log.gz",
+      "sha256": "610c99460451e2b168eb1bfb6b9b55c81b3151d2f721171a696b59cb264a8e32",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2283 filtered out; finished in 0.56s"
+    },
+    "material": {
+      "file": "material.log.gz",
+      "sha256": "8c312f8ab5ac5327a8c72996c5b7b1bf9384b3723e77b317a754fd11b44cba6d",
+      "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 114.99s"
+    }
+  },
+  "fixedNormalMatrix": [
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": false,
+      "hole": false,
+      "cells": 5969,
+      "exact": 66951,
+      "products": 52
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": false,
+      "hole": true,
+      "cells": 6053,
+      "exact": 111541,
+      "products": 104
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": true,
+      "hole": false,
+      "cells": 5937,
+      "exact": 75134,
+      "products": 52
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": true,
+      "hole": true,
+      "cells": 5989,
+      "exact": 128558,
+      "products": 104
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 30800,
+      "exact": 67053,
+      "products": 52
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 30884,
+      "exact": 111643,
+      "products": 104
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 30768,
+      "exact": 75236,
+      "products": 52
+    },
+    {
+      "fixedNormal": true,
+      "bishop": false,
+      "periodic": true,
+      "authored": false,
+      "guided": false,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 30820,
+      "exact": 128660,
+      "products": 104
+    }
+  ],
+  "inputs": "f9267c8ef38cac25b376f7758d1e55909402a5a0bbae86adf04ae1d3051fd839",
+  "oracle": "9e78899cdc368afad429f400c921248500289a35a463a0e074684db63919c71c"
+}

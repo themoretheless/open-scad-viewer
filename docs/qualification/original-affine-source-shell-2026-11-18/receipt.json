@@ -1,0 +1,16 @@
+{
+  "sourceBase": "4a6988c8538d8290847dcdc6319a8dc2f63e04a7",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact inverse of a positive-determinant affine sphere. The certified model retains the original trimmed shell, including its pole quotients.",
+  "native": {
+    "command": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 CARGO_PROFILE_TEST_DEBUG=0 cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_implicit_body",
+    "file": "native.log.gz",
+    "sha256": "14df61d1f79d7a69661230ca6300e77cb0e6c9c0e3880f1dba06181ffd15a2d8",
+    "result": "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2034 filtered out; finished in 2.38s"
+  },
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "17e8aa37870ea1b9d24b37885efc75f6afdd87ab48cca66bb54d0ca435fc3c25",
+    "count": 4911
+  }
+}

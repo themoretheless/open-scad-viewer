@@ -541,6 +541,34 @@ pub fn prove_endpoint_contacts_only(a: &Curve, b: &Curve) -> Result<bool> {
 #[cfg(test)]
 #[path = "trim_simplicity/tests/tangent_join_tests_integration.rs"]
 mod tangent_join_tests;
+fn clamp_active_loop(curves: &[Curve], cells: &mut usize, max_cells: usize) -> Result<Option<Vec<Curve>>> {
+    if curves.iter().any(|c| c.periodic) {
+        return Ok(None);
+    }
+    let mut active = Vec::with_capacity(curves.len());
+    for c in curves {
+        let [lo, hi] = c.domain();
+        let n = c.control_points.len();
+        if c.knots[..=c.degree].iter().all(|&k| k == lo)
+            && c.knots[n..].iter().all(|&k| k == hi)
+        {
+            active.push(c.clone());
+            continue;
+        }
+        let remaining = max_cells - *cells;
+        if remaining == 0 {
+            return Ok(None);
+        }
+        let report = crate::editing::exact_curve_merge::clamp_exact_curve(c, remaining as u64)?;
+        *cells += report.work_used as usize;
+        let Some(curve) = report.curve else {
+            return Ok(None);
+        };
+        active.push(curve);
+    }
+    Ok(Some(active))
+}
+
 pub fn inspect(
     curves: &[Curve],
     tolerance_uv: f64,
@@ -555,8 +583,20 @@ pub fn inspect(
             && tolerance_uv > 0.,
         "Trim simplicity requires 2..256 curves, positive tolerance and bounded work",
     )?;
-    let exact_joins = trim_domain::exact_loop_joins(curves)?;
+    let mut exact_joins = trim_domain::exact_loop_joins(curves)?;
     let mut cells = 0;
+    let active;
+    let curves = if exact_joins.is_none() {
+        active = clamp_active_loop(curves, &mut cells, max_cells)?;
+        if let Some(active) = &active {
+            exact_joins = trim_domain::exact_loop_joins(active)?;
+            active.as_slice()
+        } else {
+            curves
+        }
+    } else {
+        curves
+    };
     let injective = curves
         .iter()
         .map(|c| {

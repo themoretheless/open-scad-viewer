@@ -1,0 +1,35 @@
+{
+  "sourceBase": "ecfd20538c7bee2060947f6ac2d66478f5932017",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Strict containment of a weighted B\u00e9zier trim proved by exact homogeneous Bernstein margins despite an overhanging pole and a subdivision point not representable as Cartesian binary64. Boundary tangency and one-short work refuse.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib exact_subdivision_proves_strict_hole_containment",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s",
+      "file": "native.log.gz",
+      "sha256": "ab7ed908f16976133544dd2f6bdcad68ce31a6067d1546e89cb847417cd2f64a"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2043 filtered out; finished in 1.06s",
+      "file": "brep.log.gz",
+      "sha256": "7b022a05f249ba7fdf60001bc20cb02ef65bca5c47b98749d91e24ab8ad95103"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2003 filtered out; finished in 12.78s",
+      "file": "shell.log.gz",
+      "sha256": "f7eded3575cd95353b63658fc876d3a47be5cd53bb9cb98aa68cac4a115d68b5"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "4239c0d2526ca92b24906deca6602df25856a6c4debb9554219852509660aa7d",
+    "count": 4918
+  }
+}

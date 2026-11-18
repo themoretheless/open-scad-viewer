@@ -67,7 +67,7 @@ pub struct OrderedClosedFiberCycle {
 // A point fixes one source coordinate. It inherits support immersion from
 // the complete closed owner; a collapsed interval need not re-prove a 2D
 // surface differential. Original root existence/uniqueness is still fresh.
-pub(super) fn point_bounds(point: &QualifiedFiber) -> Result<Box4> {
+pub(crate) fn point_bounds(point: &QualifiedFiber) -> Result<Box4> {
     let report = point.report();
     check(
         report.status == FiberStatus::UniformUniqueRoot

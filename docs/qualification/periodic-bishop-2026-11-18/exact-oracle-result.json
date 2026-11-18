@@ -1,0 +1,11 @@
+{
+  "spans": 8,
+  "exactEndpointOrder": 4,
+  "oneUlpExteriorKnotGap": [
+    "1/1351079888211148680",
+    "-1/450359962737049560",
+    "-1/86469112845513515520"
+  ],
+  "projectedCurvatureNumeratorLower": "8704/3",
+  "exactNonplanarNodeDeterminant": "-413/7200"
+}

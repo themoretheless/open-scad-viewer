@@ -35,6 +35,7 @@ import VrControls from './components/VrControls.svt'
 import ModelingGridControls from './components/ModelingGridControls.svt'
 import MaterialControls from './features/MaterialControls.svt'
 import DisplayQualityControl from './components/DisplayQualityControl.svt'
+import { warmGeometryKernel } from './kernel/geometry/kernel'
 import { clamp } from './kernel/geometry/math3d'
 import { isRushFrontend, SOURCE_FILE_ACCEPT, sourceFileExtension, withSourceExtension } from './language/rushFrontendDetect'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'svet'
@@ -416,6 +417,9 @@ onMounted(async () => {
   }
   window.addEventListener('keydown', handleGlobalKey)
   try {
+    // Published worker meshes trigger synchronous viewport inspection on the main thread.
+    await warmGeometryKernel()
+    if (!componentActive) return
     startBuildCoordinator()
     doRender('full')
   } catch {

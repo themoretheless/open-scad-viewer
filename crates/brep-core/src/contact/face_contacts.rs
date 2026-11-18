@@ -649,6 +649,7 @@ impl PairContext<'_> {
             out.cells += 1;
         }
         self.chart_partitions(&mut work, out)?;
+        self.jordan_partition(&mut work, out)?;
         if !volume_first && !work.periodic && self.chart_open(&work, out) {
             self.source_volume_chart(&mut work, out)?;
         }
@@ -858,6 +859,15 @@ impl PairContext<'_> {
                     joined.cells,
                     joined.certificate.map(SharedBoundary::JoinedSourceCharts),
                 ))
+            })?;
+        }
+        Ok(())
+    }
+    fn jordan_partition(&self, work: &mut PairWork, out: &mut Report) -> Result<()> {
+        if self.chart_open(work, out) {
+            self.chart_attempt(work, out, usize::MAX, |model, faces, budget| {
+                let (certificate, cells) = crate::shared_boundary::jordan_partition::certify_audited(model, faces, budget);
+                Ok((cells, certificate.map(SharedBoundary::ExactHull)))
             })?;
         }
         Ok(())

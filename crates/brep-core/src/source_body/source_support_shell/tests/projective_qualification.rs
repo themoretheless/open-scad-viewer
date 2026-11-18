@@ -1,6 +1,8 @@
     use super::*;
     #[path="original_regularity.rs"]
     mod original_regularity;
+    #[path = "active_trim.rs"]
+    mod active_trim;
     #[path="ordinary_vertices.rs"]
     mod ordinary_vertices;
     fn limits() -> Limits {

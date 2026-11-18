@@ -20,7 +20,13 @@ interface Report {
     bodies: unknown[]
     topologyIds: { edges: string[] }
   } | null
-  edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  edgeBindings?: {
+    edgeId: string
+    contour: number
+    segment: number
+    interval?: [number, number]
+    parameters?: [Rational, Rational]
+  }[]
   componentAreas?: { outerContour: number; boundsMm2: [number, number] }[]
   centroidBoundsMm?: [number, number][] | null
   centralInertiaBoundsMm4?: [number, number][][] | null
@@ -63,10 +69,18 @@ interface Report {
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
-  principalAxes?: ({ direction: [number, number, number]; sinAngleUpper: number; distanceBoundsMm?: [number, number]; angleSineBounds?: [number, number] } | null)[] | null
+  principalAxes?:
+    | ({
+        direction: [number, number, number]
+        sinAngleUpper: number
+        distanceBoundsMm?: [number, number]
+        angleSineBounds?: [number, number]
+      } | null)[]
+    | null
   principalMomentBoundsKgMm2?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
-  stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
+  stations?:
+    { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
   pointBoundsMm?: [number, number][] | null
   parameterBounds?: [number, number] | null
   status?: string
@@ -81,18 +95,43 @@ const file = process.argv[2]
 assert.ok(file, 'Pass the path to geometry_wasm.wasm')
 const kernel = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(file))).exports as Kernel
 
-const ring = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
+const ring = [
+  [0, 0],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [0, 0],
+]
 const request = {
   op: 'brep_build_exact_periodic_trim_sheet',
   surface: {
-    degreeU: 1, degreeV: 1,
-    knotsU: [-1, 0, 1, 2, 3, 4, 5], knotsV: [0, 0, 1, 1],
-    controlPoints: ring.map(([x, y]) => [[x, y, 0], [x, y, 2]]),
-    weights: ring.map(() => [1, 1]), periodicU: true, periodicV: false,
+    degreeU: 1,
+    degreeV: 1,
+    knotsU: [-1, 0, 1, 2, 3, 4, 5],
+    knotsV: [0, 0, 1, 1],
+    controlPoints: ring.map(([x, y]) => [
+      [x, y, 0],
+      [x, y, 2],
+    ]),
+    weights: ring.map(() => [1, 1]),
+    periodicU: true,
+    periodicV: false,
   },
   contours: [
-    [[3.5, 0.125], [0.5, 0.125], [0.5, 0.875], [3.5, 0.875], [3.5, 0.125]],
-    [[0.125, 0.25], [0.375, 0.25], [0.375, 0.75], [0.125, 0.75], [0.125, 0.25]],
+    [
+      [3.5, 0.125],
+      [0.5, 0.125],
+      [0.5, 0.875],
+      [3.5, 0.875],
+      [3.5, 0.125],
+    ],
+    [
+      [0.125, 0.25],
+      [0.375, 0.25],
+      [0.375, 0.75],
+      [0.125, 0.75],
+      [0.125, 0.25],
+    ],
   ],
   toleranceMm: 1e-8,
   maxWork: 1_000_000,
@@ -105,7 +144,9 @@ function call(maxWork: number, op = request.op, options = {}): Report {
   try {
     const packed = kernel.abi_request(0, ptr, bytes.length)
     const response = decodePacked<{ ok: true; value: Report } | { ok: false; error: unknown }>(
-      kernel.memory, kernel.abi_free, packed,
+      kernel.memory,
+      kernel.abi_free,
+      packed,
     )
     assert.ok(response.ok, JSON.stringify(response))
     return response.value
@@ -133,11 +174,16 @@ const bindingOp = 'brep_build_exact_periodic_trim_sheet_with_bindings'
 const bound = call(request.maxWork, bindingOp)
 assert.deepEqual(bound.model, result.model)
 assert.ok(bound.edgeBindings)
-assert.deepEqual(bound.edgeBindings.map(binding => binding.edgeId), result.model.topologyIds.edges)
 assert.deepEqual(
-  bound.edgeBindings.filter(binding => binding.contour === 0 && binding.segment === 0)
-    .map(binding => binding.interval),
-  [[0, 0.5], [0.5, 1]],
+  bound.edgeBindings.map(binding => binding.edgeId),
+  result.model.topologyIds.edges,
+)
+assert.deepEqual(
+  bound.edgeBindings.filter(binding => binding.contour === 0 && binding.segment === 0).map(binding => binding.interval),
+  [
+    [0, 0.5],
+    [0.5, 1],
+  ],
 )
 const refusedBound = call(1, bindingOp)
 assert.equal(refusedBound.model, null)
@@ -148,14 +194,19 @@ const inputOp = 'brep_build_exact_periodic_trim_sheet_with_input_bindings'
 const directed = call(request.maxWork, inputOp)
 assert.deepEqual(directed.model, result.model)
 assert.ok(directed.edgeBindings)
-assert.deepEqual(directed.edgeBindings.map(binding => binding.edgeId), result.model.topologyIds.edges)
+assert.deepEqual(
+  directed.edgeBindings.map(binding => binding.edgeId),
+  result.model.topologyIds.edges,
+)
 assert.deepEqual(directed.edgeBindings[0].parameters, [
-  { numerator: '0', denominator: '1' }, { numerator: '1', denominator: '2' },
+  { numerator: '0', denominator: '1' },
+  { numerator: '1', denominator: '2' },
 ])
 const holeEdge = directed.edgeBindings.find(binding => binding.contour === 1)
 assert.equal(holeEdge?.segment, 3)
 assert.deepEqual(holeEdge?.parameters, [
-  { numerator: '1', denominator: '1' }, { numerator: '0', denominator: '1' },
+  { numerator: '1', denominator: '1' },
+  { numerator: '0', denominator: '1' },
 ])
 const refusedDirected = call(1, inputOp)
 assert.equal(refusedDirected.model, null)
@@ -167,7 +218,9 @@ const audit = call(request.maxWork, auditOp, { contour: 0 })
 assert.ok(audit.joins)
 assert.equal(audit.joins.length, 6)
 assert.deepEqual(audit.joins[1], {
-  segment: 0, parameter: { numerator: '1', denominator: '2' }, kind: 'corner',
+  segment: 0,
+  parameter: { numerator: '1', denominator: '2' },
+  kind: 'corner',
 })
 const refusedAudit = call(result.workUsed + 1, auditOp, { contour: 0 })
 assert.equal(refusedAudit.joins, null)
@@ -176,8 +229,12 @@ console.log('WASM ABI returned exact contour joins and withheld an exhausted aud
 
 const lengthOp = 'brep_measure_exact_periodic_trim_range'
 const selection = {
-  contour: 0, segment: 0,
-  range: [{ numerator: '4', denominator: '5' }, { numerator: '1', denominator: '3' }],
+  contour: 0,
+  segment: 0,
+  range: [
+    { numerator: '4', denominator: '5' },
+    { numerator: '1', denominator: '3' },
+  ],
 }
 const measured = call(request.maxWork, lengthOp, { ...selection, maxCells: 100 })
 assert.ok(measured.length?.withinTolerance)
@@ -210,7 +267,9 @@ for (const [index, [lo, hi]] of worldStation.pointBoundsMm.entries()) {
   assert.ok(lo <= value && value <= hi && hi - lo < 1e-5)
 }
 const outsideStation = call(request.maxWork, stationBoundsOp, {
-  ...stationOptions, distanceMm: 6, maxCells: 6,
+  ...stationOptions,
+  distanceMm: 6,
+  maxCells: 6,
 })
 assert.equal(outsideStation.status, 'outside')
 assert.equal(outsideStation.pointBoundsMm, null)
@@ -245,7 +304,10 @@ console.log('WASM ABI enclosed signed projected areas with hole subtraction.')
 
 const directionalAreaOp = 'brep_bound_exact_periodic_trim_directional_area'
 const directional = call(request.maxWork, directionalAreaOp, {
-  outerContour: 0, normal: [1, 1, 0], maxCells: 100, toleranceMm2: 1e-8,
+  outerContour: 0,
+  normal: [1, 1, 0],
+  maxCells: 100,
+  toleranceMm2: 1e-8,
 })
 assert.equal(directional.status, 'tolerance')
 assert.ok(directional.boundsMm2)
@@ -258,7 +320,9 @@ console.log('WASM ABI enclosed the signed area in an oblique projection.')
 const surfaceAreaOp = 'brep_measure_exact_periodic_trim_surface_area'
 const surfaceAreaOptions = { outerContour: 0, toleranceMm2: 0.05, toleranceUv: 1e-10 }
 const surfaceArea = call(request.maxWork, surfaceAreaOp, {
-  ...surfaceAreaOptions, maxSurfaceCells: 10_000, maxTrimCells: 1_000_000,
+  ...surfaceAreaOptions,
+  maxSurfaceCells: 10_000,
+  maxTrimCells: 1_000_000,
 })
 assert.equal(surfaceArea.status, 'tolerance')
 assert.ok(surfaceArea.boundsMm2)
@@ -266,7 +330,9 @@ const [surfaceLo, surfaceHi] = surfaceArea.boundsMm2
 assert.ok(typeof surfaceLo === 'number' && typeof surfaceHi === 'number')
 assert.ok(surfaceLo <= 1.25 && 1.25 <= surfaceHi)
 const incompleteArea = call(request.maxWork, surfaceAreaOp, {
-  ...surfaceAreaOptions, maxSurfaceCells: 1, maxTrimCells: 1,
+  ...surfaceAreaOptions,
+  maxSurfaceCells: 1,
+  maxTrimCells: 1,
 })
 assert.equal(incompleteArea.status, 'workLimit')
 assert.equal(incompleteArea.boundsMm2, null)
@@ -275,7 +341,9 @@ console.log('WASM ABI enclosed true trimmed surface area and refused incomplete 
 const massOp = 'brep_measure_exact_periodic_trim_surface_mass_properties'
 const massOptions = { ...surfaceAreaOptions, toleranceMm2: 0.005, momentToleranceMm4: 1e-8 }
 const mass = call(request.maxWork, massOp, {
-  ...massOptions, maxSurfaceCells: 10_000, maxTrimCells: 1_000_000,
+  ...massOptions,
+  maxSurfaceCells: 10_000,
+  maxTrimCells: 1_000_000,
 })
 assert.ok(mass.centroidBoundsMm)
 assert.equal(mass.centroidBoundsMm.length, 3)
@@ -292,21 +360,41 @@ console.log('WASM ABI returned trimmed area centroid, central inertia and princi
 
 const windowMassOp = 'brep_measure_exact_periodic_trim_window_mass_properties'
 const windowOptions = { ...massOptions, toleranceMm2: 0.001, maxSurfaceCells: 10_000, maxTrimCells: 500_000 }
-const windowMass = call(request.maxWork, windowMassOp, { ...windowOptions, uvWindow: [[3.75, 4.25], [0.375, 0.625]] })
+const windowMass = call(request.maxWork, windowMassOp, {
+  ...windowOptions,
+  uvWindow: [
+    [3.75, 4.25],
+    [0.375, 0.625],
+  ],
+})
 assert.ok(windowMass.boundsMm2)
 const [windowLo, windowHi] = windowMass.boundsMm2
 assert.ok(typeof windowLo === 'number' && typeof windowHi === 'number' && windowLo <= 0.1875 && 0.1875 <= windowHi)
 assert.ok(windowMass.centroidBoundsMm)
 assert.ok(windowMass.centroidBoundsMm[0][0] <= 1 / 48 && 1 / 48 <= windowMass.centroidBoundsMm[0][1])
-const emptyWindow = call(request.maxWork, windowMassOp, { ...windowOptions, uvWindow: [[5, 6], [0.25, 0.5]] })
+const emptyWindow = call(request.maxWork, windowMassOp, {
+  ...windowOptions,
+  uvWindow: [
+    [5, 6],
+    [0.25, 0.5],
+  ],
+})
 assert.deepEqual(emptyWindow.boundsMm2, [0, 0])
 assert.equal(emptyWindow.centroidBoundsMm, null)
 console.log('WASM ABI enclosed mass properties inside a clipped UV window.')
 
 const patchSetOp = 'brep_measure_exact_periodic_trim_patch_set_mass_properties'
-const island = [[0.1875, 0.375], [0.3125, 0.375], [0.3125, 0.625], [0.1875, 0.625], [0.1875, 0.375]]
+const island = [
+  [0.1875, 0.375],
+  [0.3125, 0.375],
+  [0.3125, 0.625],
+  [0.1875, 0.625],
+  [0.1875, 0.375],
+]
 const patchSetOptions = {
-  ...surfaceAreaOptions, contours: [...request.contours, island], maxTrimCells: 1_000_000,
+  ...surfaceAreaOptions,
+  contours: [...request.contours, island],
+  maxTrimCells: 1_000_000,
 }
 const patchSet = call(request.maxWork, patchSetOp, { ...patchSetOptions, maxSurfaceCells: 20_000 })
 assert.equal(patchSet.componentAreas?.length, 2)
@@ -323,13 +411,18 @@ console.log('WASM ABI returned complete multi-component trimmed surface mass pro
 
 assert.equal(patchSet.principalMomentBoundsMm4, undefined)
 const spectralOptions = { ...patchSetOptions, maxSurfaceCells: 20_000 }
-for (const [momentToleranceMm4, met] of [[10, true], [1e-8, false]]) {
+for (const [momentToleranceMm4, met] of [
+  [10, true],
+  [1e-8, false],
+]) {
   const spectrum = call(request.maxWork, patchSetOp, { ...spectralOptions, momentToleranceMm4 })
   assert.equal(spectrum.principalMomentBoundsMm4?.length, 3)
   assert.equal(spectrum.withinMomentTolerance, met)
 }
 const incompleteSpectrum = call(request.maxWork, patchSetOp, {
-  ...spectralOptions, maxSurfaceCells: 2, momentToleranceMm4: 10,
+  ...spectralOptions,
+  maxSurfaceCells: 2,
+  momentToleranceMm4: 10,
 })
 assert.equal(incompleteSpectrum.principalMomentBoundsMm4, null)
 assert.equal(incompleteSpectrum.withinMomentTolerance, false)
@@ -337,11 +430,12 @@ console.log('WASM ABI returned optional principal moments for the complete patch
 
 assert.equal(patchSet.axisMomentBoundsMm4, undefined)
 const axisOptions = {
-  ...spectralOptions, momentToleranceMm4: 10,
+  ...spectralOptions,
+  momentToleranceMm4: 10,
   inertiaAxis: { pointMm: [1, 0, 5], direction: [0, 0, -2] },
 }
 const axisMass = call(request.maxWork, patchSetOp, axisOptions)
-const expectedAxisMoment = 83 / 768 + 49 / 12288 + 1.3125 * (1 - 2 * 3 / 28)
+const expectedAxisMoment = 83 / 768 + 49 / 12288 + 1.3125 * (1 - (2 * 3) / 28)
 const axisBounds = axisMass.axisMomentBoundsMm4
 assert.ok(axisBounds && axisBounds[0] <= expectedAxisMoment && expectedAxisMoment <= axisBounds[1])
 assert.equal(axisMass.principalMomentBoundsMm4?.length, 3)
@@ -383,8 +477,8 @@ const densityMass = call(request.maxWork, densityOp, densityOptions)
 const expectedMass = 2.875
 const expectedCenterX = 0.34375 / expectedMass
 const expectedCenterY = 0.375 / expectedMass
-const expectedWeightedInertia = 2 * 83 / 768 + 6 * 49 / 12288
-  - expectedMass * (expectedCenterX ** 2 + expectedCenterY ** 2)
+const expectedWeightedInertia =
+  (2 * 83) / 768 + (6 * 49) / 12288 - expectedMass * (expectedCenterX ** 2 + expectedCenterY ** 2)
 for (const [bounds, expected] of [
   [densityMass.massBoundsKg, expectedMass],
   [densityMass.centerOfMassBoundsMm?.[0], expectedCenterX],
@@ -395,15 +489,24 @@ for (const [bounds, expected] of [
 assert.equal(call(request.maxWork, densityOp, { ...densityOptions, maxSurfaceCells: 2 }).massBoundsKg, null)
 console.log('WASM ABI enclosed density-weighted mass properties by outer contour.')
 
-assert.deepEqual(densityMass.componentMasses?.map(({ outerContour }) => outerContour), [0, 2])
-for (const [component, expected] of [[0, 2.5], [1, 0.375]]) {
+assert.deepEqual(
+  densityMass.componentMasses?.map(({ outerContour }) => outerContour),
+  [0, 2],
+)
+for (const [component, expected] of [
+  [0, 2.5],
+  [1, 0.375],
+]) {
   const bounds = densityMass.componentMasses?.[component]?.boundsKg
   assert.ok(bounds && bounds[0] <= expected && expected <= bounds[1])
 }
 assert.deepEqual(call(request.maxWork, densityOp, { ...densityOptions, maxSurfaceCells: 2 }).componentMasses, [])
 console.log('WASM ABI enclosed the mass of each retained component.')
 
-for (const [component, expected] of [[0, 20 / 23], [1, 3 / 23]]) {
+for (const [component, expected] of [
+  [0, 20 / 23],
+  [1, 3 / 23],
+]) {
   const fraction = densityMass.componentMasses?.[component]?.massFractionBounds
   assert.ok(fraction && 0 <= fraction[0] && fraction[0] <= expected && expected <= fraction[1] && fraction[1] <= 1)
 }
@@ -411,7 +514,8 @@ console.log('WASM ABI enclosed the mass fraction of each retained component.')
 
 assert.equal(densityMass.centerOfMassPlaneDistanceBoundsMm, undefined)
 const planeOptions = {
-  ...densityOptions, centerOfMassPlane: { pointMm: [1, 0, 0], normal: [2, -2, 0] },
+  ...densityOptions,
+  centerOfMassPlane: { pointMm: [1, 0, 0], normal: [2, -2, 0] },
 }
 const planeResult = call(request.maxWork, densityOp, planeOptions)
 const centerPlane = planeResult.centerOfMassPlaneDistanceBoundsMm
@@ -422,7 +526,9 @@ const incompletePlane = call(request.maxWork, densityOp, { ...planeOptions, maxS
 assert.equal(incompletePlane.centerOfMassPlaneDistanceBoundsMm, null)
 const firstMassMoment = planeResult.firstMassMomentAboutPlaneBoundsKgMm
 const expectedFirstMassMoment = expectedPlaneDistance * 2.875
-assert.ok(firstMassMoment && firstMassMoment[0] <= expectedFirstMassMoment && expectedFirstMassMoment <= firstMassMoment[1])
+assert.ok(
+  firstMassMoment && firstMassMoment[0] <= expectedFirstMassMoment && expectedFirstMassMoment <= firstMassMoment[1],
+)
 assert.equal(incompletePlane.firstMassMomentAboutPlaneBoundsKgMm, null)
 assert.equal(densityMass.firstMassMomentAboutPlaneBoundsKgMm, undefined)
 console.log('WASM ABI enclosed the signed first mass moment about a plane.')
@@ -431,10 +537,13 @@ console.log('WASM ABI enclosed the signed distance from the density-weighted cen
 assert.equal(densityMass.axisMomentBoundsKgMm2, undefined)
 const weightedAxisOptions = { ...planeOptions, inertiaAxis: axisOptions.inertiaAxis }
 const weightedAxis = call(request.maxWork, densityOp, weightedAxisOptions)
-const expectedWeightedAxisMoment = 2 * 83 / 768 + 6 * 49 / 12288 - 2 * 0.34375 + 2.875
+const expectedWeightedAxisMoment = (2 * 83) / 768 + (6 * 49) / 12288 - 2 * 0.34375 + 2.875
 const weightedAxisBounds = weightedAxis.axisMomentBoundsKgMm2
-assert.ok(weightedAxisBounds && weightedAxisBounds[0] <= expectedWeightedAxisMoment
-  && expectedWeightedAxisMoment <= weightedAxisBounds[1])
+assert.ok(
+  weightedAxisBounds &&
+    weightedAxisBounds[0] <= expectedWeightedAxisMoment &&
+    expectedWeightedAxisMoment <= weightedAxisBounds[1],
+)
 assert.deepEqual(weightedAxis.centerOfMassPlaneDistanceBoundsMm, centerPlane)
 const incompleteWeightedAxis = call(request.maxWork, densityOp, { ...weightedAxisOptions, maxSurfaceCells: 2 })
 assert.equal(incompleteWeightedAxis.axisMomentBoundsKgMm2, null)
@@ -447,9 +556,14 @@ const weightedTensor = weightedReference.referenceInertiaBoundsKgMm2
 assert.ok(weightedTensor)
 assert.deepEqual(weightedTensor[0][1], weightedTensor[1][0])
 assert.ok(weightedTensor[0][1][0] <= 0.375 && 0.375 <= weightedTensor[0][1][1])
-assert.ok(weightedTensor[2][2][0] <= expectedWeightedAxisMoment && expectedWeightedAxisMoment <= weightedTensor[2][2][1])
+assert.ok(
+  weightedTensor[2][2][0] <= expectedWeightedAxisMoment && expectedWeightedAxisMoment <= weightedTensor[2][2][1],
+)
 assert.deepEqual(weightedReference.axisMomentBoundsKgMm2, weightedAxisBounds)
-const incompleteWeightedReference = call(request.maxWork, densityOp, { ...weightedReferenceOptions, maxSurfaceCells: 2 })
+const incompleteWeightedReference = call(request.maxWork, densityOp, {
+  ...weightedReferenceOptions,
+  maxSurfaceCells: 2,
+})
 assert.equal(incompleteWeightedReference.referenceInertiaBoundsKgMm2, null)
 console.log('WASM ABI enclosed the density-weighted tensor about a fixed point.')
 
@@ -475,10 +589,25 @@ console.log('WASM ABI enclosed the radius of gyration of the density-weighted as
 const axisCertificateOptions = {
   ...densityOptions,
   contours: [
-    [[0.125, 0.125], [0.1875, 0.125], [0.1875, 0.1875], [0.125, 0.1875], [0.125, 0.125]],
-    [[0.125, 0.8125], [0.1875, 0.8125], [0.1875, 0.875], [0.125, 0.875], [0.125, 0.8125]],
+    [
+      [0.125, 0.125],
+      [0.1875, 0.125],
+      [0.1875, 0.1875],
+      [0.125, 0.1875],
+      [0.125, 0.125],
+    ],
+    [
+      [0.125, 0.8125],
+      [0.1875, 0.8125],
+      [0.1875, 0.875],
+      [0.125, 0.875],
+      [0.125, 0.8125],
+    ],
   ],
-  componentDensities: [{ outerContour: 1, densityBoundsKgPerMm2: [6, 6] }, { outerContour: 0, densityBoundsKgPerMm2: [2, 2] }],
+  componentDensities: [
+    { outerContour: 1, densityBoundsKgPerMm2: [6, 6] },
+    { outerContour: 0, densityBoundsKgPerMm2: [2, 2] },
+  ],
   includePrincipalAxes: true,
   momentToleranceKgMm2: 1e-8,
   toleranceMm2: 1e-5,
@@ -492,7 +621,8 @@ console.log('WASM ABI returned a certified isolated principal direction.')
 
 assert.equal(certifiedAxes[0].distanceBoundsMm, undefined)
 const probedAxes = call(request.maxWork, densityOp, {
-  ...axisCertificateOptions, principalAxisProbePointMm: [1, 0, 1],
+  ...axisCertificateOptions,
+  principalAxisProbePointMm: [1, 0, 1],
 }).principalAxes
 const axisDistance = probedAxes?.[0]?.distanceBoundsMm
 assert.ok(axisDistance && axisDistance[0] <= 0.84375 && 0.84375 <= axisDistance[1])

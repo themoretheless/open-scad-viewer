@@ -1,0 +1,41 @@
+{
+  "sourceBase": "951735615c95c751e91dcbde8ec7db20c4cb72f8",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Global projected injectivity of nonperiodic rational charts with continuous full-degree knot joins. Native control shifts a knot with unchanged control net and tests a speed jump, discontinuity and one-short work. The closed nonconvex loft case proves boundary agreement, volume and station G2 after exact full-multiplicity knot insertion.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib surface_injectivity",
+      "result": "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 2008 filtered out; finished in 0.05s",
+      "file": "native.log.gz",
+      "sha256": "a237a0b061fe0e65eb2a3049035804e647c2ef1cb6b2e28a5b55d213434748ea"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 0.89s",
+      "file": "brep-exact.log.gz",
+      "sha256": "06d82d2ff2385debafb666954a14f927a8465133778b566244cc349dbae38235"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 13.30s",
+      "file": "source.log.gz",
+      "sha256": "82752dbb0c97bad9243f4c7e53f2ce9ac89807237e982563db60fd9310309dff"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed::classified",
+      "result": "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2034 filtered out; finished in 27.48s",
+      "file": "closed.log.gz",
+      "sha256": "8023c2ded36f046634636f2e7143badcdfa9e21a8f67dc902b7bbc910cc8366e"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "d3433f82d48ef86ad507e4eb73d4be3e1fcce2221d9fcab36682bbe789ce5414",
+    "count": 4918
+  }
+}

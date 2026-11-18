@@ -1,0 +1,16 @@
+{
+  "path": {
+    "spans": 8,
+    "exactEndpointOrder": 4,
+    "oneUlpExteriorKnotGap": [
+      "1/1351079888211148680",
+      "-1/450359962737049560",
+      "-1/86469112845513515520"
+    ],
+    "projectedCurvatureNumeratorLower": "8704/3"
+  },
+  "authoredAxis": "P'(t) + (0, 0, 1/4) exactly on every original span",
+  "guide": "P(t) + (0, 0, 1/8) exactly on every original span",
+  "authoredAxisJoinOrder": 3,
+  "guideJoinOrder": 4
+}

@@ -1,0 +1,29 @@
+{
+  "sourceBase": "c3468faa2025f4064650f132ad102e924d02f1b2",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact projected Jordan contact on an inset authored contour and a spatial multispan neighbor. Includes the production face pair path, independent same-model exact lift, trim, and chart audits, and one-short contact work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 0.76s",
+      "file": "brep.log.gz",
+      "sha256": "6a57cae809ca2977624ffebe547a2c92b22fcbc9d1bb20161665d51e67da88de"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2006 filtered out; finished in 9.77s",
+      "file": "shell.log.gz",
+      "sha256": "0bf0b258cbf81ad653a8fd7c8a05a4d7f603eba641a855c72e7e40090c91189e"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "384a213ded9b4cc67892e212d92397b03ba4951902fd32ab773672cb87f239e2",
+    "count": 4919
+  }
+}

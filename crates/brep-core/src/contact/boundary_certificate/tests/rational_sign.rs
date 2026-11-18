@@ -370,15 +370,31 @@ fn check_coupled_wall_certificates(
 
 #[test]
 fn rectangular_rational_wall_outside_the_rails_class_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false);
+    check_polygonal_rational_wall_certificates(false, false, 0);
 }
 
 #[test]
 fn oblique_quadrilateral_rational_walls_keep_joint_certificates() {
-    check_polygonal_rational_wall_certificates(true);
+    check_polygonal_rational_wall_certificates(true, false, 0);
 }
 
-fn check_polygonal_rational_wall_certificates(oblique: bool) {
+#[test]
+fn curved_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, 0);
+}
+
+#[test]
+fn multispan_curved_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, 1);
+}
+
+#[test]
+fn full_multiplicity_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, 4);
+}
+
+fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, insertions: usize) {
+    let multispan = insertions > 0;
     let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
     let sections = [0., 4., 8.].map(|z| {
         vec![(0..4)
@@ -393,6 +409,10 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
     let wall_count = reference.faces.len() - 2;
     for face in &mut reference.0.faces[..wall_count] {
         let surface = &mut face.surface;
+        if multispan && !(surface.control_points[0][0][1] == 0.
+            && surface.control_points[1][0][1] == 0.) {
+            continue;
+        }
         let start = surface.control_points[0][0].clone();
         let end = surface.control_points[1][1].clone();
         surface.degree_u = 2;
@@ -421,6 +441,33 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
         // weights are symmetric across the two station endpoints.
         surface.control_points[1][2][2] = if start[2] == 0. { 3.5 } else { 4.5 };
     }
+    if curved_seam {
+        // Bend the shared station seam on the y=0 wall. The upper
+        // chart has a nonconvex projected image above this bowed edge.
+        // Move the same three seam-adjacent poles on each side to
+        // retain matching first and second seam jets.
+        let bump = 0.125;
+        for face in &mut reference.0.faces[..wall_count] {
+            let s = &mut face.surface;
+            if s.control_points[0][0][1] == 0. && s.control_points[s.degree_u][0][1] == 0. {
+                let columns = if s.control_points[0][0][2] == 0. { 2..5 } else { 0..3 };
+                for j in columns {
+                    s.control_points[1][j][2] += bump;
+                }
+            }
+        }
+        for edge in &mut reference.0.edges {
+            let c = &mut edge.curve;
+            let [a, b] = c.control_points.as_slice() else { continue };
+            if a[1] == 0. && b[1] == 0. && a[2] == 4. && b[2] == 4. {
+                let middle = vec![(a[0] + b[0]) / 2., 0., 4. + bump];
+                c.control_points.insert(1, middle);
+                c.degree = 2;
+                c.knots = vec![0., 0., 0., 1., 1., 1.];
+                c.weights = vec![1.; 3];
+            }
+        }
+    }
     if oblique {
         reference = crate::transform::affine(&reference, [
             [1., 0., 0., 0.],
@@ -429,16 +476,75 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
             [0., 0., 0., 1.],
         ]).unwrap();
     }
+    if multispan {
+        // Clear the odd factors of the new homogeneous weights so every
+        // inserted Cartesian coordinate stays exactly representable.
+        let axial_scale = if insertions == 1 { 5. } else { 5. * 7. * 17. };
+        reference = crate::transform::affine(&reference, [
+            [1., 0., 0., 0.], [0., 1., 0., 0.],
+            [0., 0., axial_scale, 0.], [0., 0., 0., 1.],
+        ]).unwrap();
+        let surface = &mut reference.0.faces[4].surface;
+        let inserted = nurbs_core::editing::exact_surface_knot_insertion::insert(
+            surface, nurbs_core::surface::Axis::V, 0.5, insertions, 1_000_000,
+        ).unwrap();
+        assert_eq!(inserted.inserted, insertions, "{:?}", inserted.refusal);
+        *surface = inserted.surface;
+        assert_eq!(surface.knots_v.iter().filter(|&&k| k == 0.5).count(), insertions);
+    }
     reference.validate().unwrap();
-    let wall = &reference.faces[0].surface;
+    let wall = &reference.faces[if curved_seam { 4 } else { 0 }].surface;
     let chart = nurbs_core::surface_injectivity::certify_chart(wall, 1000).unwrap();
     assert!(chart.proven, "{chart:?}");
-    assert_eq!(chart.reason, if oblique {
+    assert_eq!(chart.reason, if multispan {
+        assert!(wall.evaluate(0.5, 0.).unwrap().point[2] > 20.);
+        "global-rational-multispan-jordan-jacobian"
+    } else if curved_seam {
+        assert!(wall.evaluate(0.5, 0.).unwrap().point[2] > 4.);
+        "global-rational-jordan-jacobian"
+    } else if oblique {
         "global-rational-convex-quadrilateral-jacobian"
     } else {
         "global-rational-rectangle-jacobian"
     });
     assert!(!nurbs_core::surface_injectivity::certify_chart(wall, chart.spans - 1).unwrap().proven);
+
+    if insertions == 4 {
+        // Move an interior pole out of the shared plane without modifying
+        // any edge. The two original walls still partition the XZ image.
+        let mut spatial = reference.clone();
+        spatial.0.faces[4].surface.control_points[1][6][1] = 0.125;
+        spatial.validate().unwrap();
+        let certify = crate::shared_boundary::jordan_partition::certify;
+        let (contact, used) = certify(&spatial, [0, 4], 1000);
+        let contact = contact.unwrap();
+        assert_eq!(contact.edges.len(), 1);
+        assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
+        check_reversed_multispan_exterior(&spatial, contact.edges[0]);
+        check_partitioned_jordan_seam(&spatial, contact.edges[0]);
+        check_jordan_contact_with_interior_hole(&spatial, contact.edges[0]);
+        check_audited_inset_jordan_contact(&spatial, contact.edges[0]);
+
+        // Put the original XZ image in XY, then move the interiors along
+        // a common diagonal. The authored edge curves stay unchanged.
+        let mut diagonal = crate::transform::affine(&reference, [
+            [1., 0., 0., 0.], [0., 0., 1., 0.],
+            [0., -1., 0., 0.], [0., 0., 0., 1.],
+        ]).unwrap();
+        for (face, knot_control) in [(0, 2), (4, 4)] {
+            let surface = &mut diagonal.0.faces[face].surface;
+            for coordinate in &mut surface.control_points[1][knot_control] {
+                *coordinate += 8192.;
+            }
+            let report = nurbs_core::surface_injectivity::certify_chart(surface, 10_000).unwrap();
+            assert_eq!(report.reason, "global-exact-oblique-jordan-jacobian", "{report:?}");
+        }
+        diagonal.validate().unwrap();
+        let (contact, used) = certify(&diagonal, [0, 4], 10_000);
+        assert_eq!(contact.unwrap().edges.len(), 1);
+        assert!(certify(&diagonal, [0, 4], used - 1).0.is_none());
+        check_projection_from_either_face(&reference);
+    }
 
     let mut retained = reference.clone();
     for face in &mut retained.0.faces[..wall_count] {
@@ -454,6 +560,10 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
             v.boundary.intersections.faces.all_faces_injective,
             v.boundary.intersections.pairs.all_pairs_classified,
             &v.boundary.intersections.faces,
+            v.boundary.intersections.pairs.pairs.iter()
+                .filter(|pair| pair.reason == "pair-unresolved")
+                .map(|pair| (pair.faces, pair.source_chart_cells, pair.hull_cells))
+                .collect::<Vec<_>>(),
         )));
     let caps = [wall_count, wall_count + 1];
     let station = crate::sweep_smoothness::inspect_axis(
@@ -462,4 +572,344 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
     assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
         "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
+}
+
+fn check_jordan_contact_with_interior_hole(reference: &crate::Model, shared: usize) {
+    use nurbs_core::curve_surface_agreement::{lift, verify_exact};
+    let mut model = reference.clone();
+    // The only nonunit weight is an interior pole. Setting it to one
+    // leaves the authored boundaries unchanged and gives dyadic lifts
+    // for the four interior isoparametric cuts.
+    model.0.faces[0].surface.weights[1][2] = 1.;
+    let corners = [[0.25, 0.25], [0.25, 0.5], [0.5, 0.5], [0.5, 0.25]];
+    let mut coedges = Vec::new();
+    let first_vertex = model.vertices.len();
+    for i in 0..4 {
+        let pcurve = crate::line(corners[i].to_vec(), corners[(i + 1) % 4].to_vec());
+        let surface = &model.faces[0].surface;
+        let curve = lift(&pcurve, surface, None, 1e-8, 10_000).unwrap().curve.unwrap();
+        let proof = verify_exact(&curve, &pcurve, surface, false, 1_000_000).unwrap().unwrap();
+        assert_eq!(proof.outcome, cad_predicates::BezierIdentity::Equal);
+        let pole = &curve.control_points[0];
+        model.0.vertices.push(crate::Vertex { point: [pole[0], pole[1], pole[2]] });
+        let edge = model.edges.len();
+        model.0.edges.push(crate::Edge {
+            curve,
+            vertices: [first_vertex + i, first_vertex + (i + 1) % 4],
+            degenerate: false,
+        });
+        coedges.push(crate::Coedge::new(edge, false, pcurve));
+    }
+    let hole = model.loops.len();
+    model.0.loops.push(crate::Loop { coedges });
+    model.0.faces[0].holes.push(hole);
+    model.rebuild_topology_ids();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&model, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+    model.0.loops[hole].coedges[0].pcurve.control_points[0][0] = 0.;
+    assert!(certify(&model, [0, 4], 3000).0.is_none());
+    // Extend the stored UV carrier across the chart boundary. Only [1, 2]
+    // is material, and it exactly lifts the complete original world edge.
+    let edge = model.0.loops[hole].coedges[0].edge;
+    let world = &model.0.edges[edge].curve;
+    let pcurve = crate::Curve {
+        degree: 1,
+        knots: vec![0., 0., 4., 4.],
+        control_points: vec![vec![0.25, 0.], vec![0.25, 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    assert!(!nurbs_core::editing::exact_knot_insertion::strict_box_containment_on(
+        &pcurve, [0., 2.], [[0.; 2], [1.; 2]], 12, 10_000,
+    ).unwrap().0);
+    let world_range = world.domain();
+    let proof = nurbs_core::curve_surface_agreement::verify_exact_trimmed(
+        world, &pcurve, &model.faces[0].surface, false, world_range, [1., 2.], 1_000_000,
+    ).unwrap().unwrap();
+    assert_eq!(proof.outcome, cad_predicates::BezierIdentity::Equal);
+    model.0.loops[hole].coedges[0] = crate::Coedge::new(edge, false, pcurve)
+        .with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: world_range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0; 2]; 2],
+        }).unwrap();
+    let (contact, used) = certify(&model, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+
+}
+
+fn check_audited_inset_jordan_contact(reference: &crate::Model, shared: usize) {
+    use crate::face_contacts::{Limits, SharedBoundary};
+    let mut lower = reference.faces[0].surface.clone();
+    // A unit interior weight makes the exact inset cross-section dyadic.
+    lower.weights[1][2] = 1.;
+    let upper = &reference.faces[4];
+    let mut model = reference.clone();
+    model.0.vertices.clear();
+    model.0.edges.clear();
+    model.0.loops.clear();
+    model.0.faces.clear();
+    model.0.bodies.clear();
+
+    let mut edge = |curve: crate::Curve| {
+        let vertices = [0, curve.control_points.len() - 1].map(|i| {
+            let p = &curve.control_points[i];
+            let point = [p[0], p[1], p[2]];
+            if let Some(index) = model.0.vertices.iter().position(|v| v.point == point) {
+                index
+            } else {
+                let index = model.0.vertices.len();
+                model.0.vertices.push(crate::Vertex { point });
+                index
+            }
+        });
+        let index = model.0.edges.len();
+        model.0.edges.push(crate::Edge { curve, vertices, degenerate: false });
+        index
+    };
+    let common = edge(reference.edges[shared].curve.clone());
+    let upper_wire = &reference.loops[upper.outer].coedges;
+    let shared_upper = upper_wire.iter().find(|c| c.edge == shared).unwrap();
+    let mut lower_uses = Vec::new();
+    let corners = [[0., 0.5], [1., 0.5], [1., 1.], [0., 1.]];
+    for i in 0..4 {
+        let pcurve = crate::line(corners[i].to_vec(), corners[(i + 1) % 4].to_vec());
+        let (index, reversed) = if i == 2 {
+            (common, !shared_upper.reversed)
+        } else {
+            let lift = nurbs_core::curve_surface_agreement::lift(
+                &pcurve, &lower, None, 1e-8, 10_000,
+            ).unwrap();
+            (edge(lift.curve.unwrap()), false)
+        };
+        lower_uses.push(crate::Coedge::new(index, reversed, pcurve));
+    }
+    let upper_uses = upper_wire.iter().map(|c| {
+        let index = if c.edge == shared { common } else { edge(reference.edges[c.edge].curve.clone()) };
+        crate::Coedge::new(index, c.reversed, c.pcurve.clone())
+    }).collect();
+    model.0.loops = vec![crate::Loop { coedges: lower_uses }, crate::Loop { coedges: upper_uses }];
+    model.0.faces = [lower, upper.surface.clone()].into_iter().enumerate().map(|(outer, surface)| {
+        crate::Face { surface, outer, holes: Vec::new() }
+    }).collect();
+    model.0.shells = vec![brep_topology::Shell {
+        closed: false,
+        faces: (0..2).map(|face| brep_topology::FaceUse { face, reversed: false }).collect(),
+    }];
+    for c in model.0.loops.iter_mut().flat_map(|wire| &mut wire.coedges) {
+        if c.edge != common {
+            continue;
+        }
+        let a = &c.pcurve.control_points[0];
+        let b = &c.pcurve.control_points[1];
+        c.pcurve = crate::Curve {
+            degree: 2,
+            knots: vec![-2., -1., 0., 1., 2., 3., 4.],
+            control_points: [-0.25, 0.25, 0.75, 1.25].map(|t| {
+                a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+            }).to_vec(),
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+    }
+    // The other use is stored on a larger affine carrier. Its active
+    // interval spans one entire natural side and touches both chart corners.
+    let common_range = model.0.edges[common].curve.domain();
+    let c = model.0.loops[0].coedges.iter_mut().find(|c| c.edge == common).unwrap();
+    let a = &c.pcurve.control_points[1];
+    let b = &c.pcurve.control_points[2];
+    let step: Vec<_> = a.iter().zip(b).map(|(a, b)| 2. * (b - a)).collect();
+    let start: Vec<_> = a.iter().zip(&step).map(|(a, d)| a - 0.25 * d).collect();
+    let carrier = crate::Curve {
+        degree: 1,
+        knots: vec![0., 0., 4., 4.],
+        control_points: [-1., 3.].map(|t| {
+            start.iter().zip(&step).map(|(a, d)| a + t * d).collect()
+        }).to_vec(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let bounds = [[0.; 2], [1.; 2]];
+    use nurbs_core::editing::exact_knot_insertion::{closed_box_containment_on, strict_box_containment_on};
+    let (proven, used) = closed_box_containment_on(&carrier, [1., 2.], bounds, 12, 10_000).unwrap();
+    assert!(proven);
+    assert!(!closed_box_containment_on(&carrier, [1., 2.], bounds, 12, used - 1).unwrap().0);
+    assert!(!closed_box_containment_on(&carrier, [0., 2.], bounds, 12, 10_000).unwrap().0);
+    assert!(!strict_box_containment_on(&carrier, [1., 2.], bounds, 12, 10_000).unwrap().0);
+    *c = crate::Coedge::new(common, c.reversed, carrier).with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: common_range,
+        pcurve_parameter: [1., 2.],
+        periodic_lift: [[0; 2]; 2],
+    }).unwrap();
+    model.rebuild_topology_ids();
+    model.validate().unwrap();
+
+    let agreement = crate::boundary_agreement::verify_exact(&model, 1_000_000).unwrap();
+    assert!(agreement.all_equal && agreement.all_joins_exact);
+    let trim = crate::face_domain::audit_trim_regions(&model, 1e-8, 1000, 10_000, 100_000).unwrap();
+    assert!(trim.all_valid && trim.faces.iter().all(|f| f.as_ref().unwrap().winding == [Some(1)]));
+    let injectivity = crate::face_injectivity::inspect_with_linear(&model, 10_000, 10_000).unwrap();
+    assert!(injectivity.all_faces_injective, "{injectivity:?}");
+    let jordan = crate::shared_boundary::jordan_partition::certify_audited;
+    assert!(crate::shared_boundary::jordan_partition::certify(&model, [0, 1], 8000).0.is_none());
+    let (contact, used) = jordan(&model, [0, 1], 8000);
+    assert_eq!(contact.unwrap().edges, [common]);
+    assert!(jordan(&model, [0, 1], used - 1).0.is_none());
+
+    let contacts = crate::face_contacts::inspect_with_certificates(
+        &model, 1e-8, Limits {
+            pairs: 1, cells: 10_000, domain_cells: 10_000,
+            cells_per_pair: 8_000, domain_cells_per_pair: 8_000,
+        }, &[], &[], true,
+    ).unwrap();
+    assert!(matches!(&contacts.pairs[0].boundary, Some(SharedBoundary::ExactHull(c)) if c.edges == [common]),
+        "{:?}", contacts.pairs[0]);
+}
+
+fn check_partitioned_jordan_seam(reference: &crate::Model, shared: usize) {
+    use crate::feature_ops::edge_partition::{split, Limits};
+    let [a, b] = reference.edges[shared].curve.domain();
+    let cuts = [a + (b - a) / 4., a + (b - a) / 2.];
+    let partition = split(reference, shared, &cuts, "jordan-chain", Limits::default()).unwrap();
+    assert!(partition.exact_world_root_partition(1_000_000).unwrap().is_some());
+    let model = partition.model();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (certificate, used) = certify(model, [0, 4], 3000);
+    let mut edges = certificate.unwrap().edges;
+    let mut expected = partition.edges().to_vec();
+    edges.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(edges, expected);
+    assert_eq!(edges.len(), 3);
+    assert!(certify(model, [0, 4], used - 1).0.is_none());
+}
+
+fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {
+    let mut refined = reference.clone();
+    let edge = [0, 4].into_iter()
+        .flat_map(|face| &refined.loops[refined.faces[face].outer].coedges)
+        .find(|use_| use_.reversed && use_.edge != shared && refined.edges[use_.edge].curve.degree == 1)
+        .unwrap().edge;
+    let source = &refined.edges[edge].curve;
+    let [start, end] = source.domain();
+    let inserted = nurbs_core::editing::exact_knot_insertion::insert(
+        source, (start + end) / 2., 1, 1_000_000,
+    ).unwrap();
+    assert_eq!(inserted.inserted, 1, "{:?}", inserted.refusal);
+    refined.0.edges[edge].curve = inserted.curve;
+    refined.validate().unwrap();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&refined, [0, 4], 1000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&refined, [0, 4], used - 1).0.is_none());
+
+    // The same linear edge in an unclamped quadratic basis. The active
+    // endpoints fall halfway between the exterior and interior poles.
+    let original = &reference.edges[edge].curve;
+    let a = &original.control_points[0];
+    let b = &original.control_points[1];
+    let unclamped = crate::Curve {
+        degree: 2,
+        knots: (-2..=4).map(|i| start + f64::from(i) * (end - start) / 2.).collect(),
+        control_points: [-0.25, 0.25, 0.75, 1.25].into_iter()
+            .map(|t| (0..3).map(|axis| a[axis] + t * (b[axis] - a[axis])).collect())
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let clamped = nurbs_core::editing::exact_curve_merge::clamp_exact_curve(&unclamped, 100_000)
+        .unwrap().curve.unwrap();
+    assert!(nurbs_core::curve_partition_agreement::verify_exact_bspline_root_partition(
+        original, &[clamped], original.domain(), 1_000_000,
+    ).unwrap().is_some());
+    refined.0.edges[edge].curve = unclamped;
+    refined.validate().unwrap();
+    let (contact, used) = certify(&refined, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&refined, [0, 4], used - 1).0.is_none());
+    check_trimmed_chart_segments(reference, shared, &[edge]);
+    check_trimmed_chart_segments(reference, shared, &[edge, shared]);
+}
+
+fn check_trimmed_chart_segments(reference: &crate::Model, shared: usize, edges: &[usize]) {
+    let mut model = reference.clone();
+    // The active interval [1, 2] is asymmetric inside [0, 4].
+    let extend = |c: &crate::Curve| {
+        let a = &c.control_points[0];
+        let b = &c.control_points[1];
+        crate::Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1.5, 2., 4., 4., 4.],
+            // Greville stations preserve the original affine traversal.
+            control_points: [-1., -0.25, 0.75, 2., 3.]
+                .map(|t| a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect())
+                .to_vec(),
+            weights: vec![1.; 5],
+            periodic: false,
+        }
+    };
+    let faces = model.faces.clone();
+    for face in faces {
+        for c in &mut model.0.loops[face.outer].coedges {
+            if !edges.contains(&c.edge) {
+                continue;
+            }
+            let curve_parameter = model.0.edges[c.edge].curve.domain();
+            c.pcurve = extend(&c.pcurve);
+            *c = c.clone().with_trim(brep_topology::CoedgeTrim {
+                curve_parameter,
+                pcurve_parameter: [1., 2.],
+                periodic_lift: [[0; 2]; 2],
+            }).unwrap();
+        }
+    }
+    model.validate().unwrap();
+    let exact = crate::boundary_agreement::verify_exact(&model, 1_000_000).unwrap();
+    assert!(exact.all_equal && exact.all_joins_exact);
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&model, [0, 4], 4000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+    if edges.contains(&shared) {
+        let outer = model.faces[0].outer;
+        let c = model.0.loops[outer].coedges.iter_mut().find(|c| c.edge == shared).unwrap();
+        let mut trim = c.trim().unwrap();
+        trim.curve_parameter[1] = (trim.curve_parameter[0] + trim.curve_parameter[1]) / 2.;
+        *c = c.clone().with_trim(trim).unwrap();
+        assert!(certify(&model, [0, 4], 4000).0.is_none());
+    }
+
+}
+
+fn check_projection_from_either_face(reference: &crate::Model) {
+    let mut spatial = crate::transform::affine(reference, [
+        [1., 0., 0., 0.], [0., 1., 2., 0.],
+        [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ]).unwrap();
+    // XY is the preferred projection of the lower wall. A displacement
+    // at an interior pole folds XY on the upper wall but preserves XZ.
+    spatial.0.faces[4].surface.control_points[1][6][1] -= 32_768.;
+    spatial.validate().unwrap();
+    use nurbs_core::surface_injectivity::{certify_chart, certify_jordan_projection};
+    let lower = &spatial.faces[0].surface;
+    let upper = &spatial.faces[4].surface;
+    assert_eq!(certify_chart(lower, 10_000).unwrap().projection, Some([0, 1]));
+    assert_eq!(certify_chart(upper, 10_000).unwrap().projection, Some([0, 2]));
+    assert!(!certify_jordan_projection(upper, [[1, 0, 0], [0, 1, 0]], 10_000).unwrap().0);
+
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (forward, used) = certify(&spatial, [0, 4], 10_000);
+    let (reverse, reverse_used) = certify(&spatial, [4, 0], 10_000);
+    let [forward, reverse] = [forward.unwrap(), reverse.unwrap()];
+    assert_eq!(forward.faces, [0, 4]);
+    assert_eq!(reverse.faces, [4, 0]);
+    assert_eq!(forward.edges, reverse.edges);
+    assert_eq!(forward.contact_enclosure, reverse.contact_enclosure);
+    assert_eq!(used, reverse_used);
+    for faces in [[0, 4], [4, 0]] {
+        assert!(certify(&spatial, faces, used - 1).0.is_none());
+    }
 }

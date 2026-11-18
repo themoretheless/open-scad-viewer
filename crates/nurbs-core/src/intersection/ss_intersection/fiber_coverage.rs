@@ -737,7 +737,9 @@ pub use closed_branches::{
 };
 pub use physical_branches::{
     OriginalPhysicalFiberBranch, OriginalPhysicalFiberTrim, OriginalPhysicalFiberVertex,
-    PhysicalFiberBranchLimits, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches,
+    PhysicalFiberBranchLimits, PhysicalFiberTraceArc, PhysicalFiberTraceLimits,
+    PhysicalFiberTracePort, PhysicalFiberTraceSegment, QualifiedPhysicalFiberBranches,
+    QualifiedPhysicalFiberTrace, assemble_physical_fiber_branches, construct_physical_fiber_trace,
 };
 
 mod trace_atlas;

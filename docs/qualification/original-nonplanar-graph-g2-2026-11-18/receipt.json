@@ -1,0 +1,29 @@
+{
+  "sourceBase": "966f5c162e59aa78521c37f7d64afd7141f67f52",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact common-projection geometric G2 on an original saddle cap, with exact world edges, embedded material topology, regularity, and a volume enclosure containing 12. Includes a distinct curvature change that retains C1, a constant-strip refusal, one-short work refusal, and existing regressions.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 1997 filtered out; finished in 23.20s",
+      "file": "source.log.gz",
+      "sha256": "c4296e0faa41f235b1591b1cd716abaebb16d6cedb1550b3499c3d0195fe9730"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 2035 filtered out; finished in 0.31s",
+      "file": "sweep.log.gz",
+      "sha256": "90af9375a77de278d43cf62f37e0579a71a8e961e1bf3ac81d0df1639f89685a"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "711841ba29759d4a1850daa618be9a1be4906ce16eb487c726681709344f86dd",
+    "count": 4917
+  }
+}

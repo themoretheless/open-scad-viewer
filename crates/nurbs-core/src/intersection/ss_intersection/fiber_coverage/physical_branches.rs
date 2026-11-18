@@ -289,3 +289,9 @@ pub fn assemble_physical_fiber_branches(
 ) -> Result<QualifiedPhysicalFiberBranches> {
     build(owner, limits)
 }
+
+mod trace;
+pub use trace::{
+    PhysicalFiberTraceArc, PhysicalFiberTraceLimits, PhysicalFiberTracePort,
+    PhysicalFiberTraceSegment, QualifiedPhysicalFiberTrace, construct_physical_fiber_trace,
+};

@@ -277,7 +277,7 @@ impl Sweep<'_> {
         check(matches!(order,1|2)&&max_cells<=100000&&max_exact_work<=1000000,"Invalid closed guided frame proof limits")?;
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-guided-frame-mode-unproved")};
         let Some(guide)=self.orientation_guide else{return Ok(out);};
-        if self.frame_laws.is_some()||self.path.periodic||guide.periodic||!path_is_closed(self.path)?||!path_is_closed(guide)?{return Ok(out);}
+        if self.frame_laws.is_some()||!path_is_closed(self.path)?||!path_is_closed(guide)?{return Ok(out);}
         // Keep the cheaper sufficient Cartesian route. A failed source jet
         // query is charged before trying the geometric arc owner.
         let mut cartesian=true;
@@ -293,7 +293,7 @@ impl Sweep<'_> {
         }
         if !cartesian {
             return if self.options.spacing==Spacing::Parameter {Ok(out)}
-                else {guided_arc::certify(self,guide,out,max_cells,max_exact_work)};
+                else {guided_arc::certify(self,guide,out,false,max_cells,max_exact_work)};
         }
         if self.options.spacing!=Spacing::Parameter {
             for curve in [self.path,guide] {
@@ -306,7 +306,7 @@ impl Sweep<'_> {
             let (status,cells)=frame::certify_independent_guided_cover(self.path,guide,self.twist,(max_cells-out.cells).min(4096))?;
             out.cells+=cells;
             if status!=Status::Certified {
-                return guided_arc::certify(self,guide,out,max_cells,max_exact_work);
+                return guided_arc::certify(self,guide,out,true,max_cells,max_exact_work);
             }
             out.closed_source_frame_smoothness_certified=true;out.reason=None;
         }else {
@@ -321,7 +321,49 @@ impl Sweep<'_> {
     pub fn certify_closed_path_frame_smoothness(&self,order:usize,max_cells:usize,max_exact_work:u64)->Result<ClosedPathFrameSmoothnessReport>{
         check(matches!(order,1|2)&&max_cells<=100000&&max_exact_work<=1000000,"Invalid closed path frame proof limits")?;
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-path-frame-mode-unproved")};
-        if self.path.periodic||!path_is_closed(self.path)?||self.frame_laws.is_some()||self.orientation_guide.is_some()||!matches!(self.options.orientation,Orientation::FixedNormal|Orientation::RotationMinimizing|Orientation::CorrectedFrenet|Orientation::Frenet){return Ok(out);}
+        let spatial_bishop = self.options.orientation == Orientation::RotationMinimizing
+            && self.spatial_rmf_error_limits.is_some();
+        if self.options.orientation == Orientation::Fixed
+            && self.frame_laws.is_none()
+            && self.orientation_guide.is_none()
+            && path_is_closed(self.path)?
+        {
+            // The basis depends on the initial tangent only. Throughout
+            // the traversal the exact periodic twist rotates this basis.
+            if !knot_continuity(self.twist, order, &mut out.exact_work, max_exact_work)? {
+                out.reason = Some("closed-fixed-twist-knots-unproved");
+                return Ok(out);
+            }
+            let twist = super::endpoint_jets::certify(
+                self.twist, order, max_exact_work - out.exact_work,
+            )?;
+            out.exact_work += twist.exact_work;
+            if !twist.certified {
+                out.reason = Some("closed-fixed-twist-seam-unproved");
+                return Ok(out);
+            }
+            let basis = frame::certify_fixed_path(
+                self.path, self.options.normal, self.twist, [0., 0.], max_cells,
+            )?;
+            out.cells = basis.cells;
+            out.closed_source_frame_smoothness_certified = basis.status == Status::Certified;
+            out.reason = basis.reason;
+            return Ok(out);
+        }
+        let periodic_frame = spatial_bishop
+            || matches!(self.options.orientation, Orientation::FixedNormal | Orientation::Frenet);
+        if (self.path.periodic && !periodic_frame)
+            || !path_is_closed(self.path)?
+            || self.frame_laws.is_some()
+            || self.orientation_guide.is_some()
+            || !matches!(
+                self.options.orientation,
+                Orientation::FixedNormal | Orientation::RotationMinimizing
+                    | Orientation::CorrectedFrenet | Orientation::Frenet
+            )
+        {
+            return Ok(out);
+        }
         if self.options.orientation==Orientation::Frenet {
             return closed_frenet::certify(self,order,max_cells,max_exact_work);
         }
@@ -334,6 +376,16 @@ impl Sweep<'_> {
         }
         if !path_ok {
             for endpoints in [false,true] {
+                if self.path.periodic {
+                    let position = super::endpoint_jets::certify_position(
+                        self.path, endpoints, max_exact_work - out.exact_work,
+                    )?;
+                    out.exact_work += position.exact_work;
+                    if !position.certified {
+                        out.reason = Some("closed-path-position-jets-unproved");
+                        return Ok(out);
+                    }
+                }
                 let proof=super::endpoint_jets::certify_direction(self.path,order,endpoints,self.options.spacing!=Spacing::Parameter,max_exact_work-out.exact_work)?;
                 out.exact_work+=proof.exact_work;
                 if !proof.certified {out.reason=Some("closed-path-direction-jets-unproved");return Ok(out);}
@@ -343,7 +395,7 @@ impl Sweep<'_> {
         let seam=super::endpoint_jets::certify(self.twist,order,max_exact_work-out.exact_work)?;
         out.exact_work+=seam.exact_work;
         if !seam.certified {out.reason=Some("closed-path-frame-endpoint-jets-unproved");return Ok(out);}
-        if self.options.orientation==Orientation::RotationMinimizing && self.spatial_rmf_error_limits.is_some() {
+        if spatial_bishop {
             // The ORIGINAL Bishop ODE exists on the positive-speed source.
             // Closing its holonomy by alpha=angle*normalized_arc makes N(1)=N(0).
             // Its corrected angular field is omega+alpha' T. Periodic Ck tangent

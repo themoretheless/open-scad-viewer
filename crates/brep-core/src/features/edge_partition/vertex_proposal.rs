@@ -15,7 +15,47 @@ pub fn partition_to_vertex(
     if vertex.iter().any(|x| !x.is_finite()) {
         return Err(invalid("Choose a finite shared vertex proposal"));
     }
-    partition_impl(source, edge_id, parameter, cuts, Some(vertex), max_cells)
+    partition_impl(
+        source,
+        edge_id,
+        parameter,
+        cuts,
+        Some(vertex),
+        None,
+        max_cells,
+    )
+}
+
+/// Author matching world and face-local UV endpoints for independently certified
+/// trace ports. Every UV proposal corresponds to one `cuts` entry. The complete
+/// child curves and face lifts are still checked; no proximity-only snapping or
+/// partial result is allowed.
+pub fn partition_to_vertex_and_uv(
+    source: &Model,
+    edge_id: usize,
+    parameter: f64,
+    cuts: &[PcurveCut],
+    vertex: [f64; 3],
+    uv_vertices: &[[f64; 2]],
+    max_cells: usize,
+) -> Result<Partition> {
+    if vertex.iter().any(|x| !x.is_finite()) {
+        return Err(invalid("Choose a finite shared vertex proposal"));
+    }
+    if uv_vertices.len() != cuts.len() || uv_vertices.iter().flatten().any(|x| !x.is_finite()) {
+        return Err(invalid(
+            "Choose one finite UV vertex proposal for every pcurve cut",
+        ));
+    }
+    partition_impl(
+        source,
+        edge_id,
+        parameter,
+        cuts,
+        Some(vertex),
+        Some(uv_vertices),
+        max_cells,
+    )
 }
 fn partition_impl(
     source: &Model,
@@ -23,6 +63,7 @@ fn partition_impl(
     parameter: f64,
     cuts: &[PcurveCut],
     vertex: Option<[f64; 3]>,
+    uv_vertices: Option<&[[f64; 2]]>,
     max_cells: usize,
 ) -> Result<Partition> {
     source.validate()?;
@@ -132,10 +173,11 @@ fn partition_impl(
     });
     for (face, wire, coedge) in uses {
         let original = &source.loops[wire].coedges[coedge];
-        let cut = cuts
+        let cut_index = cuts
             .iter()
-            .find(|c| c.wire == wire && c.coedge == coedge)
+            .position(|c| c.wire == wire && c.coedge == coedge)
             .unwrap();
+        let cut = cuts[cut_index];
         if original.pcurve.periodic {
             return Err(invalid(
                 "Periodic pcurve partition needs explicit lifted chart ownership",
@@ -147,23 +189,125 @@ fn partition_impl(
                 "Every pcurve cut must be strictly inside its original natural domain",
             ));
         }
-        let pc = original.pcurve.split(cut.parameter)?;
+        let authored_curve_cut = if original.reversed {
+            a + b - parameter
+        } else {
+            parameter
+        };
+        if let Some(trim) = original.trim() {
+            trim.validate()?;
+            let inside = |value: f64, range: [f64; 2]| {
+                range[0].min(range[1]) < value && value < range[0].max(range[1])
+            };
+            if trim
+                .curve_parameter
+                .iter()
+                .any(|&value| value < a || value > b)
+                || trim
+                    .pcurve_parameter
+                    .iter()
+                    .any(|&value| value < p0 || value > p1)
+                || !inside(authored_curve_cut, trim.curve_parameter)
+                || !inside(cut.parameter, trim.pcurve_parameter)
+            {
+                return Err(invalid(
+                    "Every authored trim must contain its cut strictly inside the original domains",
+                ));
+            }
+            if crate::boundary_agreement::periodic_lifts(
+                &source.faces[face].surface,
+                &original.pcurve,
+                trim.pcurve_parameter,
+            )? != trim.periodic_lift
+            {
+                return Err(invalid(
+                    "Original coedge periodic lifts do not match their authored UV endpoints",
+                ));
+            }
+        }
+        let mut pc = original.pcurve.split(cut.parameter)?;
+        if let Some(uv_vertices) = uv_vertices {
+            let last = pc[0].control_points.len() - 1;
+            pc[0].control_points[last] = uv_vertices[cut_index].to_vec();
+            pc[1].control_points[0] = uv_vertices[cut_index].to_vec();
+        }
         let order = if original.reversed { [1, 0] } else { [0, 1] };
         let replacements: Vec<_> = pc
             .into_iter()
             .zip(order)
-            .map(|(pcurve, i)| Coedge::new(child_edges[i], original.reversed, pcurve))
-            .collect();
+            .enumerate()
+            .map(|(fragment, (pcurve, i))| {
+                let child = Coedge::new(child_edges[i], original.reversed, pcurve.clone());
+                let Some(trim) = original.trim() else {
+                    return Ok(child);
+                };
+                let curve = if fragment == 0 {
+                    [trim.curve_parameter[0], authored_curve_cut]
+                } else {
+                    [authored_curve_cut, trim.curve_parameter[1]]
+                };
+                let child_domain = children[i].domain();
+                let shift = if original.reversed {
+                    child_domain[0] + child_domain[1] - a - b
+                } else {
+                    0.
+                };
+                let curve_parameter = curve.map(|value| value + shift);
+                let pcurve_parameter = if fragment == 0 {
+                    [trim.pcurve_parameter[0], cut.parameter]
+                } else {
+                    [cut.parameter, trim.pcurve_parameter[1]]
+                };
+                if curve_parameter
+                    .iter()
+                    .any(|&value| value < child_domain[0] || value > child_domain[1])
+                    || pcurve_parameter.iter().any(|&value| {
+                        let domain = pcurve.domain();
+                        value < domain[0] || value > domain[1]
+                    })
+                {
+                    return Err(invalid(
+                        "Transferred coedge trim leaves its actual child domain",
+                    ));
+                }
+                let periodic_lift = crate::boundary_agreement::periodic_lifts(
+                    &source.faces[face].surface,
+                    &pcurve,
+                    pcurve_parameter,
+                )?;
+                child.with_trim(brep_topology::CoedgeTrim {
+                    curve_parameter,
+                    pcurve_parameter,
+                    periodic_lift,
+                })
+            })
+            .collect::<Result<_>>()?;
         for c in &replacements {
-            check_agreement(
-                &model.edges[c.edge].curve,
-                &c.pcurve,
-                &source.faces[face].surface,
-                c.reversed,
-                source.tolerance_mm,
-                &mut cells,
-                max_cells,
-            )?;
+            if let Some(trim) = c.trim() {
+                check_trimmed_agreement(
+                    &model.edges[c.edge].curve,
+                    &c.pcurve,
+                    &source.faces[face].surface,
+                    c.reversed,
+                    [
+                        [trim.curve_parameter[0], trim.pcurve_parameter[0]],
+                        [trim.curve_parameter[1], trim.pcurve_parameter[1]],
+                    ],
+                    source.tolerance_mm,
+                    &mut cells,
+                    max_cells,
+                )?;
+            } else {
+                check_agreement(
+                    &model.edges[c.edge].curve,
+                    &c.pcurve,
+                    &source.faces[face].surface,
+                    c.reversed,
+                    source.tolerance_mm,
+                    &mut cells,
+                    max_cells,
+                )?;
+            }
         }
         // A valid face uses this source edge at most once in each loop. Reject
         // ambiguous self-seams instead of shifting addresses during mutation.

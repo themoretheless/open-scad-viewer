@@ -6,6 +6,7 @@ import { McpServer, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/se
 import { OfficialArtifactCache } from '../officialArtifactCache'
 import { OfficialOpenScadRuntimeSupervisor } from '../officialOpenScadRuntimeService'
 import { assertGeometryManifestArchive } from '../engineManifest'
+import { hasProfile } from '../toolsetProfiles'
 
 import { registerCatalogTools } from './register/registerCatalogTools'
 import { registerEngineTools } from './register/registerEngineTools'
@@ -35,7 +36,12 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
     },
     {
       supportedProtocolVersions: ['2026-07-28', ...SUPPORTED_PROTOCOL_VERSIONS],
-      instructions: [options.additionalInstructions, SERVER_INSTRUCTIONS].filter(Boolean).join('\n\n'),
+      instructions: [
+        options.additionalInstructions,
+        hasProfile(options.toolsetProfiles, 'openscad') ? SERVER_INSTRUCTIONS : undefined,
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
       cacheHints: {
         'server/discover': { ttlMs: CACHE_FIVE_MINUTES, cacheScope: 'private' },
         'tools/list': { ttlMs: CACHE_FIVE_MINUTES, cacheScope: 'private' },
@@ -60,16 +66,18 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
     server,
     notifyResourceListChanged,
   }
-  registerCatalogTools(ctx)
-  registerEngineTools(ctx)
-  registerOfficialTools(ctx)
-  registerIndependentTools(ctx)
-  registerBuildTools(ctx)
-  registerSweepTools(ctx)
-  registerHandoffTools(ctx)
+  if (hasProfile(options.toolsetProfiles, 'openscad')) {
+    registerCatalogTools(ctx)
+    registerEngineTools(ctx)
+    registerOfficialTools(ctx)
+    registerIndependentTools(ctx)
+    registerBuildTools(ctx)
+    registerSweepTools(ctx)
+    registerHandoffTools(ctx)
+    registerStaticResources(ctx)
+    registerTemplateResources(ctx)
+  }
   registerPrompts(ctx)
-  registerStaticResources(ctx)
-  registerTemplateResources(ctx)
   installRequestLifecycle(ctx)
 
   return server
