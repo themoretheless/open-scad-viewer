@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0667",
+  "testedBase": "69e799e1e3d425e2bfd3f84bdd4a5f6d69c30265",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 266,
+  "scope": [
+    "Convert equivalent unbalance vectors into opposing masses and radial placement bounds at fixed radii.",
+    "Check analytic opposing placement and mass, uncertain zero direction, and radius validation."
+  ],
+  "logSha256": "faf6a3799378021bf93a3be4682f2024bd69b26b9eac84a6d9aa3061b24cddb0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "1163716fdcb7dd6f003512e7ca3684da55b7c6b44ba32b0bac8fd420d7cef8c3",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b9d9e693244ac9554dfa9f7d9b48129a13b7a14983b6a0c9a9109817b3587a18"
+  }
+}

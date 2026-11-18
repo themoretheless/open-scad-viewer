@@ -1313,6 +1313,50 @@ pub fn classify_two_plane_unbalance(
     })
 }
 
+/// Counterweight mass and radial placement at a specified mounting radius.
+#[derive(Clone, Copy, Debug)]
+pub struct PlaneCounterweightBounds {
+    pub mass_bounds: [f64; 2],
+    /// Offset from the rotation axis, in the same frame as the unbalance.
+    /// Absent when the unbalance enclosure includes zero.
+    pub radial_offset_bounds: Option<[[f64; 2]; 3]>,
+}
+
+/// Enclose one opposing counterweight in each of two correction planes.
+pub fn bound_two_plane_counterweights(
+    vectors: [[[f64; 2]; 3]; 2],
+    radii: [f64; 2],
+) -> Result<[PlaneCounterweightBounds; 2]> {
+    let mut result = [PlaneCounterweightBounds {
+        mass_bounds: [0.; 2],
+        radial_offset_bounds: None,
+    }; 2];
+    for ((vector, radius), output) in vectors.into_iter().zip(radii).zip(&mut result) {
+        check(
+            radius.is_finite() && radius > 0.,
+            "Counterweight radius must be strictly positive and finite",
+        )?;
+        let vector = centroid_intervals(vector)?;
+        let magnitude = norm(vector)?;
+        let mass = magnitude.div(Interval::point(radius))?;
+        output.mass_bounds = [mass.lo.max(0.), mass.hi];
+        if magnitude.lo > 0. {
+            let mut offset = [[0.; 2]; 3];
+            for (bounds, component) in offset.iter_mut().zip(vector) {
+                let opposite = Interval::new(-component.hi, -component.lo)?;
+                let coordinate = opposite
+                    .div(magnitude)?
+                    .intersect(-1., 1.)?
+                    .mul(Interval::point(radius))?
+                    .intersect(-radius, radius)?;
+                *bounds = [coordinate.lo, coordinate.hi];
+            }
+            output.radial_offset_bounds = Some(offset);
+        }
+    }
+    Ok(result)
+}
+
 fn classify_balance_tolerance([lo, hi]: [f64; 2], tolerance: f64) -> BalanceTolerance {
     if hi <= tolerance {
         BalanceTolerance::Within

@@ -8147,3 +8147,28 @@ fn two_plane_tolerance_rejects_malformed_inputs() {
     vectors[1][0] = [3., 2.];
     assert!(classify_two_plane_unbalance(vectors, [1.; 2]).is_err());
 }
+
+#[test]
+fn two_plane_counterweights_enclose_mass_and_opposing_radial_positions() {
+    use nurbs_core::analysis::surface_measure::bound_two_plane_counterweights;
+    let vectors = [[[3.; 2], [4.; 2], [0.; 2]], [[0.; 2], [-6.; 2], [0.; 2]]];
+    let result = bound_two_plane_counterweights(vectors, [10., 2.]).unwrap();
+    for (plane, (mass, offset)) in result.into_iter().zip([(0.5, [-6., -8., 0.]), (3., [0., 2., 0.])]) {
+        assert!(plane.mass_bounds[0] <= mass && mass <= plane.mass_bounds[1]);
+        for ([lo, hi], exact) in plane.radial_offset_bounds.unwrap().into_iter().zip(offset) {
+            assert!(lo <= exact && exact <= hi && hi - lo < 1e-12);
+        }
+    }
+}
+
+#[test]
+fn two_plane_counterweights_withhold_indeterminate_positions() {
+    use nurbs_core::analysis::surface_measure::bound_two_plane_counterweights;
+    let vectors = [[[-1., 1.], [0.; 2], [0.; 2]], [[2., 4.], [0.; 2], [0.; 2]]];
+    let [first, second] = bound_two_plane_counterweights(vectors, [2., 4.]).unwrap();
+    assert_eq!(first.mass_bounds[0], 0.);
+    assert!(first.mass_bounds[1] >= 0.5);
+    assert!(first.radial_offset_bounds.is_none());
+    assert!(second.radial_offset_bounds.is_some());
+    assert!(bound_two_plane_counterweights(vectors, [1., 0.]).is_err());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 666,
-  "unallocatedCount": 334,
+  "specifiedCount": 667,
+  "unallocatedCount": 333,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16337,6 +16337,25 @@
         "Expose independent plane magnitude bounds and statuses with an overall tolerance classification.",
         "Check analytic magnitude, mixed plane statuses and aggregate failure, preservation of vector-only requests and incomplete coverage through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0667",
+      "name": "Интервальные массы и положения противовесов в двух плоскостях",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_two_plane_counterweights",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-667-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-667-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Convert equivalent unbalance vectors into opposing masses and radial placement bounds at fixed radii.",
+        "Check analytic opposing placement and mass, uncertain zero direction, and radius validation.",
+        "WASM and application integration are separate."
       ]
     }
   ],
