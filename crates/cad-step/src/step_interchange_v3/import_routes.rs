@@ -1451,11 +1451,56 @@ impl StepSharedAssembly {
         })
     }
 
+    /// Return exact transverse section loops and material area for each
+    /// candidate polyhedral occurrence, in assembly coordinates.
+    pub fn exact_polyhedral_sections(
+        &self,
+        normal: [f64; 3],
+        offset: f64,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+        max_exact_work_per_occurrence: u64,
+    ) -> Result<Vec<(usize, Result<brep_core::analysis::ExactPolyhedralSectionArea>)>> {
+        if normal == [0.; 3] || !normal.iter().all(|value| value.is_finite()) || !offset.is_finite() {
+            return Err(refuse("STEP section requires a finite plane with a nonzero normal"));
+        }
+        let mut sections = Vec::new();
+        for (index, bounds) in self.occurrence_bounds()?.into_iter().enumerate() {
+            if !plane_may_intersect_box(normal, offset, bounds) {
+                continue;
+            }
+            let section = self.qualify_occurrence(index, policy).and_then(|solid| {
+                brep_core::analysis::exact_polyhedral_section_area(
+                    &solid, normal, offset, max_exact_work_per_occurrence,
+                )
+            });
+            sections.push((index, section));
+        }
+        Ok(sections)
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn plane_may_intersect_box(normal: [f64; 3], offset: f64, [min, max]: [[f64; 3]; 2]) -> bool {
+    let (mut lower, mut upper) = (0_f64, 0_f64);
+    for (axis, coefficient) in normal.into_iter().enumerate() {
+        if coefficient == 0. {
+            continue;
+        }
+        let (lo, hi) = if coefficient > 0. {
+            (min[axis], max[axis])
+        } else {
+            (max[axis], min[axis])
+        };
+        lower = (lower + (coefficient * lo).next_down()).next_down();
+        upper = (upper + (coefficient * hi).next_up()).next_up();
+    }
+    // Overflow can lose a useful bound, but never excludes an occurrence.
+    !lower.is_finite() || !upper.is_finite() || (lower <= offset && offset <= upper)
 }
 
 fn box_distance_squared_lower(a: &[[f64; 3]; 2], b: &[[f64; 3]; 2]) -> f64 {

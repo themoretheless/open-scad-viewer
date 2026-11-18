@@ -3185,6 +3185,32 @@ fn shared_step_material_volume_accounts_for_scale_and_reflection() {
 }
 
 #[test]
+fn shared_step_exact_sections_retain_holes_and_exclude_distant_occurrences() {
+    let mut assembly = shared_step_scaled_cube_pair().extract_occurrences(&[0]).unwrap();
+    let outer = brep_core::cuboid([0.; 3], [4.; 3]).unwrap();
+    let inner = brep_core::cuboid([1.; 3], [3.; 3]).unwrap();
+    let hollow = brep_core::minkowski3d::curved::certify_enclosed_difference(&outer, &inner, 0)
+        .unwrap().into_model();
+    assembly.replace_definition(0, hollow).unwrap();
+    let mut displaced = assembly.occurrences()[0].transform;
+    displaced[2][3] = 10.;
+    assembly.add_occurrence(0, displaced).unwrap();
+    let policy = shared_step_admission_policy();
+    let sections = assembly.exact_polyhedral_sections([0., 0., -1.], -2., policy, 100_000).unwrap();
+    assert_eq!(sections.len(), 1);
+    assert_eq!(sections[0].0, 0);
+    let section = sections[0].1.as_ref().unwrap();
+    assert_eq!(section.loops.len(), 2);
+    assert!(section.depths.contains(&0) && section.depths.contains(&1));
+    assert_eq!(section.area_squared_mm4.to_string(), "144");
+    assert!(section.loops.iter().all(|loop_| loop_.points_mm.len() == 4));
+    assert!(assembly.exact_polyhedral_sections([0., 0., 1.], 20., policy, 1).unwrap().is_empty());
+    assert!(assembly.exact_polyhedral_sections([0.; 3], 0., policy, 1).is_err());
+    let limited = assembly.exact_polyhedral_sections([0., 0., 1.], 2., policy, 1).unwrap();
+    assert!(limited[0].1.is_err());
+}
+
+#[test]
 fn shared_step_minimum_clearance_orders_pairs_and_bounds_unchecked_work() {
     let mut assembly = shared_step_scaled_cube_pair();
     let mut shifted = assembly.occurrences()[0].transform;

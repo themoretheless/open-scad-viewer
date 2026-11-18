@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 854,
-  "unallocatedCount": 146,
+  "specifiedCount": 855,
+  "unallocatedCount": 145,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19953,6 +19953,26 @@
       "remainingQualification": [
         "Process pairs in conservative lower-bound order and prune only beyond the best established upper bound.",
         "Check a 1 mm global minimum from only one measured pair, lower bound without narrow-phase budget and no result for a single occurrence.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0855",
+      "name": "Точные поперечные сечения размещённых многогранных STEP-тел",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::exact_polyhedral_sections",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
+        "docs/qualification/nurbs-curvature-field-855-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-855-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Cull by outward-rounded plane projection and recover exact material section loops and area for each placed polyhedral solid.",
+        "Check an exact 12 mm² hollow section with two cycles, reversed normal, exclusion of a translated occurrence and per-occurrence budget refusal.",
         "WASM and application integration are separate."
       ]
     }
