@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0904",
+  "testedBase": "797616a80389bd0ba9954220a9a408ab4362d024",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 470,
+  "scope": [
+    "Strict violation from exact squared witness-box distance or clamped endpoints. Verify witness parameters and distinguish equality from a threshold one binary64 step above."
+  ],
+  "logSha256": "5619e671207da3945d61e0112484c7c908b2f154e3101e5bd767493097a28dc9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "1af0ed98be3037cb8e356d287cdf20c4f9fd78c90904ed85d59266cfdebd757e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "cafdff7fb625610e8f507a1419ef49668f83c4f8c1eb39608c1615a2f82a1b9d"
+  }
+}

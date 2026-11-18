@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 903,
-  "unallocatedCount": 97,
+  "specifiedCount": 904,
+  "unallocatedCount": 96,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20818,6 +20818,23 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/receipt.json",
         "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0904",
+      "name": "Точное доказательство нарушения зазора по паре точек пространственных контуров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."

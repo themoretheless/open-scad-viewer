@@ -13568,3 +13568,24 @@ fn exact_box_clearance_resolves_diagonal_equality_without_snapping() {
     assert_eq!(exact[0].bounds[0],5.);
     assert_ne!(inspect(&[&a,&b],5_f64.next_up(),1e-7,1000).unwrap()[0].decision,MeetsMinimum);
 }
+
+#[test]
+fn exact_witness_classifies_a_strict_sub_ulp_clearance_violation() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let tri = |x,y| Curve {degree:1,knots:vec![2.,2.,3.,4.,5.,5.],
+        control_points:vec![vec![x,y,0.],vec![x,y,1.],vec![x+1.,y,0.],vec![x,y,0.]],
+        weights:vec![1.,2.,1.,1.],periodic:false};
+    let a=tri(0.,0.);
+    let mut b=tri(3.,4.);
+    // Put both triangles on opposite sides of the 3-4-5 closest endpoints.
+    b.control_points[1][2] = -1.;
+    let mut a=a;
+    a.control_points[2][0] = -1.;
+    let set=[&a,&b];
+    let report=inspect(&set,5_f64.next_up(),1e-7,100).unwrap();
+    assert_eq!(report[0].decision,BelowMinimum);
+    let [u,v]=report[0].witness_parameters;
+    assert_eq!(a.evaluate(u).unwrap().point,[0.,0.,0.]);
+    assert_eq!(b.evaluate(v).unwrap().point,[3.,4.,0.]);
+    assert_eq!(inspect(&set,5.,1e-7,100).unwrap()[0].decision,MeetsMinimum);
+}

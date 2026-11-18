@@ -2504,8 +2504,25 @@ fn box_proves_clearance(a: &[[f64;2];3], b: &[[f64;2];3], minimum: f64) -> bool 
     squared >= &threshold * &threshold
 }
 
+// Compare a known pair of on-curve points enclosed by outward coordinate
+// intervals. Use the farthest opposite faces on each axis for an upper proof.
+fn witnesses_below_clearance(a: &[[f64;2]], b: &[[f64;2]], minimum: f64) -> bool {
+    use num_rational::BigRational;
+    use num_traits::Signed;
+    let exact = |x| BigRational::from_float(x).expect("finite witness coordinate");
+    let mut squared = exact(0.);
+    for (left,right) in a.iter().zip(b) {
+        let delta = (exact(left[0])-exact(right[1])).abs()
+            .max((exact(left[1])-exact(right[0])).abs());
+        squared += &delta * &delta;
+    }
+    let limit = exact(minimum);
+    squared < &limit * &limit
+}
+
 /// Check every distinct pair, in index order, against an inclusive minimum.
-/// An interval straddling the threshold is explicitly unresolved.
+/// At a threshold straddle, exact control-box and witness tests can still
+/// certify the decision. A closed upper bound may equal a strictly violated threshold.
 pub fn inspect_spatial_contour_clearances(
     contours: &[&Curve], minimum: f64, tolerance: f64, max_cells: usize,
 ) -> Result<Vec<ContourClearanceCheck>> {
@@ -2516,15 +2533,36 @@ pub fn inspect_spatial_contour_clearances(
     let boxes: Vec<_> = contours.iter().map(|c| spatial_control_box(c)).collect();
     let mut checks = Vec::new();
     visit_contour_pairs(contours,contours,tolerance,max_cells,true,|indices,distance| {
-        let [mut lo,hi] = distance.distance_interval_mm;
-        if lo < minimum && minimum <= hi && box_proves_clearance(&boxes[indices[0]], &boxes[indices[1]], minimum) {
+        let [mut lo,mut hi] = distance.distance_interval_mm;
+        let mut parameters = distance.parameters;
+        let decision = if lo >= minimum {
+            ClearanceDecision::MeetsMinimum
+        } else if hi < minimum {
+            ClearanceDecision::BelowMinimum
+        } else if box_proves_clearance(&boxes[indices[0]], &boxes[indices[1]], minimum) {
             lo = minimum;
-        }
-        let decision = if lo >= minimum { ClearanceDecision::MeetsMinimum }
-            else if hi < minimum { ClearanceDecision::BelowMinimum }
-            else { ClearanceDecision::Unresolved };
+            ClearanceDecision::MeetsMinimum
+        } else {
+            let [a,b] = indices.map(|i| contours[i]);
+            let witness = &distance.point_enclosures;
+            // The first pole of a clamped curve is an exact endpoint. Its
+            // enclosure need not inherit rounding from point evaluation.
+            let endpoint = |c: &Curve| -> [[f64;2];3] {
+                std::array::from_fn(|k| [c.control_points[0][k];2])
+            };
+            if witnesses_below_clearance(&witness[0], &witness[1], minimum) {
+                hi = minimum;
+                ClearanceDecision::BelowMinimum
+            } else if witnesses_below_clearance(&endpoint(a), &endpoint(b), minimum) {
+                parameters = [a.domain()[0], b.domain()[0]];
+                hi = minimum;
+                ClearanceDecision::BelowMinimum
+            } else {
+                ClearanceDecision::Unresolved
+            }
+        };
         checks.push(ContourClearanceCheck { contours: indices, bounds:[lo,hi],
-            witness_parameters:distance.parameters,cells:distance.cells,decision });
+            witness_parameters:parameters,cells:distance.cells,decision });
     })?;
     Ok(checks)
 }
