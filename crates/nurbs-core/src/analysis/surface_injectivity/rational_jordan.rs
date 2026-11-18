@@ -47,8 +47,6 @@ pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[us
             }
         }
     }
-    let single_span = size == [degree[0] + 1, degree[1] + 1];
-    let [m, n] = size.map(|count| count - 1);
     let origin = &s.control_points[0][0];
     let u = &s.control_points[1][0];
     let v = &s.control_points[0][1];
@@ -56,13 +54,40 @@ pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[us
     let area = |[a, b]: [usize; 2]| {
         (u[a] - origin[a]) * (v[b] - origin[b]) - (u[b] - origin[b]) * (v[a] - origin[a])
     };
-    let axes = [[0, 1], [0, 2], [1, 2]]
-        .into_iter()
-        .max_by(|&a, &b| area(a).abs().total_cmp(&area(b).abs()))?;
-    let orientation = area(axes);
-    if !orientation.is_finite() || orientation == 0. {
-        return None;
+    let mut candidates = [[0, 1], [0, 2], [1, 2]].map(|axes| (axes, area(axes)));
+    candidates.sort_by(|a, b| b.1.abs().total_cmp(&a.1.abs()));
+    for (axes, orientation) in candidates {
+        if !orientation.is_finite() || orientation == 0. {
+            continue;
+        }
+        if certify_projection(s, &spans, axes, orientation.signum(), work, limit).is_some() {
+            return Some(axes);
+        }
     }
+    None
+}
+
+fn certify_projection(
+    s: &Surface,
+    spans: &[Vec<usize>; 2],
+    axes: [usize; 2],
+    orientation: f64,
+    work: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let degree = [s.degree_u, s.degree_v];
+    let size = [s.control_points.len(), s.control_points[0].len()];
+    let knots = [&s.knots_u, &s.knots_v];
+    let single_span = size == [degree[0] + 1, degree[1] + 1];
+    let [m, n] = size.map(|count| count - 1);
+    let origin = &s.control_points[0][0];
+    let mut spend = |cost: usize| {
+        if cost > limit - *work {
+            return None;
+        }
+        *work += cost;
+        Some(())
+    };
 
     // Extract the four original clamped boundary curves. Reversed sides
     // need exact knot reflection to keep the projected curve image.
@@ -141,7 +166,7 @@ pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[us
         *work += cost;
         Some(())
     };
-    let sign = I::point(orientation.signum());
+    let sign = I::point(orientation);
     if single_span {
         let mut weights = Vec::with_capacity(m + 1);
         let mut x = Vec::with_capacity(m + 1);
@@ -225,12 +250,47 @@ pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[us
     // values off the grid. An interior preimage on the Jordan boundary
     // would give a contribution for a nearby exterior value. Both contradict
     // the global degree. The Jordan boundary already gives injectivity there.
-    Some(axes)
+    Some(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retries_the_projection_after_the_strongest_corner_minor_folds() {
+        let surface = Surface {
+            degree_u: 2,
+            degree_v: 2,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            control_points: [0., 0.5, 1.]
+                .into_iter()
+                .map(|x| {
+                    [[0., 0.], [0.5, 4.], [1., 0.]]
+                        .into_iter()
+                        .map(|[y, z]| vec![x, y, z])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 3]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let spans = [vec![2], vec![2]];
+        let mut folded_work = 0;
+        assert!(certify_projection(&surface, &spans, [0, 2], 1., &mut folded_work, 1000).is_none());
+        assert!(folded_work > 0);
+        let mut fallback_work = 0;
+        assert!(
+            certify_projection(&surface, &spans, [0, 1], 1., &mut fallback_work, 1000).is_some()
+        );
+
+        let mut used = 0;
+        assert_eq!(certify(&surface, &mut used, 1000), Some([0, 1]));
+        assert!(used >= folded_work + fallback_work);
+        assert!(certify(&surface, &mut 0, used - 1).is_none());
+    }
 
     #[test]
     fn bowed_boundary_uses_jordan_degree_and_rejects_crossings() {

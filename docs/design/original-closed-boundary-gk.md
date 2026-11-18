@@ -196,3 +196,9 @@ local degree. A simple projected boundary limits the global degree to one
 inside and zero outside. The chart test establishes injectivity. The
 original shell still checks regularity, contact ownership and smoothness
 with their own certificates.
+
+The largest projected corner tangent area orders the coordinate plane
+trials. If the first projection refuses, the remaining planes with a
+nonzero corner area can use the rest of the same work allowance. Each
+successful plane independently proves both the simple boundary and the
+strict Jacobian sign on the entire chart.
