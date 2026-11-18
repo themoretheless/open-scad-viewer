@@ -1,0 +1,35 @@
+{
+  "sourceBase": "f60cff161e72e2ab5d62a205119bd2c26c645bfb",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact topological ownership of both full wrap edges of a single doubly periodic rational BRep face, with refusal for partial world trims and an exhausted proof budget.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2033 filtered out; finished in 0.19s",
+      "file": "complete.log.gz",
+      "sha256": "26aed6bdeeb57080f209d0cf3ae0762669313410d023a70310b6a1dac613167f"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed",
+      "result": "test result: ok. 72 passed; 0 failed; 0 ignored; 0 measured; 1975 filtered out; finished in 109.80s",
+      "file": "closed.log.gz",
+      "sha256": "f87010e9c92b7e03eb0df32ed0118f7d07c725ba5d7c4924787f9e2c4f861525"
+    },
+    {
+      "command": "cargo check --locked --manifest-path crates/Cargo.toml -p geometry-bridge",
+      "result": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 31.83s",
+      "file": "bridge.log.gz",
+      "sha256": "08adf10672721de7b9c3c6a3aed3438528497799ee8086e36c33423ef6b83d46"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "baf124bdb9bfe31052eb23a9ed6ead626b94dc7fede7d17ac2d7bb96e39c1291",
+    "count": 4916
+  }
+}
