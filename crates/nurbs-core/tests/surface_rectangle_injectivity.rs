@@ -96,3 +96,26 @@ fn refinement_proves_one_common_original_domain_and_never_combines_independent_l
     assert!(r.spans > 1);
     assert!(r.contraction_upper.unwrap() < 1.);
 }
+
+#[test]
+fn multi_cell_affine_projection_uses_every_greville_coefficient() {
+    use nurbs_core::surface_injectivity::certify_affine_coordinate_pair;
+    // Greville values for [2,2,2,3,3,6,6,6] and [-1,-1,1,3,3].
+    let us = [2., 2.5, 3., 4.5, 6.];
+    let vs = [-1., 1., 3.];
+    let mut patch = Surface {
+        degree_u: 2, degree_v: 1,
+        knots_u: vec![2.,2.,2.,3.,3.,6.,6.,6.],
+        knots_v: vec![-1.,-1.,1.,3.,3.],
+        control_points: us.iter().enumerate().map(|(i,u)| {
+            vs.iter().enumerate().map(|(j,v)| vec![
+                if i == 2 && j == 1 { 5. } else { 0. }, 2.*u-v, u+v
+            ]).collect()
+        }).collect(),
+        weights: vec![vec![2.;3];5],
+        periodic_u: false, periodic_v: false,
+    };
+    assert_eq!(certify_affine_coordinate_pair(&patch), Some([1,2]));
+    patch.control_points[1][1][2] += 0.000_000_001;
+    assert_eq!(certify_affine_coordinate_pair(&patch), None);
+}

@@ -74,6 +74,68 @@ pub fn projection(s: &Surface) -> Option<[usize; 2]> {
     })
 }
 
+/// Identify an invertible affine projection in the original parameter clock.
+/// For a clamped polynomial tensor spline the coefficients of a linear
+/// coordinate are its values at the tensor product of Greville abscissae.
+pub fn certify_affine_coordinate_pair(s: &Surface) -> Option<[usize; 2]> {
+    if s.control_points.len() <= s.degree_u.saturating_add(1)
+        && s.control_points.first()?.len() <= s.degree_v.saturating_add(1)
+    {
+        return projection(s);
+    }
+    s.validate().ok()?;
+    if s.periodic_u
+        || s.periodic_v
+        || s.control_points[0][0].len() != 3
+        || !s.weights.iter().flatten().all(|w| *w == s.weights[0][0])
+    {
+        return None;
+    }
+    let greville = |knots: &[f64], degree: usize, count: usize| -> Option<Vec<Q>> {
+        if degree == 0
+            || !knots[..=degree].iter().all(|t| *t == knots[degree])
+            || !knots[count..].iter().all(|t| *t == knots[count])
+        {
+            return None;
+        }
+        let lo = Q::from_float(knots[degree])?;
+        let width = Q::from_float(knots[count])? - &lo;
+        let scale = Q::from_integer(degree.into());
+        (0..count)
+            .map(|i| {
+                let sum = knots[i + 1..=i + degree]
+                    .iter()
+                    .try_fold(Q::zero(), |sum, t| Some(sum + Q::from_float(*t)?))?;
+                Some((sum / &scale - &lo) / &width)
+            })
+            .collect()
+    };
+    let rows = s.control_points.len();
+    let cols = s.control_points[0].len();
+    let us = greville(&s.knots_u, s.degree_u, rows)?;
+    let vs = greville(&s.knots_v, s.degree_v, cols)?;
+    let slopes = [0, 1, 2].map(|k| -> Option<[Q; 2]> {
+        let origin = Q::from_float(s.control_points[0][0][k])?;
+        let u = Q::from_float(s.control_points[rows - 1][0][k])? - &origin;
+        let v = Q::from_float(s.control_points[0][cols - 1][k])? - &origin;
+        for (i, a) in us.iter().enumerate() {
+            let row = &origin + &u * a;
+            for (j, b) in vs.iter().enumerate() {
+                if &row + &v * b != Q::from_float(s.control_points[i][j][k])? {
+                    return None;
+                }
+            }
+        }
+        Some([u, v])
+    });
+    [[0, 1], [0, 2], [1, 2]].into_iter().find(|&[i, j]| {
+        slopes[i]
+            .as_ref()
+            .zip(slopes[j].as_ref())
+            .is_some_and(|(a, b)| &a[0] * &b[1] != &a[1] * &b[0])
+    })
+}
+
 fn affine_row(s: &Surface, coordinate: usize) -> Option<[Q; 2]> {
     let [p, q] = [s.degree_u, s.degree_v];
     let [origin, end_u, end_v] = [[0, 0], [p, 0], [0, q]]

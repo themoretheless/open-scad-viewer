@@ -1525,6 +1525,18 @@ fn model_only_trim_recovers_a_nonplanar_saddle_loop() {
     let mut wrong = edge.clone();
     wrong.control_points[5][2] += 0.001;
     assert!(affine_boundary::recover(pair, &saddle, &wrong, &mut 0).is_err());
+    let grid = saddle.edit_axis(Axis::U, |curve| curve.insert(0.5, 1)).unwrap()
+        .edit_axis(Axis::V, |curve| curve.insert(0.25, 1)).unwrap();
+    let (multi, support_de) = append_entity(&text, 128, 0, "00000000", |_| surface_values(&grid).unwrap());
+    let multi = rewire_reference(&rewire_reference(&multi, pair, 2, support_de), face, 1, support_de);
+    let restored = import_iges_v2(&multi).unwrap().0;
+    assert_eq!(restored.faces[0].surface, grid);
+    assert_eq!(restored.loops[0].coedges[0].pcurve, *uv);
+    if let Some(path) = std::env::var_os("CAD_IGES_GRID_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, multi).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&restored).unwrap().0).unwrap();
+    }
     if let Some(path) = std::env::var_os("CAD_IGES_GRAPH_BOUNDARY_FIXTURE") {
         let path = std::path::Path::new(&path);
         std::fs::write(path, text).unwrap();

@@ -12,6 +12,7 @@ pub(super) fn recover(
 ) -> Result<Curve> {
     let last_u = surface.control_points.len() - 1;
     let last_v = surface.control_points[0].len() - 1;
+    graph_work(work, (last_u + 1) * (last_v + 1))?;
     let origin = &surface.control_points[0][0];
     let u: [f64; 3] = std::array::from_fn(|i| surface.control_points[last_u][0][i] - origin[i]);
     let v: [f64; 3] = std::array::from_fn(|i| surface.control_points[0][last_v][i] - origin[i]);
