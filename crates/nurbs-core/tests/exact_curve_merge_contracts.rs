@@ -13589,3 +13589,19 @@ fn exact_witness_classifies_a_strict_sub_ulp_clearance_violation() {
     assert_eq!(b.evaluate(v).unwrap().point,[3.,4.,0.]);
     assert_eq!(inspect(&set,5.,1e-7,100).unwrap()[0].decision,MeetsMinimum);
 }
+
+#[test]
+fn oblique_support_proves_clearance_at_equality_for_overlapping_cartesian_boxes() {
+    use nurbs_core::analysis::curve_measure::prove_spatial_contour_clearance_along as prove;
+    let contour = |x:f64,y:f64| Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,2.,2.,2.],
+        control_points:vec![vec![x,y,0.],vec![x+8.,y-6.,2.],vec![x+4.,y-3.,4.],
+                            vec![x-4.,y+3.,2.],vec![x,y,0.]],
+        weights:vec![1.,2.,1.,3.,1.],periodic:false};
+    let a=contour(0.,0.); let b=contour(3.,4.);
+    for n in [[3.,4.,0.],[-6.,-8.,0.]] {
+        assert!(prove(&a,&b,n,5.).unwrap());
+        assert!(!prove(&a,&b,n,5_f64.next_up()).unwrap());
+    }
+    assert!(!prove(&a,&b,[1.,0.,0.],5.).unwrap());
+    assert!(prove(&a,&b,[0.;3],5.).is_err());
+}

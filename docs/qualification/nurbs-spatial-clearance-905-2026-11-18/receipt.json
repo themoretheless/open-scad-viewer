@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0905",
+  "testedBase": "12c465f64e95b7d6d85ac6f60390ea15b2c87b68",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 471,
+  "scope": [
+    "Exact projected support separation for rational curves and arbitrary finite normal. Verify equality with overlapping boxes, sign and scale invariance, and one-step larger requirement."
+  ],
+  "logSha256": "ab0c57f9b9c6f84c51563120e9cbf3af9521568ca56feda38dad93cb73d22539",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "cf24510e7bb14f1c0bdd05e4bc4cf01131ac935d09fec470eca11d9b80f74848",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b219f3067371c10f4bf05f9063d0b2e201baf833de5466b9d1b325cfe195feb5"
+  }
+}

@@ -2520,6 +2520,35 @@ fn witnesses_below_clearance(a: &[[f64;2]], b: &[[f64;2]], minimum: f64) -> bool
     squared < &limit * &limit
 }
 
+/// Sufficient clearance certificate from exact control-pole projections on
+/// a supplied separating normal. A false result only means the direction
+/// did not prove the threshold. The normal need not have unit length.
+pub fn prove_spatial_contour_clearance_along(
+    first: &Curve, second: &Curve, normal: [f64; 3], minimum: f64,
+) -> Result<bool> {
+    use num_rational::BigRational as Q;
+    use num_traits::Zero;
+    validate_spatial_distance_set(&[first, second], 2)?;
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    check(normal.iter().all(|v| v.is_finite()) && normal.iter().any(|&v| v != 0.),
+          "Expected finite nonzero separating normal")?;
+    let exact = |x| Q::from_float(x).expect("validated finite input");
+    let n = normal.map(exact);
+    let support = |curve: &Curve| {
+        let mut projections = curve.control_points.iter().map(|p| {
+            n.iter().zip(p).map(|(a,&b)| a * exact(b)).sum::<Q>()
+        });
+        let first = projections.next().expect("validated nonempty control net");
+        projections.fold((first.clone(),first), |(lo,hi),x| (lo.min(x.clone()),hi.max(x)))
+    };
+    let (alo,ahi) = support(first);
+    let (blo,bhi) = support(second);
+    let gap = (blo-ahi).max(alo-bhi).max(Q::zero());
+    let squared_norm = n.iter().map(|a| a*a).sum::<Q>();
+    let threshold = exact(minimum);
+    Ok(&gap * &gap >= &threshold * &threshold * squared_norm)
+}
+
 /// Check every distinct pair, in index order, against an inclusive minimum.
 /// At a threshold straddle, exact control-box and witness tests can still
 /// certify the decision. A closed upper bound may equal a strictly violated threshold.
