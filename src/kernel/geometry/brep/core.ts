@@ -135,6 +135,12 @@ export function brepGearFaceCount(spec: Pick<BrepGearSpec, 'teeth' | 'herringbon
   const circle = spec.internal || (spec.bore ?? 0) > 0 ? arcs : 0
   return (spec.teeth * 6 + circle) * (spec.herringbone ? 2 : 1) + 2
 }
+/** Estimate display work against the native tessellator's 20,000-triangle limit. */
+export function gearDisplaySegments(faces: number, requested: number): number {
+  let segments = requested
+  while (segments > 1 && 2 * faces * segments * segments > 20000) segments--
+  return segments
+}
 /**
  * Gears are built once per specification and then copied: the eighteen planets of
  * a spinner share one involute fit and one helical sweep, and only their placement

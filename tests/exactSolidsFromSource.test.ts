@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { exportSolidStepAssembly } from '../src/kernel/solidStepAssembly'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
 
@@ -73,7 +74,7 @@ describe('exact solids from source', () => {
     expect(extent.max[0]).toBeCloseTo(14, 1)
   }, 30000)
 
-  it('builds the planetary spinner as twenty exact herringbone gears', async () => {
+  it('builds and exports the planetary spinner as twenty exact herringbone gears', async () => {
     // The spinner used to be a sampled polygon prototype; its gears are now
     // the brep_gear builtin, so the Solid workspace gets sun, ring and 18
     // planets as NURBS bodies.
@@ -85,7 +86,14 @@ describe('exact solids from source', () => {
     const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
     expect(bodies).toHaveLength(20)
     expect(bodies.every(b => b.brep && b.brep.faces.length > 8)).toBe(true)
-  }, 120000)
+    const step = await exportSolidStepAssembly({ version: 1, sketches: [], bodies })
+    const definitions = step.match(/=MANIFOLD_SOLID_BREP\(/g)?.length ?? 0
+    const occurrences = step.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)?.length ?? 0
+    expect(occurrences).toBe(20)
+    expect(definitions).toBeGreaterThanOrEqual(3)
+    expect(definitions).toBeLessThanOrEqual(occurrences)
+    console.info('Rush spinner STEP', { definitions, occurrences, bytes: Buffer.byteLength(step) })
+  }, 600000)
 
   it('lowers a helical RushGraph gear through the same builtin', async () => {
     const result = await evaluate(
