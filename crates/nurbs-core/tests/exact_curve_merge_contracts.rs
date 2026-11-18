@@ -10672,3 +10672,42 @@ fn last_toolpath_chain_violation_retains_later_unresolved_tangency() {
     else { panic!("expected last possible contact on the first segment"); };
     assert!(lo <= 3. && 3. <= hi && hi - lo < 0.03);
 }
+
+#[test]
+fn toolpath_chain_timeline_keeps_clear_gaps_and_shared_time_boundaries() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        toolpath_chain_clearance_timeline,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [0., 1.], duration: 3. },
+        TimedMotionSegment { curve: &curve, interval: [1., 8.], duration: 2. },
+    ];
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 0.5 }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[6., 0.], radius: 0.5 }),
+    ];
+    let report = toolpath_chain_clearance_timeline(&segments, &obstacles, 0., 0., 0.01, 512)
+        .unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    let cells = &report.intervals;
+    assert_eq!(cells[0].status, Status::Within);
+    assert_eq!(cells[0].time_endpoint_bounds, [[0.; 2], [3.; 2]]);
+    assert_eq!(cells.last().unwrap().time_endpoint_bounds[1], [5.; 2]);
+    assert_eq!(cells.iter().filter(|cell| cell.status == Status::Exceeds).count(), 2);
+    assert!(cells.iter().any(|cell| {
+        cell.segment_index == 1 && cell.status == Status::Within
+            && cell.parameter_interval[0] < 4. && 4. < cell.parameter_interval[1]
+    }));
+    for pair in cells.windows(2) {
+        assert_eq!(pair[0].time_endpoint_bounds[1], pair[1].time_endpoint_bounds[0]);
+        assert!(pair[0].segment_index != pair[1].segment_index || pair[0].status != pair[1].status);
+    }
+}

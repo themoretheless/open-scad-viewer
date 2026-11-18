@@ -3349,6 +3349,78 @@ pub fn last_toolpath_chain_violation(
     })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct TimedToolpathClearanceInterval {
+    pub segment_index: usize,
+    pub parameter_interval: [f64; 2],
+    /// Elapsed-time enclosures for the start and end, respectively. The
+    /// classification applies between the exact endpoints.
+    pub time_endpoint_bounds: [[f64; 2]; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathChainClearanceTimeline {
+    pub intervals: Vec<TimedToolpathClearanceInterval>,
+    pub work_obstacle_cells: usize,
+}
+
+/// Map clearance cells to elapsed chain time and merge adjacent cells with
+/// equal status within each segment. Each segment uses its own uniform clock.
+pub fn toolpath_chain_clearance_timeline(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathChainClearanceTimeline> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let mut elapsed = num_rational::BigRational::default();
+    let mut remaining = max_obstacle_cells;
+    let mut intervals: Vec<TimedToolpathClearanceInterval> = Vec::new();
+    for (segment_index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - segment_index);
+        let partition = partition_toolpath_clearance_with_margin(
+            segment.curve, segment.interval, obstacles, tool_radius, margin,
+            parameter_tolerance, budget,
+        )?;
+        let rate = motion_clock_factor(segment.interval, segment.duration)?;
+        let start = exact_motion_operand(segment.interval[0])?;
+        let time = |parameter| -> Result<[f64; 2]> {
+            let exact = &elapsed + (exact_motion_operand(parameter)? - &start) * &rate;
+            Ok([round_motion_duration(&exact, false)?, round_motion_duration(&exact, true)?])
+        };
+        for cell in &partition.cells {
+            let [a, b] = cell.parameter_interval;
+            if let Some(last) = intervals.last_mut()
+                && last.segment_index == segment_index
+                && last.status == cell.status
+                && last.parameter_interval[1] == a
+            {
+                last.parameter_interval[1] = b;
+                last.time_endpoint_bounds[1] = time(b)?;
+                continue;
+            }
+            intervals.push(TimedToolpathClearanceInterval {
+                segment_index,
+                parameter_interval: [a, b],
+                time_endpoint_bounds: [time(a)?, time(b)?],
+                status: cell.status,
+            });
+        }
+        elapsed += exact_motion_operand(segment.duration)?;
+        reserve -= minimum;
+        remaining -= partition.work_obstacle_cells;
+    }
+    Ok(ToolpathChainClearanceTimeline {
+        intervals,
+        work_obstacle_cells: max_obstacle_cells - remaining,
+    })
+}
+
 fn prepare_toolpath_obstacles<'a>(
     curve: &Curve,
     obstacles: &[ToolpathObstacle<'a>],
