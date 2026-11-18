@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 637,
-  "unallocatedCount": 363,
+  "specifiedCount": 638,
+  "unallocatedCount": 362,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15753,6 +15753,28 @@
         "Project piece centers before weighted extremization to preserve cancellation across Cartesian axes.",
         "Check oblique cancellation, subnormal and maximal normal scales, interval masses and positions, and invalid normal rejection.",
         "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0638",
+      "name": "Знаковое расстояние центра масс периодической обрезки до заданной плоскости через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-638-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-638-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Expose opt-in signed plane distance computed from per-component mass and centroid enclosures.",
+        "Check the signed oblique distance from an analytic density-weighted center through the compiled ABI, opt-in shape compatibility, and incomplete or invalid inputs.",
+        "Editor and production delivery qualification remain."
       ]
     }
   ],

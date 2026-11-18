@@ -33,6 +33,7 @@ interface Report {
     massFractionBounds: [number, number] | null
   }[]
   massBoundsKg?: [number, number] | null
+  centerOfMassPlaneDistanceBoundsMm?: [number, number] | null
   centerOfMassBoundsMm?: [number, number][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
   axisMomentBoundsMm4?: [number, number] | null
@@ -380,3 +381,15 @@ for (const [component, expected] of [[0, 20 / 23], [1, 3 / 23]]) {
   assert.ok(fraction && 0 <= fraction[0] && fraction[0] <= expected && expected <= fraction[1] && fraction[1] <= 1)
 }
 console.log('WASM ABI enclosed the mass fraction of each retained component.')
+
+assert.equal(densityMass.centerOfMassPlaneDistanceBoundsMm, undefined)
+const planeOptions = {
+  ...densityOptions, centerOfMassPlane: { pointMm: [1, 0, 0], normal: [2, -2, 0] },
+}
+const centerPlane = call(request.maxWork, densityOp, planeOptions).centerOfMassPlaneDistanceBoundsMm
+const expectedPlaneDistance = (expectedCenterX - expectedCenterY - 1) / Math.SQRT2
+assert.ok(centerPlane && centerPlane[0] <= expectedPlaneDistance && expectedPlaneDistance <= centerPlane[1])
+assert.ok(centerPlane[1] < 0)
+const incompletePlane = call(request.maxWork, densityOp, { ...planeOptions, maxSurfaceCells: 2 })
+assert.equal(incompletePlane.centerOfMassPlaneDistanceBoundsMm, null)
+console.log('WASM ABI enclosed the signed distance from the density-weighted center to a plane.')

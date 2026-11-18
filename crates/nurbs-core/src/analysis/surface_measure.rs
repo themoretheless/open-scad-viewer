@@ -1031,26 +1031,35 @@ pub struct SurfaceAssemblyMassBounds {
 pub fn combine_surface_mass_properties_with_density(
     pieces: &[(SurfaceMassPropertiesBounds, [f64; 2])],
 ) -> Result<SurfaceAssemblyMassBounds> {
-    combine_mass_properties(pieces.iter().map(|(piece, [lo, hi])| {
-        let density = Interval::new(*lo, *hi)?;
-        let area = Interval::new(piece.area_bounds[0], piece.area_bounds[1])?;
-        check(
-            density.lo > 0. && area.lo > 0.,
-            "Surface area and areal density must be strictly positive",
-        )?;
-        let mass = area.mul(density)?;
-        let mut inertia = symmetric_tensor_intervals(piece.central_inertia_bounds)?;
-        for row in &mut inertia {
-            for moment in row {
-                *moment = moment.mul(density)?;
-            }
+    combine_mass_properties(
+        pieces
+            .iter()
+            .map(|(piece, density)| apply_surface_density(piece, *density)),
+    )
+}
+
+fn apply_surface_density(
+    piece: &SurfaceMassPropertiesBounds,
+    [lo, hi]: [f64; 2],
+) -> Result<SurfaceAssemblyMassBounds> {
+    let density = Interval::new(lo, hi)?;
+    let area = Interval::new(piece.area_bounds[0], piece.area_bounds[1])?;
+    check(
+        density.lo > 0. && area.lo > 0.,
+        "Surface area and areal density must be strictly positive",
+    )?;
+    let mass = area.mul(density)?;
+    let mut inertia = symmetric_tensor_intervals(piece.central_inertia_bounds)?;
+    for row in &mut inertia {
+        for moment in row {
+            *moment = moment.mul(density)?;
         }
-        Ok(SurfaceAssemblyMassBounds {
-            mass_bounds: [mass.lo, mass.hi],
-            centroid_bounds: piece.centroid_bounds,
-            central_inertia_bounds: inertia.map(|row| row.map(|moment| [moment.lo, moment.hi])),
-        })
-    }))
+    }
+    Ok(SurfaceAssemblyMassBounds {
+        mass_bounds: [mass.lo, mass.hi],
+        centroid_bounds: piece.centroid_bounds,
+        central_inertia_bounds: inertia.map(|row| row.map(|moment| [moment.lo, moment.hi])),
+    })
 }
 
 fn combine_mass_properties(
@@ -1532,9 +1541,23 @@ pub struct TrimmedPatchSetDensityReport {
     /// Total mass can be enclosed even when no center of mass is certified.
     pub total_mass_bounds: Option<[f64; 2]>,
     pub mass_properties: Option<SurfaceAssemblyMassBounds>,
+    weighted_components: Vec<SurfaceAssemblyMassBounds>,
 }
 
 impl TrimmedPatchSetDensityReport {
+    /// Enclose the signed distance of the density-weighted center to a plane.
+    pub fn center_of_mass_plane_distance(
+        &self,
+        point: [f64; 3],
+        normal: [f64; 3],
+    ) -> Result<Option<[f64; 2]>> {
+        self.mass_properties
+            .map(|_| {
+                bound_mass_weighted_centroid_plane_distance(&self.weighted_components, point, normal)
+            })
+            .transpose()
+    }
+
     /// Enclose the fractional mass of each patch in input order.
     pub fn component_mass_fractions(&self) -> Result<Option<Vec<[f64; 2]>>> {
         bound_component_mass_fractions(&self.component_mass_bounds)
@@ -1640,14 +1663,14 @@ pub fn periodic_trim_patch_set_mass_with_density(
                     cells.iter().map(|cell| (surface, cell)),
                     centroid_intervals(centroid_bounds)?,
                 )?;
-                pieces.push((
-                    SurfaceMassPropertiesBounds {
+                pieces.push(apply_surface_density(
+                    &SurfaceMassPropertiesBounds {
                         area_bounds: area.bounds,
                         centroid_bounds,
                         central_inertia_bounds,
                     },
                     density,
-                ));
+                )?);
             }
             Ok(())
         },
@@ -1671,13 +1694,14 @@ pub fn periodic_trim_patch_set_mass_with_density(
         .as_ref()
         .map(|_| [total_mass.lo.max(0.), total_mass.hi]);
     let mass_properties = (pieces.len() == patches.len())
-        .then(|| combine_surface_mass_properties_with_density(&pieces))
+        .then(|| combine_mass_properties(pieces.iter().copied().map(Ok)))
         .transpose()?;
     Ok(TrimmedPatchSetDensityReport {
         measure,
         component_mass_bounds,
         total_mass_bounds,
         mass_properties,
+        weighted_components: pieces,
     })
 }
 

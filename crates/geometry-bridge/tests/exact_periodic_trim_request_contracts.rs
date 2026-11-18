@@ -862,3 +862,28 @@ fn patch_set_density_reports_fraction_intervals_by_outer_contour() {
     assert_eq!(incomplete["ok"], true, "{incomplete}");
     assert_eq!(incomplete["value"]["componentMasses"], json!([]));
 }
+
+#[test]
+fn patch_set_density_returns_signed_center_distance_to_requested_plane() {
+    let mut request = patch_set_density_request(20_000);
+    let legacy = run(&request);
+    assert_eq!(legacy["ok"], true, "{legacy}");
+    assert!(legacy["value"].get("centerOfMassPlaneDistanceBoundsMm").is_none());
+
+    request["centerOfMassPlane"] =
+        json!({"pointMm": [1., 0., 0.], "normal": [2., -2., 0.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let interval = &response["value"]["centerOfMassPlaneDistanceBoundsMm"];
+    let expected = ((0.34375 - 0.375) / 2.875 - 1.) / 2_f64.sqrt();
+    assert!(interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap());
+    assert!(interval[1].as_f64().unwrap() < 0.);
+    request["maxSurfaceCells"] = json!(2);
+    let incomplete = run(&request);
+    assert_eq!(
+        incomplete["value"].get("centerOfMassPlaneDistanceBoundsMm"),
+        Some(&Value::Null)
+    );
+    request["centerOfMassPlane"]["normal"] = json!([0., 0., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}

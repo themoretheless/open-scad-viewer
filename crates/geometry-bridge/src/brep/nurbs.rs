@@ -1444,6 +1444,19 @@ pub fn exact_periodic_trim_patch_set_density_request(
     let max_surface: usize = field(request, "maxSurfaceCells")?;
     let max_trim: usize = field(request, "maxTrimCells")?;
     validate_trimmed_patch_set_limits(tolerance, tolerance_uv, max_surface, max_trim)?;
+    let center_plane = request
+        .get("centerOfMassPlane")
+        .map(|plane| -> Result<_> {
+            let point: [f64; 3] = field(plane, "pointMm")?;
+            let normal: [f64; 3] = field(plane, "normal")?;
+            if !point.iter().chain(&normal).all(|x| x.is_finite()) || normal == [0.; 3] {
+                return Err(input(
+                    "Center of mass plane needs a finite point and nonzero finite normal",
+                ));
+            }
+            Ok((point, normal))
+        })
+        .transpose()?;
     let entries = request
         .get("componentDensities")
         .and_then(Value::as_array)
@@ -1470,6 +1483,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
         "status": "buildRefused", "componentAreas": [], "componentMasses": [],
         "massBoundsKg": null, "centerOfMassBoundsMm": null, "centralInertiaBoundsKgMm2": null,
     });
+    if center_plane.is_some() {
+        response["centerOfMassPlaneDistanceBoundsMm"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1495,6 +1511,10 @@ pub fn exact_periodic_trim_patch_set_density_request(
         max_surface,
         max_trim,
     )?;
+    if let Some((point, normal)) = center_plane {
+        response["centerOfMassPlaneDistanceBoundsMm"] =
+            json!(report.center_of_mass_plane_distance(point, normal)?);
+    }
     response["massBoundsKg"] = json!(report.total_mass_bounds);
     let fractions = report.component_mass_fractions()?;
     let component_masses = patches

@@ -1,0 +1,49 @@
+{
+  "id": "NURBS-0638",
+  "testedBase": "ef3da3453034332acf3f08738bf4236cb0ebb71f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 276,
+  "scope": [
+    "Expose opt-in signed plane distance computed from per-component mass and centroid enclosures.",
+    "Check the signed oblique distance from an analytic density-weighted center through the compiled ABI, opt-in shape compatibility, and incomplete or invalid inputs."
+  ],
+  "logSha256": "1c0e5cb898b44c6647783e1f6330495de997827566c54655e017752bbcf6c2cd",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "1b07ce790791def28d5a4e63ab21d96ea18758b5e23b3ef831e6aedaf122d7e9",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "50707a13341d5c3f290f2028df46d857474d915a90d742852e99b9792d30fe7b",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "05ecafa246ac088e24bf065404e035a852d829af140eddf78354cee5d12aedce",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "7ed1d08241cf1d30a9bd32ad0522a75eebb4b12593db6bea8d1bdf53f2b08af5"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}
