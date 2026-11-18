@@ -1465,19 +1465,7 @@ pub fn partition_planar_orientation_sector(
 
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Orientation sectors require a planar direction curve")?;
-    let [start, end] = rays;
-    check(rays.iter().all(|ray| ray.iter().all(|x| x.is_finite()) && *ray != [0.; 2]),
-        "Sector rays must be finite and nonzero")?;
-    let determinant = exact_motion_operand(start[0])? * exact_motion_operand(end[1])?
-        - exact_motion_operand(start[1])? * exact_motion_operand(end[0])?;
-    let zero = exact_motion_operand(0.)?;
-    if determinant == zero {
-        let alignment = exact_motion_operand(start[0])? * exact_motion_operand(end[0])?
-            + exact_motion_operand(start[1])? * exact_motion_operand(end[1])?;
-        check(alignment < zero, "Sector boundary rays must not coincide")?;
-    }
-    let reflex = determinant < zero;
-    let normals = [[-start[1], start[0]], [end[1], -end[0]]];
+    let (normals, reflex) = prepare_orientation_sector(rays)?;
     let exact_status = fixed_cardinal_rotation(direction).map(|axis| {
         let inside = normals.map(|normal| {
             // Cardinal axes select exactly one normal component.
@@ -1493,19 +1481,7 @@ pub fn partition_planar_orientation_sector(
             if let Some(status) = exact_status {
                 return Ok((status, false));
             }
-            let axis = &jets[0];
-            if axis.iter().all(|value| value.lo <= 0. && value.hi >= 0.) {
-                return Ok((Undetermined, true));
-            }
-            let bounds = [project_jet(axis, &normals[0])?, project_jet(axis, &normals[1])?];
-            let inside = bounds.map(|value| value.lo >= 0.);
-            let outside = bounds.map(|value| value.hi < 0.);
-            let (within, exceeds) = if reflex {
-                (inside[0] || inside[1], outside[0] && outside[1])
-            } else {
-                (inside[0] && inside[1], outside[0] || outside[1])
-            };
-            let status = if within { Within } else if exceeds { Exceeds } else { Undetermined };
+            let status = classify_orientation_sector(&jets[0], &normals, reflex)?;
             Ok((status, status == Undetermined))
         },
     )?;
@@ -1513,6 +1489,97 @@ pub fn partition_planar_orientation_sector(
         DirectionalSpeedLimitCell { parameter_interval, span, status }
     }).collect();
     Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct RelativePlanarOrientationCell {
+    pub parameter_interval: [f64; 2],
+    /// The original spans of the direction and reference, respectively.
+    pub spans: [usize; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct RelativePlanarOrientationPartition {
+    pub cells: Vec<RelativePlanarOrientationCell>,
+    pub work_cells: usize,
+}
+
+/// Classify the direction in the rotating reference frame. Both curves
+/// use the same parameter clock. The sector is measured counterclockwise
+/// from its first ray to its second in the reference frame.
+pub fn partition_relative_planar_orientation_sector(
+    direction: &Curve,
+    reference: &Curve,
+    interval: [f64; 2],
+    rays: [[f64; 2]; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<RelativePlanarOrientationPartition> {
+    validate(parameter_tolerance, max_cells)?;
+    let (_, initial) = synchronized_clearance_cells([direction, reference], interval, [0.; 2])?;
+    check(direction.control_points[0].len() == 2, "Orientation sectors require planar direction curves")?;
+    let (normals, reflex) = prepare_orientation_sector(rays)?;
+    let normals = normals.map(|normal| normal.map(Interval::point));
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, reference_span], domain| {
+            let axis = curve_jets::enclose(direction, span, domain)?;
+            let frame = curve_jets::enclose(reference, reference_span, domain)?;
+            let axis = &axis[0];
+            let frame = &frame[0];
+            // The dot and cross components represent the relative angle,
+            // with a positive common scale when both directions are nonzero.
+            let relative = [
+                project_jet(axis, frame)?,
+                frame[0].mul(axis[1])?.sub(frame[1].mul(axis[0])?)?,
+            ];
+            let status = classify_orientation_sector(&relative, &normals, reflex)?;
+            Ok((status, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(spans, parameter_interval, status)| {
+        RelativePlanarOrientationCell { parameter_interval, spans, status }
+    }).collect();
+    Ok(RelativePlanarOrientationPartition { cells, work_cells })
+}
+
+fn prepare_orientation_sector(rays: [[f64; 2]; 2]) -> Result<([[f64; 2]; 2], bool)> {
+    let [start, end] = rays;
+    check(rays.iter().all(|ray| ray.iter().all(|x| x.is_finite()) && *ray != [0.; 2]),
+        "Sector rays must be finite and nonzero")?;
+    let determinant = exact_motion_operand(start[0])? * exact_motion_operand(end[1])?
+        - exact_motion_operand(start[1])? * exact_motion_operand(end[0])?;
+    let zero = exact_motion_operand(0.)?;
+    if determinant == zero {
+        let alignment = exact_motion_operand(start[0])? * exact_motion_operand(end[0])?
+            + exact_motion_operand(start[1])? * exact_motion_operand(end[1])?;
+        check(alignment < zero, "Sector boundary rays must not coincide")?;
+    }
+    let reflex = determinant < zero;
+    let normals = [[-start[1], start[0]], [end[1], -end[0]]];
+    Ok((normals, reflex))
+}
+
+fn classify_orientation_sector(
+    axis: &[Interval],
+    normals: &[[Interval; 2]; 2],
+    reflex: bool,
+) -> Result<DirectionalMotionStatus> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+    if axis.iter().all(|value| value.lo <= 0. && value.hi >= 0.) {
+        return Ok(Undetermined);
+    }
+    let bounds = [project_jet(axis, &normals[0])?, project_jet(axis, &normals[1])?];
+    let inside = bounds.map(|value| value.lo >= 0.);
+    let outside = bounds.map(|value| value.hi < 0.);
+    let (within, exceeds) = if reflex {
+        (inside[0] || inside[1], outside[0] && outside[1])
+    } else {
+        (inside[0] && inside[1], outside[0] || outside[1])
+    };
+    let status = if within { Within } else if exceeds { Exceeds } else { Undetermined };
+    Ok(status)
 }
 
 /// Classify absolute angular speed of a planar direction curve against an

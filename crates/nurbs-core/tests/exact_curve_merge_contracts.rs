@@ -12470,3 +12470,42 @@ fn planar_orientation_sector_classifies_narrow_and_reflex_windows() {
     ).unwrap();
     assert_eq!(report.cells[0].status, Status::Within);
 }
+
+#[test]
+fn relative_planar_orientation_sector_tracks_the_reference_knot_grid() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_relative_planar_orientation_sector,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![1., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let reference = Curve {
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![1., -1.], vec![1., 0.], vec![1., 1.]],
+        weights: vec![1., 2., 1.],
+        ..direction.clone()
+    };
+    let rays = [[1., -0.5], [1., 0.5]];
+    let report = partition_relative_planar_orientation_sector(
+        &direction, &reference, [0., 1.], rays, 0.01, 127,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Within && cell.spans == [1, 2]));
+    assert!(report.cells.iter().all(|cell| {
+        let [a, b] = cell.parameter_interval;
+        !(a < 0.5 && 0.5 < b)
+    }));
+    let singular = Curve { control_points: vec![vec![1., 0.], vec![-1., 0.]], ..direction.clone() };
+    let report = partition_relative_planar_orientation_sector(
+        &direction, &singular, [0., 1.], rays, 0.01, 127,
+    ).unwrap();
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.status == Status::Undetermined
+    }));
+}
