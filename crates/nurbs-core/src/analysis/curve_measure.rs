@@ -2712,6 +2712,60 @@ pub fn measure_planar_contour_fill_area(
 }
 
 #[derive(Clone, Debug)]
+pub struct PlanarContourNonzeroFillAreaReport {
+    pub area_bounds: [f64; 2],
+    /// Winding just inside each contour, in input order.
+    pub interior_windings: Vec<i32>,
+    /// Each contour's unsigned area multiplier: add, subtract or skip.
+    pub area_multipliers: Vec<i32>,
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Bound nonzero-fill area using the original directions of a certified
+/// simple contour hierarchy. Only transitions between zero and nonzero
+/// winding contribute to the area.
+pub fn measure_planar_contour_nonzero_fill_area(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_area_cells: usize,
+) -> Result<PlanarContourNonzeroFillAreaReport> {
+    let (orientation, areas) = contour_fill_orientation_and_moments::<1>(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_area_cells,
+    )?;
+    let mut order: Vec<_> = (0..contours.len()).collect();
+    order.sort_by_key(|&index| orientation.hierarchy.depths[index]);
+    let mut interior_windings = vec![0; contours.len()];
+    let mut area_multipliers = vec![0; contours.len()];
+    let mut total = Interval::point(0.);
+    for index in order {
+        let exterior = orientation.hierarchy.parents[index].map_or(0, |parent| interior_windings[parent]);
+        let direction = match orientation.orientations[index] {
+            PlanarContourOrientation::Counterclockwise => 1,
+            PlanarContourOrientation::Clockwise => -1,
+        };
+        let interior = exterior + direction;
+        interior_windings[index] = interior;
+        let multiplier = i32::from(interior != 0) - i32::from(exterior != 0);
+        area_multipliers[index] = multiplier;
+        if multiplier != 0 {
+            let factor = Interval::point(f64::from(multiplier * direction));
+            total = total.add(areas[index][0].mul(factor)?)?;
+        }
+    }
+    Ok(PlanarContourNonzeroFillAreaReport {
+        area_bounds: [total.lo.max(0.), total.hi],
+        interior_windings,
+        area_multipliers,
+        orientation,
+    })
+}
+
+#[derive(Clone, Debug)]
 pub struct PlanarContourFillCentroidReport {
     pub area_bounds: [f64; 2],
     /// Bounds for the X and Y coordinates in the source coordinate system.
