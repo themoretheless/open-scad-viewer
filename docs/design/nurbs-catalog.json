@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 700,
-  "unallocatedCount": 300,
+  "specifiedCount": 701,
+  "unallocatedCount": 299,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16992,6 +16992,25 @@
       "remainingQualification": [
         "Check one-sided tangent alignment and spatial gap between two curve windows.",
         "Check clipped windows, spatial gap independent of angle, right-angle and reversed tangents, stationary uncertainty, and invalid thresholds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0701",
+      "name": "Сертифицированная проверка поворотов и зазоров на стыках NURBS-цепочки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_chain_turns",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-701-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-701-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check spatial gaps and tangent turns across open or closed chains of curve windows.",
+        "Check open and closed joins, independent gap and turn failures, stationary seam uncertainty, and the join budget.",
         "WASM and application integration are separate."
       ]
     }

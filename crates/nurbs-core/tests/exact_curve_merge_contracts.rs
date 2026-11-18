@@ -9499,3 +9499,51 @@ fn motion_join_turn_preserves_stationary_endpoint_uncertainty() {
     assert_eq!(report.turn_status, Status::Undetermined);
     assert!(classify_motion_join_turn(window, window, 1.1).is_err());
 }
+
+#[test]
+fn motion_chain_turns_check_closure_with_independent_gap_and_turn_limits() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_chain_turns,
+    };
+    let line = |a, b| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a, b],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line(vec![0., 0.], vec![1., 0.]);
+    let second = line(vec![1., 0.], vec![1., 1.]);
+    let windows = [(&first, [0., 1.]), (&second, [0., 1.])];
+    let open = classify_motion_chain_turns(&windows, false, -0.5, 1e-6, 1).unwrap();
+    assert_eq!(open.status, Status::Within);
+    let closed = classify_motion_chain_turns(&windows, true, -0.5, 1e-6, 2).unwrap();
+    assert_eq!(closed.status, Status::Exceeds);
+    assert_eq!(closed.joins[1].segment_indices, [1, 0]);
+    assert_eq!(closed.joins[1].gap_status, Status::Exceeds);
+    assert_eq!(closed.joins[1].join.turn_status, Status::Within);
+    assert!(classify_motion_chain_turns(&windows, true, -0.5, 1e-6, 1).is_err());
+    let sharp = classify_motion_chain_turns(&windows, false, 0.5, 1e-6, 1).unwrap();
+    assert_eq!(sharp.joins[0].gap_status, Status::Within);
+    assert_eq!(sharp.joins[0].join.turn_status, Status::Exceeds);
+    assert_eq!(sharp.status, Status::Exceeds);
+}
+
+#[test]
+fn motion_chain_turns_keep_a_stationary_closing_tangent_unresolved() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_chain_turns,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: [0., 0., 1., 0.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = classify_motion_chain_turns(&[(&curve, [0., 1.])], true, 0., 1e-6, 1)
+        .unwrap();
+    assert_eq!(report.joins[0].segment_indices, [0, 0]);
+    assert_eq!(report.joins[0].gap_status, Status::Within);
+    assert_eq!(report.status, Status::Undetermined);
+}

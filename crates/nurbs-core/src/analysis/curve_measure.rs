@@ -1844,6 +1844,59 @@ pub fn classify_motion_join_turn(
     Ok(MotionJoinTurn { position_gap_bounds: [lo, hi], cosine_bounds, turn_status })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct MotionChainTurn {
+    pub segment_indices: [usize; 2],
+    pub join: MotionJoinTurn,
+    pub gap_status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct MotionChainTurnReport {
+    pub joins: Vec<MotionChainTurn>,
+    pub status: DirectionalMotionStatus,
+}
+
+/// Check tangent turns and spatial gaps in traversal order, including the
+/// last-to-first join for a closed chain. Both thresholds are inclusive.
+pub fn classify_motion_chain_turns(
+    windows: &[(&Curve, [f64; 2])],
+    closed: bool,
+    minimum_cosine: f64,
+    maximum_gap: f64,
+    max_joins: usize,
+) -> Result<MotionChainTurnReport> {
+    check(maximum_gap.is_finite() && maximum_gap >= 0., "Gap limit must be finite and nonnegative")?;
+    let count = motion_chain_join_count(windows.len(), closed, max_joins)?;
+    let mut joins = Vec::with_capacity(count);
+    let mut status = DirectionalMotionStatus::Within;
+    for first in 0..count {
+        let second = (first + 1) % windows.len();
+        let join = classify_motion_join_turn(windows[first], windows[second], minimum_cosine)?;
+        let [lo, hi] = join.position_gap_bounds;
+        let gap_status = classify_absolute_limit(Interval::new(lo, hi)?, maximum_gap);
+        for result in [gap_status, join.turn_status] {
+            if result == DirectionalMotionStatus::Exceeds || status == DirectionalMotionStatus::Within {
+                status = result;
+            }
+        }
+        joins.push(MotionChainTurn { segment_indices: [first, second], join, gap_status });
+    }
+    Ok(MotionChainTurnReport { joins, status })
+}
+
+fn motion_chain_join_count(segment_count: usize, closed: bool, max_joins: usize) -> Result<usize> {
+    check(
+        segment_count >= 2 || (closed && segment_count == 1),
+        "An open motion chain needs two segments, and a closed chain needs one",
+    )?;
+    let count = if closed { segment_count } else { segment_count - 1 };
+    if count > max_joins {
+        return Err(resource("Motion chain joins exceed the work budget"));
+    }
+    Ok(count)
+}
+
 fn motion_window_endpoint(
     curve: &Curve,
     interval: [f64; 2],
@@ -1957,18 +2010,11 @@ pub fn classify_directional_motion_chain(
     derivative_limits: DirectionalMotionLimits,
     max_joins: usize,
 ) -> Result<DirectionalMotionChainReport> {
-    check(
-        segments.len() >= 2 || (closed && segments.len() == 1),
-        "An open motion chain needs two segments, and a closed chain needs one",
-    )?;
+    let join_count = motion_chain_join_count(segments.len(), closed, max_joins)?;
     check(
         position_limit.is_finite() && position_limit >= 0.,
         "Position gap limit must be finite and nonnegative",
     )?;
-    let join_count = if closed { segments.len() } else { segments.len() - 1 };
-    if join_count > max_joins {
-        return Err(resource("Motion chain joins exceed the work budget"));
-    }
     let mut joins = Vec::with_capacity(join_count);
     let mut status = DirectionalMotionStatus::Within;
     for first in 0..join_count {
