@@ -62,7 +62,9 @@ pub(crate) fn frame_on(s: &Surface, axes: [usize; 2]) -> Result<[Q; 4]> {
     Ok([x, y, dx, dy])
 }
 
-pub(super) fn projection(s: &Surface) -> Option<[usize; 2]> {
+/// Cartesian coordinate pair whose homogeneous identities prove a nonsingular
+/// affine map of the full single-span UV chart.
+pub fn projection(s: &Surface) -> Option<[usize; 2]> {
     admit(s).ok()?;
     let affine = [0, 1, 2].map(|coordinate| affine_row(s, coordinate));
     [[0, 1], [0, 2], [1, 2]].into_iter().find(|&[x, y]| {

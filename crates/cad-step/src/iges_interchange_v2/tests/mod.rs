@@ -1485,3 +1485,49 @@ fn uv_only_boundary_lifts_diagonals_to_curved_spatial_edges() {
     let invalid = replace_parameters(&text, parameter, curve_values(&outside, 2).unwrap());
     assert!(import_iges_v2(&invalid).is_err());
 }
+
+#[test]
+fn model_only_trim_recovers_a_nonplanar_saddle_loop() {
+    // The XY projection is (4u,4v). The Z component is 4uv.
+    let saddle = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+        control_points: vec![vec![vec![0.,0.,0.],vec![0.,4.,0.]],vec![vec![4.,0.,0.],vec![4.,4.,4.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let edge = Curve {
+        degree: 2, periodic: false, knots: vec![0.,0.,0.,1.,1.,2.,2.,3.,3.,3.],
+        control_points: [[0.,0.,0.],[2.,0.,0.],[4.,0.,0.],[4.,2.,2.],[4.,4.,4.],[2.,2.,0.],[0.,0.,0.]]
+            .map(|point| point.to_vec()).to_vec(), weights: vec![1.;7],
+    };
+    let mut writer = Writer::new();
+    let support = writer.emit(128, surface_values(&saddle).unwrap());
+    let spatial = writer.emit(126, curve_values(&edge,3).unwrap());
+    let pair = writer.emit(142, vec!["142".into(),"0".into(),support.to_string(),"0".into(),spatial.to_string(),"2".into()]);
+    let face = writer.emit(144, vec!["144".into(),support.to_string(),"1".into(),"0".into(),pair.to_string()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let text = render(writer).unwrap();
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+    let uv = &model.loops[0].coedges[0].pcurve;
+    assert_eq!(uv.evaluate(2.5).unwrap().point, [0.5,0.5]);
+    assert_eq!(edge.evaluate(2.5).unwrap().point, [2.,2.,1.]);
+    // Rotate XYZ so the affine coordinate pair becomes YZ.
+    let mut rotated = saddle.clone();
+    for point in rotated.control_points.iter_mut().flatten() {
+        point.rotate_right(1);
+    }
+    let mut spatial = edge.clone();
+    for point in &mut spatial.control_points {
+        point.rotate_right(1);
+    }
+    assert_eq!(affine_boundary::recover(pair, &rotated, &spatial, &mut 0).unwrap(), *uv);
+    let mut wrong = edge.clone();
+    wrong.control_points[5][2] += 0.001;
+    assert!(affine_boundary::recover(pair, &saddle, &wrong, &mut 0).is_err());
+    if let Some(path) = std::env::var_os("CAD_IGES_GRAPH_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, text).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+}

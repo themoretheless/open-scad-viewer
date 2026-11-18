@@ -7,7 +7,7 @@ use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 mod separable_monotone;
 mod affine_separable;
 pub(crate) mod exact_affine_xy;
-pub use exact_affine_xy::certify_affine_parameterization;
+pub use exact_affine_xy::{certify_affine_parameterization, projection as certify_affine_coordinate_pair};
 mod rational_clock;
 mod rational_separable;
 pub(crate) mod rational_triangular;

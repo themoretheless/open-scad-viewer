@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 968,
-  "unallocatedCount": 32,
+  "specifiedCount": 969,
+  "unallocatedCount": 31,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22036,6 +22036,28 @@
       ],
       "remainingQualification": [
         "Requires a certified single-span affine chart and a storable UV candidate with proven exact full-domain agreement. Tested on an offset plane and a tilted chart with a weighted quadratic."
+      ]
+    },
+    {
+      "id": "NURBS-0969",
+      "name": "Восстановление UV-контура IGES на криволинейной поверхности с аффинной координатной проекцией",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/nurbs-core/src/analysis/surface_injectivity.rs",
+        "crates/nurbs-core/src/analysis/surface_injectivity/exact_affine_xy.rs",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/projection.log.gz",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Single clamped tensor span with a certified nonsingular affine coordinate pair. Every recovered trim must agree in all three spatial coordinates over its full domain."
       ]
     }
   ],
