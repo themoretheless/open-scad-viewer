@@ -8355,3 +8355,49 @@ fn directional_travel_window_contains_an_interior_rational_segment() {
         assert!(directional_travel_on_interval(&curve, invalid, &[1., 0.], 1e-8, 32).is_err());
     }
 }
+
+#[test]
+fn directional_backtracking_distinguishes_bounds_and_measurement_tolerance() {
+    use nurbs_core::analysis::curve_measure::{ReverseTravelStatus, check_directional_backtracking};
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![4., 0.], vec![2., 0.]],
+        None,
+    )
+    .unwrap();
+    let domain = curve.domain();
+    for (limit, budget, expected) in [
+        (0.6, 4096, ReverseTravelStatus::Exceeds),
+        (0.7, 4096, ReverseTravelStatus::Within),
+        (0.7, 1, ReverseTravelStatus::Undetermined),
+        (100., 1, ReverseTravelStatus::Within),
+    ] {
+        let (report, status) =
+            check_directional_backtracking(&curve, domain, &[1., 0.], limit, 1e-7, budget)
+                .unwrap();
+        assert_eq!(status, expected, "{report:?}");
+        assert_eq!(report.total.within_tolerance, budget > 1);
+        assert!(report.reverse_bounds[0] <= 2. / 3. && 2. / 3. <= report.reverse_bounds[1]);
+    }
+}
+
+#[test]
+fn directional_backtracking_rejects_invalid_limit_and_checks_selected_window() {
+    use nurbs_core::analysis::curve_measure::{ReverseTravelStatus, check_directional_backtracking};
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![4., 0.], vec![2., 0.]],
+        None,
+    )
+    .unwrap();
+    let (_, status) =
+        check_directional_backtracking(&curve, [0., 0.5], &[1., 0.], 1e-6, 1e-7, 1024)
+            .unwrap();
+    assert_eq!(status, ReverseTravelStatus::Within);
+    for invalid in [-1., f64::NAN, f64::INFINITY] {
+        assert!(
+            check_directional_backtracking(
+                &curve, curve.domain(), &[1., 0.], invalid, 1e-7, 64,
+            )
+            .is_err()
+        );
+    }
+}

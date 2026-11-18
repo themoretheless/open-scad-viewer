@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 675,
-  "unallocatedCount": 325,
+  "specifiedCount": 676,
+  "unallocatedCount": 324,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16513,6 +16513,25 @@
       "remainingQualification": [
         "Measure absolute and signed axial motion in an original-parameter window, clipping every intersected knot span.",
         "Check clipped knot reversals, a rational interior interval, shared span coverage, and invalid windows.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0676",
+      "name": "Гарантированная проверка допуска обратного хода NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_backtracking",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-676-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-676-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify reverse axial travel against a limit independently of measurement convergence.",
+        "Verify both decisive classifications and the undecided case, including coarse-budget enclosures, selected windows and invalid limits.",
         "WASM and application integration are separate."
       ]
     }

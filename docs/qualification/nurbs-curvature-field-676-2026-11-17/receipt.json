@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0676",
+  "testedBase": "284318b783146b22be64b7bd40090883c138ae89",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 278,
+  "scope": [
+    "Classify reverse axial travel against a limit independently of measurement convergence.",
+    "Verify both decisive classifications and the undecided case, including coarse-budget enclosures, selected windows and invalid limits."
+  ],
+  "logSha256": "52b69f76720540f0daba1e4fc16993b3601dd5bc11c554df9bfe6d6c784178a6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "79ad3c61a597211646453334c6a46b1d74d235a99779495cd8bd266bc163bb52",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "265653d7d43542a26df11153d17b4aef323f509e8940f39a7e05963a555aef76"
+  }
+}
