@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0740",
+  "testedBase": "022356c38ee423e32511653c0dacbf7831b08a53",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 365,
+  "scope": [
+    "Classify tool clearance through all scheduled phases with endpoint holds.",
+    "Check disjoint motion schedules, collision after a tool stops, exact shared phase boundaries, and shared budget refusal."
+  ],
+  "logSha256": "042704428f8c1978e2a53179cfc49d96e5c496ca6ca7293b6530034b33c48f73",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "240cdb1e8504de46cdf4b6cd3bdc0972faacd54ff8f0c99fba484e5c809843e2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "eac6d83b655fb346d23fdcf7c5dd683e1b2321b828cf0e3b166f5acab57663cb"
+  }
+}

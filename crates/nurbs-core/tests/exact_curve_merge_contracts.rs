@@ -10936,3 +10936,40 @@ fn scheduled_clearance_partition_maps_contact_to_absolute_time() {
     assert_eq!(instant.cells[0].time_endpoint_bounds, [[8.; 2]; 2]);
     assert_eq!(instant.cells[0].status, Status::Exceeds);
 }
+
+#[test]
+fn scheduled_clearance_with_holds_finds_collision_after_first_tool_stops() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, TimedMotionSegment,
+        partition_scheduled_clearance_with_holds, partition_scheduled_curve_clearance,
+    };
+    let line = |a, b| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![a, 0.], vec![b, 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line(0., 2.);
+    let second = line(4., 0.);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [0., 1.], duration: 1. },
+        TimedMotionSegment { curve: &second, interval: [0., 1.], duration: 4. },
+    ];
+    assert!(partition_scheduled_curve_clearance(segments, [0., 2.], [0.25; 2], 0.01, 128)
+        .unwrap().is_none());
+    assert!(partition_scheduled_clearance_with_holds(segments, [0., 2.], [0.25; 2], 0.01, 2)
+        .is_err());
+    let report = partition_scheduled_clearance_with_holds(
+        segments, [0., 2.], [0.25; 2], 0.01, 128,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().time_endpoint_bounds[0], [0.; 2]);
+    assert_eq!(report.cells.last().unwrap().time_endpoint_bounds[1], [6.; 2]);
+    assert!(report.cells.iter().any(|cell| {
+        let [[a, _], [_, b]] = cell.time_endpoint_bounds;
+        a <= 4. && 4. <= b && cell.status == Status::Exceeds
+    }));
+    for pair in report.cells.windows(2) {
+        assert_eq!(pair[0].time_endpoint_bounds[1], pair[1].time_endpoint_bounds[0]);
+    }
+}

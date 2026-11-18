@@ -2759,12 +2759,74 @@ pub fn partition_scheduled_curve_clearance(
     progress_tolerance: f64,
     max_cells: usize,
 ) -> Result<Option<ScheduledClearancePartition>> {
-    use num_traits::Zero;
-
     validate(progress_tolerance, max_cells)?;
     let Some(overlap) = prepare_scheduled_overlap(segments, start_times, radii)? else {
         return Ok(None);
     };
+    partition_scheduled_phase(&overlap, progress_tolerance, max_cells).map(Some)
+}
+
+/// Check the schedule from the first start to the last finish. Each tool
+/// holds its start position before moving and its final position afterward.
+/// Progress tolerance is relative to each phase between start or finish events.
+pub fn partition_scheduled_clearance_with_holds(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledClearancePartition> {
+    validate(progress_tolerance, max_cells)?;
+    let (starts, durations, radius) = validate_motion_schedule(segments, start_times, radii)?;
+    let mut events = [starts[0].clone(), starts[1].clone(),
+        &starts[0] + &durations[0], &starts[1] + &durations[1]].to_vec();
+    events.sort();
+    events.dedup();
+    let phase_count = events.len() - 1;
+    if phase_count > max_cells {
+        return Err(resource("Clearance budget must cover every scheduled phase"));
+    }
+    let mut cells = Vec::new();
+    let mut remaining = max_cells;
+    for (index, times) in events.windows(2).enumerate() {
+        let origin = &times[0];
+        let end = &times[1];
+        let map = |tool: usize| -> Result<_> {
+            let [a, b] = segments[tool].interval;
+            let a = exact_motion_operand(a)?;
+            let width = exact_motion_operand(b)? - &a;
+            let parameter = |time: &num_rational::BigRational| {
+                let elapsed = (time - &starts[tool])
+                    .max(num_rational::BigRational::default())
+                    .min(durations[tool].clone());
+                &a + &width * elapsed / &durations[tool]
+            };
+            let first = parameter(origin);
+            Ok((first.clone(), parameter(end) - first))
+        };
+        let phase = ScheduledOverlap {
+            segments,
+            origin: origin.clone(),
+            duration: end - origin,
+            maps: [map(0)?, map(1)?],
+            radius,
+        };
+        let report = partition_scheduled_phase(
+            &phase, progress_tolerance, remaining / (phase_count - index),
+        )?;
+        remaining -= report.work_cells;
+        cells.extend(report.cells);
+    }
+    Ok(ScheduledClearancePartition { cells, work_cells: max_cells - remaining })
+}
+
+fn partition_scheduled_phase(
+    overlap: &ScheduledOverlap<'_>,
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledClearancePartition> {
+    use num_traits::Zero;
+
     let progress = if overlap.duration.is_zero() { [0.; 2] } else { [0., 1.] };
     let (cells, work_cells) = partition_enclosed_cells(
         [((), progress)], progress_tolerance, max_cells,
@@ -2791,7 +2853,7 @@ pub fn partition_scheduled_curve_clearance(
             status,
         })
     }).collect::<Result<Vec<_>>>()?;
-    Ok(Some(ScheduledClearancePartition { cells, work_cells }))
+    Ok(ScheduledClearancePartition { cells, work_cells })
 }
 
 struct ScheduledOverlap<'a> {
@@ -2825,17 +2887,8 @@ fn prepare_scheduled_overlap<'a>(
     start_times: [f64; 2],
     radii: [f64; 2],
 ) -> Result<Option<ScheduledOverlap<'a>>> {
-    let curves = segments.map(|segment| segment.curve);
+    let (starts, durations, radius) = validate_motion_schedule(segments, start_times, radii)?;
     let windows = segments.map(|segment| segment.interval);
-    let radius = validate_affine_clearance(curves, windows, radii)?;
-    check(start_times.iter().all(|time| time.is_finite()), "Start times must be finite")?;
-    check(segments.iter().all(|segment| segment.duration.is_finite() && segment.duration > 0.),
-        "Motion segment duration must be finite and positive")?;
-    let starts = [exact_motion_operand(start_times[0])?, exact_motion_operand(start_times[1])?];
-    let durations = [
-        exact_motion_operand(segments[0].duration)?,
-        exact_motion_operand(segments[1].duration)?,
-    ];
     let origin = starts[0].clone().max(starts[1].clone());
     let end = (&starts[0] + &durations[0]).min(&starts[1] + &durations[1]);
     if end < origin {
@@ -2850,6 +2903,25 @@ fn prepare_scheduled_overlap<'a>(
     };
     let maps = [map(0)?, map(1)?];
     Ok(Some(ScheduledOverlap { segments, origin, duration: overlap, maps, radius }))
+}
+
+fn validate_motion_schedule(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+) -> Result<([num_rational::BigRational; 2], [num_rational::BigRational; 2], Interval)> {
+    let curves = segments.map(|segment| segment.curve);
+    let windows = segments.map(|segment| segment.interval);
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    check(start_times.iter().all(|time| time.is_finite()), "Start times must be finite")?;
+    check(segments.iter().all(|segment| segment.duration.is_finite() && segment.duration > 0.),
+        "Motion segment duration must be finite and positive")?;
+    let starts = [exact_motion_operand(start_times[0])?, exact_motion_operand(start_times[1])?];
+    let durations = [
+        exact_motion_operand(segments[0].duration)?,
+        exact_motion_operand(segments[1].duration)?,
+    ];
+    Ok((starts, durations, radius))
 }
 
 fn affine_progress_position(
