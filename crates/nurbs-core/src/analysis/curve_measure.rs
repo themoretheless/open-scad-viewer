@@ -2304,6 +2304,23 @@ pub fn measure_planar_contour_set_capsule_distance(
     })
 }
 
+/// Measure the minimum unsigned distance between an oriented rectangle
+/// and a set of closed planar contours. The axes must be orthogonal, but
+/// do not need unit length. A zero upper bound certifies contact.
+pub fn measure_planar_contour_set_oriented_box_distance(
+    contours: &[&Curve],
+    rectangle: OrientedBoxObstacle<'_>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    validate_distance_contours(contours, max_cells)?;
+    let prepared = prepare_oriented_boxes(contours[0], &[rectangle])?;
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        prepared[0].gap(cell, 0.)
+    })
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;

@@ -12867,3 +12867,29 @@ fn planar_contour_set_capsule_distance_checks_segment_projection_and_overlap() {
     assert!(collapsed.bounds[0] <= disk.bounds[1] && disk.bounds[0] <= collapsed.bounds[1]);
     assert!(measure([&[0., 0.], &[1., 1.]], -0.1).is_err());
 }
+
+#[test]
+fn planar_contour_set_oriented_box_distance_tracks_rotated_corners() {
+    use nurbs_core::analysis::curve_measure::{
+        OrientedBoxObstacle, measure_planar_contour_set_oriented_box_distance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-1., -1.], vec![1., -1.], vec![1., 1.],
+            vec![-1., 1.], vec![-1., -1.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let diagonal = [&[2., 2.][..], &[-3., 3.][..]];
+    let measure = |center, axes| measure_planar_contour_set_oriented_box_distance(
+        &[&curve], OrientedBoxObstacle { center, axes, half_extents: &[0.25, 0.5] }, 0.001, 4096,
+    );
+    let report = measure(&[0., 0.], &diagonal).unwrap();
+    let expected = 1. - 0.75 / 2_f64.sqrt();
+    let [lo, hi] = report.bounds;
+    assert!(lo <= expected && expected <= hi && hi - lo <= 0.001);
+    let contact = measure(&[1., 0.], &diagonal).unwrap();
+    assert_eq!(contact.bounds, [0.; 2]);
+    assert!(measure(&[0., 0.], &[&[1., 1.], &[0., 1.]]).is_err());
+}
