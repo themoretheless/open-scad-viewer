@@ -2802,6 +2802,44 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_round_trips_nonuniform_placement() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
+    let row = step.lines().find(|line| line.contains("=CARTESIAN_TRANSFORMATION_OPERATOR_3D(")).unwrap();
+    let (id, call) = row.split_once("=CARTESIAN_TRANSFORMATION_OPERATOR_3D(").unwrap();
+    let fields: Vec<_> = call.trim_end_matches(");").split(',').collect();
+    let [_, x, y, p, _, z] = fields[..] else { panic!("unexpected operator fields"); };
+    let affine = format!(
+        "{id}=(CARTESIAN_TRANSFORMATION_OPERATOR('',{x},{y},{p},2.)CARTESIAN_TRANSFORMATION_OPERATOR_3D({z})CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(3.,4.)GEOMETRIC_REPRESENTATION_ITEM()REPRESENTATION_ITEM(''));"
+    );
+    let assembly = crate::import_step_shared_assembly(&step.replacen(row, &affine, 1)).unwrap();
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 1);
+    assert_eq!(exported.matches("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(").count(), 1);
+    let back = crate::import_step_shared_assembly(&exported).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (1, 2));
+    for (before, after) in assembly.occurrences().iter().zip(back.occurrences()) {
+        assert_eq!(before.definition, after.definition);
+        for (expected, actual) in before.transform.iter().flatten().zip(after.transform.iter().flatten()) {
+            assert!((expected - actual).abs() < 1e-10);
+        }
+    }
+    let rigid = crate::import_step_shared_assembly(&step).unwrap();
+    let original = rigid.occurrences()[0].transform;
+    let model = back.materialize(0).unwrap();
+    let [x, y, z] = back.definitions()[0].vertices[0].point;
+    let expected = |axis: usize| {
+        original[axis][0] * (2. * x) + original[axis][1] * (3. * y)
+            + original[axis][2] * (4. * z) + original[axis][3]
+    };
+    for (axis, actual) in model.vertices[0].point.into_iter().enumerate() {
+        assert!((actual - expected(axis)).abs() < 1e-10);
+    }
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+}
+
+#[test]
 fn shared_step_round_trips_per_definition_uncertainties() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

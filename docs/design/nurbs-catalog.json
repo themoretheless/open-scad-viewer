@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 828,
-  "unallocatedCount": 172,
+  "specifiedCount": 829,
+  "unallocatedCount": 171,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19440,6 +19440,26 @@
       "remainingQualification": [
         "Write definition-specific AP242 uncertainty contexts and reuse the same context for equal tolerances.",
         "Check distinct tolerances for a repeated gear and a second solid, with both local definitions and materialized models retaining their own tolerances after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0829",
+      "name": "Повторный экспорт STEP-экземпляров с неравномерным масштабированием",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::export_step_shared_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-829-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-829-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Serialize positive per-axis scales in AP242 orthogonal placements without copying the shared definition.",
+        "Check imported scales 2, 3 and 4 through AP242 re-export, preserved placement matrices, shared definition and independently evaluated vertex coordinates.",
         "WASM and application integration are separate."
       ]
     }

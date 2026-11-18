@@ -657,15 +657,29 @@ fn export_step_direct_impl(
             }
             for (index, (body, matrix)) in assembly.placements.iter().enumerate() {
                 let (representation, definition) = definitions[*body];
+                let rigid = crate::step_interchange_v3::is_proper_rigid_placement(*matrix);
+                let scales = if rigid {
+                    [1.; 3]
+                } else {
+                    orthogonal_placement_scales(*matrix)
+                        .ok_or_else(|| refuse("STEP assembly export requires proper orthogonal placements"))?
+                };
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
-                let axes = [0, 1, 2].map(|column| {
-                    let direction = [matrix[0][column], matrix[1][column], matrix[2][column]];
+                let [x, y, z] = [0, 1, 2].map(|column| {
+                    let direction = [0, 1, 2].map(|row| matrix[row][column] / scales[column]);
                     w.emit(format!("DIRECTION('',({}))", floats(&direction)))
                 });
-                let [x, y, z] = axes;
-                let operator = w.emit(format!(
-                    "CARTESIAN_TRANSFORMATION_OPERATOR_3D('',#{x},#{y},#{origin},1.,#{z})"
-                ));
+                let operator = if rigid {
+                    w.emit(format!(
+                        "CARTESIAN_TRANSFORMATION_OPERATOR_3D('',#{x},#{y},#{origin},1.,#{z})"
+                    ))
+                } else {
+                    let [sx, sy, sz] = scales;
+                    let (sx, sy, sz) = (floats(&[sx]), floats(&[sy]), floats(&[sz]));
+                    w.emit(format!(
+                        "(CARTESIAN_TRANSFORMATION_OPERATOR('',#{x},#{y},#{origin},{sx})CARTESIAN_TRANSFORMATION_OPERATOR_3D(#{z})CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM({sy},{sz})GEOMETRIC_REPRESENTATION_ITEM()REPRESENTATION_ITEM(''))"
+                    ))
+                };
                 let relationship = w.emit(format!(
                     "(REPRESENTATION_RELATIONSHIP('','',#{representation},#{assembly_rep})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#{operator})SHAPE_REPRESENTATION_RELATIONSHIP())"
                 ));
@@ -873,7 +887,7 @@ pub fn export_planetary_gear_set_step(
     Ok(text)
 }
 
-/// Serialize current shared definitions with their rigid placements.
+/// Serialize current shared definitions with their proper orthogonal placements.
 pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
     let definitions = assembly.definitions();
     let occurrences = assembly.occurrences();
@@ -885,19 +899,31 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
     }) {
         return Err(refuse("STEP shared assembly export requires one closed solid per definition"));
     }
-    let placements = occurrences.iter().map(|occurrence| {
-        let matrix = occurrence.transform;
-        if !crate::step_interchange_v3::is_proper_rigid_placement(matrix) {
-            return Err(refuse("STEP shared assembly export requires proper rigid placements"));
-        }
-        Ok((occurrence.definition, matrix))
-    }).collect::<Result<Vec<_>>>()?;
+    let placements: Vec<_> = occurrences.iter()
+        .map(|occurrence| (occurrence.definition, occurrence.transform))
+        .collect();
     let model = crate::compose_step_v7_occurrences(definitions)?;
     let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
         &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }),
     )?;
     Ok(text)
+}
+
+fn orthogonal_placement_scales(mut matrix: [[f64; 4]; 4]) -> Option<[f64; 3]> {
+    let scales = [0, 1, 2].map(|column| {
+        matrix[0][column].hypot(matrix[1][column]).hypot(matrix[2][column])
+    });
+    let determinant = scales[0] * scales[1] * scales[2];
+    if !determinant.is_finite() || determinant <= 1e-14 {
+        return None;
+    }
+    for row in &mut matrix[..3] {
+        for (entry, scale) in row.iter_mut().zip(scales) {
+            *entry /= scale;
+        }
+    }
+    crate::step_interchange_v3::is_proper_rigid_placement(matrix).then_some(scales)
 }
 
 pub fn export_step_v9_with_metadata(

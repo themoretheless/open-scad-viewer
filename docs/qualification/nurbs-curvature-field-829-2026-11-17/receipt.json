@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0829",
+  "testedBase": "2a2e2a5c647a7b3484af3b11670a3b5da150a28f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 178,
+  "scope": [
+    "Serialize positive per-axis scales in AP242 orthogonal placements without copying the shared definition.",
+    "Check imported scales 2, 3 and 4 through AP242 re-export, preserved placement matrices, shared definition and independently evaluated vertex coordinates."
+  ],
+  "logSha256": "a21783684bff627d5dd8ee5a71cebd801cee0b07dbf95f44d8ecd113ae43a83c",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3.rs": "025de492a88f2ca8e38fd3c2f8d076c516064f7a01a8a861a61954b22ce4d81a",
+    "crates/cad-step/src/step_v3_export.rs": "644fdc48e69d093295e624c1e7f3740f36997ad011f3b1cd55d064f19c759e9e",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "a1c78977dff3dcc784fe4af0d11a008b35dae2dfb6f96fee20ddeac72d199981"
+  }
+}
