@@ -1320,16 +1320,7 @@ pub fn exact_periodic_trim_patch_set_mass_request(
     if include_axis_radius && inertia_axis.is_none() {
         return Err(input("Radius of gyration requires an inertia axis"));
     }
-    if [tolerance, tolerance_uv]
-        .iter()
-        .any(|t| !t.is_finite() || *t <= 0.)
-        || !(1..=100_000).contains(&max_surface)
-        || !(1..=1_000_000).contains(&max_trim)
-    {
-        return Err(input(
-            "Invalid tolerance or cell limit for trimmed patch set",
-        ));
-    }
+    validate_trimmed_patch_set_limits(tolerance, tolerance_uv, max_surface, max_trim)?;
     let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let build = build_exact_periodic_surface_trim_patches(&source, &contours, max_work)?;
     let mut response = json!({
@@ -1385,6 +1376,38 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         response["referenceInertiaBoundsMm4"] = json!(mass.bound_inertia_about_point(point)?);
     }
     let measure = mass.centroid.measure;
+    response["centroidBoundsMm"] = json!(mass.centroid.centroid_bounds);
+    response["centralInertiaBoundsMm4"] = json!(mass.central_inertia_bounds);
+    write_trimmed_patch_set_area(&mut response, &patches, measure);
+    Ok(response)
+}
+
+fn validate_trimmed_patch_set_limits(
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface: usize,
+    max_trim: usize,
+) -> Result<()> {
+    if [tolerance, tolerance_uv]
+        .iter()
+        .any(|t| !t.is_finite() || *t <= 0.)
+        || !(1..=100_000).contains(&max_surface)
+        || !(1..=1_000_000).contains(&max_trim)
+    {
+        return Err(input(
+            "Invalid tolerance or cell limit for trimmed patch set",
+        ));
+    }
+    Ok(())
+}
+
+fn write_trimmed_patch_set_area(
+    response: &mut value_codec::Value,
+    patches: &[nurbs_core::editing::exact_periodic_surface::PeriodicTrimPatch],
+    measure: nurbs_core::analysis::surface_measure::TrimmedPatchSetAreaReport,
+) {
+    use value_codec::json;
+
     let components = patches
         .iter()
         .zip(measure.components)
@@ -1397,8 +1420,86 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         })
         .collect::<Vec<_>>();
     response["componentAreas"] = json!(components);
-    response["centroidBoundsMm"] = json!(mass.centroid.centroid_bounds);
-    response["centralInertiaBoundsMm4"] = json!(mass.central_inertia_bounds);
-    write_trimmed_surface_area(&mut response, measure.total);
+    write_trimmed_surface_area(response, measure.total);
+}
+
+/// Measure all retained components at distinct areal densities indexed by
+/// the supplied outer contours.
+pub fn exact_periodic_trim_patch_set_density_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_set_mass_with_density,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    use std::collections::BTreeMap;
+    use value_codec::{Value, json};
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let tolerance: f64 = field(request, "toleranceMm2")?;
+    let tolerance_uv: f64 = field(request, "toleranceUv")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    let max_surface: usize = field(request, "maxSurfaceCells")?;
+    let max_trim: usize = field(request, "maxTrimCells")?;
+    validate_trimmed_patch_set_limits(tolerance, tolerance_uv, max_surface, max_trim)?;
+    let entries = request
+        .get("componentDensities")
+        .and_then(Value::as_array)
+        .filter(|entries| (1..=256).contains(&entries.len()))
+        .ok_or_else(|| input("Expected 1..256 component densities"))?;
+    let mut densities = BTreeMap::new();
+    for entry in entries {
+        let contour: usize = field(entry, "outerContour")?;
+        let density: [f64; 2] = field(entry, "densityBoundsKgPerMm2")?;
+        if contour >= contours.len()
+            || !(density[0] > 0. && density[0] <= density[1] && density[1].is_finite())
+            || densities.insert(contour, density).is_some()
+        {
+            return Err(input(
+                "Expected unique contour indices and positive finite density bounds",
+            ));
+        }
+    }
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let build = build_exact_periodic_surface_trim_patches(&source, &contours, max_work)?;
+    let mut response = json!({
+        "boundsMm2": null, "withinTolerance": false, "surfaceCells": 0,
+        "minimumSurfaceCells": null, "trimCells": 0, "workUsed": build.work_used,
+        "status": "buildRefused", "componentAreas": [],
+        "massBoundsKg": null, "centerOfMassBoundsMm": null, "centralInertiaBoundsKgMm2": null,
+    });
+    let Some(patches) = build.patches else {
+        return Ok(response);
+    };
+    if patches.len() != densities.len() {
+        return Err(input(
+            "Expected exactly one density for each retained outer contour",
+        ));
+    }
+    let ordered_densities = patches
+        .iter()
+        .map(|patch| {
+            densities
+                .get(&patch.trim.contours[0])
+                .copied()
+                .ok_or_else(|| input("Missing density for a retained outer contour"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches,
+        &ordered_densities,
+        tolerance,
+        tolerance_uv,
+        max_surface,
+        max_trim,
+    )?;
+    if let Some(properties) = report.mass_properties {
+        response["massBoundsKg"] = json!(properties.mass_bounds);
+        response["centerOfMassBoundsMm"] = json!(properties.centroid_bounds);
+        response["centralInertiaBoundsKgMm2"] = json!(properties.central_inertia_bounds);
+    }
+    write_trimmed_patch_set_area(&mut response, &patches, report.measure);
     Ok(response)
 }

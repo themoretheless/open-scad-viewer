@@ -764,3 +764,56 @@ fn patch_set_mass_operation_requires_axis_and_positive_area_for_gyration_radius(
         request["maxWork"] = json!(1);
     }
 }
+
+fn patch_set_density_request(max_cells: usize) -> Value {
+    let mut request = patch_set_mass_request(max_cells);
+    request["op"] = json!("brep_measure_exact_periodic_trim_patch_set_density");
+    request["componentDensities"] = json!([
+        {"outerContour": 2, "densityBoundsKgPerMm2": [6., 6.]},
+        {"outerContour": 0, "densityBoundsKgPerMm2": [2., 2.]}
+    ]);
+    request
+}
+
+#[test]
+fn patch_set_density_assigns_mass_by_outer_contour_in_any_input_order() {
+    let mut request = patch_set_density_request(20_000);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let mass = 2.875;
+    let center_x = 0.34375 / mass;
+    let center_y = 0.375 / mass;
+    let inertia_z = 2. * 83. / 768. + 6. * 49. / 12288.
+        - mass * (center_x * center_x + center_y * center_y);
+    for (interval, expected) in [
+        (&report["boundsMm2"], 1.3125),
+        (&report["massBoundsKg"], mass),
+        (&report["centerOfMassBoundsMm"][0], center_x),
+        (&report["centralInertiaBoundsKgMm2"][2][2], inertia_z),
+    ] {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    request["componentDensities"].as_array_mut().unwrap().reverse();
+    assert_eq!(run(&request), response);
+}
+
+#[test]
+fn patch_set_density_rejects_incomplete_and_non_outer_density_assignments() {
+    let valid = patch_set_density_request(2);
+    let response = run(&valid);
+    assert_eq!(response["ok"], true, "{response}");
+    assert_eq!(response["value"]["status"], "workLimit");
+    assert_eq!(response["value"].get("massBoundsKg"), Some(&Value::Null));
+    for (contour, density) in [(0, [6., 6.]), (1, [6., 6.]), (2, [0., 6.])] {
+        let mut request = valid.clone();
+        request["componentDensities"].as_array_mut().unwrap()[0] =
+            json!({"outerContour": contour, "densityBoundsKgPerMm2": density});
+        assert_eq!(run(&request)["ok"], false);
+    }
+    let mut missing = valid;
+    missing["componentDensities"].as_array_mut().unwrap().pop();
+    assert_eq!(run(&missing)["ok"], false);
+}

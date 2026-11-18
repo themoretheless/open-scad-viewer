@@ -27,6 +27,9 @@ interface Report {
   withinMomentTolerance?: boolean
   referenceInertiaBoundsMm4?: [number, number][][] | null
   axisRadiusOfGyrationBoundsMm?: [number, number] | null
+  massBoundsKg?: [number, number] | null
+  centerOfMassBoundsMm?: [number, number][] | null
+  centralInertiaBoundsKgMm2?: [number, number][][] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
@@ -334,3 +337,27 @@ assert.deepEqual(gyrationMass.axisMomentBoundsMm4, axisMass.axisMomentBoundsMm4)
 const incompleteGyration = call(request.maxWork, patchSetOp, { ...gyrationOptions, maxSurfaceCells: 2 })
 assert.equal(incompleteGyration.axisRadiusOfGyrationBoundsMm, null)
 console.log('WASM ABI enclosed the patch set radius of gyration about an offset axis.')
+
+const densityOp = 'brep_measure_exact_periodic_trim_patch_set_density'
+const densityOptions = {
+  ...spectralOptions,
+  componentDensities: [
+    { outerContour: 2, densityBoundsKgPerMm2: [6, 6] },
+    { outerContour: 0, densityBoundsKgPerMm2: [2, 2] },
+  ],
+}
+const densityMass = call(request.maxWork, densityOp, densityOptions)
+const expectedMass = 2.875
+const expectedCenterX = 0.34375 / expectedMass
+const expectedCenterY = 0.375 / expectedMass
+const expectedWeightedInertia = 2 * 83 / 768 + 6 * 49 / 12288
+  - expectedMass * (expectedCenterX ** 2 + expectedCenterY ** 2)
+for (const [bounds, expected] of [
+  [densityMass.massBoundsKg, expectedMass],
+  [densityMass.centerOfMassBoundsMm?.[0], expectedCenterX],
+  [densityMass.centralInertiaBoundsKgMm2?.[2]?.[2], expectedWeightedInertia],
+] as const) {
+  assert.ok(bounds && bounds[0] <= expected && expected <= bounds[1])
+}
+assert.equal(call(request.maxWork, densityOp, { ...densityOptions, maxSurfaceCells: 2 }).massBoundsKg, null)
+console.log('WASM ABI enclosed density-weighted mass properties by outer contour.')
