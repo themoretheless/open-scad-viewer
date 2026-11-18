@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 965,
-  "unallocatedCount": 35,
+  "specifiedCount": 966,
+  "unallocatedCount": 34,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21978,6 +21978,25 @@
       ],
       "remainingQualification": [
         "Requires an exactly constant Euclidean control polygon for the boundary isocurve. Nonconstant closed isocurves retain ordinary edge semantics."
+      ]
+    },
+    {
+      "id": "NURBS-0966",
+      "name": "Импорт замкнутого контура IGES 142 по паре UV-кривой и пространственного ребра",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Both representations required. Single closed spline boundary qualified on an offset planar face with direct and pre-existing edge-list geometry; correspondence uses the existing finite sampling gate."
       ]
     }
   ],

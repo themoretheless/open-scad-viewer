@@ -1383,3 +1383,45 @@ fn natural_rational_cone_retains_apex_and_circular_rim() {
     assert!(poles[0].curve.weights.iter().any(|w| *w != 1.));
     assert!(model.edges.iter().any(|edge| !edge.degenerate && edge.curve.weights.iter().any(|w| *w != 1.)));
 }
+
+#[test]
+fn standard_curve_on_surface_keeps_a_single_closed_trim_edge() {
+    let plane = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+        control_points: vec![vec![vec![10.,0.,7.],vec![10.,4.,7.]],vec![vec![18.,0.,7.],vec![18.,4.,7.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let uv = Curve::from_polyline(vec![vec![0.25,0.25],vec![0.75,0.25],vec![0.75,0.75],vec![0.25,0.75],vec![0.25,0.25]]).unwrap();
+    let xyz = Curve::from_polyline(uv.control_points.iter().map(|p| plane.evaluate(p[0],p[1]).unwrap().point.to_vec()).collect()).unwrap();
+    let mut writer = Writer::new();
+    let surface = writer.emit(128, surface_values(&plane).unwrap());
+    let parameter = writer.emit(126, curve_values(&uv, 2).unwrap());
+    let spatial = writer.emit(126, curve_values(&xyz, 3).unwrap());
+    let boundary = writer.emit(142, vec!["142".into(),"0".into(),surface.to_string(),parameter.to_string(),spatial.to_string(),"1".into()]);
+    let face = writer.emit(144, vec!["144".into(),surface.to_string(),"1".into(),"0".into(),boundary.to_string()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let text = render(writer).unwrap();
+    for preference in 0..=3 {
+        let test = rewire_reference(&text, boundary, 5, preference);
+        let model = import_iges_v2(&test).unwrap().0;
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+        assert_eq!(model.edges.len(), 1);
+        assert!(!model.edges[0].degenerate);
+        assert_eq!(model.edges[0].curve, xyz);
+        assert_eq!(model.loops[0].coedges[0].pcurve, uv);
+    }
+    assert!(import_iges_v2(&rewire_reference(&text, boundary, 3, spatial)).is_err());
+    let (listed, vertex) = append_entity(&text, 502, 1, "00000000", |_| {
+        ["502","1","12","1","7"].map(str::to_owned).to_vec()
+    });
+    let (listed, _) = append_entity(&listed, 504, 1, "00000000", |_| {
+        vec!["504".into(),"1".into(),spatial.to_string(),vertex.to_string(),"1".into(),vertex.to_string(),"1".into()]
+    });
+    let model = import_iges_v2(&listed).unwrap().0;
+    assert_eq!(model.edges.len(), 1);
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+    if let Some(path) = std::env::var_os("CAD_IGES_BOUNDARY_PAIR_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}

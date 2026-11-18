@@ -564,11 +564,11 @@ fn entity_references(de: usize, entity: &Entity) -> Result<Vec<EntityReference>>
         142 => {
             exact_count(6, 0, 0, "curve on parametric surface")?;
             push(2, "parametric surface")?;
-            if u(v, 3, "boundary model curve")? != 0 {
-                push(3, "boundary model curve")?;
+            if u(v, 3, "boundary pcurve")? != 0 {
+                push(3, "boundary pcurve")?;
             }
-            if u(v, 4, "boundary pcurve")? != 0 {
-                push(4, "boundary pcurve")?;
+            if u(v, 4, "boundary model curve")? != 0 {
+                push(4, "boundary model curve")?;
             }
         }
         143 => {
@@ -1233,6 +1233,10 @@ fn topology_digest(entity: &Entity) -> String {
     }
     format!("{h:016x}")
 }
+fn constant_curve(curve: &Curve) -> bool {
+    curve.control_points.iter().all(|point| point == &curve.control_points[0])
+}
+
 fn verify_correspondence(
     edge: &Edge,
     pcurve: &Curve,
@@ -1576,7 +1580,7 @@ impl<'a> Builder<'a> {
             let b = self.trimmed_vertex(de, curve.evaluate(domain[1])?.point)?;
             let edge = self.edges.len();
             self.edges.push(Edge {
-                degenerate: a == b,
+                degenerate: a == b && constant_curve(&curve),
                 vertices: [a, b],
                 curve,
             });
@@ -1691,7 +1695,7 @@ impl<'a> Builder<'a> {
                     .ok_or_else(|| refuse("Invalid IGES end vertex index"))?;
                 let index = self.edges.len();
                 self.edges.push(Edge {
-                    degenerate: a == b,
+                    degenerate: a == b && constant_curve(&curve),
                     vertices: [a, b],
                     curve,
                 });
@@ -2013,17 +2017,17 @@ fn trimmed_boundary_segments(de: usize, entity: &Entity) -> Result<(usize, Vec<B
                 ));
             }
             let preference = u(v, 5, "curve-on-surface preference")?;
-            if !matches!(preference, 0 | 2 | 3) {
+            if preference > 3 {
                 return Err(trimmed_unsupported(
                     de,
-                    "3D-only or model-preferred boundary without reliable parameterization",
+                    "unknown curve-on-surface representation preference",
                 ));
             }
             Ok((
                 u(v, 2, "curve-on-surface geometry")?,
                 vec![(
-                    u(v, 3, "boundary model curve")?,
-                    u(v, 4, "boundary pcurve")?,
+                    u(v, 4, "boundary model curve")?,
+                    u(v, 3, "boundary pcurve")?,
                     1,
                 )],
             ))

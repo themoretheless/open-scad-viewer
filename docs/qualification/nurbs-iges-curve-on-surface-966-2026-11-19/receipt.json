@@ -1,0 +1,21 @@
+{
+  "id": "NURBS-0966",
+  "testedBase": "ffddc1a129ba9d91d4a14e6e56bf66a1c0124101",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "f4bfd98c77e8f972b7be64e3454f7382a69fb6234f6844b7eb3ac0e4043815a5",
+    "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs": "3244dfe60a92c0cf3f603cc65c4d236c325abfd1d3549ef4410cafd969b6f918",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "e6bcf3a2d39bb72bb3e864f6d9317d1b8938d010e9843110082f4f1c820d664b"
+  },
+  "occt": {
+    "valid": true,
+    "area": 8.0
+  },
+  "fixtureSha256": "17a8150d7b5569d1e15257b2dc9d162374bcde56fa970b347920d115944185d9",
+  "fixtureEnvironment": "CAD_IGES_BOUNDARY_PAIR_FIXTURE=/tmp/osv966-pair.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Closed nonconstant spline remains an ordinary edge",
+    "All four preference values accepted with both representations present",
+    "Explicit 504 list shares the closed edge"
+  ]
+}

@@ -23,10 +23,7 @@ impl Builder<'_> {
             (Axis::U, u0, true, [u0, v1], [u0, v0]),
         ] {
             let iso = surface.iso(axis, parameter)?;
-            let collapsed = iso
-                .control_points
-                .iter()
-                .all(|point| point == &iso.control_points[0]);
+            let collapsed = constant_curve(&iso);
             let opposite = iso.reverse()?;
             let mut existing = None;
             for (index, edge) in self.edges.iter().enumerate() {
