@@ -10033,3 +10033,36 @@ fn box_clearance_checks_euclidean_corner_and_solid_interior() {
     let invalid = BoxObstacle { minimum: &[2., 0.], ..obstacle };
     assert!(partition_curve_box_clearance(&inside, [0., 1.], &[invalid], 0., 0.01, 1).is_err());
 }
+
+#[test]
+fn oriented_box_clearance_uses_local_axis_extents() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, OrientedBoxObstacle, partition_curve_oriented_box_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![10., 20.], vec![13., 24.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let box_shape = OrientedBoxObstacle {
+        center: &[10., 20.],
+        axes: &[&[3., 4.], &[-8., 6.]],
+        half_extents: &[2., 0.25],
+    };
+    let measure = |obstacle, radius| {
+        partition_curve_oriented_box_clearance(&curve, [0., 1.], &[obstacle], radius, 0.01, 128)
+    };
+    let report = measure(box_shape, 0.5).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+    }));
+    let [lo, hi] = report.cells.last().unwrap().gap_bounds[0];
+    assert!(lo <= 2.5 && hi >= 2.5);
+    let skew = OrientedBoxObstacle { axes: &[&[3., 4.], &[-8., 7.]], ..box_shape };
+    assert!(measure(skew, 0.5).is_err());
+}

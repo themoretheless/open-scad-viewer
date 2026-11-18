@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 714,
-  "unallocatedCount": 286,
+  "specifiedCount": 715,
+  "unallocatedCount": 285,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17258,6 +17258,25 @@
       "remainingQualification": [
         "Certify Euclidean clearance against solid axis-aligned boxes, including corner contacts.",
         "Check Euclidean corner clearance, radius-induced corner contact, zero-radius solid containment, and invalid box bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0715",
+      "name": "Сертифицированный зазор сферического инструмента до повёрнутых коробок",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_oriented_box_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-715-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-715-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check Euclidean swept-ball clearance against oriented solid boxes.",
+        "Check translated oblique axes of unequal length, analytic contact, and exact rejection of a skew frame.",
         "WASM and application integration are separate."
       ]
     }

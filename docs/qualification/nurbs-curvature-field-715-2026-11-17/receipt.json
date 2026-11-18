@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0715",
+  "testedBase": "5008db13f4403a2ec6d86d54e6a35cc0ce1e52ee",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 338,
+  "scope": [
+    "Check Euclidean swept-ball clearance against oriented solid boxes.",
+    "Check translated oblique axes of unequal length, analytic contact, and exact rejection of a skew frame."
+  ],
+  "logSha256": "7158e5edd25245709905656c0f08bcfe5395b05f46b52627c4837ad6f4a28fc1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c42a26a28b9022efbd048da099fd8e3d972a71d4e92fed0141513be7898f3aa8",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "79d2544f82a22515891f3b3d8db8aedb28b953ebf843a8c288f9d8d85851e24f"
+  }
+}

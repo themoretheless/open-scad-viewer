@@ -2371,31 +2371,106 @@ pub fn partition_curve_box_clearance(
             "Box requires finite ordered bounds matching the curve dimension",
         )?;
     }
-    let radius = Interval::point(tool_radius);
     partition_radial_clearance(
         curve, interval, parameter_tolerance, max_cells, obstacles.len(),
         |point, index| {
             let obstacle = obstacles[index];
-            let mut residuals = Vec::with_capacity(dimension);
-            for ((coord, &a), &b) in point.iter().zip(obstacle.minimum).zip(obstacle.maximum) {
-                if a <= coord.lo && coord.hi <= b {
-                    residuals.push(Interval::point(0.));
-                    continue;
-                }
-                let below = Interval::point(a).sub(*coord)?;
-                let above = coord.sub(Interval::point(b))?;
-                residuals.push(Interval::new(
-                    below.lo.max(above.lo).max(0.),
-                    below.hi.max(above.hi).max(0.),
-                )?);
-            }
-            if residuals.iter().all(|axis| axis.hi == 0.) {
-                return Ok(Interval::point(-tool_radius));
-            }
-            let distance = norm(&residuals)?;
-            if tool_radius == 0. { Ok(distance) } else { distance.sub(radius) }
+            solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
         },
     )
+}
+
+/// A rectangular box centered at a world point. Axes must be pairwise
+/// orthogonal, but need not have unit length. Extents are physical lengths.
+#[derive(Clone, Copy, Debug)]
+pub struct OrientedBoxObstacle<'a> {
+    pub center: &'a [f64],
+    pub axes: &'a [&'a [f64]],
+    pub half_extents: &'a [f64],
+}
+
+/// Check swept ball clearance in each obstacle's orthonormal frame.
+/// Orthogonality is checked exactly for the supplied binary64 directions.
+pub fn partition_curve_oriented_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[OrientedBoxObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    use num_traits::Zero;
+
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every box"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let obstacles = obstacles.iter().map(|obstacle| {
+        check(
+            obstacle.center.len() == dimension
+                && obstacle.center.iter().all(|value| value.is_finite())
+                && obstacle.axes.len() == dimension
+                && obstacle.half_extents.len() == dimension
+                && obstacle.half_extents.iter().all(|value| value.is_finite() && *value >= 0.),
+            "Oriented box requires a finite center, a full frame and nonnegative half-extents",
+        )?;
+        let units = obstacle.axes.iter().map(|axis| travel_direction(curve, axis))
+            .collect::<Result<Vec<_>>>()?;
+        let exact = obstacle.axes.iter().map(|axis| {
+            axis.iter().copied().map(exact_motion_operand).collect::<Result<Vec<_>>>()
+        }).collect::<Result<Vec<_>>>()?;
+        for (i, a) in exact.iter().enumerate() {
+            for b in &exact[..i] {
+                let dot: num_rational::BigRational = a.iter().zip(b).map(|(a, b)| a * b).sum();
+                check(dot.is_zero(), "Oriented box axes must be pairwise orthogonal")?;
+            }
+        }
+        let center = obstacle.center.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        let minimum = obstacle.half_extents.iter().map(|value| -*value).collect::<Vec<_>>();
+        Ok((center, units, minimum, obstacle.half_extents))
+    }).collect::<Result<Vec<_>>>()?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, units, minimum, maximum) = &obstacles[index];
+            let relative = point.iter().zip(center).map(|(&p, &c)| p.sub(c))
+                .collect::<Result<Vec<_>>>()?;
+            let local = units.iter().map(|unit| project_jet(&relative, unit))
+                .collect::<Result<Vec<_>>>()?;
+            solid_box_gap(&local, minimum, maximum, tool_radius)
+        },
+    )
+}
+
+fn solid_box_gap(
+    point: &[Interval],
+    minimum: &[f64],
+    maximum: &[f64],
+    tool_radius: f64,
+) -> Result<Interval> {
+    let mut residuals = Vec::with_capacity(point.len());
+    for ((coord, &a), &b) in point.iter().zip(minimum).zip(maximum) {
+        if a <= coord.lo && coord.hi <= b {
+            residuals.push(Interval::point(0.));
+            continue;
+        }
+        let below = Interval::point(a).sub(*coord)?;
+        let above = coord.sub(Interval::point(b))?;
+        residuals.push(Interval::new(
+            below.lo.max(above.lo).max(0.),
+            below.hi.max(above.hi).max(0.),
+        )?);
+    }
+    if residuals.iter().all(|axis| axis.hi == 0.) {
+        return Ok(Interval::point(-tool_radius));
+    }
+    let distance = norm(&residuals)?;
+    if tool_radius == 0. { Ok(distance) } else { distance.sub(Interval::point(tool_radius)) }
 }
 
 fn partition_radial_clearance(
