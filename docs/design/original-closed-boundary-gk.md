@@ -353,3 +353,9 @@ checks outward orientation, and distinguishes material, the torus hole,
 and the external region. It also checks complete G2, mixed G1/G2/C0,
 and refusal when the chart budget is below its mandatory work. This
 covers the certified radial tensor family with two complete band charts.
+
+The four-band native regression recovers the meridian order from a shuffled
+shell face list. The closed material audit proves the four neighboring rim
+contacts and the two exact disjoint non-neighbor pairs, then checks outward
+orientation and point parity. A five-pair allowance leaves the sixth pair
+pending and cannot admit the body.
