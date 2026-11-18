@@ -2826,11 +2826,11 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     let angles: Vec<_> = (0..18).map(|index| f64::from(index) * 20.).collect();
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &angles).unwrap();
     let sun = brep_core::gear(&brep_core::GearSpec { teeth: 32, helix_angle_deg: -35., bore: 44., ..spec.clone() }).unwrap();
-    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, ..spec }).unwrap();
+    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, ..spec.clone() }).unwrap();
     let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
     assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
     assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
-    let imported = crate::import_step_shared_assembly(&text).unwrap();
+    let mut imported = crate::import_step_shared_assembly(&text).unwrap();
     assert_eq!(imported.definitions().len(), 3);
     assert_eq!(imported.occurrences().len(), 20);
     let planet_index = imported.occurrences()[2].definition;
@@ -2838,4 +2838,28 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     let first_planet = imported.materialize(2).unwrap();
     assert_eq!(first_planet.faces.len(), planets.prototype().faces.len());
     assert_eq!(first_planet.validate().unwrap().boundary_edge_count, 0);
+
+    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec }).unwrap();
+    assert!(imported.replace_definition(usize::MAX, edited.clone()).is_err());
+    imported.replace_definition(planet_index, edited).unwrap();
+    let exported = crate::export_step_shared_assembly(&imported).unwrap();
+    assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 3);
+    let reopened = crate::import_step_shared_assembly(&exported).unwrap();
+    assert_eq!(reopened.definitions().len(), 3);
+    assert_eq!(reopened.occurrences().len(), 20);
+    for (before, after) in imported.occurrences().iter().zip(reopened.occurrences()) {
+        assert_eq!(before.definition, after.definition);
+        for (before, after) in before.transform.iter().flatten().zip(after.transform.iter().flatten()) {
+            assert!((before - after).abs() < 1e-10);
+        }
+    }
+    let maximum_z = |model: &Model| model.vertices.iter()
+        .map(|vertex| vertex.point[2]).fold(f64::NEG_INFINITY, f64::max);
+    let reopened_planet = reopened.materialize(2).unwrap();
+    assert_eq!(reopened_planet.validate().unwrap().boundary_edge_count, 0);
+    assert!((maximum_z(&reopened_planet) - maximum_z(&first_planet) - 2.).abs() < 1e-10);
+    for index in 0..2 {
+        assert!((maximum_z(&reopened.definitions()[index])
+            - maximum_z(&imported.definitions()[index])).abs() < 1e-10);
+    }
 }

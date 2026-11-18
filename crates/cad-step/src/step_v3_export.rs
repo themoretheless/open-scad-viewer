@@ -858,6 +858,48 @@ pub fn export_planetary_gear_set_step(
     Ok(text)
 }
 
+/// Serialize current shared definitions with their rigid placements.
+pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
+    let definitions = assembly.definitions();
+    let occurrences = assembly.occurrences();
+    if definitions.is_empty() || occurrences.is_empty() || occurrences.len() > 256 {
+        return Err(refuse("STEP shared assembly requires 1 to 256 occurrences"));
+    }
+    if definitions.iter().any(|model| {
+        model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed)
+    }) {
+        return Err(refuse("STEP shared assembly export requires one closed solid per definition"));
+    }
+    let placements = occurrences.iter().map(|occurrence| {
+        let matrix = occurrence.transform;
+        if !is_proper_rigid_placement(matrix) {
+            return Err(refuse("STEP shared assembly export requires proper rigid placements"));
+        }
+        Ok((occurrence.definition, matrix))
+    }).collect::<Result<Vec<_>>>()?;
+    let model = crate::compose_step_v7_occurrences(definitions)?;
+    let (text, _, _) = export_step_direct_impl(
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(&placements),
+    )?;
+    Ok(text)
+}
+
+fn is_proper_rigid_placement(matrix: [[f64; 4]; 4]) -> bool {
+    if matrix[3] != [0., 0., 0., 1.] || !matrix.iter().flatten().all(|value| value.is_finite()) {
+        return false;
+    }
+    let [x, y, z] = [0, 1, 2].map(|column| [matrix[0][column], matrix[1][column], matrix[2][column]]);
+    let dot = |a: [f64; 3], b: [f64; 3]| a.into_iter().zip(b).map(|(a, b)| a * b).sum::<f64>();
+    let cross = [
+        x[1] * y[2] - x[2] * y[1],
+        x[2] * y[0] - x[0] * y[2],
+        x[0] * y[1] - x[1] * y[0],
+    ];
+    [x, y, z].into_iter().all(|axis| (dot(axis, axis) - 1.).abs() <= 1e-12)
+        && [dot(x, y), dot(x, z), dot(y, z)].into_iter().all(|value| value.abs() <= 1e-12)
+        && (dot(cross, z) - 1.).abs() <= 1e-12
+}
+
 pub fn export_step_v9_with_metadata(
     model: &Model,
     semantic: &StepSemanticMetadata,

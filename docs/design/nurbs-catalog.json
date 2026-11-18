@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 818,
-  "unallocatedCount": 182,
+  "specifiedCount": 819,
+  "unallocatedCount": 181,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19238,6 +19238,27 @@
       "remainingQualification": [
         "Import three shared herringbone definitions with twenty placements and materialize one closed planet on demand.",
         "Verify that all eighteen planet placements share one definition and that materialization preserves closed B-rep topology.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0819",
+      "name": "Повторный экспорт STEP AP242 после замены общей геометрии детали",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::export_step_shared_assembly",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-819-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-819-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Export edited definitions as closed solids with proper rigid placements. The twenty-placement herringbone assembly retains all transforms and three shared definitions while exporting the changed planet height.",
+        "Check an invalid definition index, shared occurrence references, unchanged placement matrices and closed topology after exporting the height edit.",
         "WASM and application integration are separate."
       ]
     }

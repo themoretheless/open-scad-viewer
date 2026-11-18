@@ -655,6 +655,15 @@ impl StepSharedAssembly {
         &self.occurrences
     }
 
+    /// Replace geometry for every occurrence of this definition.
+    pub fn replace_definition(&mut self, index: usize, model: Model) -> Result<()> {
+        let definition = self.definitions.get_mut(index)
+            .ok_or_else(|| refuse("STEP assembly definition index out of range"))?;
+        model.validate()?;
+        *definition = model;
+        Ok(())
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

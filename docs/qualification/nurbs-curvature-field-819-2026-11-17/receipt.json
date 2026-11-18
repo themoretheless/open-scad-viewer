@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0819",
+  "testedBase": "8be73fe599c0e05e5300c0071a03e2668b2a3477",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 168,
+  "scope": [
+    "Export edited definitions as closed solids with proper rigid placements. The twenty-placement herringbone assembly retains all transforms and three shared definitions while exporting the changed planet height.",
+    "Check an invalid definition index, shared occurrence references, unchanged placement matrices and closed topology after exporting the height edit."
+  ],
+  "logSha256": "b7a734dd8be1491fa5c5ed2a70cf8984f93013d9f83a8cae7e648ed6c7cf1111",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "cf2e3ee4d3b9b997e32337d9333e9c2ae9cbb7b697a12c0eb818b6d801e6a49e",
+    "crates/cad-step/src/step_v3_export.rs": "9ff80868ca47f7bc29bdf82831a101cad46beef44f246d374d671e7d340129ee",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "394365f67d8871c319dac4acffe82077bc135cfbc7098de051248088a67923fc",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "9dae7e0287ce1eb9aa1fb63fa33c0c901df01be8d3f369f032910c084415450c"
+  }
+}
