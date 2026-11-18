@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 649,
-  "unallocatedCount": 351,
+  "specifiedCount": 650,
+  "unallocatedCount": 350,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15995,6 +15995,25 @@
       "remainingQualification": [
         "Bound the sine of the acute angle to an isolated principal axis from a certified residual and unwanted spectral separation.",
         "Check rotated analytic axes, sign and magnitude invariance, repeated moments, and rejection of an orthogonal candidate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0650",
+      "name": "Автоматический поиск сертифицированной главной оси инерции",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::find_certified_principal_axis",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-650-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-650-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Generate candidate directions from row cross products of the shifted midpoint tensor and certify them against full intervals.",
+        "Automatically certify all three rotated axes and preserve only the isolated axis when two moments coincide.",
         "WASM and application integration are separate."
       ]
     }

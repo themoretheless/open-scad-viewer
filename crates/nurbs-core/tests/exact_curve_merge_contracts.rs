@@ -7804,3 +7804,31 @@ fn principal_axis_residual_refuses_repeated_moments_and_wrong_candidates() {
     assert!(certify_principal_axis_direction(tensor, 3, [1., 0., 0.], 1e-9).is_err());
     assert!(certify_principal_axis_direction(tensor, 2, [0.; 3], 1e-9).is_err());
 }
+
+#[test]
+fn automatic_principal_axes_certify_the_three_rotated_directions() {
+    use nurbs_core::analysis::surface_measure::find_certified_principal_axis;
+    let tensor = [[3., 1., 0.], [1., 3., 0.], [0., 0., 5.]]
+        .map(|row| row.map(|value| [value; 2]));
+    for (index, expected) in [[1., -1., 0.], [1., 1., 0.], [0., 0., 1.]].into_iter().enumerate() {
+        let result = find_certified_principal_axis(tensor, index, 1e-9).unwrap().unwrap();
+        let [x, y, z] = result.direction;
+        let [a, b, c] = expected;
+        let cosine = (x * a + y * b + z * c).abs()
+            / ((x * x + y * y + z * z) * (a * a + b * b + c * c)).sqrt();
+        assert!(cosine > 1. - 1e-14);
+        assert!(result.sin_angle_upper < 1e-8);
+    }
+}
+
+#[test]
+fn automatic_principal_axes_skip_repeated_moments_but_return_isolated_axis() {
+    use nurbs_core::analysis::surface_measure::find_certified_principal_axis;
+    let tensor = [[3., 0., 0.], [0., 3., 0.], [0., 0., 5.]]
+        .map(|row| row.map(|value| [value; 2]));
+    assert!(find_certified_principal_axis(tensor, 0, 1e-9).unwrap().is_none());
+    assert!(find_certified_principal_axis(tensor, 1, 1e-9).unwrap().is_none());
+    let axis = find_certified_principal_axis(tensor, 2, 1e-9).unwrap().unwrap();
+    assert_eq!(axis.direction.map(f64::abs), [0., 0., 1.]);
+    assert!(axis.sin_angle_upper < 1e-8);
+}

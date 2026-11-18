@@ -1416,6 +1416,15 @@ pub fn certify_principal_axis_direction(
     check(index < 3, "Principal moment index must be in 0..3")?;
     let axis = InertiaAxis::new(direction)?;
     let moments = bound_physical_principal_moments(tensor, moment_tolerance)?;
+    certify_principal_axis_residual(tensor, moments, index, &axis)
+}
+
+fn certify_principal_axis_residual(
+    tensor: [[[f64; 2]; 3]; 3],
+    moments: PrincipalMomentBounds,
+    index: usize,
+    axis: &InertiaAxis,
+) -> Result<Option<f64>> {
     let [lo, hi] = moments[index];
     let shift = crate::distance_bounds::midpoint(lo, hi);
     let mut separation = f64::INFINITY;
@@ -1449,6 +1458,64 @@ pub fn certify_principal_axis_direction(
     let relative_residual = (norm(residual)?.hi / length_lower).next_up();
     let sin_upper = (relative_residual / separation).next_up();
     Ok((sin_upper < 1.).then_some(sin_upper))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PrincipalAxisCertificate {
+    /// A direction representative, scaled so its largest component has magnitude one.
+    pub direction: [f64; 3],
+    /// Upper bound on the sine of the acute angle to the true axis.
+    pub sin_angle_upper: f64,
+}
+
+/// Find and certify a direction for a selected principal moment. Candidate
+/// construction uses midpoint data, and certification uses the full intervals.
+pub fn find_certified_principal_axis(
+    tensor: [[[f64; 2]; 3]; 3],
+    index: usize,
+    moment_tolerance: f64,
+) -> Result<Option<PrincipalAxisCertificate>> {
+    use crate::distance_bounds::midpoint;
+    check(index < 3, "Principal moment index must be in 0..3")?;
+    let moments = bound_physical_principal_moments(tensor, moment_tolerance)?;
+    let shift = midpoint(moments[index][0], moments[index][1]);
+    let mut matrix = tensor.map(|row| row.map(|[lo, hi]| midpoint(lo, hi)));
+    let scale = matrix
+        .iter()
+        .flatten()
+        .fold(shift.abs(), |maximum, value| maximum.max(value.abs()));
+    if scale == 0. {
+        return Ok(None);
+    }
+    for (i, row) in matrix.iter_mut().enumerate() {
+        for value in row.iter_mut() {
+            *value /= scale;
+        }
+        row[i] -= shift / scale;
+    }
+
+    let mut best: Option<PrincipalAxisCertificate> = None;
+    // A null direction of the shifted midpoint tensor lies perpendicular
+    // to its rows. Try every independent row pair and verify the result.
+    for (a, b) in [(0, 1), (0, 2), (1, 2)] {
+        let direction = [0, 1, 2].map(|i| {
+            let j = (i + 1) % 3;
+            let k = (i + 2) % 3;
+            matrix[a][j] * matrix[b][k] - matrix[a][k] * matrix[b][j]
+        });
+        let magnitude = direction.into_iter().map(f64::abs).fold(0., f64::max);
+        if magnitude == 0. {
+            continue;
+        }
+        let direction = direction.map(|value| value / magnitude);
+        let axis = InertiaAxis::new(direction)?;
+        if let Some(sin_angle_upper) = certify_principal_axis_residual(tensor, moments, index, &axis)?
+            && best.is_none_or(|current| sin_angle_upper < current.sin_angle_upper)
+        {
+            best = Some(PrincipalAxisCertificate { direction, sin_angle_upper });
+        }
+    }
+    Ok(best)
 }
 
 fn validate_moment_tolerance(tolerance: f64) -> Result<()> {
