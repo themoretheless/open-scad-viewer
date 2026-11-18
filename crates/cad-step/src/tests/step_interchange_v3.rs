@@ -3843,13 +3843,19 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     let angles: Vec<_> = (0..18).map(|index| f64::from(index) * 20.).collect();
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &angles).unwrap();
     let sun = brep_core::gear(&brep_core::GearSpec { teeth: 32, helix_angle_deg: -35., bore: 44., ..spec.clone() }).unwrap();
-    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, ..spec.clone() }).unwrap();
+    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, rim_width: 32. - (30. + 1.5 + 0.1), ..spec.clone() }).unwrap();
     let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
     assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
     assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
     let mut imported = crate::import_step_shared_assembly(&text).unwrap();
     assert_eq!(imported.definitions().len(), 3);
     assert_eq!(imported.occurrences().len(), 20);
+    let stored_faces: usize = imported.definitions().iter().map(|body| body.faces.len()).sum();
+    let placed_faces: usize = imported.occurrences().iter()
+        .map(|item| imported.definitions()[item.definition].faces.len()).sum();
+    assert_eq!(stored_faces, sun.faces.len() + ring.faces.len() + planets.prototype().faces.len());
+    assert_eq!(placed_faces - stored_faces, 17 * planets.prototype().faces.len());
+    eprintln!("Spinner STEP: {} bytes, {stored_faces} stored faces, {placed_faces} placed faces", text.len());
     let planet_index = imported.occurrences()[2].definition;
     assert!(imported.occurrences()[2..].iter().all(|item| item.definition == planet_index));
     let first_planet = imported.materialize(2).unwrap();
