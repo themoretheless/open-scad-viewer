@@ -6822,12 +6822,10 @@ fn periodic_trim_patch_set_centroid_withholds_when_total_area_is_uncertain() {
     assert_eq!(report.measure.total.area.unwrap().bounds[0], 0.);
 }
 
-#[test]
-fn periodic_trim_patch_set_central_inertia_includes_offset_components() {
-    use nurbs_core::{
-        analysis::surface_measure::periodic_trim_patch_set_central_inertia,
-        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
-    };
+fn periodic_trim_patches_with_nested_island()
+-> Vec<nurbs_core::editing::exact_periodic_surface::PeriodicTrimPatch> {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches;
+
     let mut profile = periodic_unit_square();
     for pole in &mut profile.control_points {
         pole.push(0.);
@@ -6854,11 +6852,17 @@ fn periodic_trim_patch_set_central_inertia_includes_offset_components() {
         [0.1875, 0.625],
         [0.1875, 0.375],
     ];
-    let patches =
-        build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole, &island], 1_000_000)
-            .unwrap()
-            .patches
-            .unwrap();
+    build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole, &island], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap()
+}
+
+#[test]
+fn periodic_trim_patch_set_central_inertia_includes_offset_components() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
     let report =
         periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
     let tensor = report.central_inertia_bounds.unwrap();
@@ -6899,5 +6903,80 @@ fn periodic_trim_patch_set_central_inertia_requires_full_positive_area_proof() {
         assert!(report.central_inertia_bounds.is_none());
         assert!(report.centroid.centroid_bounds.is_none());
         assert_eq!(report.centroid.measure.total.area.is_some(), area_present);
+    }
+}
+
+#[test]
+fn periodic_trim_patch_set_principal_moments_bracket_analytic_island_case() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let central =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
+    let coarse = central.clone().bound_principal_moments(10.).unwrap();
+    assert!(coarse.within_moment_tolerance);
+    let report = central.bound_principal_moments(1e-8).unwrap();
+    let area: f64 = 1.3125;
+    let cx = 3. / 28.;
+    let cy = 1. / 7.;
+    let var_x = 1. / 16. - 13. / 768. + 49. / 12288. - area * cx * cx;
+    let var_y = 1. / 16. - area * cy * cy;
+    let var_z = 1.5 * 1.5_f64.powi(2) / 12. - 0.25 / 12. + 0.0625 * 0.25 / 12.;
+    let coupling = area * cx * cy;
+    let split = ((var_x - var_y) * 0.5).hypot(coupling);
+    let average = var_z + (var_x + var_y) * 0.5;
+    let mut expected = [var_x + var_y, average - split, average + split];
+    expected.sort_by(f64::total_cmp);
+    let bounds = report.principal_bounds.unwrap();
+    for ([lo, hi], reference) in bounds.into_iter().zip(expected) {
+        assert!(
+            lo <= reference && reference <= hi,
+            "{bounds:?}, {expected:?}"
+        );
+    }
+    assert!(!report.within_moment_tolerance);
+}
+
+#[test]
+fn periodic_trim_patch_set_principal_moments_require_complete_inertia() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let central =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    for bad_tolerance in [0., -1., f64::INFINITY, f64::NAN] {
+        assert!(
+            central
+                .clone()
+                .bound_principal_moments(bad_tolerance)
+                .is_err()
+        );
+    }
+    let report = central.bound_principal_moments(0.1).unwrap();
+    assert!(report.principal_bounds.is_none());
+    assert!(!report.within_moment_tolerance);
+}
+
+#[test]
+fn periodic_trim_patch_set_principal_moments_resolve_repeated_exact_values() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let mut central =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    central.central_inertia_bounds = Some([
+        [[3.; 2], [1.; 2], [0.; 2]],
+        [[1.; 2], [3.; 2], [0.; 2]],
+        [[0.; 2], [0.; 2], [4.; 2]],
+    ]);
+    let report = central.bound_principal_moments(1e-8).unwrap();
+    assert!(report.within_moment_tolerance);
+    for ([lo, hi], reference) in report
+        .principal_bounds
+        .unwrap()
+        .into_iter()
+        .zip([2., 4., 4.])
+    {
+        assert!(lo <= reference && reference <= hi);
     }
 }

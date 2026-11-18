@@ -756,25 +756,35 @@ impl TrimmedCentralInertiaReport {
         self,
         moment_tolerance: f64,
     ) -> Result<TrimmedPrincipalInertiaReport> {
-        check(
-            moment_tolerance.is_finite() && moment_tolerance > 0.,
-            "Principal moment tolerance must be positive and finite",
-        )?;
-        let principal_bounds = self
-            .central_inertia_bounds
-            .map(|bounds| principal_moment_intervals(bounds, moment_tolerance))
-            .transpose()?;
-        let within_moment_tolerance = principal_bounds.is_some_and(|bounds| {
-            bounds
-                .into_iter()
-                .all(|[lo, hi]| (hi - lo).next_up() <= moment_tolerance)
-        });
+        let (principal_bounds, within_moment_tolerance) =
+            bound_optional_principal_moments(self.central_inertia_bounds, moment_tolerance)?;
         Ok(TrimmedPrincipalInertiaReport {
             central: self,
             principal_bounds,
             within_moment_tolerance,
         })
     }
+}
+
+type PrincipalMomentBounds = [[f64; 2]; 3];
+
+fn bound_optional_principal_moments(
+    central_inertia_bounds: Option<[[[f64; 2]; 3]; 3]>,
+    moment_tolerance: f64,
+) -> Result<(Option<PrincipalMomentBounds>, bool)> {
+    check(
+        moment_tolerance.is_finite() && moment_tolerance > 0.,
+        "Principal moment tolerance must be positive and finite",
+    )?;
+    let principal_bounds = central_inertia_bounds
+        .map(|bounds| principal_moment_intervals(bounds, moment_tolerance))
+        .transpose()?;
+    let within_moment_tolerance = principal_bounds.is_some_and(|bounds| {
+        bounds
+            .into_iter()
+            .all(|[lo, hi]| (hi - lo).next_up() <= moment_tolerance)
+    });
+    Ok((principal_bounds, within_moment_tolerance))
 }
 
 fn principal_moment_intervals(bounds: [[[f64; 2]; 3]; 3], tolerance: f64) -> Result<[[f64; 2]; 3]> {
@@ -917,6 +927,31 @@ pub struct TrimmedPatchSetCentralInertiaReport {
     pub centroid: TrimmedPatchSetCentroidReport,
     /// Inertia of all components about their common area centroid at unit density.
     pub central_inertia_bounds: Option<[[[f64; 2]; 3]; 3]>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TrimmedPatchSetPrincipalInertiaReport {
+    pub central: TrimmedPatchSetCentralInertiaReport,
+    /// Enclosures in increasing order for the inertia about the common centroid.
+    pub principal_bounds: Option<[[f64; 2]; 3]>,
+    pub within_moment_tolerance: bool,
+}
+
+impl TrimmedPatchSetCentralInertiaReport {
+    /// Enclose the sorted principal moments of the complete patch set.
+    /// Unavailable central inertia remains unavailable in the spectral report.
+    pub fn bound_principal_moments(
+        self,
+        moment_tolerance: f64,
+    ) -> Result<TrimmedPatchSetPrincipalInertiaReport> {
+        let (principal_bounds, within_moment_tolerance) =
+            bound_optional_principal_moments(self.central_inertia_bounds, moment_tolerance)?;
+        Ok(TrimmedPatchSetPrincipalInertiaReport {
+            central: self,
+            principal_bounds,
+            within_moment_tolerance,
+        })
+    }
 }
 
 /// Enclose the central inertia of the complete patch set on a shared

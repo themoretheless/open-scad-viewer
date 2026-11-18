@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 618,
-  "unallocatedCount": 382,
+  "specifiedCount": 619,
+  "unallocatedCount": 381,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15376,6 +15376,25 @@
         "Expose total and component area, common centroid and central inertia through one WASM operation.",
         "Verify nested-island areas, common centroid, tensor delivery, and absence of partial component sets through the compiled WASM ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0619",
+      "name": "Гарантированные главные моменты инерции всех компонент периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::TrimmedPatchSetCentralInertiaReport::bound_principal_moments",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-619-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-619-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the ordered eigenvalues of the complete patch-set central inertia tensor.",
+        "Bracket analytic principal moments with off-diagonal coupling and withhold spectral bounds when complete central inertia is unavailable.",
+        "WASM and application integration are separate."
       ]
     }
   ],
