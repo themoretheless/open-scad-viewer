@@ -155,3 +155,39 @@ fn internal_spur_contact_uses_ring_tip_and_difference_of_pitch_radii() {
     assert!(ratio(1., 21, 20, 20.).is_err());
     assert!(ratio(1., 20, usize::MAX, 20.).is_err());
 }
+
+#[test]
+fn mounted_spur_mesh_uses_actual_line_of_action() {
+    use involute::{SpurMesh, mounted_spur_contact_ratio_bounds as ratio};
+    let a = 20_f64.to_radians();
+    let tip = |r: f64, t: f64| (t.powi(2) - (r * a.cos()).powi(2)).sqrt();
+    for (mesh, teeth, d, projected) in [
+        (
+            SpurMesh::External,
+            [20, 40],
+            30.3_f64,
+            tip(10., 11.) + tip(20., 21.),
+        ),
+        (
+            SpurMesh::Internal,
+            [20, 80],
+            30.1_f64,
+            tip(10., 11.) - tip(40., 39.),
+        ),
+    ] {
+        let tangent = d * ((30. * a.cos() / d).acos()).sin();
+        let expected = match mesh {
+            SpurMesh::External => projected - tangent,
+            // For this mounting the ring tip passes the pinion base tangent
+            // point. The pinion involute cannot extend below its base.
+            SpurMesh::Internal => (projected + tangent).min(tip(10., 11.)),
+        } / (std::f64::consts::PI * a.cos());
+        let bound = ratio(1., teeth, 20., mesh, d).unwrap();
+        contains(bound, expected);
+        assert!(bound[1] - bound[0] < 1e-9);
+    }
+    for distance in [0., f64::NAN, 25., 40.] {
+        assert!(ratio(1., [20, 40], 20., SpurMesh::External, distance).is_err());
+    }
+    assert!(ratio(1., [40, 20], 20., SpurMesh::Internal, 10.).is_err());
+}

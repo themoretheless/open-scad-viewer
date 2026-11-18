@@ -199,7 +199,7 @@ pub fn external_spur_contact_ratio_bounds(
     teeth: [usize; 2],
     pressure_degrees: f64,
 ) -> Result<[f64; 2]> {
-    spur_contact_ratio(module, teeth, pressure_degrees, false)
+    spur_contact_ratio(module, teeth, pressure_degrees, false, None)
 }
 
 /// Active transverse involute overlap for a pinion inside a larger spur ring.
@@ -215,7 +215,49 @@ pub fn internal_spur_contact_ratio_bounds(
         ring_teeth > pinion_teeth,
         "Ring must have more teeth than pinion",
     )?;
-    spur_contact_ratio(module, [pinion_teeth, ring_teeth], pressure_degrees, true)
+    spur_contact_ratio(
+        module,
+        [pinion_teeth, ring_teeth],
+        pressure_degrees,
+        true,
+        None,
+    )
+}
+
+/// Which common base-circle tangent is used for the mounted pair.
+#[derive(Clone, Copy, Debug)]
+pub enum SpurMesh {
+    External,
+    Internal,
+}
+
+/// Active flank overlap at a specified positive mounting distance. Both gears
+/// retain their nominal tooth geometry. For internal meshes the ring is second.
+/// An error indicates an invalid input, unresolved tangent or no proven overlap.
+/// Backlash, undercut and material interference require separate checks.
+pub fn mounted_spur_contact_ratio_bounds(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    mesh: SpurMesh,
+    centre_distance: f64,
+) -> Result<[f64; 2]> {
+    check(
+        centre_distance.is_finite() && centre_distance > 0.,
+        "Expected positive finite centre distance",
+    )?;
+    let internal = matches!(mesh, SpurMesh::Internal);
+    check(
+        !internal || teeth[1] > teeth[0],
+        "Ring must have more teeth than pinion",
+    )?;
+    spur_contact_ratio(
+        module,
+        teeth,
+        pressure_degrees,
+        internal,
+        Some(centre_distance),
+    )
 }
 
 fn spur_contact_ratio(
@@ -223,6 +265,7 @@ fn spur_contact_ratio(
     teeth: [usize; 2],
     pressure_degrees: f64,
     internal: bool,
+    mounted: Option<f64>,
 ) -> Result<[f64; 2]> {
     let flank = |count, ring| -> Result<(I, I, I)> {
         let gear =
@@ -236,15 +279,30 @@ fn spur_contact_ratio(
         Ok((distance(gear.roll_start)?, distance(gear.roll_end)?, base))
     };
     let (low, high, base) = flank(teeth[0], false)?;
-    let (peer_low, peer_high, _) = flank(teeth[1], internal)?;
-    let alpha = pi()?.mul(I::point(pressure_degrees))?.div(I::point(180.))?;
-    let separation = if internal {
-        teeth[1] - teeth[0]
+    let (peer_low, peer_high, peer_base) = flank(teeth[1], internal)?;
+    let span = if let Some(value) = mounted {
+        let offset = if internal {
+            peer_base.sub(base)?
+        } else {
+            peer_base.add(base)?
+        };
+        let centres = I::point(value);
+        let gap = centres.sub(offset)?;
+        check(
+            gap.lo > 0.,
+            "Common tangent requires positive base-circle separation margin",
+        )?;
+        sqrt_positive(gap.mul(centres.add(offset)?)?)?
     } else {
-        teeth[0] + teeth[1]
+        let alpha = pi()?.mul(I::point(pressure_degrees))?.div(I::point(180.))?;
+        let separation = if internal {
+            teeth[1] - teeth[0]
+        } else {
+            teeth[0] + teeth[1]
+        };
+        let centres = I::point(module).mul(I::point(separation as f64 / 2.))?;
+        centres.mul(trig(alpha)?.0)?
     };
-    let centres = I::point(module).mul(I::point(separation as f64 / 2.))?;
-    let span = centres.mul(trig(alpha)?.0)?;
     // Ring and pinion roll in the same tangent coordinate direction.
     let (peer_start, peer_end) = if internal {
         (peer_low.sub(span)?, peer_high.sub(span)?)
