@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 836,
-  "unallocatedCount": 164,
+  "specifiedCount": 837,
+  "unallocatedCount": 163,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19597,6 +19597,27 @@
       "remainingQualification": [
         "Estimate summed occurrence volume using one mass integration per definition and absolute linear determinants for placements.",
         "Check one shared cube, overlapping placements, a reflected scaled placement, invalid budget and 208 cubic millimetres after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0837",
+      "name": "Импорт совпадающих размещений STEP с отдельными связями экземпляров",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::import_step_shared_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/assembly_occurrences.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-837-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-837-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Preserve coincident placements where each is backed by a distinct explicit product usage path.",
+        "Check two distinct coincident occurrence identities, one shared definition, reported interference and rejection of a reused product usage.",
         "WASM and application integration are separate."
       ]
     }

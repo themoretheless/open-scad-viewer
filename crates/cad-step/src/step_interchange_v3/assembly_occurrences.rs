@@ -116,8 +116,10 @@ pub(super) fn representation_occurrences(
             &mut out,
         )?;
     }
-    let mut paths = BTreeSet::new();
-    for occurrence in &out {
+    let mut placements = BTreeMap::new();
+    for occurrence in &mut out {
+        let explicit = occurrence.path.len() > 1
+            && occurrence.path.iter().skip(1).step_by(2).all(|relation| assembly.contains_key(relation));
         let key = (
             occurrence.representation,
             occurrence.bodies.clone(),
@@ -128,10 +130,11 @@ pub(super) fn representation_occurrences(
                 .map(|v| v.to_bits())
                 .collect::<Vec<_>>(),
         );
-        if !paths.insert(key) {
-            return Err(refuse(
-                "Ambiguous duplicate selected representation occurrence",
-            ));
+        if let Some(prior) = placements.insert(key, explicit) {
+            if !(prior && explicit) {
+                return Err(refuse("Ambiguous duplicate selected representation occurrence"));
+            }
+            occurrence.coincident = true;
         }
     }
     Ok(out)
@@ -143,6 +146,7 @@ fn collect_product_assembly(
     // CDSR identifies product occurrences. Its relationship runs child -> parent;
     // traverse parent -> child while retaining the child-to-parent placement.
     let mut products = BTreeMap::new();
+    let mut used_occurrences = BTreeSet::new();
     let mut assembly = BTreeMap::new();
     for entity in entities.values() {
         if let Value::Call(name, args) = &entity.value
@@ -172,7 +176,8 @@ fn collect_product_assembly(
             if kind != "PRODUCT_DEFINITION_SHAPE" || shape.len() != 3 {
                 return Err(refuse("Invalid occurrence product shape"));
             }
-            let (kind, usage) = call(entities, one_ref(&shape[2], "occurrence usage")?)?;
+            let usage_id = one_ref(&shape[2], "occurrence usage")?;
+            let (kind, usage) = call(entities, usage_id)?;
             if kind != "NEXT_ASSEMBLY_USAGE_OCCURRENCE"
                 || usage.len() != 6
                 || products.get(&parent) != Some(&one_ref(&usage[3], "parent product")?)
@@ -182,7 +187,9 @@ fn collect_product_assembly(
                     "Occurrence product endpoints disagree with placement",
                 ));
             }
-            if assembly.insert(relation, (parent, child)).is_some() {
+            if !used_occurrences.insert(usage_id)
+                || assembly.insert(relation, (parent, child)).is_some()
+            {
                 return Err(refuse("Duplicate product occurrence relationship"));
             }
         }
@@ -342,6 +349,7 @@ fn walk(
             transform: matrix,
             linked,
             path: path.to_vec(),
+            coincident: false,
         });
     }
     if let Some(edges) = outgoing.get(&rep) {

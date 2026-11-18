@@ -327,6 +327,7 @@ impl DirectImportRoute<'_> {
         if !self.allow_degenerate {
             return Ok((definition_identities, occurrence_identities));
         }
+        let mut repeats = BTreeMap::new();
         for occurrence in occurrences {
             let definition = format!("representation:{}", entity_digest(self.entities, occurrence.representation)?);
             if !definition_identities.contains(&definition) {
@@ -344,7 +345,15 @@ impl DirectImportRoute<'_> {
                 .flatten()
                 .map(|value| format!("{:016x}", value.to_bits()))
                 .collect::<String>();
-            occurrence_identities.push(format!("occurrence:{}", hash(&(path + &matrix))));
+            let key = path + &matrix;
+            let ordinal = repeats.entry(hash(&key)).or_insert(0usize);
+            let identity = if *ordinal == 0 {
+                hash(&key)
+            } else {
+                hash(&format!("{key}/instance-{ordinal}"))
+            };
+            *ordinal += 1;
+            occurrence_identities.push(format!("occurrence:{identity}"));
         }
         Ok((definition_identities, occurrence_identities))
     }
@@ -481,6 +490,7 @@ impl DirectImportRoute<'_> {
         let mut aggregate = Model::empty(DEFAULT_STEP_TOLERANCE_MM)?;
         let mut aggregate_tolerance = None::<f64>;
         let mut aggregate_map = Vec::new();
+        let has_coincident_occurrences = occurrences.iter().any(|occurrence| occurrence.coincident);
         for occurrence in occurrences {
             let scale = length_scale(self.entities, &occurrence.linked, false)?;
             let tolerance_mm = uncertainty_mm(self.entities, &occurrence.linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
@@ -492,6 +502,9 @@ impl DirectImportRoute<'_> {
         }
         aggregate.tolerance_mm = aggregate_tolerance.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
         aggregate.rebuild_topology_ids();
+        if has_coincident_occurrences {
+            assign_occurrence_topology_ids(&mut aggregate, self.capability);
+        }
         Ok((aggregate, aggregate_map))
     }
 

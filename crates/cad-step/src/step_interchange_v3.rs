@@ -2562,6 +2562,11 @@ fn compose_step_occurrences(models: &[Model], capability: &str) -> Result<Model>
         append_direct_model(&mut aggregate, model.clone(), &[], &mut ignored);
     }
     aggregate.rebuild_topology_ids();
+    assign_occurrence_topology_ids(&mut aggregate, capability);
+    aggregate.validate()?;
+    Ok(aggregate)
+}
+fn assign_occurrence_topology_ids(aggregate: &mut Model, capability: &str) {
     let occurrence_ids = |kind: TopoKind, ids: &[TopoId]| {
         ids.iter()
             .enumerate()
@@ -2596,9 +2601,8 @@ fn compose_step_occurrences(models: &[Model], capability: &str) -> Result<Model>
             aggregate.1.change_set.nodes.insert(*id, kind);
         }
     }
-    aggregate.validate()?;
-    Ok(aggregate)
 }
+
 pub fn compose_step_v7_occurrences(models: &[Model]) -> Result<Model> {
     compose_step_occurrences(models, STEP_INTERCHANGE_V7_CAPABILITY)
 }
@@ -2620,6 +2624,7 @@ struct RepresentationOccurrence {
     transform: [[f64; 4]; 4],
     linked: BTreeSet<usize>,
     path: Vec<usize>,
+    coincident: bool,
 }
 
 fn relationship_components(

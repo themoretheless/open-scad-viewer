@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0837",
+  "testedBase": "e42f12713d69c722137aa80d413354cdede44494",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 186,
+  "scope": [
+    "Preserve coincident placements where each is backed by a distinct explicit product usage path.",
+    "Check two distinct coincident occurrence identities, one shared definition, reported interference and rejection of a reused product usage."
+  ],
+  "logSha256": "3f7c4e7eb10ac45a3a9c7d9c5c9bb5468bbcf5359fa1a12b4bb985980a3d8287",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3.rs": "a3f9143ac620db8d8a8f2047948f076be760dc9cdbd2c99e112b9d70979a4405",
+    "crates/cad-step/src/step_interchange_v3/assembly_occurrences.rs": "4d08564b3f32ffc56bbf17fbbed66730100217412b78abf197e1b45e04062f00",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "23d8a0d508af8e5ac0ed732038b468fb900b72375137ffb01df2746bb2f30df1",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "49194b1922c1e8f8aec5a9f681a056830d3730632cbbe88fabc457053222205e"
+  }
+}

@@ -2802,6 +2802,33 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_round_trips_explicit_coincident_product_occurrences() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let placement = assembly.occurrences()[0].transform;
+    assembly.set_occurrence_placement(1, placement).unwrap();
+    let step = crate::export_step_shared_assembly(&assembly).unwrap();
+    let back = crate::import_step_shared_assembly(&step).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (1, 2));
+    assert_eq!(back.occurrences()[0].transform, back.occurrences()[1].transform);
+    assert_eq!(back.check_interferences(1).unwrap()[0].1.as_ref().unwrap(), &true);
+    let (_, _, report) = crate::import_step_v9(&step).unwrap();
+    assert_eq!(report.occurrence_identities.len(), 2);
+    assert_ne!(report.occurrence_identities[0], report.occurrence_identities[1]);
+
+    let mut rows = step.lines().filter(|row| row.contains("=CONTEXT_DEPENDENT_SHAPE_REPRESENTATION("));
+    let first = rows.next().unwrap();
+    let second = rows.next().unwrap();
+    let (_, first_shape) = first.split_once(',').unwrap();
+    let (second_prefix, _) = second.split_once(',').unwrap();
+    let reused = format!("{second_prefix},{first_shape}");
+    let invalid = step.replacen(second, &reused, 1);
+    assert!(crate::import_step_shared_assembly(&invalid).is_err());
+}
+
+#[test]
 fn shared_step_material_volume_accounts_for_scale_and_reflection() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
