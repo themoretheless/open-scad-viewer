@@ -15,10 +15,11 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
 pub(crate) enum Region {
     Inside,
     Outside,
+    Filled,
 }
 
 fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64, region: Region) -> Result<Model> {
-    let outside = region == Region::Outside;
+    let keep_exterior = region != Region::Inside;
     let refuse = || {
         Error::new(
             "BREP_CYLINDRICAL_WALL_UNPROVED",
@@ -70,11 +71,11 @@ fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64
             &cutter,
             tool_cap.outer,
             &face.surface,
-            outside,
+            keep_exterior,
             source.tolerance_mm,
         )?;
         new_loops.push((cap, tool_cap.outer, rim));
-        removed_loops.insert(if outside { face.holes[0] } else { face.outer });
+        removed_loops.insert(if keep_exterior { face.holes[0] } else { face.outer });
     }
     let radial = |f: &crate::Face| {
         piecewise_axis_radius_bounds(&f.surface, 2, [0.; 3], 256)?.ok_or_else(refuse)
@@ -98,10 +99,17 @@ fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64
         } else if r[0] <= tool[1] {
             return Err(refuse());
         }
-        if wall.contains(&index) == outside {
+        if wall.contains(&index) == keep_exterior {
             removed_faces.insert(index);
             removed_loops.extend(std::iter::once(f.outer).chain(f.holes.iter().copied()));
         }
+    }
+    if region == Region::Filled {
+        let mut stage = source.clone();
+        for cap in caps {
+            stage.faces[cap].holes.clear();
+        }
+        return compact_region(source, &stage, &removed_faces, &removed_loops);
     }
     let mut stage = crate::boolean_support::concatenate_bodies(source, &cutter)?;
     for (cap, l, mut wire) in new_loops {
@@ -110,7 +118,7 @@ fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64
         }
         let l = l + source.loops.len();
         stage.loops[l] = wire;
-        if outside {
+        if keep_exterior {
             stage.faces[cap].holes[0] = l;
         } else {
             stage.faces[cap].outer = l;
@@ -123,13 +131,17 @@ fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64
         .cloned()
         .filter(|f| !removed_faces.contains(&f.face))
         .map(|mut f| {
-            f.reversed ^= outside;
+            f.reversed ^= keep_exterior;
             f
         })
         .collect();
     stage.shells.truncate(1);
     stage.shells[0].faces.extend(sides);
     stage.bodies.truncate(1);
+    compact_region(source, &stage, &removed_faces, &removed_loops)
+}
+
+fn compact_region(source: &Model, stage: &Model, removed_faces: &BTreeSet<usize>, removed_loops: &BTreeSet<usize>) -> Result<Model> {
     let kept_edges: BTreeSet<_> = stage
         .loops
         .iter()
@@ -148,9 +160,9 @@ fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64
         .filter(|v| !kept_vertices.contains(v))
         .collect();
     let mut result = crate::features::direct_edit::suppression::compact(
-        &stage,
-        &removed_faces,
-        &removed_loops,
+        stage,
+        removed_faces,
+        removed_loops,
         &edges,
         &vertices,
     )?;
@@ -199,7 +211,7 @@ pub(crate) fn try_boolean(stock: &Model, tool: &Model, region: Region) -> Option
         }
     }
     let caps = [caps[0]?, caps[1]?];
-    if carrier_top > stock_height {
+    if carrier_top > stock_height || (region == Region::Filled && height != stock_height) {
         return None;
     }
     let canonical = crate::cylinder(radius, height).ok()?;

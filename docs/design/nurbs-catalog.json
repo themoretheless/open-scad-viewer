@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 949,
-  "unallocatedCount": 51,
+  "specifiedCount": 950,
+  "unallocatedCount": 50,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21671,6 +21671,26 @@
       ],
       "remainingQualification": [
         "Single isolated through bore with two horizontal cap charts and radial separation. Both operand orders. General non-coaxial cuts remain outside this domain."
+      ]
+    },
+    {
+      "id": "NURBS-0950",
+      "name": "Объединение шестерни с цилиндрической вставкой до заполнения сквозного отверстия",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, both operand orders. General non-coaxial cuts remain outside this domain."
       ]
     }
   ],
