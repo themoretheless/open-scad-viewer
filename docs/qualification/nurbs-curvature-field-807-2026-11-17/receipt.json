@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0807",
+  "testedBase": "d56adcaf587fd4724959d76653c43f5bfc513323",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 433,
+  "scope": [
+    "Enclose the centroid using certified contour nesting, area and first boundary moments.",
+    "Check certified centroid displacement due to an off-center hole, translated coordinates and bounded work."
+  ],
+  "logSha256": "0b5c5d440c1c0d6b5b3c34aeec02cc6016c37de67c8608e7ce49d492a0fbf951",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "4662b3959241c97f0b4b594066069ae4d32fb937649a7871360661c0888513f5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f551492982904cdec1f70722905a021a74f898c6929fcc11531ac1843bd2fb12"
+  }
+}

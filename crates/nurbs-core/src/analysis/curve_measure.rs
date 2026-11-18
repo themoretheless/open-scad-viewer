@@ -2593,14 +2593,14 @@ pub fn certify_planar_contour_fill_orientations(
     max_distance_cells: usize,
     max_orientation_cells: usize,
 ) -> Result<PlanarContourOrientationReport> {
-    let (report, _) = contour_fill_orientation_and_area(
+    let (report, _) = contour_fill_orientation_and_moments(
         contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
-        max_winding_cells, max_distance_cells, max_orientation_cells,
+        max_winding_cells, max_distance_cells, max_orientation_cells, false,
     )?;
     Ok(report)
 }
 
-fn contour_fill_orientation_and_area(
+fn contour_fill_orientation_and_moments(
     contours: &[&Curve],
     parameter_tolerance: f64,
     distance_tolerance: f64,
@@ -2608,18 +2608,20 @@ fn contour_fill_orientation_and_area(
     max_winding_cells: usize,
     max_distance_cells: usize,
     max_orientation_cells: usize,
-) -> Result<(PlanarContourOrientationReport, Vec<Interval>)> {
+    first_moments: bool,
+) -> Result<(PlanarContourOrientationReport, Vec<[Interval; 3]>)> {
     validate(parameter_tolerance, max_orientation_cells)?;
     let hierarchy = certify_planar_contour_hierarchy(
         contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
         max_winding_cells, max_distance_cells,
     )?;
     let mut orientations = Vec::with_capacity(contours.len());
-    let mut signed_areas = Vec::with_capacity(contours.len());
+    let mut signed_moments = Vec::with_capacity(contours.len());
     let mut orientation_work_cells = 0;
     for (index, curve) in contours.iter().enumerate() {
         let budget = (max_orientation_cells - orientation_work_cells) / (contours.len() - index);
-        let origin = &curve.control_points[0];
+        let origin = if first_moments { &contours[0].control_points[0] }
+            else { &curve.control_points[0] };
         let (cells, work) = partition_motion_cells(
             curve, curve.domain(), parameter_tolerance, budget,
             |jets, _| {
@@ -2628,10 +2630,24 @@ fn contour_fill_orientation_and_area(
                 let x = jets[0][0].sub(Interval::point(origin[0]))?;
                 let y = jets[0][1].sub(Interval::point(origin[1]))?;
                 let cross = x.mul(jets[1][1])?.sub(y.mul(jets[1][0])?)?;
-                Ok((cross, true))
+                let (moment_x, moment_y) = if first_moments {
+                    (
+                        x.mul(x)?.mul(jets[1][1])?,
+                        Interval::point(-1.).mul(y.mul(y)?.mul(jets[1][0])?)?,
+                    )
+                } else {
+                    (Interval::point(0.), Interval::point(0.))
+                };
+                Ok(([cross, moment_x, moment_y], true))
             },
         )?;
-        let doubled_area = cells.into_iter().try_fold(Interval::point(0.), |sum, (_, _, cross)| sum.add(cross))?;
+        let mut integrals = [Interval::point(0.); 3];
+        for (_, _, cell) in cells {
+            for (sum, value) in integrals.iter_mut().zip(cell) {
+                *sum = sum.add(value)?;
+            }
+        }
+        let doubled_area = integrals[0];
         let orientation = if doubled_area.lo > 0. {
             PlanarContourOrientation::Counterclockwise
         } else if doubled_area.hi < 0. {
@@ -2640,7 +2656,10 @@ fn contour_fill_orientation_and_area(
             return Err(resource("Contour orientation is unresolved under the area work budget"));
         };
         orientations.push(orientation);
-        signed_areas.push(doubled_area.mul(Interval::point(0.5))?);
+        for value in &mut integrals {
+            *value = value.mul(Interval::point(0.5))?;
+        }
+        signed_moments.push(integrals);
         orientation_work_cells += work;
     }
     let reverse = orientations.iter().zip(&hierarchy.depths).map(|(orientation, depth)| {
@@ -2648,7 +2667,7 @@ fn contour_fill_orientation_and_area(
         counterclockwise != (depth % 2 == 0)
     }).collect();
     let report = PlanarContourOrientationReport { hierarchy, orientations, reverse, orientation_work_cells };
-    Ok((report, signed_areas))
+    Ok((report, signed_moments))
 }
 
 #[derive(Clone, Debug)]
@@ -2671,19 +2690,62 @@ pub fn measure_planar_contour_fill_area(
     max_distance_cells: usize,
     max_area_cells: usize,
 ) -> Result<PlanarContourFillAreaReport> {
-    let (orientation, areas) = contour_fill_orientation_and_area(
+    let (orientation, areas) = contour_fill_orientation_and_moments(
         contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
-        max_winding_cells, max_distance_cells, max_area_cells,
+        max_winding_cells, max_distance_cells, max_area_cells, false,
     )?;
     let mut total = Interval::point(0.);
-    for (area, &reverse) in areas.iter().zip(&orientation.reverse) {
+    for ([area, _, _], &reverse) in areas.iter().zip(&orientation.reverse) {
         let contribution = if reverse { Interval::new(-area.hi, -area.lo)? } else { *area };
         total = total.add(contribution)?;
     }
-    let signed_contour_area_bounds = areas.into_iter().map(|area| [area.lo, area.hi]).collect();
+    let signed_contour_area_bounds = areas.into_iter().map(|[area, _, _]| [area.lo, area.hi]).collect();
     Ok(PlanarContourFillAreaReport {
         area_bounds: [total.lo.max(0.), total.hi],
         signed_contour_area_bounds,
+        orientation,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillCentroidReport {
+    pub area_bounds: [f64; 2],
+    /// Bounds for the X and Y coordinates in the source coordinate system.
+    pub centroid_bounds: [[f64; 2]; 2],
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Enclose the centroid of an even-odd filled planar contour hierarchy.
+/// Area and first moments use the same interval subdivision. A strictly
+/// positive filled area is required before dividing by it.
+pub fn measure_planar_contour_fill_centroid(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_moment_cells: usize,
+) -> Result<PlanarContourFillCentroidReport> {
+    let (orientation, moments) = contour_fill_orientation_and_moments(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_moment_cells, true,
+    )?;
+    let mut total = [Interval::point(0.); 3];
+    for (values, &reverse) in moments.into_iter().zip(&orientation.reverse) {
+        for (sum, value) in total.iter_mut().zip(values) {
+            let oriented = if reverse { Interval::new(-value.hi, -value.lo)? } else { value };
+            *sum = sum.add(oriented)?;
+        }
+    }
+    let [area, x, y] = total;
+    check(area.lo > 0., "Filled area must be certified positive for centroid measurement")?;
+    let origin = &contours[0].control_points[0];
+    let x = x.div(area)?.add(Interval::point(origin[0]))?;
+    let y = y.div(area)?.add(Interval::point(origin[1]))?;
+    Ok(PlanarContourFillCentroidReport {
+        area_bounds: [area.lo, area.hi],
+        centroid_bounds: [[x.lo, x.hi], [y.lo, y.hi]],
         orientation,
     })
 }

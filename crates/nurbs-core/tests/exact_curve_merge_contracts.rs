@@ -13093,3 +13093,27 @@ fn planar_contour_fill_area_subtracts_holes_and_adds_nested_islands() {
         assert!(bounds[1] - bounds[0] < 1e-6);
     }
 }
+
+#[test]
+fn planar_contour_fill_centroid_accounts_for_an_off_center_hole() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_centroid;
+    let square = |x: f64, y: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, y-r], vec![x+r, y-r], vec![x+r, y+r],
+            vec![x-r, y+r], vec![x-r, y-r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(10., -7., 3.);
+    let hole = square(11., -7., 1.);
+    let report = measure_planar_contour_fill_centroid(
+        &[&hole, &outer], 0.02, 1e-4, 128, 2048, 512, 512,
+    ).unwrap();
+    for ([lo, hi], expected) in [report.area_bounds, report.centroid_bounds[0], report.centroid_bounds[1]]
+        .into_iter().zip([32., 9.875, -7.])
+    {
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-6);
+    }
+    assert!(report.orientation.orientation_work_cells <= 512);
+}
