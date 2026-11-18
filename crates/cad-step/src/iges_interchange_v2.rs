@@ -910,6 +910,7 @@ enum CompositeVisit {
 mod circular_arc;
 mod placement;
 mod natural_boundary;
+mod affine_boundary;
 mod composite_join;
 
 struct CurveDispatcher<'a> {
@@ -1546,6 +1547,15 @@ impl<'a> Builder<'a> {
                     let (edge, reversed) = self.match_or_create_boundary_edge(de, piece, work)?;
                     coedges.push(Coedge::new(edge, reversed, pcurve));
                 }
+            } else if entity.directory.ty == 142 && segment.0 != 0 && segment.1 == 0 {
+                let curve = self.curve(segment.0, 3)?;
+                let uv = affine_boundary::recover(de, &surface, &curve, work)?;
+                let (edge, reversed) = if let Some(index) = curve_edges.get(&segment.0) {
+                    (*index, false)
+                } else {
+                    self.match_or_create_boundary_edge(de, curve, work)?
+                };
+                coedges.push(Coedge::new(edge, reversed, uv));
             } else {
                 coedges.push(self.trimmed_boundary_coedge(de, segment, curve_edges, owned_edges)?);
             }

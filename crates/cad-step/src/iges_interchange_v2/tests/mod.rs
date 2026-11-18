@@ -1432,6 +1432,15 @@ fn standard_curve_on_surface_keeps_a_single_closed_trim_edge() {
         std::fs::write(path, uv_only).unwrap();
         std::fs::write(path.with_extension("step"), crate::export_step_v9(&lifted).unwrap().0).unwrap();
     }
+    let model_only = rewire_reference(&rewire_reference(&text, boundary, 3, 0), boundary, 5, 2);
+    let recovered = import_iges_v2(&model_only).unwrap().0;
+    assert_eq!(recovered.loops[0].coedges[0].pcurve, uv);
+    assert_eq!(recovered.validate().unwrap().boundary_edge_count, 1);
+    if let Some(path) = std::env::var_os("CAD_IGES_MODEL_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, model_only).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&recovered).unwrap().0).unwrap();
+    }
     if let Some(path) = std::env::var_os("CAD_IGES_BOUNDARY_PAIR_FIXTURE") {
         std::fs::write(path, text).unwrap();
     }

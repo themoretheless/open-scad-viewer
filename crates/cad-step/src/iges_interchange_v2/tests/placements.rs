@@ -480,3 +480,25 @@ fn restricted_support_surface_retains_the_closed_cuboid_face() {
         assert!(CurveDispatcher::distance(a,b).unwrap() < 1e-12);
     }
 }
+
+#[test]
+fn spatial_trim_recovers_tilted_chart_clock_and_rejects_off_plane_trace() {
+    let chart = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![-2.,-2.,2.,2.], knots_v: vec![3.,3.,5.,5.],
+        control_points: vec![vec![vec![1.,2.,3.], vec![1.,6.,7.]], vec![vec![1.,2.,11.], vec![1.,6.,15.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let uv = Curve { degree: 2, knots: vec![4.,4.,4.,8.,8.,8.],
+        control_points: vec![vec![-1.,3.5], vec![0.,4.5], vec![1.,4.]],
+        weights: vec![1.,0.5,1.], periodic: false };
+    let mut world = uv.clone();
+    for p in &mut world.control_points {
+        *p = chart.evaluate(p[0], p[1]).unwrap().point.to_vec();
+    }
+    assert_eq!(affine_boundary::recover(1, &chart, &world, &mut 0).unwrap(), uv);
+    world.control_points[1][0] += 1e-10;
+    assert!(affine_boundary::recover(1, &chart, &world, &mut 0).is_err());
+    world.control_points[1][0] = 1.;
+    world.control_points[0][1] = -10.;
+    assert!(affine_boundary::recover(1, &chart, &world, &mut 0).is_err());
+}

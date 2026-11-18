@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 967,
-  "unallocatedCount": 33,
+  "specifiedCount": 968,
+  "unallocatedCount": 32,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22016,6 +22016,26 @@
       ],
       "remainingQualification": [
         "Uses the bounded exact rational pcurve lift. Internal crossings and stored spatial pieces must be certifiable. Covers a planar offset face and a saddle with a rational trim and a multi-cell crossing."
+      ]
+    },
+    {
+      "id": "NURBS-0968",
+      "name": "Восстановление UV-контура IGES 142 по пространственной кривой на аффинной грани",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Requires a certified single-span affine chart and a storable UV candidate with proven exact full-domain agreement. Tested on an offset plane and a tilted chart with a weighted quadratic."
       ]
     }
   ],
