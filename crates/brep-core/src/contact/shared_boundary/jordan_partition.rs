@@ -54,7 +54,12 @@ pub(crate) fn certify(
     limit: usize,
 ) -> (Option<Certificate>, usize) {
     let mut cells = 0;
-    let result = prove(model, faces, limit, &mut cells);
+    let mut ordered = faces;
+    ordered.sort_unstable();
+    let result = prove(model, ordered, limit, &mut cells).map(|mut certificate| {
+        certificate.faces = faces;
+        certificate
+    });
     (result, cells)
 }
 
@@ -101,9 +106,8 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         return None;
     }
 
-    let mut projection = None;
-    let mut orientation = None;
-    for (s, wire) in surfaces.into_iter().zip(wires) {
+    let mut proposals = [None; 2];
+    for ((s, wire), proposal) in surfaces.into_iter().zip(wires).zip(&mut proposals) {
         let [u0, u1] = [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]];
         let [v0, v1] = [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]];
         let corners = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
@@ -133,39 +137,57 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         }
         let proof = certify_chart(s, remaining).ok()?;
         charge(cells, limit, proof.spans)?;
-        let own_projection = match proof.reason {
-            "global-rational-jordan-jacobian" | "global-rational-multispan-jordan-jacobian" => {
-                proof.projection.map(Projection::Coordinate)
-            }
-            "global-exact-oblique-jordan-jacobian" => {
+        *proposal = match (proof.proven, proof.reason) {
+            (
+                true,
+                "global-rational-jordan-jacobian" | "global-rational-multispan-jordan-jacobian",
+            ) => proof.projection.map(Projection::Coordinate),
+            (true, "global-exact-oblique-jordan-jacobian") => {
                 proof.linear_projection.map(Projection::Linear)
             }
             _ => None,
         };
-        let chart_projection = if let Some(shared) = projection {
-            let shared: Projection = shared;
-            if own_projection != Some(shared) {
-                let (certified, used) =
-                    certify_jordan_projection(s, shared.rows(), limit - *cells).ok()?;
-                charge(cells, limit, used)?;
-                if !certified {
-                    return None;
-                }
+    }
+    let mut candidates = proposals;
+    if candidates[0] == candidates[1] {
+        candidates[1] = None;
+    }
+    for projection in candidates.into_iter().flatten() {
+        if common_orientation(surfaces, proposals, projection, cells, limit).is_some()
+            && projected_exterior(model, wires, *common, projection, cells, limit).is_some()
+        {
+            return edge_certificate(model, faces, edge, cells, limit);
+        }
+    }
+    None
+}
+
+fn common_orientation(
+    surfaces: [&crate::Surface; 2],
+    proposals: [Option<Projection>; 2],
+    projection: Projection,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let mut orientation = None;
+    for (s, proposed) in surfaces.into_iter().zip(proposals) {
+        if proposed != Some(projection) {
+            let (certified, used) =
+                certify_jordan_projection(s, projection.rows(), limit - *cells).ok()?;
+            charge(cells, limit, used)?;
+            if !certified {
+                return None;
             }
-            shared
-        } else {
-            own_projection?
-        };
-        projection = Some(chart_projection);
+        }
         charge(cells, limit, 1)?;
-        // The Jordan route proves a nonzero Jacobian. Clamping and positive
-        // weights give its sign at the corner from these three poles.
+        // Strict rank on the original chart makes the corner sign valid
+        // throughout its projected image.
         let points = [
             &s.control_points[0][0],
             &s.control_points[1][0],
             &s.control_points[0][1],
         ];
-        let [a, b, c] = points.map(|p| chart_projection.point(p));
+        let [a, b, c] = points.map(|p| projection.point(p));
         let [[ax, ay], [bx, by], [cx, cy]] = [a?, b?, c?];
         let sign = super::orient(&[&[ax, ay, 0.], &[bx, by, 0.], &[cx, cy, 0.]], Some([0, 1]))?;
         if sign == Sign::Zero || orientation.is_some_and(|p| p != sign) {
@@ -173,10 +195,19 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         }
         orientation = Some(sign);
     }
+    Some(())
+}
 
-    let projection = projection?;
+fn projected_exterior(
+    model: &Model,
+    wires: [&[crate::Coedge]; 2],
+    common: [usize; 2],
+    projection: Projection,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
     let mut exterior = Vec::with_capacity(6);
-    for (wire, start) in wires.into_iter().zip(*common) {
+    for (wire, start) in wires.into_iter().zip(common) {
         for offset in 1..4 {
             charge(cells, limit, 1)?;
             let c = &wire[(start + offset) % 4];
@@ -230,6 +261,16 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
     // so the two interiors cannot overlap. Nor can either interior contain the
     // other's boundary by openness and density. Simplicity of the exterior and
     // the two original loops leaves only the authored seam as boundary contact.
+    Some(())
+}
+
+fn edge_certificate(
+    model: &Model,
+    faces: [usize; 2],
+    edge: usize,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<Certificate> {
     let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     for pole in &model.edges[edge].curve.control_points {
         charge(cells, limit, 1)?;

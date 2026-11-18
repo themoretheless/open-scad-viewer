@@ -216,6 +216,7 @@ projection and orientation on both faces and proves simplicity of the
 combined exterior after the opposite edge traversals cancel. This also
 covers faces on different spatial carriers. For an oblique projection,
 the exterior control points must project exactly under the certified map.
-When the faces prefer different planes, the audit can replay the first
-face's projection on the second face within the same budget. This replay
-proves the entire second chart before the exterior test uses the map.
+When the faces prefer different planes, the audit tries the projections
+proposed by either face. Each trial proves both complete charts and their
+combined exterior in that plane. The trials share one budget and follow
+the same order when the caller swaps the faces.

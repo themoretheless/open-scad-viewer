@@ -538,6 +538,7 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         let (contact, used) = certify(&diagonal, [0, 4], 10_000);
         assert_eq!(contact.unwrap().edges.len(), 1);
         assert!(certify(&diagonal, [0, 4], used - 1).0.is_none());
+        check_projection_from_either_face(&reference);
     }
 
     let mut retained = reference.clone();
@@ -566,4 +567,34 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
     assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
         "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
+}
+
+fn check_projection_from_either_face(reference: &crate::Model) {
+    let mut spatial = crate::transform::affine(reference, [
+        [1., 0., 0., 0.], [0., 1., 2., 0.],
+        [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ]).unwrap();
+    // XY is the preferred projection of the lower wall. A displacement
+    // at an interior pole folds XY on the upper wall but preserves XZ.
+    spatial.0.faces[4].surface.control_points[1][6][1] -= 32_768.;
+    spatial.validate().unwrap();
+    use nurbs_core::surface_injectivity::{certify_chart, certify_jordan_projection};
+    let lower = &spatial.faces[0].surface;
+    let upper = &spatial.faces[4].surface;
+    assert_eq!(certify_chart(lower, 10_000).unwrap().projection, Some([0, 1]));
+    assert_eq!(certify_chart(upper, 10_000).unwrap().projection, Some([0, 2]));
+    assert!(!certify_jordan_projection(upper, [[1, 0, 0], [0, 1, 0]], 10_000).unwrap().0);
+
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (forward, used) = certify(&spatial, [0, 4], 10_000);
+    let (reverse, reverse_used) = certify(&spatial, [4, 0], 10_000);
+    let [forward, reverse] = [forward.unwrap(), reverse.unwrap()];
+    assert_eq!(forward.faces, [0, 4]);
+    assert_eq!(reverse.faces, [4, 0]);
+    assert_eq!(forward.edges, reverse.edges);
+    assert_eq!(forward.contact_enclosure, reverse.contact_enclosure);
+    assert_eq!(used, reverse_used);
+    for faces in [[0, 4], [4, 0]] {
+        assert!(certify(&spatial, faces, used - 1).0.is_none());
+    }
 }
