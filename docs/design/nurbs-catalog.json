@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 920,
-  "unallocatedCount": 80,
+  "specifiedCount": 921,
+  "unallocatedCount": 79,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21117,6 +21117,24 @@
       ],
       "remainingQualification": [
         "Ordered segments around the Z axis. Tests up to 65536 repeats sharing the corresponding rational basis. No automatic ordering or axis fitting."
+      ]
+    },
+    {
+      "id": "NURBS-0921",
+      "name": "Побитовое восстановление NURBS-профиля шестерни из сектора и упакованных поправок",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::encode",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
       ]
     }
   ],

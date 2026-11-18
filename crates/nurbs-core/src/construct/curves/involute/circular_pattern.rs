@@ -149,3 +149,62 @@ impl CircularSectorPattern {
         self.pieces.iter().map(|piece| piece.instance(index).map(|(curve, _)| curve)).collect()
     }
 }
+
+/// Lossless representation for ordered copies with identical knot layouts.
+/// Rotated seed coordinates predict each copy; byte-packed XOR residuals retain
+/// every input coordinate and weight bit, including signed zero.
+pub struct LosslessSectorPattern {
+    pattern: CircularSectorPattern,
+    residuals: Vec<Vec<u8>>,
+}
+
+impl LosslessSectorPattern {
+    pub fn encode(segments: &[Curve], pieces_per_sector: usize) -> Result<Self> {
+        check(pieces_per_sector > 0 && !segments.is_empty() && segments.len() % pieces_per_sector == 0,
+              "Expected complete profile sectors")?;
+        let count = segments.len() / pieces_per_sector;
+        let pieces = segments[..pieces_per_sector].iter().map(|c| CircularProfilePattern::new(c.clone(), count))
+            .collect::<Result<Vec<_>>>()?;
+        let pattern = CircularSectorPattern { pieces, sector_count: count };
+        let mut residuals = Vec::with_capacity(count - 1);
+        for (i, sector) in segments.chunks_exact(pieces_per_sector).enumerate().skip(1) {
+            let mut bytes = Vec::new();
+            for (actual, predicted) in sector.iter().zip(pattern.sector(i)?) {
+                actual.validate()?;
+                check(actual.degree == predicted.degree && actual.periodic == predicted.periodic &&
+                    actual.knots.len() == predicted.knots.len() &&
+                    actual.knots.iter().zip(&predicted.knots).all(|(a,b)| a.to_bits() == b.to_bits()) &&
+                    actual.control_points[0].len() == predicted.control_points[0].len(),
+                    "Lossless sector requires matching spline layout")?;
+                let values = actual.control_points.iter().flatten().chain(&actual.weights);
+                let predictions = predicted.control_points.iter().flatten().chain(&predicted.weights);
+                for (x,y) in values.zip(predictions) {
+                    let delta = x.to_bits() ^ y.to_bits();
+                    let size = (64 - delta.leading_zeros()).div_ceil(8) as usize;
+                    bytes.push(size as u8);
+                    bytes.extend_from_slice(&delta.to_le_bytes()[..size]);
+                }
+            }
+            residuals.push(bytes);
+        }
+        Ok(Self { pattern, residuals })
+    }
+
+    pub fn residual_bytes(&self) -> usize { self.residuals.iter().map(Vec::len).sum() }
+
+    pub fn sector(&self, index: usize) -> Result<Vec<Curve>> {
+        let mut sector = self.pattern.sector(index)?;
+        if index == 0 { return Ok(sector); }
+        let mut bytes = self.residuals[index-1].as_slice();
+        for curve in &mut sector {
+            for value in curve.control_points.iter_mut().flatten().chain(&mut curve.weights) {
+                let size = bytes[0] as usize;
+                let mut mask = [0;8];
+                mask[..size].copy_from_slice(&bytes[1..1+size]);
+                *value = f64::from_bits(value.to_bits() ^ u64::from_le_bytes(mask));
+                bytes = &bytes[1+size..];
+            }
+        }
+        Ok(sector)
+    }
+}

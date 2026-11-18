@@ -67,3 +67,30 @@ fn represented_small_gear_profile_has_independent_exact_certificate() {
         assert_eq!(verified.nesting_depth(), &[0]);
     }
 }
+
+#[test]
+fn spinner_sun_profile_roundtrips_through_lossless_sector_pattern() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { module: 1.5, teeth: 32, clearance: 0.1, herringbone: true,
+        helix_angle_deg: -35., ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let outline = &wires[0];
+    let width = outline.len()/spec.teeth;
+    let pattern = LosslessSectorPattern::encode(outline,width).unwrap();
+    let mut raw = 0;
+    for (i,sector) in outline.chunks_exact(width).enumerate() {
+        for (a,b) in sector.iter().zip(pattern.sector(i).unwrap()) {
+            assert_eq!(a.degree,b.degree);
+            assert_eq!(a.periodic,b.periodic);
+            let bits = |c: &nurbs_core::curve::Curve| c.control_points.iter().flatten()
+                .chain(&c.weights).chain(&c.knots).map(|x| x.to_bits()).collect::<Vec<_>>();
+            assert_eq!(bits(a),bits(&b));
+            if i > 0 { raw += bits(a).len()*8; }
+        }
+    }
+    eprintln!("sun profile: {} segments, {} seed pieces, {} residual bytes vs {} repeated numeric bytes",
+        outline.len(),width,pattern.residual_bytes(),raw);
+    assert!(pattern.residual_bytes() < raw);
+    assert!(pattern.sector(spec.teeth).is_err());
+    assert!(LosslessSectorPattern::encode(outline,0).is_err());
+}
