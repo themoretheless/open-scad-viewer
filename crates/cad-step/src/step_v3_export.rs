@@ -329,9 +329,24 @@ fn export_step_direct_impl(
         let p = w.point(&v.point);
         vertex_entities.push(w.emit(format!("VERTEX_POINT('',#{p})")));
     }
+    // At a shared pole several UV intervals map to one spatial vertex.
+    // Give each incident face its own carrier for unambiguous PCURVE selection.
+    let mut pole_uses = vec![0usize; model.edges.len()];
+    for coedge in model.loops.iter().flat_map(|wire| &wire.coedges) {
+        if model.edges[coedge.edge].degenerate {
+            pole_uses[coedge.edge] += 1;
+        }
+    }
     let mut surface_cache = BTreeMap::<String, usize>::new();
     let mut surfaces = Vec::new();
     for face in &model.faces {
+        if ap242_composition && std::iter::once(&face.outer).chain(&face.holes)
+            .flat_map(|&wire| &model.loops[wire].coedges)
+            .any(|coedge| pole_uses[coedge.edge] > 2)
+        {
+            surfaces.push(emit_surface_v5(&mut w, &face.surface));
+            continue;
+        }
         let key = format!("{:?}", face.surface);
         let id = if let Some(id) = surface_cache.get(&key) {
             *id
