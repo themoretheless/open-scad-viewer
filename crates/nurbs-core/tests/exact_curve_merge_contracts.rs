@@ -11398,3 +11398,30 @@ fn variable_radius_clearance_brackets_growth_and_shrinkage_contacts() {
     }
     assert!(check([-1., 0.]).is_err());
 }
+
+#[test]
+fn minimum_variable_radius_clearance_couples_the_witness_position_and_radius() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, StopReason, measure_minimum_variable_radius_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 1.], vec![2., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [SphericalObstacle { center: &[0., 0.], radius: 0.25 }];
+    let check = |budget| measure_minimum_variable_radius_spherical_clearance(
+        &curve, [0., 1.], &obstacles, [0.25, 2.25], 1e-4, budget,
+    ).unwrap();
+    let exact = 3_f64.sqrt() / 2. - 1.5;
+    let coarse = check(1);
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096);
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo < 1e-4);
+    assert!((fine.witness_parameter - (0.5 + 1. / (4. * 3_f64.sqrt()))).abs() < 0.01);
+}

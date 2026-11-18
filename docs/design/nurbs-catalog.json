@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 753,
-  "unallocatedCount": 247,
+  "specifiedCount": 754,
+  "unallocatedCount": 246,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17999,6 +17999,25 @@
       "remainingQualification": [
         "Classify clearance against balls while the moving tool radius varies affinely.",
         "Check growing and shrinking radii, analytic contact boundaries, original parameter scaling, and invalid radii.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0754",
+      "name": "Минимальный зазор инструмента с линейно меняющимся радиусом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_variable_radius_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-754-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-754-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine the signed gap minimum while evaluating radius and position at the same witness parameter.",
+        "Check shifted analytic minimum, synchronized radius and position witness, coarse enclosure and requested tolerance.",
         "WASM and application integration are separate."
       ]
     }

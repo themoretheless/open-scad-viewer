@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0754",
+  "testedBase": "11dee72a28b7dce34fdd835de6462e5c2c678a43",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 379,
+  "scope": [
+    "Refine the signed gap minimum while evaluating radius and position at the same witness parameter.",
+    "Check shifted analytic minimum, synchronized radius and position witness, coarse enclosure and requested tolerance."
+  ],
+  "logSha256": "e9e5ccb88f686e9a4411b0dfee41bbe00099209c066d599fa5e4f64046104936",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "dfb50d75d8780078ee1ad79c6b96109e72076b047d5887391dab0a30a1fa0aa2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "aa7ec7da46b0822b6e3c002b790e0aba618d3e402a1195c3356b287829e70a20"
+  }
+}

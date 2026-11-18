@@ -2393,7 +2393,7 @@ pub fn measure_minimum_spherical_clearance(
     let obstacles = prepare_spherical_obstacles(curve, obstacles, tool_radius)?;
     measure_minimum_radial_clearance(
         curve, interval, tolerance, max_cells, obstacles.len(),
-        |point, index| {
+        |point, index, _| {
             let (center, radius) = &obstacles[index];
             let (lo, hi) = box_distance(point, center)?;
             Interval::new(lo, hi)?.sub(*radius)
@@ -2407,7 +2407,7 @@ fn measure_minimum_radial_clearance(
     tolerance: f64,
     max_cells: usize,
     obstacle_count: usize,
-    gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+    gap: impl Fn(&[Interval], usize, [f64; 2]) -> Result<Interval>,
 ) -> Result<SphericalMinimumClearance> {
     let measure = |span, domain: [f64; 2], witness: &mut (f64, f64, usize)| -> Result<f64> {
         let jets = curve_jets::enclose(curve, span, domain)?;
@@ -2415,9 +2415,9 @@ fn measure_minimum_radial_clearance(
         let end = curve_jets::endpoint(curve, span, domain, true)?;
         let mut lower = f64::INFINITY;
         for index in 0..obstacle_count {
-            lower = lower.min(gap(&jets[0], index)?.lo);
+            lower = lower.min(gap(&jets[0], index, domain)?.lo);
             for (point, parameter) in [(&start[0], domain[0]), (&end[0], domain[1])] {
-                let bound = gap(point, index)?.hi;
+                let bound = gap(point, index, [parameter; 2])?.hi;
                 if bound < witness.0 {
                     *witness = (bound, parameter, index);
                 }
@@ -3521,7 +3521,7 @@ pub fn measure_minimum_capsule_clearance(
     let obstacles = prepare_capsules(curve, obstacles, tool_radius)?;
     measure_minimum_radial_clearance(
         curve, interval, tolerance, max_cells, obstacles.len(),
-        |point, index| obstacles[index].gap(point),
+        |point, index, _| obstacles[index].gap(point),
     )
 }
 
@@ -3636,7 +3636,7 @@ pub fn measure_minimum_box_clearance(
     validate_box_obstacles(curve, obstacles)?;
     measure_minimum_radial_clearance(
         curve, interval, tolerance, max_cells, obstacles.len(),
-        |point, index| {
+        |point, index, _| {
             let obstacle = obstacles[index];
             solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
         },
@@ -3713,7 +3713,7 @@ pub fn measure_minimum_oriented_box_clearance(
     let obstacles = prepare_oriented_boxes(curve, obstacles)?;
     measure_minimum_radial_clearance(
         curve, interval, tolerance, max_cells, obstacles.len(),
-        |point, index| obstacles[index].gap(point, tool_radius),
+        |point, index, _| obstacles[index].gap(point, tool_radius),
     )
 }
 
@@ -3819,7 +3819,7 @@ pub fn measure_minimum_toolpath_clearance(
     let obstacles = prepare_toolpath_obstacles(curve, obstacles, tool_radius)?;
     measure_minimum_radial_clearance(
         curve, interval, tolerance, max_cells, obstacles.len(),
-        |point, index| obstacles[index].gap(point, tool_radius),
+        |point, index, _| obstacles[index].gap(point, tool_radius),
     )
 }
 
@@ -4534,10 +4534,7 @@ pub fn partition_variable_radius_spherical_clearance(
     curve.validate()?;
     validate_travel_interval(curve, interval)?;
     let obstacles = prepare_spherical_obstacles(curve, obstacles, 0.)?;
-    let start = exact_motion_operand(interval[0])?;
-    let width = exact_motion_operand(interval[1])? - &start;
-    let radius_start = exact_motion_operand(tool_radii[0])?;
-    let slope = (exact_motion_operand(tool_radii[1])? - &radius_start) / width;
+    let radius_range = linear_tool_radius(interval, tool_radii)?;
     let initial = active_spans(curve, interval).map(|span| (span, [
         curve.knots[span].max(interval[0]),
         curve.knots[span + 1].min(interval[1]),
@@ -4545,15 +4542,7 @@ pub fn partition_variable_radius_spherical_clearance(
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_cells,
         |span, domain| {
-            let radius_at = |parameter| -> Result<_> {
-                Ok(&radius_start + &slope * (exact_motion_operand(parameter)? - &start))
-            };
-            let a = radius_at(domain[0])?;
-            let b = radius_at(domain[1])?;
-            let tool = Interval::new(
-                round_motion_duration(std::cmp::min(&a, &b), false)?,
-                round_motion_duration(std::cmp::max(&a, &b), true)?,
-            )?;
+            let tool = radius_range(domain)?;
             let jets = curve_jets::enclose(curve, span, domain)?;
             let gaps = obstacles.iter().map(|(center, radius)| {
                 let (lo, hi) = box_distance(&jets[0], center)?;
@@ -4572,6 +4561,59 @@ pub fn partition_variable_radius_spherical_clearance(
     Ok(SphericalClearancePartition {
         cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
         work_obstacle_cells: work_cells * obstacles.len(),
+    })
+}
+
+/// Refine the minimum signed gap while the tool radius varies linearly.
+/// The witness evaluates position and radius at the same source parameter.
+pub fn measure_minimum_variable_radius_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radii: [f64; 2],
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, 0.)?;
+    let radius_range = linear_tool_radius(interval, tool_radii)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, domain| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)?.sub(radius_range(domain)?)
+        },
+    )
+}
+
+fn linear_tool_radius(
+    interval: [f64; 2],
+    tool_radii: [f64; 2],
+) -> Result<impl Fn([f64; 2]) -> Result<Interval>> {
+    let start = exact_motion_operand(interval[0])?;
+    let width = exact_motion_operand(interval[1])? - &start;
+    let radius_start = exact_motion_operand(tool_radii[0])?;
+    let slope = (exact_motion_operand(tool_radii[1])? - &radius_start) / width;
+    Ok(move |domain: [f64; 2]| {
+            let radius_at = |parameter| -> Result<_> {
+                Ok(&radius_start + &slope * (exact_motion_operand(parameter)? - &start))
+            };
+            let a = radius_at(domain[0])?;
+            let b = radius_at(domain[1])?;
+            Interval::new(
+                round_motion_duration(std::cmp::min(&a, &b), false)?,
+                round_motion_duration(std::cmp::max(&a, &b), true)?,
+            )
     })
 }
 
