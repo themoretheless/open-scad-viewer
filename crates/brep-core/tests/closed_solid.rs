@@ -10,9 +10,9 @@ fn periodic_cylinder_qualifies_as_closed_material_through_its_owned_rims() {
     let world = model.edges[edge_index].curve.domain();
     let edge = &mut model.loops[0].coedges[1];
     edge.pcurve = nurbs_core::curve::Curve {
-        degree: 1, knots: vec![0., 0., 4., 4.],
-        control_points: vec![vec![4., -1.], vec![4., 3.]],
-        weights: vec![1.; 2], periodic: false,
+        degree: 1, knots: vec![0., 0., 1., 2., 4., 4.],
+        control_points: vec![vec![3., -1.], vec![4., 0.], vec![4., 1.], vec![3., 3.]],
+        weights: vec![1.; 4], periodic: false,
     };
     *edge = edge.clone().with_trim(brep_topology::CoedgeTrim {
         curve_parameter: world,

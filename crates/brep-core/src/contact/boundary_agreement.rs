@@ -273,10 +273,17 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
                         curve, &coedge.pcurve, surface, coedge.reversed, max_work - report.work,
                     )?
                 } else {
-                    curve_surface_agreement::verify_exact_trimmed(
+                    let proof = curve_surface_agreement::verify_exact_trimmed(
                         curve, &coedge.pcurve, surface, coedge.reversed,
                         trim.curve_parameter, trim.pcurve_parameter, max_work - report.work,
-                    )?
+                    )?;
+                    if proof.is_none() && trim.curve_parameter == curve.domain() {
+                        restricted_periodic_lift(
+                            curve, coedge, surface, trim.pcurve_parameter, &mut report.work, max_work,
+                        )?
+                    } else {
+                        proof
+                    }
                 }
             }else{
                 curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
@@ -295,6 +302,36 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
     }
     Ok(report)
 }
+/// The interval is bound to a complete original world edge by the caller.
+/// Exact restriction preserves the UV clock, including its traversal direction.
+fn restricted_periodic_lift(
+    curve: &crate::Curve,
+    coedge: &crate::Coedge,
+    surface: &crate::Surface,
+    [a, b]: [f64; 2],
+    work: &mut u64,
+    limit: u64,
+) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    let range = [a.min(b), a.max(b)];
+    if !(surface.periodic_u || surface.periodic_v)
+        || coedge.pcurve.periodic
+        || range == coedge.pcurve.domain()
+        || *work == limit
+    {
+        return Ok(None);
+    }
+    let restriction = nurbs_core::editing::exact_curve_merge::clamp_exact_curve_on(
+        &coedge.pcurve, range, limit - *work,
+    )?;
+    *work += restriction.work_used;
+    let Some(pcurve) = restriction.curve.filter(|_| *work < limit) else {
+        return Ok(None);
+    };
+    curve_surface_agreement::verify_exact(
+        curve, &pcurve, surface, coedge.reversed ^ (a > b), limit - *work,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

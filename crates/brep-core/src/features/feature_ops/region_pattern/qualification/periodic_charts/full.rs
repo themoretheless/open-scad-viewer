@@ -6,7 +6,7 @@ pub(super) fn verify(
     model: &Model,
     face: usize,
     bounds: [[f64; 2]; 2],
-    active: &[Option<[[f64; 2]; 2]>],
+    traces: &[ChartTrace<'_>],
     natural: [[f64; 2]; 2],
     remaining: &mut usize,
     pairs: &mut usize,
@@ -35,49 +35,51 @@ pub(super) fn verify(
     }
     let mut ranges: [Vec<[f64; 2]>; 4] = std::array::from_fn(|_| Vec::new());
     let mut shores: [BTreeMap<usize, bool>; 2] = std::array::from_fn(|_| BTreeMap::new());
-    for (c, active) in model.loops[f.outer].coedges.iter().zip(active) {
-        let p = &c.pcurve;
-        let d = p.domain();
-        let degree = p.degree;
-        let n = p.control_points.len();
-        let (side, range) = if let Some([a, b]) = active {
-            let side = (0..4)
-                .find(|i| a[i / 2] == bounds[i / 2][i % 2] && a[i / 2] == b[i / 2])
-                .ok_or_else(|| error("Active full-lap UV boundary is not a rectangle side"))?;
-            let k = 1 - side / 2;
-            if a[k] == b[k] {
-                return Err(error("Active full-lap boundary side is empty"));
+    for (c, trace) in model.loops[f.outer].coedges.iter().zip(traces) {
+        let (side, range) = match trace {
+            ChartTrace::Segment([a, b]) => {
+                let side = (0..4)
+                    .find(|i| a[i / 2] == bounds[i / 2][i % 2] && a[i / 2] == b[i / 2])
+                    .ok_or_else(|| error("Active full-lap UV boundary is not a rectangle side"))?;
+                let k = 1 - side / 2;
+                if a[k] == b[k] {
+                    return Err(error("Active full-lap boundary side is empty"));
+                }
+                (side, [a[k].min(b[k]), a[k].max(b[k])])
             }
-            (side, [a[k].min(b[k]), a[k].max(b[k])])
-        } else {
-            if !p.knots[..=degree].iter().all(|k| *k == d[0])
-                || !p.knots[n..].iter().all(|k| *k == d[1])
-            {
-                return Err(error(
-                    "Full-lap rectangle needs exact clamped actual UV endpoints",
-                ));
-            }
-            let side = (0..4)
-                .find(|i| {
-                    p.control_points
+            ChartTrace::Curve(p) => {
+                let d = p.domain();
+                let degree = p.degree;
+                let n = p.control_points.len();
+                if !p.knots[..=degree].iter().all(|k| *k == d[0])
+                    || !p.knots[n..].iter().all(|k| *k == d[1])
+                {
+                    return Err(error(
+                        "Full-lap rectangle needs exact clamped actual UV endpoints",
+                    ));
+                }
+                let side = (0..4)
+                    .find(|i| {
+                        p.control_points
+                            .iter()
+                            .all(|v| v[i / 2] == bounds[i / 2][i % 2])
+                    })
+                    .ok_or_else(|| error("Full-lap UV boundary is not an exact rectangle side"))?;
+                let k = 1 - side / 2;
+                let a = p.control_points[0][k];
+                let b = p.control_points[n - 1][k];
+                let range = [a.min(b), a.max(b)];
+                if a == b
+                    || p.control_points
                         .iter()
-                        .all(|v| v[i / 2] == bounds[i / 2][i % 2])
-                })
-                .ok_or_else(|| error("Full-lap UV boundary is not an exact rectangle side"))?;
-            let k = 1 - side / 2;
-            let a = p.control_points[0][k];
-            let b = p.control_points[n - 1][k];
-            let range = [a.min(b), a.max(b)];
-            if a == b
-                || p.control_points
-                    .iter()
-                    .any(|v| v[k] < range[0] || v[k] > range[1])
-            {
-                return Err(error(
-                    "Full-lap rectangle side has unproved original coverage",
-                ));
+                        .any(|v| v[k] < range[0] || v[k] > range[1])
+                {
+                    return Err(error(
+                        "Full-lap rectangle side has unproved original coverage",
+                    ));
+                }
+                (side, range)
             }
-            (side, range)
         };
         ranges[side].push(range);
         if side / 2 == axis && shores[side % 2].insert(c.edge, c.reversed).is_some() {
@@ -135,8 +137,8 @@ pub(super) fn verify(
                 .source_frame
                 .ok_or_else(|| error("Collapsed quotient has no original source frame"))?[3];
             let mut vertex = None;
-            for c in &model.loops[f.outer].coedges {
-                if !c.pcurve.control_points.iter().all(|p| p[other] == shore) {
+            for (c, trace) in model.loops[f.outer].coedges.iter().zip(traces) {
+                if !trace.poles().all(|p| p[other] == shore) {
                     continue;
                 }
                 let e = &model.edges[c.edge];

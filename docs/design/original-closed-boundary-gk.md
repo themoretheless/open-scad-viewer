@@ -249,7 +249,14 @@ carrier on a quotient shore. The audit proves the ordered active
 segment and uses its exact endpoints for chart coverage. It checks
 that opposite shores use the same full world edges after exact lift
 and trim validation. The original quotient still needs an independent
-injectivity and regularity proof.
+injectivity and regularity proof. When the stored carrier has unused bends
+or the active contour is curved, the audit can use an exactly clamped
+restriction on the original parameter interval. Its poles bound the active
+trim chart, and the same restriction identifies an outer rectangle side or
+a collapsed shore when applicable. The exact lift check can also use the
+restriction to prove equality over the complete spatial edge, with the
+authored traversal direction and sheet endpoints. Restriction work is
+charged to the corresponding lift or chart allowance.
 
 The complete G1/G2 and classified seam audits can recover a full natural
 side from the active interval of a rational UV carrier. On a periodic
