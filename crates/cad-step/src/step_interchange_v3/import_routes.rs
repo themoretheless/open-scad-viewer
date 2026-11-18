@@ -659,6 +659,12 @@ pub struct StepSharedAssembly {
     occurrences: Vec<StepAssemblyOccurrence>,
 }
 
+/// Directional changes of material in assembly coordinates.
+pub struct StepMaterialDelta {
+    pub added: Model,
+    pub removed: Model,
+}
+
 /// Inner and outer unions of positive-length material spans in ray parameters.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StepRayMaterialCoverage {
@@ -968,6 +974,16 @@ impl StepSharedAssembly {
         let first = self.materialize(first)?;
         let second = self.materialize(second)?;
         brep_core::boolean(&first, &second, "intersection")
+    }
+
+    /// Compare two placed versions of a solid, preserving both directions of change.
+    pub fn material_delta(&self, before: usize, after: usize) -> Result<StepMaterialDelta> {
+        let before = self.materialize(before)?;
+        let after = self.materialize(after)?;
+        Ok(StepMaterialDelta {
+            added: brep_core::boolean(&after, &before, "difference")?,
+            removed: brep_core::boolean(&before, &after, "difference")?,
+        })
     }
 
     /// Fuse the selected occurrences in assembly coordinates, retaining disjoint material.

@@ -3944,3 +3944,27 @@ fn fusion_counts_overlapping_and_coincident_occurrences_once() {
     assert!(scene.fuse_occurrences(&[1, 4]).is_err());
     assert!(scene.fuse_occurrences(&[0; 257]).is_err());
 }
+
+#[test]
+fn placed_revision_delta_distinguishes_added_and_removed_stock() {
+    let before = brep_core::cuboid([0.; 3], [3., 2., 2.]).unwrap();
+    let after = brep_core::cuboid([0.; 3], [4., 2., 2.]).unwrap();
+    let placed = |definition, x| crate::StepAssemblyOccurrence { definition, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![before, after],
+        vec![placed(0, 10.), placed(1, 11.), placed(0, 10.)]).unwrap();
+    let delta = scene.material_delta(0, 1).unwrap();
+    for (part, volume, xmin, xmax) in [(delta.added, 8., 13., 15.), (delta.removed, 4., 10., 11.)] {
+        assert_eq!(part.validate().unwrap().boundary_edge_count, 0);
+        let mass = brep_core::analysis::mass_properties(&part, 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - volume).abs() < 1e-8);
+        let xs = part.vertices.iter().map(|v| v.point[0]);
+        assert_eq!(xs.clone().fold(f64::INFINITY, f64::min), xmin);
+        assert_eq!(xs.fold(f64::NEG_INFINITY, f64::max), xmax);
+    }
+    let unchanged = scene.material_delta(0, 2).unwrap();
+    assert!(unchanged.added.bodies.is_empty() && unchanged.removed.bodies.is_empty());
+    assert!(scene.material_delta(3, 0).is_err());
+    assert!(scene.material_delta(0, 3).is_err());
+}

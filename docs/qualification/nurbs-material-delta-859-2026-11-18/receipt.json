@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0859",
+  "testedBase": "7b9ac9cdde9edefd7e662204f028edea5ba9f088",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 206,
+  "scope": [
+    "Directional material comparison of placed solids in assembly coordinates.",
+    "Two translated box revisions add 8 cubic millimetres and remove 4 in distinct verified regions. Equal placements produce empty changes; invalid references refuse."
+  ],
+  "logSha256": "64407661134e825a6d8b6c5e5930312fedfec7513e1fa84257bedb90609c37a9",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "074b04230d086fc4984e9ecce57707c1fe0f734059bdcdb0e153e5fbdb99f48e",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "8644f3b0d310c7dd2dcdfcffb64fb0cf4e54e28027ef25a1cd01f7b916d04102",
+    "crates/cad-step/src/lib.rs": "a125273756adb2763bce07a64de34f7096050f8fe38ce06b2c57126680801935",
+    "crates/cad-step/src/step_interchange_v3.rs": "911754bfe68334539fa86091efc151d174ecad5de56381cf199667b1abb43c08"
+  }
+}

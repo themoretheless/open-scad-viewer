@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 858,
-  "unallocatedCount": 142,
+  "specifiedCount": 859,
+  "unallocatedCount": 141,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20025,6 +20025,25 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-assembly-fusion-858-2026-11-18/receipt.json",
         "docs/qualification/nurbs-assembly-fusion-858-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0859",
+      "name": "Сравнение редакций детали по добавленному и удалённому материалу",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::material_delta",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "docs/qualification/nurbs-material-delta-859-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-material-delta-859-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
