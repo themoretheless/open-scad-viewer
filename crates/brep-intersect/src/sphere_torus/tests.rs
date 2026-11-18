@@ -836,3 +836,94 @@ fn drill_refuses_a_cylinder_that_grazes_the_teeth() {
     let error = cylinder_drill_boolean(&spur, &drill, "difference").unwrap_err();
     assert_eq!(error.code, "BREP_UNSUPPORTED_OPERATION");
 }
+
+#[test]
+fn tilted_and_off_axis_torus_pairs_balance_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let big = brep_core::analytic::torus(3., 1.).unwrap();
+    let (sin, cos) = 1.0_f64.sin_cos();
+    let cases: [(Model, f64); 3] = [
+        // Parallel axes, shifted off the axis and along it: one loop.
+        (
+            translated(
+                &brep_core::analytic::torus(3., 1.).unwrap(),
+                [4.5, 0.4, 0.3],
+            ),
+            2. * PI * PI * 3.,
+        ),
+        // A smaller ring crossing the tube twice: three loops.
+        (
+            translated(
+                &brep_core::analytic::torus(2., 0.5).unwrap(),
+                [2.2, 0.4, 0.3],
+            ),
+            2. * PI * PI * 2. * 0.25,
+        ),
+        // A smaller ring tilted about x, biting into the tube.
+        (
+            brep_core::transform::affine(
+                &brep_core::analytic::torus(2., 0.5).unwrap(),
+                [
+                    [1., 0., 0., 2.],
+                    [0., cos, -sin, 0.2],
+                    [0., sin, cos, 0.1],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap(),
+            2. * PI * PI * 2. * 0.25,
+        ),
+    ];
+    let va = 2. * PI * PI * 3.;
+    for (index, (other, vb)) in cases.into_iter().enumerate() {
+        let run = |a: &Model, b: &Model, op: &str| {
+            torus_torus_boolean(a, b, op).unwrap_or_else(|e| panic!("case {index} {op}: {e:?}"))
+        };
+        let (u, i, d, r) = (
+            run(&big, &other, "union"),
+            run(&big, &other, "intersection"),
+            run(&big, &other, "difference"),
+            run(&other, &big, "difference"),
+        );
+        for m in [&u, &i, &d, &r] {
+            m.validate().unwrap();
+        }
+        let (u, i, d, r) = (volume(&u), volume(&i), volume(&d), volume(&r));
+        let tol = 1e-3 * (va + vb);
+        assert!(i > 0. && i < va.min(vb), "case {index}: {i}");
+        assert!(
+            (u + i - va - vb).abs() <= tol,
+            "case {index}: union {u} + {i} vs {}",
+            va + vb
+        );
+        assert!(
+            (d - (va - i)).abs() <= tol,
+            "case {index}: difference {d} vs {}",
+            va - i
+        );
+        assert!(
+            (r - (vb - i)).abs() <= tol,
+            "case {index}: reverse difference {r} vs {}",
+            vb - i
+        );
+    }
+}
+
+#[test]
+fn torus_loop_clipping_a_patch_corner_is_refused() {
+    // The contact curve passes 0.008 from the patch vertex (0, -3, 1) of the
+    // first torus and cuts the corner with a run too short for the lift
+    // certificate, so the Boolean refuses instead of guessing.
+    let first = brep_core::analytic::torus(3., 1.).unwrap();
+    let second = translated(
+        &brep_core::analytic::torus(3., 1.).unwrap(),
+        [1.5, 0.4, 0.3],
+    );
+    let error = torus_torus_boolean(&first, &second, "union").unwrap_err();
+    assert_eq!(error.code, "BREP_UNSUPPORTED_OPERATION");
+}

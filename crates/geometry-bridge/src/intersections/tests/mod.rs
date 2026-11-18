@@ -1567,7 +1567,8 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the general quartic is unsupported, no fallback.
+        // Clearly off-axis: the general quartic is traced and certified,
+        // an apart pair resolves empty and a crossing pair as traced loops.
         let off = brep_core::transform::affine(
             &at(3.),
             [
@@ -1579,10 +1580,25 @@
         )
         .unwrap();
         let off = run(&first, &off);
-        assert_eq!(
-            off["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        assert_eq!(off["unresolved"].as_array().map(Vec::len), Some(0));
+        assert_eq!(off["components"].as_array().map(Vec::len), Some(0));
+        let crossing = brep_core::transform::affine(
+            &at(0.3),
+            [
+                [1., 0., 0., 4.5],
+                [0., 1., 0., 0.4],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let crossing = run(&first, &crossing);
+        assert_eq!(crossing["unresolved"].as_array().map(Vec::len), Some(0));
+        assert!(crossing["components"].as_array().is_some_and(|c| {
+            !c.is_empty()
+                && c.iter()
+                    .all(|c| c["kind"] == "traced" && c["complete"] == true)
+        }));
         // Non-canonical operands on either side: unsupported regions.
         let refused = run(&first, &brep_core::analytic::sphere(2.).unwrap());
         assert_eq!(

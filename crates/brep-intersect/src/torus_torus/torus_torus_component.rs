@@ -17,6 +17,112 @@ pub enum TorusTorusComponent {
         /// implicit equations.
         max_sample_residual: f64,
     },
+    /// General (tilted or off-axis) contact: closed loops traced into cubic
+    /// pieces certified within `distance_bound` of both surfaces;
+    /// `complete` says whether the set is certified complete (on the
+    /// sixteen charts of the first torus). UV lifts cut at the patch seams,
+    /// certified within `lift_deviation` of the other surface.
+    Traced {
+        pieces: Vec<Curve>,
+        distance_bound: f64,
+        spans: usize,
+        complete: bool,
+        first_uv: Vec<TorusPatchCurve>,
+        second_uv: Vec<TorusPatchCurve>,
+        lift_deviation: f64,
+    },
+}
+
+/// General tilted or off-axis pair: every contact is a closed loop on both
+/// tori. Traced from seeds on the first torus, certified against both
+/// implicits, counted complete on the first torus's charts, lifted.
+fn general(
+    mut report: Report<TorusTorusComponent>,
+    domain: Vec<f64>,
+    models: [&Model; 2],
+    tori: [&CanonicalTorus; 2],
+    terms: f64,
+) -> Result<Report<TorusTorusComponent>> {
+    use crate::sphere_torus::completeness::{Quadric, certify_complete_on_torus};
+    use crate::sphere_torus::traced_lift::{Other, lift_pair};
+    let [first, second] = tori;
+    let implicit = |t: &CanonicalTorus| crate::implicit_trace::TorusImplicit {
+        center: t.center,
+        frame: [t.frame[0], t.frame[1], t.axis],
+        major: t.major,
+        minor: t.minor,
+    };
+    let (a, b) = (implicit(first), implicit(second));
+    // Seed lines: profile circles of the first torus (the polar grid
+    // parameter covers the full profile turn).
+    let seed = |theta: f64, phi: f64| -> [f64; 3] {
+        let (sp, cp) = (2. * theta).sin_cos();
+        let (sr, cr) = phi.sin_cos();
+        let rho = first.major + first.minor * cp;
+        std::array::from_fn(|k| {
+            first.center[k]
+                + rho * (cr * first.frame[0][k] + sr * first.frame[1][k])
+                + first.minor * sp * first.axis[k]
+        })
+    };
+    let traced = crate::implicit_trace::trace_intersection(
+        &a,
+        &b,
+        seed,
+        terms,
+        first.minor.min(second.minor),
+        crate::TRACE_TOLERANCE,
+    );
+    let loops = match traced {
+        Ok(loops) => loops,
+        Err(e) => {
+            let reason = if e.message.contains("tangency") {
+                UnresolvedReason::TangencyOrMultipleRoot
+            } else {
+                UnresolvedReason::UnsupportedSurface
+            };
+            report.unresolved(domain, reason);
+            return Ok(report);
+        }
+    };
+    let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+    let complete = certify_complete_on_torus(first, models[0], &Quadric::Torus(second), &all);
+    if loops.is_empty() {
+        // No loop found: an empty answer only with the certificate.
+        if !complete {
+            report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+        }
+        return Ok(report);
+    }
+    for l in loops {
+        let lifted = lift_pair(
+            Other::Torus(first),
+            models[0],
+            Other::Torus(second),
+            models[1],
+            &l.pieces,
+        );
+        let Ok((first_uv, second_uv, lift_deviation)) = lifted else {
+            report.components.clear();
+            report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+            return Ok(report);
+        };
+        let uv = |lift: Vec<(usize, Vec<Curve>)>| -> Vec<TorusPatchCurve> {
+            lift.into_iter()
+                .map(|(patch, arcs)| TorusPatchCurve { patch, arcs })
+                .collect()
+        };
+        report.components.push(TorusTorusComponent::Traced {
+            pieces: l.pieces,
+            distance_bound: l.distance_bound,
+            spans: l.spans,
+            complete,
+            first_uv: uv(first_uv),
+            second_uv: uv(second_uv),
+            lift_deviation,
+        });
+    }
+    Ok(report)
 }
 
 /// Exact circle component at height `z` (along the first torus's axis from
@@ -102,13 +208,17 @@ pub fn intersect_torus_torus(
     let axis_snap =
         64. * f64::EPSILON + first.error / (2. * first.major) + second.error / (2. * second.major);
     if tilt > axis_snap {
-        let reason = if tilt <= RECOGNITION {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if tilt <= RECOGNITION {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return general(
+            report,
+            domain,
+            [first_model, second_model],
+            [&first, &second],
+            terms,
+        );
     }
     // Coaxiality: a center-line distance at pure rounding scale snaps to
     // zero; a recognition-scale offset is near_coincidence, never forced;
@@ -124,13 +234,17 @@ pub fn intersect_torus_torus(
     };
     let dist_snap = 64. * f64::EPSILON * terms + first.error + second.error;
     if d_perp > dist_snap {
-        let reason = if d_perp <= RECOGNITION * terms {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if d_perp <= RECOGNITION * terms {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return general(
+            report,
+            domain,
+            [first_model, second_model],
+            [&first, &second],
+            terms,
+        );
     }
     let (r1, big_r1) = (first.minor, first.major);
     let (r2, big_r2) = (second.minor, second.major);

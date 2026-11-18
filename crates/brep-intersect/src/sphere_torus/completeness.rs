@@ -553,6 +553,310 @@ impl Crossings for CylinderSide<'_> {
     }
 }
 
+/// Product of two univariate Bernstein polynomials.
+fn mul1(a: &[Interval], b: &[Interval]) -> Option<Vec<Interval>> {
+    let (n, m) = (a.len() - 1, b.len() - 1);
+    let mut out = vec![Interval::point(0.); n + m + 1];
+    for (i, x) in a.iter().enumerate() {
+        for (j, y) in b.iter().enumerate() {
+            let c = binomial(n, i) * binomial(m, j) / binomial(n + m, i + j);
+            out[i + j] = out[i + j]
+                .add(x.mul(*y).ok()?.mul(Interval::point(c)).ok()?)
+                .ok()?;
+        }
+    }
+    Some(out)
+}
+
+/// One patch of a canonical ring torus: revolution quadrant `rev` with `u`
+/// the exact arc parameter of the revolution angle, profile quadrant `prof`
+/// with `v` the exact arc parameter of the profile angle. Spans are in the
+/// torus frame.
+///
+/// The iso line `u = c` is a half-plane through the axis. The iso line
+/// `v = c` is the parallel at profile angle `phi`: where `|sin phi|` is
+/// small it is cut out by the plane `z = r sin phi`, otherwise by the
+/// coaxial cylinder `rho = R + r cos phi`; each choice is transversal to
+/// the torus there, and its mirror parallel (across `phi = 90/270` resp.
+/// `phi = 0/180` degrees) is more than 80 degrees of profile away, so a
+/// box whose profile range stays within 41 degrees of `phi` counts only
+/// the wanted parallel.
+struct TorusSide<'a> {
+    spans: &'a [LocalSpan],
+    rev: usize,
+    prof: usize,
+    major: f64,
+    minor: f64,
+}
+
+impl TorusSide<'_> {
+    fn crossings(
+        &self,
+        span: &LocalSpan,
+        axis: usize,
+        c: f64,
+        lo: f64,
+        hi: f64,
+        depth: usize,
+    ) -> Option<usize> {
+        let split = |this: &Self| -> Option<usize> {
+            if depth == 0 {
+                return None;
+            }
+            let (xa, xb) = halves1(&span.x).ok()?;
+            let (ya, yb) = halves1(&span.y).ok()?;
+            let (za, zb) = halves1(&span.z).ok()?;
+            Some(
+                this.crossings(
+                    &LocalSpan {
+                        x: xa,
+                        y: ya,
+                        z: za,
+                    },
+                    axis,
+                    c,
+                    lo,
+                    hi,
+                    depth - 1,
+                )? + this.crossings(
+                    &LocalSpan {
+                        x: xb,
+                        y: yb,
+                        z: zb,
+                    },
+                    axis,
+                    c,
+                    lo,
+                    hi,
+                    depth - 1,
+                )?,
+            )
+        };
+        let rot = |x: &[Interval], y: &[Interval], cs: f64, sn: f64| -> Option<Vec<Interval>> {
+            x.iter()
+                .zip(y)
+                .map(|(x, y)| {
+                    x.mul(Interval::point(cs))
+                        .and_then(|a| a.add(y.mul(Interval::point(sn))?))
+                        .ok()
+                })
+                .collect()
+        };
+        // Revolution wedge, as on a cylinder side.
+        let mid = self.rev as f64 * QUARTER + 0.5 * QUARTER;
+        let (cm, sm) = (mid.cos(), mid.sin());
+        let big_x = rot(&span.x, &span.y, cm, sm)?;
+        let big_y = rot(&span.y, &span.x, cm, -sm)?;
+        let (xl, xh) = hull1(&big_x);
+        let (yl, yh) = hull1(&big_y);
+        if xh <= 0. || yl > xh || yh < -xh {
+            return Some(0);
+        }
+        if xl <= 0. {
+            return split(self);
+        }
+        let corners = |al: f64, ah: f64, bl: f64, bh: f64| {
+            [bl.atan2(al), bl.atan2(ah), bh.atan2(al), bh.atan2(ah)]
+                .iter()
+                .fold((f64::INFINITY, f64::NEG_INFINITY), |(l, h), a| {
+                    (l.min(*a), h.max(*a))
+                })
+        };
+        let arc_t = |phi: f64| {
+            let t = (0.5 * phi).tan();
+            let s = std::f64::consts::SQRT_2 * t / (1. - t);
+            s / (1. + s)
+        };
+        let parameter_range = |(al, ah): (f64, f64)| {
+            (
+                arc_t(al + 0.5 * QUARTER) - 1e-12,
+                if ah + 0.5 * QUARTER >= QUARTER {
+                    f64::INFINITY
+                } else {
+                    arc_t(ah + 0.5 * QUARTER) + 1e-12
+                },
+            )
+        };
+        let rev_range = parameter_range(corners(xl, xh, yl, yh));
+        // Meridian coordinates P = rho - R and Z, rotated to the middle of
+        // the profile quadrant.
+        let y_abs = (
+            if yl > 0. {
+                yl
+            } else if yh < 0. {
+                -yh
+            } else {
+                0.
+            },
+            yl.abs().max(yh.abs()),
+        );
+        let (pl, ph) = (
+            xl.hypot(y_abs.0) - self.major,
+            xh.hypot(y_abs.1) - self.major,
+        );
+        let (zl, zh) = hull1(&span.z);
+        let psi = self.prof as f64 * QUARTER + 0.5 * QUARTER;
+        let (cp, sp) = (psi.cos(), psi.sin());
+        let combine = |a: (f64, f64), ka: f64, b: (f64, f64), kb: f64| {
+            let terms = [a.0 * ka, a.1 * ka, b.0 * kb, b.1 * kb];
+            (
+                terms[0].min(terms[1]) + terms[2].min(terms[3]),
+                terms[0].max(terms[1]) + terms[2].max(terms[3]),
+            )
+        };
+        let (al, ah) = combine((pl, ph), cp, (zl, zh), sp);
+        let (bl, bh) = combine((zl, zh), cp, (pl, ph), -sp);
+        if ah <= 0. || bl > ah || bh < -ah {
+            return Some(0);
+        }
+        if al <= 0. {
+            return split(self);
+        }
+        // Local profile angle range, relative to the quadrant middle.
+        let local = corners(al, ah, bl, bh);
+        let prof_range = parameter_range(local);
+        let (g, other, isolated) = if axis == 0 {
+            let a = arc_angle(c) - 0.5 * QUARTER;
+            let (ca, sa) = (a.cos(), a.sin());
+            let g: Vec<Interval> = big_x
+                .iter()
+                .zip(&big_y)
+                .map(|(x, y)| {
+                    y.mul(Interval::point(ca))
+                        .and_then(|p| p.sub(x.mul(Interval::point(sa))?))
+                        .ok()
+                })
+                .collect::<Option<_>>()?;
+            (g, prof_range, true)
+        } else {
+            let at = arc_angle(c) - 0.5 * QUARTER;
+            // The parallel is outside the box's profile range.
+            if at < local.0 - 1e-9 || at > local.1 + 1e-9 {
+                return Some(0);
+            }
+            let phi = psi + at;
+            let g: Vec<Interval> = if phi.sin().abs() <= 0.75 {
+                let z0 = self.minor * phi.sin();
+                span.z
+                    .iter()
+                    .map(|z| z.sub(Interval::point(z0)).ok())
+                    .collect::<Option<_>>()?
+            } else {
+                let rho = self.major + self.minor * phi.cos();
+                let xx = mul1(&span.x, &span.x)?;
+                let yy = mul1(&span.y, &span.y)?;
+                xx.iter()
+                    .zip(&yy)
+                    .map(|(a, b)| {
+                        a.add(*b)
+                            .and_then(|s| s.sub(Interval::point(rho * rho)))
+                            .ok()
+                    })
+                    .collect::<Option<_>>()?
+            };
+            let window = 41f64.to_radians();
+            (g, rev_range, local.0 > at - window && local.1 < at + window)
+        };
+        let (gl, gh) = hull1(&g);
+        if gl > 0. || gh < 0. || other.1 < lo || other.0 > hi {
+            return Some(0);
+        }
+        match variations(&g) {
+            Some(0) => return Some(0),
+            Some(1) if isolated && other.0 > lo && other.1 < hi => return Some(1),
+            _ => {}
+        }
+        split(self)
+    }
+}
+
+impl Crossings for TorusSide<'_> {
+    fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize> {
+        let mut total = 0;
+        for span in self.spans {
+            for (axis, c, range) in [(0, u[0], v), (0, u[1], v), (1, v[0], u), (1, v[1], u)] {
+                let n = [0., 1e-11, -1e-11]
+                    .iter()
+                    .find_map(|&eps| self.crossings(span, axis, c + eps, range[0], range[1], 40))?;
+                total += n;
+            }
+        }
+        Some(total)
+    }
+}
+
+/// True when the traced `loops` provably are all the components of the
+/// intersection of a canonical ring torus with `other`, counted on the
+/// sixteen patches of the torus.
+pub(crate) fn certify_complete_on_torus(
+    torus: &CanonicalTorus,
+    torus_model: &Model,
+    other: &Quadric<'_>,
+    loops: &[Vec<Curve>],
+) -> bool {
+    (|| -> Result<bool> {
+        let frame = [torus.frame[0], torus.frame[1], torus.axis];
+        let mut spans = Vec::new();
+        for piece in loops.iter().flatten() {
+            for segment in piece.decompose()? {
+                let c = &segment.definition().control_points;
+                let local = |axis: [f64; 3]| -> Vec<Interval> {
+                    c.iter()
+                        .map(|p| Interval::point(dot(sub([p[0], p[1], p[2]], torus.center), axis)))
+                        .collect()
+                };
+                spans.push(LocalSpan {
+                    x: local(frame[0]),
+                    y: local(frame[1]),
+                    z: local(frame[2]),
+                });
+            }
+        }
+        for prof in 0..4 {
+            for rev in 0..4 {
+                let surface = &torus_model.faces[torus.patches[prof][rev]].surface;
+                if surface.degree_u != 2
+                    || surface.degree_v != 2
+                    || surface.knots_u != [0., 0., 0., 1., 1., 1.]
+                    || surface.knots_v != surface.knots_u
+                {
+                    return Ok(false);
+                }
+                // The chart must be this patch's own parameterization.
+                for (u, v) in [(0.2, 0.3), (0.7, 0.9)] {
+                    let p = surface.evaluate(u, v)?.point;
+                    let d = sub([p[0], p[1], p[2]], torus.center);
+                    let (x, y, z) = (dot(d, frame[0]), dot(d, frame[1]), dot(d, frame[2]));
+                    let angle = |a: f64, q: usize| {
+                        crate::plane_torus::arc_parameter(
+                            (a.rem_euclid(std::f64::consts::TAU) - q as f64 * QUARTER)
+                                .clamp(0., QUARTER),
+                        )
+                    };
+                    let pu = angle(y.atan2(x), rev);
+                    let pv = angle(z.atan2(x.hypot(y) - torus.major), prof);
+                    if (pu - u).abs() > 1e-9 || (pv - v).abs() > 1e-9 {
+                        return Ok(false);
+                    }
+                }
+                let f = on_patch(other, surface)?;
+                let side = TorusSide {
+                    spans: &spans,
+                    rev,
+                    prof,
+                    major: torus.major,
+                    minor: torus.minor,
+                };
+                if !certify_square(&side, f) {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    })()
+    .unwrap_or(false)
+}
+
 /// A planar cap chart: `u = (x / R + 1) / 2`, `v = (y / R + 1) / 2` in the
 /// cap frame, so both iso lines are linear in the point.
 struct Planar<'a> {
