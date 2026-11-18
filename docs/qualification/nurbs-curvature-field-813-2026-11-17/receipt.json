@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0813",
+  "testedBase": "6f0137e674d22d5fb22c66e333a3704296da284a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 439,
+  "scope": [
+    "Group connected fill components and holes under even-odd or nonzero winding.",
+    "Check hole ownership across inactive winding boundaries, nested islands and both fill rules."
+  ],
+  "logSha256": "874ee47d6c8311e0879cacc451e5fb05ef4f065932eb9e3635aaaf999a427527",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "22042a46087ac42ef3b15e0a72aaf23ba647d95c90e2b16974b109379abfd253",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "afeab09844d10e2e7c02e46e529ee9f6f6a3669511430bc2383bebb80a63bc35"
+  }
+}

@@ -13198,3 +13198,92 @@ fn planar_contour_fill_principal_axes_enclose_a_rotated_projector() {
     let report = measure(&[&outer]).unwrap();
     assert!(report.projector_bounds.is_none());
 }
+
+#[test]
+fn planar_contour_nonzero_fill_area_uses_original_directions() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_nonzero_fill_area;
+    let square = |r: f64| Curve {
+        degree: 1, knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r], vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5], periodic: false,
+    };
+    let [outer, middle, inner] = [square(4.), square(2.), square(0.5)];
+    let measure = |middle| measure_planar_contour_nonzero_fill_area(
+        &[&inner, &outer, middle], 0.02, 1e-4, 128, 4096, 512, 1024,
+    );
+    let same = measure(&middle).unwrap();
+    assert_eq!(same.interior_windings, [3, 1, 2]);
+    assert_eq!(same.area_multipliers, [0, 1, 0]);
+    assert!(same.area_bounds[0] <= 64. && 64. <= same.area_bounds[1]);
+    assert!(same.area_bounds[1] - same.area_bounds[0] < 1e-6);
+    let mut reversed = middle.clone();
+    reversed.control_points.reverse();
+    let hole = measure(&reversed).unwrap();
+    assert_eq!(hole.interior_windings, [1, 1, 0]);
+    assert_eq!(hole.area_multipliers, [1, 1, -1]);
+    assert!(hole.area_bounds[0] <= 49. && 49. <= hole.area_bounds[1]);
+    assert!(hole.area_bounds[1] - hole.area_bounds[0] < 1e-6);
+}
+
+#[test]
+fn planar_contour_fill_perimeter_skips_boundaries_with_no_fill_transition() {
+    use nurbs_core::{
+        analysis::curve_measure::measure_planar_contour_fill_perimeter,
+        chord_winding::FillRule,
+    };
+    let square = |r: f64| Curve {
+        degree: 1, knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r], vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5], periodic: false,
+    };
+    let [outer, middle, inner] = [square(4.), square(2.), square(0.5)];
+    let run = |middle, rule, budget| measure_planar_contour_fill_perimeter(
+        &[&inner, &outer, middle], rule, 0.02, 1e-5, 128, 4096, 512, 1024, budget,
+    );
+    let same = run(&middle, FillRule::NonZero, 128).unwrap();
+    assert_eq!(same.boundary_contours, [1]);
+    assert!(same.perimeter_bounds[0] <= 32. && 32. <= same.perimeter_bounds[1] && same.converged);
+    assert!(run(&middle, FillRule::EvenOdd, 11).is_err());
+
+    let mut reversed = middle.clone();
+    reversed.control_points.reverse();
+    for (contour, rule) in [(&middle, FillRule::EvenOdd), (&reversed, FillRule::NonZero)] {
+        let report = run(contour, rule, 128).unwrap();
+        assert_eq!(report.boundary_contours, [0, 1, 2]);
+        assert!(report.perimeter_bounds[0] <= 52. && 52. <= report.perimeter_bounds[1] && report.converged);
+        assert!(report.work_cells <= 128);
+    }
+}
+
+#[test]
+fn planar_contour_fill_topology_assigns_holes_across_inactive_contours() {
+    use nurbs_core::{
+        analysis::curve_measure::analyze_planar_contour_fill_topology, chord_winding::FillRule,
+    };
+    let square = |r: f64| Curve {
+        degree: 1, knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r], vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5], periodic: false,
+    };
+    let [a, b, mut c, mut d, e] = [square(5.), square(4.), square(3.), square(2.), square(0.5)];
+    c.control_points.reverse();
+    d.control_points.reverse();
+    let run = |rule| analyze_planar_contour_fill_topology(
+        &[&a, &b, &c, &d, &e], rule, 0.02, 1e-4, 256, 16384, 2048, 4096,
+    );
+    let report = run(FillRule::NonZero).unwrap();
+    assert_eq!(report.inactive_contours, [1, 2]);
+    assert_eq!(report.components.len(), 2);
+    assert_eq!(report.components[0].outer, 0);
+    assert_eq!(report.components[0].holes, [3]);
+    assert_eq!(report.components[1].outer, 4);
+    assert!(report.components[1].holes.is_empty());
+    assert_eq!(report.euler_characteristic, 1);
+
+    let report = run(FillRule::EvenOdd).unwrap();
+    assert!(report.inactive_contours.is_empty());
+    assert_eq!(report.components.len(), 3);
+    assert_eq!(report.components[0].holes, [1]);
+    assert_eq!(report.components[1].holes, [3]);
+    assert_eq!(report.euler_characteristic, 1);
+}

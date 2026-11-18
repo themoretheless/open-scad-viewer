@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0811",
+  "testedBase": "92b7d177a093398e4724a284df55b5066dc0883d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 437,
+  "scope": [
+    "Bound nonzero-fill area by propagating original winding through a certified contour hierarchy.",
+    "Check redundant same-orientation loops, opposite winding holes, nested islands and contour input order."
+  ],
+  "logSha256": "76214f3147a8d6a4269e243437103948b870958600c7cea5f483493cd3e5b0d6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "fec8b8d84175631e1d30f092e354425bf419449c80afdefef4b8a3be053dcd14",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a5654b03df70895fba97b7255d8a762a2511e5e4f92e30d4d5452c0fde433200"
+  }
+}

@@ -2712,6 +2712,220 @@ pub fn measure_planar_contour_fill_area(
 }
 
 #[derive(Clone, Debug)]
+pub struct PlanarContourNonzeroFillAreaReport {
+    pub area_bounds: [f64; 2],
+    /// Winding just inside each contour, in input order.
+    pub interior_windings: Vec<i32>,
+    /// Each contour's unsigned area multiplier: add, subtract or skip.
+    pub area_multipliers: Vec<i32>,
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Bound nonzero-fill area using the original directions of a certified
+/// simple contour hierarchy. Only transitions between zero and nonzero
+/// winding contribute to the area.
+pub fn measure_planar_contour_nonzero_fill_area(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_area_cells: usize,
+) -> Result<PlanarContourNonzeroFillAreaReport> {
+    let (orientation, areas) = contour_fill_orientation_and_moments::<1>(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_area_cells,
+    )?;
+    let (interior_windings, area_multipliers) = nonzero_contour_transitions(&orientation);
+    let mut total = Interval::point(0.);
+    for (index, &multiplier) in area_multipliers.iter().enumerate() {
+        if multiplier != 0 {
+            let direction = contour_orientation_sign(orientation.orientations[index]);
+            let factor = Interval::point(f64::from(multiplier * direction));
+            total = total.add(areas[index][0].mul(factor)?)?;
+        }
+    }
+    Ok(PlanarContourNonzeroFillAreaReport {
+        area_bounds: [total.lo.max(0.), total.hi],
+        interior_windings,
+        area_multipliers,
+        orientation,
+    })
+}
+
+fn contour_orientation_sign(orientation: PlanarContourOrientation) -> i32 {
+    match orientation {
+        PlanarContourOrientation::Counterclockwise => 1,
+        PlanarContourOrientation::Clockwise => -1,
+    }
+}
+
+fn nonzero_contour_transitions(orientation: &PlanarContourOrientationReport) -> (Vec<i32>, Vec<i32>) {
+    let count = orientation.orientations.len();
+    let mut order: Vec<_> = (0..count).collect();
+    order.sort_by_key(|&index| orientation.hierarchy.depths[index]);
+    let mut windings = vec![0; count];
+    let mut multipliers = vec![0; count];
+    for index in order {
+        let exterior = orientation.hierarchy.parents[index].map_or(0, |parent| windings[parent]);
+        let interior = exterior + contour_orientation_sign(orientation.orientations[index]);
+        windings[index] = interior;
+        multipliers[index] = i32::from(interior != 0) - i32::from(exterior != 0);
+    }
+    (windings, multipliers)
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillPerimeterReport {
+    pub perimeter_bounds: [f64; 2],
+    /// Original indices of contours that separate filled and empty regions.
+    pub boundary_contours: Vec<usize>,
+    pub work_cells: usize,
+    pub converged: bool,
+}
+
+/// Bound the perimeter of a simple contour hierarchy under the given
+/// fill rule. Length work is shared only among actual fill boundaries.
+pub fn measure_planar_contour_fill_perimeter(
+    contours: &[&Curve],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+    max_length_cells: usize,
+) -> Result<PlanarContourFillPerimeterReport> {
+    validate(length_tolerance, max_length_cells)?;
+    let (_, multipliers) = certify_contour_fill_transitions(
+        contours, rule, parameter_tolerance, length_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_orientation_cells,
+    )?;
+    let boundary_contours: Vec<_> = multipliers.into_iter().enumerate()
+        .filter_map(|(index, value)| (value != 0).then_some(index)).collect();
+    let mut initial = 0;
+    let mut span_counts = Vec::with_capacity(boundary_contours.len());
+    for &index in &boundary_contours {
+        let curve = contours[index];
+        let spans = active_spans(curve, curve.domain()).count();
+        if spans > max_length_cells - initial {
+            return Err(resource("Perimeter budget must cover every boundary span"));
+        }
+        initial += spans;
+        span_counts.push(spans);
+    }
+    let mut extra = max_length_cells - initial;
+    let mut work_cells = 0;
+    let mut total = Interval::point(0.);
+    let count = boundary_contours.len();
+    let per_contour_tolerance = (length_tolerance / 2. / count as f64).max(f64::from_bits(1));
+    for (position, (&index, spans)) in boundary_contours.iter().zip(span_counts).enumerate() {
+        let share = extra / (count - position);
+        let report = length(contours[index], per_contour_tolerance, spans + share)?;
+        extra -= report.cells.saturating_sub(spans);
+        work_cells += report.cells;
+        total = total.add(Interval::new(report.bounds[0], report.bounds[1])?)?;
+    }
+    Ok(PlanarContourFillPerimeterReport {
+        perimeter_bounds: [total.lo.max(0.), total.hi],
+        boundary_contours,
+        work_cells,
+        converged: total.width().next_up() <= length_tolerance,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillComponent {
+    pub outer: usize,
+    pub holes: Vec<usize>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillTopology {
+    pub components: Vec<PlanarContourFillComponent>,
+    pub inactive_contours: Vec<usize>,
+    pub euler_characteristic: isize,
+    pub hierarchy: PlanarContourHierarchyReport,
+}
+
+/// Group the connected filled components and their holes from a
+/// certified simple contour hierarchy. Indices refer to input contours.
+pub fn analyze_planar_contour_fill_topology(
+    contours: &[&Curve],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+) -> Result<PlanarContourFillTopology> {
+    let (hierarchy, transitions) = certify_contour_fill_transitions(
+        contours, rule, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_orientation_cells,
+    )?;
+    let mut order: Vec<_> = (0..contours.len()).collect();
+    order.sort_by_key(|&index| hierarchy.depths[index]);
+    let mut owners: Vec<Option<usize>> = vec![None; contours.len()];
+    let mut components: Vec<PlanarContourFillComponent> = Vec::new();
+    let mut inactive_contours = Vec::new();
+    let mut euler_characteristic = 0;
+    for index in order {
+        let owner = hierarchy.parents[index].and_then(|parent| owners[parent]);
+        match transitions[index] {
+            1 => {
+                owners[index] = Some(components.len());
+                components.push(PlanarContourFillComponent { outer: index, holes: Vec::new() });
+                euler_characteristic += 1;
+            }
+            -1 => {
+                let owner = owner.ok_or_else(|| crate::numeric_err("Hole has no containing fill component"))?;
+                components[owner].holes.push(index);
+                euler_characteristic -= 1;
+            }
+            _ => {
+                owners[index] = owner;
+                inactive_contours.push(index);
+            }
+        }
+    }
+    Ok(PlanarContourFillTopology { components, inactive_contours, euler_characteristic, hierarchy })
+}
+
+fn certify_contour_fill_transitions(
+    contours: &[&Curve],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+) -> Result<(PlanarContourHierarchyReport, Vec<i32>)> {
+    use crate::chord_winding::FillRule;
+    match rule {
+        FillRule::EvenOdd => {
+            let hierarchy = certify_planar_contour_hierarchy(
+                contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+                max_winding_cells, max_distance_cells,
+            )?;
+            let transitions = hierarchy.depths.iter().map(|depth| if depth % 2 == 0 { 1 } else { -1 }).collect();
+            Ok((hierarchy, transitions))
+        }
+        FillRule::NonZero => {
+            let orientation = certify_planar_contour_fill_orientations(
+                contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+                max_winding_cells, max_distance_cells, max_orientation_cells,
+            )?;
+            let (_, transitions) = nonzero_contour_transitions(&orientation);
+            Ok((orientation.hierarchy, transitions))
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct PlanarContourFillCentroidReport {
     pub area_bounds: [f64; 2],
     /// Bounds for the X and Y coordinates in the source coordinate system.
