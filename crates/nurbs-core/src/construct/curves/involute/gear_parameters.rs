@@ -319,3 +319,56 @@ fn spur_contact_ratio(
         .div(I::point(teeth[0] as f64))?;
     Ok(pair(length.div(base_pitch)?))
 }
+
+/// Signed radial tip-to-root margins on the line of centres for standard
+/// full-depth spur profiles. The first interval is the first gear's tip
+/// against the second root, and the second interval is the reverse pairing.
+/// The two clearance inputs are root-depth allowances in model units.
+/// Negative margins denote radial overlap. This does not test flank collisions.
+pub fn spur_tip_root_clearance_bounds(
+    module: f64,
+    teeth: [usize; 2],
+    root_allowances: [f64; 2],
+    mesh: SpurMesh,
+    centre_distance: f64,
+) -> Result<[[f64; 2]; 2]> {
+    check(
+        centre_distance.is_finite() && centre_distance > 0.,
+        "Expected positive finite centre distance",
+    )?;
+    let ring = matches!(mesh, SpurMesh::Internal);
+    check(
+        !ring || teeth[1] > teeth[0],
+        "Ring must have more teeth than pinion",
+    )?;
+    // Pressure angle does not enter the nominal root and tip radii.
+    let radii = |index: usize, internal| -> Result<(I, I)> {
+        let p = derive_gear_parameter_bounds(
+            module,
+            teeth[index],
+            20.,
+            root_allowances[index],
+            0.,
+            internal,
+        )?;
+        Ok((
+            I::new(p.tip_radius[0], p.tip_radius[1])?,
+            I::new(p.root_radius[0], p.root_radius[1])?,
+        ))
+    };
+    let (tip, root) = radii(0, false)?;
+    let (peer_tip, peer_root) = radii(1, ring)?;
+    let distance = I::point(centre_distance);
+    let (first, second) = if ring {
+        (
+            peer_root.sub(distance)?.sub(tip)?,
+            peer_tip.sub(distance)?.sub(root)?,
+        )
+    } else {
+        (
+            distance.sub(tip)?.sub(peer_root)?,
+            distance.sub(peer_tip)?.sub(root)?,
+        )
+    };
+    Ok([pair(first), pair(second)])
+}

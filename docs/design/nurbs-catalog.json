@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 876,
-  "unallocatedCount": 124,
+  "specifiedCount": 877,
+  "unallocatedCount": 123,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20339,6 +20339,24 @@
       ],
       "remainingQualification": [
         "Nominal active involutes only, specified centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0877",
+      "name": "Радиальные зазоры между вершинами и впадинами зубьев установленной пары",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_tip_root_clearance_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-877-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-877-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal radial clearance along the line of centres. Flank and fillet interference require separate checks."
       ]
     }
   ],

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0877",
+  "testedBase": "18bd650af498ee00e5810d78f6258889d3267e45",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Signed tip-to-root margins for external and internal gears, unequal allowances, zero contact, overlap and invalid inputs."
+  ],
+  "logSha256": "bfd089504d4a40f0f779dc9476ec7e3b2e8f00f36eaf5490c17d1c4c54f26bbe",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "c3ac14adb05795840f773f1ac499a6726c6386e097ed10a9e4b6f1ec603b91e7",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "ef5c6c6fb8cd0c4094639d54f66ff43c303b02a74ef76b4d11dc2b4f8c5aba70",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "ffc1a80b92210dbdb79e4c059fdac9eae9c368753fc37f4cc84895013fbd8ce7"
+  }
+}

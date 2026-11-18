@@ -191,3 +191,24 @@ fn mounted_spur_mesh_uses_actual_line_of_action() {
     }
     assert!(ratio(1., [40, 20], 20., SpurMesh::Internal, 10.).is_err());
 }
+
+#[test]
+fn tip_to_root_margins_distinguish_both_roots_and_mesh_directions() {
+    use involute::{SpurMesh, spur_tip_root_clearance_bounds as margins};
+    for (mesh, teeth, distance) in [
+        (SpurMesh::External, [20, 40], 29.75),
+        (SpurMesh::Internal, [20, 80], 30.25),
+    ] {
+        let [first, second] = margins(1., teeth, [0.125, 0.5], mesh, distance).unwrap();
+        contains(first, 0.25);
+        contains(second, -0.125);
+        assert!(first[0] > 0. && second[1] < 0.);
+        for bound in margins(1., teeth, [0.; 2], mesh, 30.).unwrap() {
+            contains(bound, 0.);
+            assert!(bound[1] - bound[0] < 1e-10);
+        }
+    }
+    assert!(margins(1., [20, 40], [-0.1, 0.], SpurMesh::External, 30.).is_err());
+    assert!(margins(1., [40, 20], [0.; 2], SpurMesh::Internal, 10.).is_err());
+    assert!(margins(1., [20, 40], [0.; 2], SpurMesh::External, f64::NAN).is_err());
+}
