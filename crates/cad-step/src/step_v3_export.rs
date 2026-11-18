@@ -872,7 +872,7 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
     }
     let placements = occurrences.iter().map(|occurrence| {
         let matrix = occurrence.transform;
-        if !is_proper_rigid_placement(matrix) {
+        if !crate::step_interchange_v3::is_proper_rigid_placement(matrix) {
             return Err(refuse("STEP shared assembly export requires proper rigid placements"));
         }
         Ok((occurrence.definition, matrix))
@@ -882,22 +882,6 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
         &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(&placements),
     )?;
     Ok(text)
-}
-
-fn is_proper_rigid_placement(matrix: [[f64; 4]; 4]) -> bool {
-    if matrix[3] != [0., 0., 0., 1.] || !matrix.iter().flatten().all(|value| value.is_finite()) {
-        return false;
-    }
-    let [x, y, z] = [0, 1, 2].map(|column| [matrix[0][column], matrix[1][column], matrix[2][column]]);
-    let dot = |a: [f64; 3], b: [f64; 3]| a.into_iter().zip(b).map(|(a, b)| a * b).sum::<f64>();
-    let cross = [
-        x[1] * y[2] - x[2] * y[1],
-        x[2] * y[0] - x[0] * y[2],
-        x[0] * y[1] - x[1] * y[0],
-    ];
-    [x, y, z].into_iter().all(|axis| (dot(axis, axis) - 1.).abs() <= 1e-12)
-        && [dot(x, y), dot(x, z), dot(y, z)].into_iter().all(|value| value.abs() <= 1e-12)
-        && (dot(cross, z) - 1.).abs() <= 1e-12
 }
 
 pub fn export_step_v9_with_metadata(

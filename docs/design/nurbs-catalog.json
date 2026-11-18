@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 820,
-  "unallocatedCount": 180,
+  "specifiedCount": 821,
+  "unallocatedCount": 179,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19279,6 +19279,27 @@
       "remainingQualification": [
         "Split a shared definition only for the edited occurrence and export the resulting two definitions with all original placements.",
         "Check invalid occurrence index, repeated local edits, closed topology, shared peer definitions, unchanged placement matrices and heights 10, 12, 10 after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0821",
+      "name": "Перемещение и поворот отдельного экземпляра общей геометрии STEP",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::set_occurrence_placement",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-821-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-821-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Edit one proper rigid local-to-assembly placement and export it without duplicating the B-rep definition.",
+        "Check shared geometry and independent placements after STEP round-trip, transformed coordinates and atomic refusal of reflection, scale and nonfinite input.",
         "WASM and application integration are separate."
       ]
     }

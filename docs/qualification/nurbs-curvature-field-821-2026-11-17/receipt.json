@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0821",
+  "testedBase": "99f32c36b7f5b929d0789ce20b8fa94dc4712ec0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 170,
+  "scope": [
+    "Edit one proper rigid local-to-assembly placement and export it without duplicating the B-rep definition.",
+    "Check shared geometry and independent placements after STEP round-trip, transformed coordinates and atomic refusal of reflection, scale and nonfinite input."
+  ],
+  "logSha256": "688e47c150028805550044bc0b8abbabfa94442c65a34a20a1ff4450c84e416e",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3.rs": "025de492a88f2ca8e38fd3c2f8d076c516064f7a01a8a861a61954b22ce4d81a",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "2a2204234611929226b3075de7c7c6871f791f2f2f984d4b19db9d90c1d2ca70",
+    "crates/cad-step/src/step_v3_export.rs": "0a2f23d34fb0cdf83de7d1b410acd9d27c6a0a4a259ebfe7ff5004d8cf0a4385",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "0f9b0b5d529bb15f451220e3ff65b0f1b07f469ed0822681ec923f98867f0bb6"
+  }
+}

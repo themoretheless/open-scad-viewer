@@ -2802,6 +2802,48 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_placement_edit_preserves_definition_and_peer() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let original = assembly.occurrences()[1].transform;
+    let peer = assembly.occurrences()[0].transform;
+    let placement = [
+        [0., -1., 0., 25.],
+        [1., 0., 0., -8.],
+        [0., 0., 1., 4.],
+        [0., 0., 0., 1.],
+    ];
+    let mut reflection = placement;
+    reflection[2][2] = -1.;
+    let mut scale = placement;
+    scale[2][2] = 2.;
+    let mut invalid = placement;
+    invalid[2][3] = f64::NAN;
+    for transform in [reflection, scale, invalid] {
+        assert!(assembly.set_occurrence_placement(1, transform).is_err());
+        assert_eq!(assembly.occurrences()[1].transform, original);
+    }
+    assert!(assembly.set_occurrence_placement(2, placement).is_err());
+    assembly.set_occurrence_placement(1, placement).unwrap();
+    let edited = crate::export_step_shared_assembly(&assembly).unwrap();
+    assert_eq!(edited.matches("MANIFOLD_SOLID_BREP(").count(), 1);
+    let back = crate::import_step_shared_assembly(&edited).unwrap();
+    assert_eq!(back.definitions().len(), 1);
+    assert_eq!(back.occurrences().len(), 2);
+    assert_eq!(back.occurrences()[0].transform, peer);
+    assert_eq!(back.occurrences()[1].transform, placement);
+    let model = back.materialize(1).unwrap();
+    let [x, y, z] = back.definitions()[0].vertices[0].point;
+    let expected = [25. - y, x - 8., z + 4.];
+    for (actual, expected) in model.vertices[0].point.into_iter().zip(expected) {
+        assert!((actual - expected).abs() < 1e-10);
+    }
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+}
+
+#[test]
 fn shared_step_edit_isolates_one_planet_occurrence() {
     let spec = brep_core::GearSpec { teeth: 4, height: 10., ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 120., 240.]).unwrap();

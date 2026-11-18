@@ -683,6 +683,17 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Replace an occurrence's local-to-assembly rigid placement in millimetres.
+    pub fn set_occurrence_placement(&mut self, index: usize, transform: [[f64; 4]; 4]) -> Result<()> {
+        let occurrence = self.occurrences.get_mut(index)
+            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+        if !super::is_proper_rigid_placement(transform) {
+            return Err(refuse("STEP assembly placement must be a finite proper rigid transform"));
+        }
+        occurrence.transform = transform;
+        Ok(())
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
