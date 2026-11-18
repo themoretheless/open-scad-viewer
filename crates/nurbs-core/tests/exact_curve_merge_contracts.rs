@@ -13171,3 +13171,30 @@ fn planar_contour_fill_principal_moments_enclose_distinct_and_repeated_values() 
         assert!(lo <= 4. / 3. && 4. / 3. <= hi && hi - lo < 0.1);
     }
 }
+
+#[test]
+fn planar_contour_fill_principal_axes_enclose_a_rotated_projector() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_principal_axes;
+    let square = |x: f64, y: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, y-r], vec![x+r, y-r], vec![x+r, y+r],
+            vec![x-r, y+r], vec![x-r, y-r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(10., -7., 3.);
+    let hole = square(11., -6.5, 1.);
+    let measure = |contours: &[&Curve]| measure_planar_contour_fill_principal_axes(
+        contours, 0.002, 1e-4, 128, 4096, 512, 8192,
+    );
+    let report = measure(&[&hole, &outer]).unwrap();
+    let projectors = report.projector_bounds.unwrap();
+    for (axis, expected) in projectors.into_iter().zip([[0.8, 0.4, 0.2], [0.2, -0.4, 0.8]]) {
+        for ([lo, hi], value) in axis.into_iter().zip(expected) {
+            assert!(lo <= value && value <= hi && hi - lo < 0.2);
+        }
+    }
+    let report = measure(&[&outer]).unwrap();
+    assert!(report.projector_bounds.is_none());
+}

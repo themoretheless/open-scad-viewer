@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0810",
+  "testedBase": "6b4ff052aa919343b31fbaede720e8ac6c3ffae4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 436,
+  "scope": [
+    "Certify sign-independent planar principal axis projectors when moments are separated.",
+    "Check both rotated axis projectors from an off-axis hole and suppress axes for repeated moments."
+  ],
+  "logSha256": "b88a3c39c99b6e0d742a1e1cfbf244261e71809a30f6588c63682037eff677f5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "29182a57ee0d27d493d50b3594a06f7ef274eae03d257c85d0695e7cb6e95100",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6934ad1791e1e45a336bc722416f915d14a19401a2bb8bf7ee79d99dca1dbe6a"
+  }
+}
