@@ -340,3 +340,63 @@ fn ruled_surface_keeps_its_periodic_axis_in_standard_and_legacy_iges() {
         std::fs::write(path, text).unwrap();
     }
 }
+
+#[test]
+fn iges_edge_uses_only_the_declared_piece_of_a_longer_curve() {
+    let text = composite_base_text();
+    let original = import_iges_v2(&text).unwrap().0;
+    let edge_list = directory_entity(&text, 504, 0);
+    let edge = &original.edges[0].curve;
+    let (a, b) = CurveDispatcher::endpoints(edge).unwrap();
+    let extend = |t: f64| a.iter().zip(&b).map(|(x, y)| x + t * (y - x)).collect();
+    let mut basis = Curve::from_polyline(vec![extend(-1.), extend(2.)]).unwrap();
+    let [lo, hi] = edge.domain();
+    basis.knots = vec![lo - (hi-lo), lo - (hi-lo), hi + (hi-lo), hi + (hi-lo)];
+    let mut values = curve_values(&basis, 3).unwrap();
+    let at = values.len() - 5;
+    values[at] = number(lo);
+    values[at + 1] = number(hi);
+    let (text, de) = append_entity(&text, 126, 0, "00000000", |_| values.clone());
+    let text = rewire_reference(&text, edge_list, 2, de);
+    let restored = import_iges_v2(&text).unwrap().0;
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    let trimmed = &restored.edges[0].curve;
+    assert_eq!(trimmed.domain(), edge.domain());
+    for t in [lo, (lo + hi) / 2., hi] {
+        assert!(CurveDispatcher::distance(&trimmed.evaluate(t).unwrap().point,
+            &edge.evaluate(t).unwrap().point).unwrap() < 1e-12);
+    }
+    values[at] = number(basis.domain()[0] - 1.);
+    let invalid = replace_parameters(&text, de, values);
+    assert!(import_iges_v2(&invalid).is_err());
+}
+
+#[test]
+fn declared_iges_subinterval_preserves_weighted_multispan_geometry() {
+    let basis = Curve {
+        degree: 2,
+        control_points: vec![vec![0.,0.,1.], vec![1.,3.,1.], vec![2.,1.,2.], vec![4.,0.,3.]],
+        knots: vec![0.,0.,0.,1.,2.,2.,2.],
+        weights: vec![1.,0.5,1.5,1.],
+        periodic: false,
+    };
+    let mut values = curve_values(&basis, 3).unwrap();
+    let at = values.len() - 5;
+    values[at] = number(0.25);
+    values[at + 1] = number(1.5);
+    let (text, de) = append_entity(&base_text(), 126, 0, "00000000", |_| values);
+    let (entities, _, _) = parse(&text).unwrap();
+    let segment = curve126(&entities, de, 3, 1.).unwrap();
+    assert_eq!(segment.domain(), [0.25, 1.5]);
+    for t in [0.25, 0.5, 1., 1.25, 1.5] {
+        assert!(CurveDispatcher::distance(&basis.evaluate(t).unwrap().point,
+            &segment.evaluate(t).unwrap().point).unwrap() < 1e-12);
+    }
+    if let Some(dir) = std::env::var_os("CAD_IGES_CURVE_INTERVAL_FIXTURE") {
+        let dir = std::path::Path::new(&dir);
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("source.igs"), text).unwrap();
+        let (exported, _) = append_entity(&base_text(), 126, 0, "00000000", |_| curve_values(&segment, 3).unwrap());
+        std::fs::write(dir.join("trimmed.igs"), exported).unwrap();
+    }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "NURBS-0962",
+  "testedBase": "6df70621d78ef383e8f620be84e057ebbc0190b1",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "298f2af6b88c3c2264d641512d5321b7bb201904e2875e4c1b7a8191d29976e9",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "4885486ebf49778b3778ff4eb1ff84a58aa324172a05c973908ac6360062a4e8"
+  },
+  "occtSamples": 129,
+  "maxDistance": 0.0,
+  "fixtureSha256": {
+    "trimmed.igs": "938b7acf3337733d53e7cb302de6a80e028b2b20a6c3220d03d1407863edaab4",
+    "source.igs": "8e869467e2cca2719e2ab241e3509ff3044c67dd9713b7a7242abb5c5b744281"
+  },
+  "fixtureEnvironment": "CAD_IGES_CURVE_INTERVAL_FIXTURE=/tmp/osv962-interval",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Extended basis restricted to an edge of a closed cuboid",
+    "Out-of-domain bound rejected",
+    "Weighted two-span quadratic compared independently across the trim interval"
+  ]
+}

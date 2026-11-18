@@ -846,12 +846,15 @@ fn curve126(
     let v = &entity(entities, de, 126)?.values;
     let k = u(v, 1, "curve upper index")?;
     let degree = u(v, 2, "curve degree")?;
+    if k >= 4096 || degree > k {
+        return Err(refuse("Malformed IGES rational B-spline curve dimensions"));
+    }
     let n = k + 1;
     let knot_count = n + degree + 1;
-    if n == 0 || n > 4096 || v.len() < 8 + knot_count + n + 3 * n {
+    if v.len() < 9 + knot_count + 4 * n {
         return Err(refuse("Malformed IGES rational B-spline curve"));
     }
-    let mut knots = (0..knot_count)
+    let knots = (0..knot_count)
         .map(|i| f(v, 7 + i, "curve knot"))
         .collect::<Result<Vec<_>>>()?;
     let weights = (0..n)
@@ -878,13 +881,6 @@ fn curve126(
     if !a.is_finite() || !b.is_finite() || a >= b {
         return Err(refuse("IGES curve domain is not increasing"));
     }
-    let old = [knots[degree], knots[knots.len() - degree - 1]];
-    if (old[0] - a).abs() > 1e-10 || (old[1] - b).abs() > 1e-10 {
-        let factor = (b - a) / (old[1] - old[0]);
-        for x in &mut knots {
-            *x = a + (*x - old[0]) * factor;
-        }
-    }
     let c = Curve {
         degree,
         knots,
@@ -893,7 +889,11 @@ fn curve126(
         periodic: u(v, if entities[&de].legacy_curve_flags { 5 } else { 6 }, "curve periodic flag")? != 0,
     };
     c.validate()?;
-    Ok(c)
+    if [a, b] == c.domain() {
+        Ok(c)
+    } else {
+        c.trim(a, b)
+    }
 }
 
 #[derive(Clone)]

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 961,
-  "unallocatedCount": 39,
+  "specifiedCount": 962,
+  "unallocatedCount": 38,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21904,6 +21904,24 @@
       ],
       "remainingQualification": [
         "OCCT verified U-periodic rational and V-periodic polynomial surfaces, all poles and weights. Rust also distinguishes clamped closed edges from periodic seams."
+      ]
+    },
+    {
+      "id": "NURBS-0962",
+      "name": "Импорт участка рациональной кривой IGES 126 по заданному интервалу",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Single ordered subinterval within the active knot domain; OCCT compared the imported and re-exported rational segment at 129 parameters."
       ]
     }
   ],
