@@ -1666,12 +1666,45 @@ pub fn classify_directional_motion_knot_jumps(
     limits: DirectionalMotionLimits,
     max_knots: usize,
 ) -> Result<Vec<DirectionalMotionKnotJump>> {
+    classify_motion_knot_jumps(curve, interval, direction, limits, max_knots, None)
+}
+
+/// Classify interior-knot jumps in the uniform clock of a timed segment.
+/// Reported knot coordinates remain in the original parameter domain.
+pub fn classify_timed_motion_knot_jumps(
+    segment: TimedMotionSegment<'_>,
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    max_knots: usize,
+) -> Result<Vec<DirectionalMotionKnotJump>> {
+    check(
+        segment.duration.is_finite() && segment.duration > 0.,
+        "Motion segment duration must be finite and positive",
+    )?;
+    classify_motion_knot_jumps(
+        segment.curve, segment.interval, direction, limits, max_knots, Some(segment.duration),
+    )
+}
+
+fn classify_motion_knot_jumps(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    max_knots: usize,
+    duration: Option<f64>,
+) -> Result<Vec<DirectionalMotionKnotJump>> {
     curve.validate()?;
     validate_travel_interval(curve, interval)?;
     check(max_knots <= 100_000, "Motion jump budget must be at most 100000 knots")?;
     let limits = [limits.speed, limits.acceleration, limits.jerk];
     validate_motion_partition_limits(limits)?;
     let unit = travel_direction(curve, direction)?;
+    let source_rate = duration.map(|duration| {
+        Interval::point(interval[1])
+            .sub(Interval::point(interval[0]))?
+            .div(Interval::point(duration))
+    }).transpose()?;
     let mut jumps = Vec::new();
     let mut spans = active_spans(curve, interval);
     let mut left = spans.next().ok_or_else(|| crate::numeric_err("Missing motion span coverage"))?;
@@ -1698,7 +1731,12 @@ pub fn classify_directional_motion_knot_jumps(
                     before = before.div(left_width)?;
                     after = after.div(right_width)?;
                 }
-                let jump = after.sub(before)?;
+                let mut jump = after.sub(before)?;
+                if let Some(rate) = source_rate {
+                    for _ in 0..order {
+                        jump = jump.mul(rate)?;
+                    }
+                }
                 jump_bounds[index] = [jump.lo, jump.hi];
                 statuses[index] = classify_absolute_limit(jump, limit);
             }

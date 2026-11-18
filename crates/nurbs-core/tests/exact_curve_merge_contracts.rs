@@ -9380,3 +9380,33 @@ fn timed_motion_chain_distinguishes_segment_violations_from_join_violations() {
     limits.join.speed = 2.;
     assert_eq!(check(&segments, limits, 6).unwrap().status, Status::Within);
 }
+
+#[test]
+fn timed_motion_knot_jumps_scale_jerk_without_losing_proved_continuity() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_timed_motion_knot_jumps,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 2., 2., 2., 2.],
+        control_points: [0., 0., 0., 0., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let segment = TimedMotionSegment { curve: &curve, interval: [0.5, 1.5], duration: 2. };
+    let limits = DirectionalMotionLimits { speed: 0., acceleration: 0., jerk: 1. };
+    let report = classify_timed_motion_knot_jumps(segment, &[1., 0.], limits, 1).unwrap();
+    assert_eq!(report[0].parameter, 1.);
+    assert_eq!(report[0].jump_bounds[..2], [[0.; 2]; 2]);
+    assert_eq!(report[0].statuses, [Status::Within; 3]);
+    let [lo, hi] = report[0].jump_bounds[2];
+    assert!(lo <= 0.75 && 0.75 <= hi && hi - lo < 1e-8);
+    let faster = TimedMotionSegment { duration: 0.5, ..segment };
+    let report = classify_timed_motion_knot_jumps(faster, &[1., 0.], limits, 1).unwrap();
+    assert_eq!(report[0].statuses[2], Status::Exceeds);
+    let [lo, hi] = report[0].jump_bounds[2];
+    assert!(lo <= 48. && 48. <= hi && hi - lo < 1e-8);
+    let invalid = TimedMotionSegment { duration: 0., ..segment };
+    assert!(classify_timed_motion_knot_jumps(invalid, &[1., 0.], limits, 1).is_err());
+}

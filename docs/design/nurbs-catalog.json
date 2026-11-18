@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 697,
-  "unallocatedCount": 303,
+  "specifiedCount": 698,
+  "unallocatedCount": 302,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16935,6 +16935,25 @@
       "remainingQualification": [
         "Check axial motion limits in each segment clock together with spatial and derivative join limits.",
         "Check physical-clock limits, separate segment and join violations, a fully feasible chain, and shared span budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0698",
+      "name": "Скачки производных в узлах NURBS-сегмента с заданной длительностью",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_timed_motion_knot_jumps",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-698-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-698-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify interior derivative jumps in the traversal clock of a timed curve window.",
+        "Check clipped source windows, cubic duration scaling at two rates, exact C2 zero jumps, and invalid duration.",
         "WASM and application integration are separate."
       ]
     }
