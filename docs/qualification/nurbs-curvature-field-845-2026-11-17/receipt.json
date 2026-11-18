@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0845",
+  "testedBase": "ba93fc1aa0e379a594dc4da6d63b18504eaf9d4d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 194,
+  "scope": [
+    "Intersect outward-rounded slab intervals to cull diagonal ray misses before trimmed face tracing.",
+    "Check diagonal rejection, forward and reverse bounds, inside origins, corner contact and zero direction refusal."
+  ],
+  "logSha256": "9fe518553d32bd9a088d83ca1d6513f42f83d7109e9326401381a73be60a1cfd",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "c4725b0d9c185a833d2a5311b818ce0a4c1bd427a4060f7164c2307a53b39862",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "306a5f77040a142cb1560750e5463373aafb1b0c88406e278ab0ebd41577d197"
+  }
+}

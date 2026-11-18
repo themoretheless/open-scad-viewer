@@ -659,6 +659,38 @@ pub struct StepSharedAssembly {
     occurrences: Vec<StepAssemblyOccurrence>,
 }
 
+/// Inner and outer unions of positive-length material spans in ray parameters.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StepRayMaterialCoverage {
+    pub guaranteed: Vec<[f64; 2]>,
+    pub possible: Vec<[f64; 2]>,
+}
+
+/// Classification against a caller-supplied minimum material clearance.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StepClearanceStatus {
+    BelowMinimum,
+    MeetsMinimum,
+    Unresolved,
+}
+
+pub struct StepClearanceCheck {
+    pub status: StepClearanceStatus,
+    pub measurement: brep_core::solid_distance::Report,
+}
+
+/// Conservative bounds on the smallest distance between distinct occurrences.
+#[derive(Debug)]
+pub struct StepMinimumClearance {
+    pub lower_bound_mm: f64,
+    pub upper_bound_mm: Option<f64>,
+    /// Pair furnishing the upper bound, which may not be the unique closest pair.
+    pub upper_bound_pair: Option<[usize; 2]>,
+    pub checked_pairs: usize,
+    pub converged: bool,
+    pub pair_errors: Vec<([usize; 2], Error)>,
+}
+
 impl StepSharedAssembly {
     pub fn definitions(&self) -> &[Model] {
         &self.definitions
@@ -894,14 +926,7 @@ impl StepSharedAssembly {
         let mut pairs = Vec::new();
         for (index, a) in bounds.iter().enumerate() {
             for (other, b) in bounds.iter().enumerate().skip(index + 1) {
-                let mut lower_squared: f64 = 0.;
-                for axis in 0..3 {
-                    let gap = (b[0][axis] - a[1][axis]).max(a[0][axis] - b[1][axis])
-                        .next_down().max(0.);
-                    lower_squared = (lower_squared + (gap * gap).next_down().max(0.))
-                        .next_down().max(0.);
-                }
-                if lower_squared <= limit {
+                if box_distance_squared_lower(a, b) <= limit {
                     pairs.push([index, other]);
                 }
             }
@@ -915,6 +940,120 @@ impl StepSharedAssembly {
         let first = self.materialize(first)?;
         let second = self.materialize(second)?;
         brep_core::boolean(&first, &second, "intersection")
+    }
+
+    /// Bound the distance between the filled materials of two placed
+    /// occurrences, retaining unresolved solid and containment diagnostics.
+    pub fn occurrence_clearance(
+        &self,
+        pair: [usize; 2],
+        tolerance_mm: f64,
+        tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits,
+    ) -> Result<brep_core::solid_distance::Report> {
+        let first = self.materialize(pair[0])?;
+        let second = self.materialize(pair[1])?;
+        brep_core::solid_distance::distance(&first, &second, tolerance_mm, tolerance_uv, limits)
+    }
+
+    /// Bound the smallest material clearance without evaluating pairs whose
+    /// box separation is already larger than the best measured upper bound.
+    /// None indicates an assembly with fewer than two occurrences.
+    pub fn minimum_clearance(
+        &self,
+        tolerance_mm: f64,
+        tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits,
+        max_pairs: usize,
+    ) -> Result<Option<StepMinimumClearance>> {
+        if !tolerance_mm.is_finite() || tolerance_mm <= 0.
+            || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        {
+            return Err(refuse("STEP clearance requires positive finite tolerances"));
+        }
+        let bounds = self.occurrence_bounds()?;
+        let mut pairs = Vec::new();
+        for (first, a) in bounds.iter().enumerate() {
+            for (second, b) in bounds.iter().enumerate().skip(first + 1) {
+                let lower = box_distance_squared_lower(a, b).sqrt().next_down().max(0.);
+                pairs.push(([first, second], lower));
+            }
+        }
+        if pairs.is_empty() {
+            return Ok(None);
+        }
+        pairs.sort_by(|a, b| a.1.total_cmp(&b.1));
+        let mut result = StepMinimumClearance {
+            lower_bound_mm: f64::INFINITY,
+            upper_bound_mm: None,
+            upper_bound_pair: None,
+            checked_pairs: 0,
+            converged: false,
+            pair_errors: Vec::new(),
+        };
+        for (pair, box_lower) in pairs {
+            if result.upper_bound_mm.is_some_and(|upper| box_lower > upper) {
+                break;
+            }
+            if result.checked_pairs == max_pairs {
+                result.lower_bound_mm = result.lower_bound_mm.min(box_lower);
+                break;
+            }
+            result.checked_pairs += 1;
+            let mut pair_lower = box_lower;
+            match self.occurrence_clearance(pair, tolerance_mm, tolerance_uv, limits) {
+                Ok(report) => {
+                    if let Some([lower, upper]) = report.distance_interval_mm {
+                        pair_lower = pair_lower.max(lower);
+                        if upper.is_finite() && result.upper_bound_mm.is_none_or(|best| upper < best) {
+                            result.upper_bound_mm = Some(upper);
+                            result.upper_bound_pair = Some(pair);
+                        }
+                    }
+                }
+                Err(error) => result.pair_errors.push((pair, error)),
+            }
+            result.lower_bound_mm = result.lower_bound_mm.min(pair_lower);
+        }
+        result.converged = result.upper_bound_mm.is_some_and(|upper| {
+            upper == result.lower_bound_mm
+                || (upper - result.lower_bound_mm).next_up() <= tolerance_mm
+        });
+        Ok(Some(result))
+    }
+
+    /// Check neighboring pairs against a minimum clearance in millimetres.
+    /// Pairs absent from the report are excluded conservatively by their boxes.
+    /// An unresolved measurement or pair error is retained, not treated as a pass.
+    pub fn check_clearances(
+        &self,
+        minimum_mm: f64,
+        tolerance_mm: f64,
+        tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits,
+        max_pairs: usize,
+    ) -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
+        if !tolerance_mm.is_finite() || tolerance_mm <= 0.
+            || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        {
+            return Err(refuse("STEP clearance requires positive finite tolerances"));
+        }
+        let pairs = self.proximity_candidates(minimum_mm)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly clearance candidate budget exceeded"));
+        }
+        Ok(pairs.into_iter().map(|pair| {
+            let checked = self.occurrence_clearance(pair, tolerance_mm, tolerance_uv, limits)
+                .map(|measurement| {
+                    let status = match measurement.distance_interval_mm {
+                        Some([lower, _]) if lower >= minimum_mm => StepClearanceStatus::MeetsMinimum,
+                        Some([_, upper]) if upper < minimum_mm => StepClearanceStatus::BelowMinimum,
+                        _ => StepClearanceStatus::Unresolved,
+                    };
+                    StepClearanceCheck { status, measurement }
+                });
+            (pair, checked)
+        }).collect())
     }
 
     /// Check overlapping occurrence boxes for common material. Each result
@@ -940,22 +1079,403 @@ impl StepSharedAssembly {
         relative_tolerance: f64,
         max_evaluations_per_definition: usize,
     ) -> Result<f64> {
-        let volumes = self.definitions.iter().map(|model| {
-            brep_core::analysis::mass_properties(model, relative_tolerance, max_evaluations_per_definition)
-                .map(|mass| mass.signed_volume_mm3)
-        }).collect::<Result<Vec<_>>>()?;
-        let mut total = 0.;
-        for occurrence in &self.occurrences {
-            let scale = placement_determinant(occurrence.transform).abs();
-            if !scale.is_finite() || scale == 0. {
-                return Err(refuse("STEP assembly volume requires finite nonsingular placements"));
+        let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        self.occurrences.iter().try_fold(0., |total, occurrence| {
+            let volume = placed_material_volume(occurrence, properties[occurrence.definition].signed_volume_mm3)?;
+            let total: f64 = total + volume;
+            if !total.is_finite() {
+                return Err(refuse("STEP assembly volume exceeds the finite range"));
             }
-            total += scale * volumes[occurrence.definition];
+            Ok(total)
+        })
+    }
+
+    /// Estimate the centroid in assembly coordinates, weighted by each
+    /// occurrence's material volume. Overlapping volumes count separately.
+    pub fn material_centroid_mm(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<[f64; 3]> {
+        let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        weighted_centroid(&self.placed_centroids(&properties)?)
+    }
+
+    /// Estimate central volume inertia in mm⁵ for uniform unit density,
+    /// counting each occurrence independently.
+    pub fn material_inertia_mm5(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<[[f64; 3]; 3]> {
+        self.material_mass_properties(None, relative_tolerance, max_evaluations_per_definition)
+            .map(|properties| properties.inertia)
+    }
+
+    /// Estimate mass, center of mass and central inertia with one density
+    /// per occurrence, in kg/mm³. Outputs are kg, mm and kg·mm².
+    pub fn mass_properties_with_densities(
+        &self,
+        densities_kg_per_mm3: &[f64],
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<brep_core::analysis::AssemblyMass> {
+        if densities_kg_per_mm3.len() != self.occurrences.len()
+            || densities_kg_per_mm3.iter().any(|value| !value.is_finite() || *value <= 0.)
+        {
+            return Err(refuse("STEP assembly requires a finite positive density for each occurrence"));
+        }
+        self.material_mass_properties(Some(densities_kg_per_mm3), relative_tolerance, max_evaluations_per_definition)
+    }
+
+    fn material_mass_properties(
+        &self,
+        densities: Option<&[f64]>,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<brep_core::analysis::AssemblyMass> {
+        let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        let mut placed = self.placed_centroids(&properties)?;
+        if let Some(densities) = densities {
+            for ((weight, _), density) in placed.iter_mut().zip(densities) {
+                *weight *= density;
+                if !weight.is_finite() || *weight <= 0. {
+                    return Err(refuse("STEP occurrence mass is outside the finite positive range"));
+                }
+            }
+        }
+        let center = weighted_centroid(&placed)?;
+        let mut second = [[0.; 3]; 3];
+        let total_mass = placed.iter().map(|(weight, _)| weight).sum();
+        for (index, (occurrence, (weight, point))) in self.occurrences.iter().zip(placed).enumerate() {
+            let mass = &properties[occurrence.definition];
+            let half_trace = (0..3).map(|i| mass.inertia_mm5[i][i] / 2.).sum::<f64>();
+            let density = densities.map_or(1., |values| values[index]);
+            let scale = placement_determinant(occurrence.transform).abs() * density;
+            let offset: [f64; 3] = std::array::from_fn(|i| point[i] - center[i]);
+            for i in 0..3 {
+                for j in i..3 {
+                    // I = trace(C) Id - C, where C is the central second moment.
+                    let mut transformed = 0.;
+                    for k in 0..3 {
+                        for l in 0..3 {
+                            let moment = if k == l { half_trace } else { 0. } - mass.inertia_mm5[k][l];
+                            transformed += occurrence.transform[i][k] * moment * occurrence.transform[j][l];
+                        }
+                    }
+                    second[i][j] += scale * transformed + weight * offset[i] * offset[j];
+                    second[j][i] = second[i][j];
+                }
+            }
+        }
+        let inertia = std::array::from_fn(|i| std::array::from_fn(|j| {
+            if i == j {
+                second[(i + 1) % 3][(i + 1) % 3] + second[(i + 2) % 3][(i + 2) % 3]
+            } else {
+                -second[i][j]
+            }
+        }));
+        if !inertia.iter().flatten().all(|entry| entry.is_finite()) {
+            return Err(refuse("STEP assembly inertia exceeds the finite range"));
+        }
+        Ok(brep_core::analysis::AssemblyMass { mass: total_mass, centroid: center, inertia })
+    }
+
+    /// Estimate principal moments in mm⁵ and their right-handed unit axes
+    /// in assembly coordinates. Repeated moments have non-unique axes.
+    pub fn material_principal_inertia(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<brep_core::analysis::PrincipalInertia> {
+        let tensor = self.material_inertia_mm5(relative_tolerance, max_evaluations_per_definition)?;
+        let scale = tensor.iter().flatten().map(|entry| entry.abs()).fold(0., f64::max);
+        if scale == 0. {
+            return brep_core::analysis::principal_inertia(tensor);
+        }
+        let mut principal = brep_core::analysis::principal_inertia(tensor.map(|row| row.map(|entry| entry / scale)))?;
+        principal.moments_mm5 = principal.moments_mm5.map(|moment| moment * scale);
+        if !principal.moments_mm5.iter().all(|moment| moment.is_finite()) {
+            return Err(refuse("STEP assembly principal inertia exceeds the finite range"));
+        }
+        Ok(principal)
+    }
+
+    /// Estimate the sum of occurrence boundary areas in mm². Area is reused
+    /// per definition for similarities, and per linear map otherwise.
+    pub fn material_surface_area_mm2(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<f64> {
+        let mut areas = BTreeMap::new();
+        let mut total: f64 = 0.;
+        for occurrence in &self.occurrences {
+            let mut transform = occurrence.transform;
+            for row in &mut transform[..3] {
+                row[3] = 0.;
+            }
+            let uniform_scale = super::orthogonal_placement_scales(transform)
+                .filter(|[x, y, z]| x == y && y == z).map(|scales| scales[0]);
+            let linear = uniform_scale.is_none().then(|| {
+                [0, 1, 2].map(|row| [0, 1, 2].map(|col| transform[row][col].to_bits()))
+            });
+            let model = &self.definitions[occurrence.definition];
+            let area = match areas.entry((occurrence.definition, linear)) {
+                std::collections::btree_map::Entry::Occupied(entry) => *entry.get(),
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    let transformed;
+                    let source = if uniform_scale.is_some() {
+                        model
+                    } else {
+                        transformed = brep_core::transform::affine(model, transform)?;
+                        &transformed
+                    };
+                    *entry.insert(brep_core::analysis::mass_properties(
+                        source, relative_tolerance, max_evaluations_per_definition,
+                    )?.surface_area_mm2)
+                }
+            };
+            let scale = uniform_scale.unwrap_or(1.);
+            total += area * scale * scale;
         }
         if !total.is_finite() || total <= 0. {
-            return Err(refuse("STEP assembly volume is outside the finite positive range"));
+            return Err(refuse("STEP assembly surface area is outside the finite positive range"));
         }
         Ok(total)
+    }
+
+    fn placed_centroids(
+        &self,
+        properties: &[brep_core::analysis::MassProperties],
+    ) -> Result<Vec<(f64, [f64; 3])>> {
+        let mut placed = Vec::with_capacity(self.occurrences.len());
+        for occurrence in &self.occurrences {
+            let mass = &properties[occurrence.definition];
+            let volume = placed_material_volume(occurrence, mass.signed_volume_mm3)?;
+            let center: [f64; 3] = std::array::from_fn(|axis| {
+                let row = occurrence.transform[axis];
+                row[..3].iter().zip(mass.centroid)
+                    .fold(row[3], |offset, (coefficient, coordinate)| coefficient.mul_add(coordinate, offset))
+            });
+            placed.push((volume, center));
+        }
+        Ok(placed)
+    }
+
+    fn definition_mass_properties(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<Vec<brep_core::analysis::MassProperties>> {
+        self.definitions.iter().map(|model| {
+            brep_core::analysis::mass_properties(model, relative_tolerance, max_evaluations_per_definition)
+        }).collect()
+    }
+
+    /// Bound the forward ray parameter interval for each intersectable
+    /// occurrence box. These are broad-phase candidates in assembly order.
+    pub fn ray_candidates(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Vec<(usize, [f64; 2])>> {
+        if !origin.iter().chain(&direction).all(|coordinate| coordinate.is_finite())
+            || direction == [0.; 3]
+        {
+            return Err(refuse("STEP assembly ray requires a finite origin and nonzero finite direction"));
+        }
+        Ok(self.occurrence_bounds()?.into_iter().enumerate().filter_map(|(index, bounds)| {
+            ray_box_interval(origin, direction, bounds).map(|interval| (index, interval))
+        }).collect())
+    }
+
+    /// Trace a forward ray against placed trimmed faces. Returns occurrence
+    /// indices in assembly order after conservative ray-box culling.
+    /// Unresolved crossings and exhausted work remain explicit per occurrence.
+    pub fn ray_crossings(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<Vec<(usize, Result<brep_core::ray_parity::Report>)>> {
+        validate_ray_work(tolerance_uv, max_cells, max_domain_cells)?;
+        let mut remaining = [max_cells, max_domain_cells];
+        let mut results = Vec::new();
+        for (index, _) in self.ray_candidates(origin, direction)? {
+            let report = if remaining.contains(&0) {
+                Err(refuse("STEP assembly ray work budget exhausted"))
+            } else {
+                Ok(self.trace_occurrence_ray(index, origin, direction, tolerance_uv, &mut remaining)?)
+            };
+            results.push((index, report));
+        }
+        Ok(results)
+    }
+
+    fn trace_occurrence_ray(
+        &self,
+        index: usize,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        remaining: &mut [usize; 2],
+    ) -> Result<brep_core::ray_parity::Report> {
+        if remaining.contains(&0) {
+            return Err(refuse("STEP assembly ray work budget exhausted"));
+        }
+        let model = self.materialize(index)?;
+        let report = brep_core::ray_parity::classify_ray(
+            &model, origin, direction, tolerance_uv, remaining[0], remaining[1],
+        )?;
+        remaining[0] -= report.cells;
+        remaining[1] -= report.domain_cells;
+        Ok(report)
+    }
+
+    /// Return the first trimmed-face crossing only when its ray interval
+    /// strictly precedes every other candidate. None means a resolved miss.
+    pub fn first_ray_crossing(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<Option<(usize, brep_core::ray_parity::Crossing)>> {
+        validate_ray_work(tolerance_uv, max_cells, max_domain_cells)?;
+        let mut remaining = [max_cells, max_domain_cells];
+        let mut boxes = self.ray_candidates(origin, direction)?;
+        boxes.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
+        let mut candidates = Vec::new();
+        let mut earliest_upper = f64::INFINITY;
+        for (index, [entry, _]) in boxes {
+            if entry > earliest_upper {
+                break;
+            }
+            let report = self.trace_occurrence_ray(index, origin, direction, tolerance_uv, &mut remaining)?;
+            if !report.unresolved.is_empty() {
+                return Err(refuse("STEP assembly ray has unresolved trimmed-face crossings"));
+            }
+            if let Some(crossing) = report.crossings.into_iter().next() {
+                earliest_upper = earliest_upper.min(crossing.parameter[1]);
+                candidates.push((index, crossing));
+            }
+        }
+        candidates.sort_by(|a, b| a.1.parameter[0].total_cmp(&b.1.parameter[0]));
+        let mut ordered = candidates.into_iter();
+        let first = ordered.next();
+        if let (Some((_, first)), Some((_, next))) = (&first, ordered.next())
+            && first.parameter[1] >= next.parameter[0]
+        {
+            return Err(refuse("STEP assembly nearest ray crossing is ambiguous"));
+        }
+        Ok(first)
+    }
+
+    /// Prove material ownership for one placed occurrence in assembly coordinates.
+    /// The returned solid owns the proved geometry and can answer repeated queries.
+    pub fn qualify_occurrence(
+        &self,
+        index: usize,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+    ) -> Result<brep_core::closed_solid::QualifiedClosedSolid> {
+        let model = self.materialize(index)?;
+        brep_core::closed_solid::qualify(model, policy)?.into_solid().ok_or_else(|| {
+            Error::new("BREP_CLOSED_SOLID_UNPROVED", "STEP occurrence material ownership is unproved")
+        })
+    }
+
+    /// Bound the union of material along a finite forward ray segment.
+    /// Admission and ray budgets apply to each occurrence whose box overlaps the segment.
+    /// If a relevant occurrence cannot be checked, the entire query returns an error.
+    pub fn ray_material_coverage(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_parameter: f64,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+        max_cells_per_occurrence: usize,
+        max_domain_cells_per_occurrence: usize,
+    ) -> Result<StepRayMaterialCoverage> {
+        self.ray_material_coverage_at_least(
+            1, origin, direction, max_parameter, policy,
+            max_cells_per_occurrence, max_domain_cells_per_occurrence,
+        )
+    }
+
+    /// Bound the spans crossing material of at least the requested number of
+    /// distinct placed occurrences. Isolated contacts contribute no span.
+    pub fn ray_material_coverage_at_least(
+        &self,
+        count: usize,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_parameter: f64,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+        max_cells_per_occurrence: usize,
+        max_domain_cells_per_occurrence: usize,
+    ) -> Result<StepRayMaterialCoverage> {
+        if count == 0 {
+            return Err(refuse("STEP material ray coverage count must be positive"));
+        }
+        if !max_parameter.is_finite() || max_parameter < 0. {
+            return Err(refuse("STEP material ray needs a finite nonnegative end parameter"));
+        }
+        validate_ray_work(policy.tolerance_uv, max_cells_per_occurrence, max_domain_cells_per_occurrence)?;
+        let mut guaranteed = Vec::new();
+        let mut possible = Vec::new();
+        for (index, [lower, _]) in self.ray_candidates(origin, direction)? {
+            if lower >= max_parameter {
+                continue;
+            }
+            let solid = self.qualify_occurrence(index, policy)?;
+            for [entry, exit] in solid.ray_material_intervals(
+                origin, direction, max_cells_per_occurrence, max_domain_cells_per_occurrence,
+            )? {
+                let inner_exit = exit[0].min(max_parameter);
+                if entry[1] < inner_exit {
+                    guaranteed.push([entry[1], inner_exit]);
+                }
+                let outer_exit = exit[1].min(max_parameter);
+                if entry[0] < outer_exit {
+                    possible.push([entry[0], outer_exit]);
+                }
+            }
+        }
+        Ok(StepRayMaterialCoverage {
+            guaranteed: ray_spans_at_least(guaranteed, count),
+            possible: ray_spans_at_least(possible, count),
+        })
+    }
+
+    /// Return exact transverse section loops and material area for each
+    /// candidate polyhedral occurrence, in assembly coordinates.
+    pub fn exact_polyhedral_sections(
+        &self,
+        normal: [f64; 3],
+        offset: f64,
+        policy: brep_core::closed_solid::AdmissionPolicy,
+        max_exact_work_per_occurrence: u64,
+    ) -> Result<Vec<(usize, Result<brep_core::analysis::ExactPolyhedralSectionArea>)>> {
+        if normal == [0.; 3] || !normal.iter().all(|value| value.is_finite()) || !offset.is_finite() {
+            return Err(refuse("STEP section requires a finite plane with a nonzero normal"));
+        }
+        let mut sections = Vec::new();
+        for (index, bounds) in self.occurrence_bounds()?.into_iter().enumerate() {
+            if !plane_may_intersect_box(normal, offset, bounds) {
+                continue;
+            }
+            let section = self.qualify_occurrence(index, policy).and_then(|solid| {
+                brep_core::analysis::exact_polyhedral_section_area(
+                    &solid, normal, offset, max_exact_work_per_occurrence,
+                )
+            });
+            sections.push((index, section));
+        }
+        Ok(sections)
     }
 
     pub fn materialize(&self, index: usize) -> Result<Model> {
@@ -963,6 +1483,121 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn plane_may_intersect_box(normal: [f64; 3], offset: f64, [min, max]: [[f64; 3]; 2]) -> bool {
+    let (mut lower, mut upper) = (0_f64, 0_f64);
+    for (axis, coefficient) in normal.into_iter().enumerate() {
+        if coefficient == 0. {
+            continue;
+        }
+        let (lo, hi) = if coefficient > 0. {
+            (min[axis], max[axis])
+        } else {
+            (max[axis], min[axis])
+        };
+        lower = (lower + (coefficient * lo).next_down()).next_down();
+        upper = (upper + (coefficient * hi).next_up()).next_up();
+    }
+    // Overflow can lose a useful bound, but never excludes an occurrence.
+    !lower.is_finite() || !upper.is_finite() || (lower <= offset && offset <= upper)
+}
+
+fn box_distance_squared_lower(a: &[[f64; 3]; 2], b: &[[f64; 3]; 2]) -> f64 {
+    let mut squared = 0.;
+    for axis in 0..3 {
+        let gap = (b[0][axis] - a[1][axis]).max(a[0][axis] - b[1][axis])
+            .next_down().max(0.);
+        squared = (squared + (gap * gap).next_down().max(0.)).next_down().max(0.);
+    }
+    squared
+}
+
+fn ray_spans_at_least(spans: Vec<[f64; 2]>, count: usize) -> Vec<[f64; 2]> {
+    let mut events = Vec::with_capacity(2 * spans.len());
+    for [start, end] in spans {
+        events.extend([(start, 1_isize), (end, -1)]);
+    }
+    events.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut spans = Vec::new();
+    let mut active = 0_isize;
+    let mut start = 0.;
+    for group in events.chunk_by(|a, b| a.0 == b.0) {
+        let was_covered = active as usize >= count;
+        active += group.iter().map(|event| event.1).sum::<isize>();
+        let covered = active as usize >= count;
+        let parameter = group[0].0;
+        if covered && !was_covered {
+            start = parameter;
+        } else if was_covered && !covered && start < parameter {
+            spans.push([start, parameter]);
+        }
+    }
+    spans
+}
+
+fn validate_ray_work(tolerance_uv: f64, max_cells: usize, max_domain_cells: usize) -> Result<()> {
+    if !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        || !(1..=1_000_000).contains(&max_cells)
+        || !(1..=8_000_000).contains(&max_domain_cells)
+    {
+        return Err(refuse("STEP assembly ray requires positive tolerance and bounded work"));
+    }
+    Ok(())
+}
+
+fn ray_box_interval(
+    origin: [f64; 3],
+    direction: [f64; 3],
+    [min, max]: [[f64; 3]; 2],
+) -> Option<[f64; 2]> {
+    let (mut entry, mut exit) = (0_f64, f64::INFINITY);
+    for axis in 0..3 {
+        let start = origin[axis];
+        let velocity = direction[axis];
+        if velocity == 0. {
+            if start < min[axis] || start > max[axis] {
+                return None;
+            }
+            continue;
+        }
+        // Form both numerators for division by a positive speed, then
+        // round each arithmetic operation outward.
+        let (lo, hi) = if velocity > 0. {
+            (min[axis] - start, max[axis] - start)
+        } else {
+            (start - max[axis], start - min[axis])
+        };
+        let speed = velocity.abs();
+        entry = entry.max((lo.next_down() / speed).next_down());
+        exit = exit.min((hi.next_up() / speed).next_up());
+        if entry > exit {
+            return None;
+        }
+    }
+    Some([entry, exit])
+}
+
+fn weighted_centroid(placed: &[(f64, [f64; 3])]) -> Result<[f64; 3]> {
+    let total: f64 = placed.iter().map(|entry| entry.0).sum();
+    if !total.is_finite() || total <= 0. {
+        return Err(refuse("STEP assembly volume is outside the finite positive range"));
+    }
+    let center = std::array::from_fn(|axis| {
+        placed.iter().map(|(volume, point)| (volume / total) * point[axis]).sum::<f64>()
+    });
+    if !center.iter().all(|coordinate| coordinate.is_finite()) {
+        return Err(refuse("STEP assembly centroid exceeds finite coordinates"));
+    }
+    Ok(center)
+}
+
+fn placed_material_volume(occurrence: &StepAssemblyOccurrence, local_volume: f64) -> Result<f64> {
+    let volume = placement_determinant(occurrence.transform).abs() * local_volume;
+    if !volume.is_finite() || volume <= 0. {
+        return Err(refuse("STEP occurrence volume is outside the finite positive range"));
+    }
+    Ok(volume)
 }
 
 fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0855",
+  "testedBase": "28f8eebdbd6574fa842290a45e6c9621681bfa78",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 202,
+  "scope": [
+    "Cull by outward-rounded plane projection and recover exact material section loops and area for each placed polyhedral solid.",
+    "Check an exact 12 mm\u00b2 hollow section with two cycles, reversed normal, exclusion of a translated occurrence and per-occurrence budget refusal."
+  ],
+  "logSha256": "f7d182f26acd04859a3fdd5629cb2fb78c08138ef3a090d92b2bbe7185d4aa48",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "406ae47d525e1d6fa97716cdf56b2607cb442b917c9587ae4417aa12134a0288",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "adcd5afde6156130bdfabeddc80f0bd2a8b82ef4d3b84dc7c4c8b21231e53ead",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs": "9cd3a1cb558d83155688e6d059fc133f59c104afb0b54482cf2f41b9eab2e0a3"
+  }
+}

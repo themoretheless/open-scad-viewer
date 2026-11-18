@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0847",
+  "testedBase": "5af395f67dfb7832bccd85b37e0203b2f1df061f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "closed_solid"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 25,
+  "scope": [
+    "Group fully resolved retained-face ray roots into material intervals of a qualified closed solid.",
+    "Check outside and inside ray origins, interior cavity separation, a resolved miss, edge contacts and exhausted budgets."
+  ],
+  "logSha256": "ff8f931c1defae0bdb438a6918d26f3841a55b674b008be438b40c66a9657a5b",
+  "sourceSha256": {
+    "crates/brep-core/src/model/closed_solid.rs": "c74888eea507e7d5c95cf26a301d60e0c7b6d5adaa49f58a5e00922140af4261",
+    "crates/brep-core/src/model/ray_parity.rs": "e9b5c0b000ee5c8b3874f4762eb16f4720b293a9023c3a4c317a12461516c3e2",
+    "crates/brep-core/tests/closed_solid.rs": "fc743c37a59fc29d60c9def8ae407ede889622353fbb9a6940c6d0d07e97a6f9"
+  }
+}

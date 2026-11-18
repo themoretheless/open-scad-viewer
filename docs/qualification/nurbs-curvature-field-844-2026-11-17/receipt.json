@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0844",
+  "testedBase": "d0adf08e9176c79cc3b45951f6151e70c61e9911",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 193,
+  "scope": [
+    "Return the nearest retained trimmed crossing when its complete ray interval strictly precedes all other candidates.",
+    "Check nearest crossing out of occurrence order, a resolved miss, work exhaustion and coincident independent placements."
+  ],
+  "logSha256": "62015d5a2e83f35dfac88583f45eb55cb4bfbeef34c790c9d6fca24ac02d48d1",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "fb5ec2cd5da7f425be2bf34c57d8cf7cf68e6c0d6753dc1e3ebdf939ea53438e",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "d50e4f590a5928200dda8e7c4e286964e70f7ccc06817f9c7c84aff77d7c3b38"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0853",
+  "testedBase": "11fb6b8ec71443de3e0b3844cf893bdcad0924ae",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 200,
+  "scope": [
+    "Conservatively filter by box distance and classify checked pairs only when the measured interval supports a threshold verdict.",
+    "Check a 3 mm pair below a 4 mm minimum, conservative distant exclusion, preserved measurement and refusal before expensive work above the pair limit."
+  ],
+  "logSha256": "b498cc7e41fcf24e6e9ba488b10e4114a96610af362b35984f6c7b64979a3b54",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "9661a2cd128f5a486111da14256f92430fe115c260b075581d9d3e331d2a980c",
+    "crates/cad-step/src/step_interchange_v3.rs": "70e5b509f7bcb88b86bc9c215014aa78a49394248ea6e8395b00b077dc021945",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "867a52a29bf994ae00a2c018bfcc21fcaaa9a7ae7610200781d6587a4324b781",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "7dbec561f62959a5add3dd649efc0c8c52b81a2d66cc56b24e19b522b9a962f6"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0841",
+  "testedBase": "7d2ff9eab870157d0bf82c9bb779c21381389641",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 190,
+  "scope": [
+    "Diagonalize the normalized assembly inertia tensor and restore principal moments in physical units.",
+    "Check analytically known principal moments and the directions of a rotated, anisotropically scaled reflected cuboid, including axis handedness."
+  ],
+  "logSha256": "c7caf144df4e3b4b61f3acb4e4fc7eb2afbe5fcfb4c480f4c9473284e91084ec",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "9c04b63282323d41157ceef9c1b0df5395199e04e2d85ea9986c49974542edfd",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "b25afc74d574f82a5396feec6c339c23be39e2f4fa13588a73b6d94eb3ec5e6c",
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "00232243bcb55def3920e091a02de5dcfe99234e4d01e8a9370401d5035bb174"
+  }
+}

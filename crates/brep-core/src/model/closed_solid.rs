@@ -50,6 +50,92 @@ impl QualifiedClosedSolid {
         }
         Ok(())
     }
+    /// Return the entry and exit parameter enclosures of each material
+    /// interval on a forward ray. An interior origin starts at [0, 0].
+    /// A ray with unresolved, coincident or boundary-origin contacts is refused.
+    pub fn ray_material_intervals(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<Vec<[[f64; 2]; 2]>> {
+        let report = ray_parity::classify_ray(
+            &self.model,
+            origin,
+            direction,
+            self.policy.tolerance_uv,
+            max_cells,
+            max_domain_cells,
+        )?;
+        let starts_inside = report.parity.ok_or_else(|| {
+            Error::new("BREP_RAY_UNRESOLVED", "Material ray contains unresolved crossings")
+        })?;
+        let mut crossings = report.crossings.into_iter().map(|root| root.parameter);
+        let mut intervals = Vec::new();
+        if starts_inside {
+            let exit = crossings.next().ok_or_else(|| {
+                Error::new("BREP_RAY_UNRESOLVED", "Interior ray has no exit crossing")
+            })?;
+            intervals.push([[0., 0.], exit]);
+        }
+        while let Some(entry) = crossings.next() {
+            let exit = crossings.next().ok_or_else(|| {
+                Error::new("BREP_RAY_UNRESOLVED", "Material ray has an unmatched entry crossing")
+            })?;
+            intervals.push([entry, exit]);
+        }
+        Ok(intervals)
+    }
+
+    /// Enclose the length in millimetres of material on the ray segment
+    /// `origin + t * direction`, for `0 <= t <= max_parameter`.
+    pub fn ray_material_length_mm(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_parameter: f64,
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<[f64; 2]> {
+        if !max_parameter.is_finite() || max_parameter < 0. {
+            return Err(Error::new("BREP_INVALID_INPUT", "Ray segment requires a finite nonnegative end parameter"));
+        }
+        let intervals = self.ray_material_intervals(origin, direction, max_cells, max_domain_cells)?;
+        let (mut lower, mut upper) = (0_f64, 0_f64);
+        for [entry, exit] in intervals {
+            let latest_entry = entry[1].min(max_parameter);
+            let earliest_entry = entry[0].min(max_parameter);
+            let earliest_exit = exit[0].min(max_parameter);
+            let latest_exit = exit[1].min(max_parameter);
+            if latest_exit > earliest_entry {
+                lower = (lower + (earliest_exit - latest_entry).next_down().max(0.)).next_down().max(0.);
+                upper = (upper + (latest_exit - earliest_entry).next_up()).next_up();
+            }
+        }
+        if upper == 0. {
+            return Ok([0.; 2]);
+        }
+        let scale = direction.iter().map(|value| value.abs()).fold(0., f64::max);
+        let mut norm2 = [0_f64; 2];
+        for value in direction.map(f64::abs) {
+            if value == 0. {
+                continue;
+            }
+            let ratio = value / scale;
+            let ratio_lo = ratio.next_down().max(0.);
+            let ratio_hi = ratio.next_up();
+            norm2[0] = (norm2[0] + (ratio_lo * ratio_lo).next_down().max(0.)).next_down().max(0.);
+            norm2[1] = (norm2[1] + (ratio_hi * ratio_hi).next_up()).next_up();
+        }
+        let lo = ((lower * scale).next_down().max(0.) * norm2[0].sqrt().next_down()).next_down().max(0.);
+        let hi = ((upper * scale).next_up() * norm2[1].sqrt().next_up()).next_up();
+        if !hi.is_finite() {
+            return Err(Error::new("BREP_RAY_UNRESOLVED", "Material ray length exceeds finite millimetres"));
+        }
+        Ok([lo, hi])
+    }
+
     /// The owned closed embedded material boundary establishes the precondition
     /// which a standalone parity report deliberately leaves to its caller.
     pub fn classify_point(

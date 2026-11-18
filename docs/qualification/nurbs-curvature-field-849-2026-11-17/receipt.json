@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0849",
+  "testedBase": "8fda52049ae9ecef4b0dcdf691f7b8d2d94331a0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 196,
+  "scope": [
+    "Validate material ownership in assembly coordinates and return an immutable qualified occurrence for repeated measurements.",
+    "Check two world ray lengths from one qualified scaled reflected occurrence, re-verification, invalid index and retained sharing."
+  ],
+  "logSha256": "7f136978dcf256ec3df7a85b89a9942296a2828a8d5e5bef6f61faee51bba7e5",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "b07bfc42ae3fd9aa73303a3f8b960595bfda8ca9e780ca1a8cc9175fd0e2180e",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "874fffe5aedb43d72211e8c802f5f6a43f576710e55df3f25cdb21ab1e448baa",
+    "crates/brep-core/src/model/closed_solid.rs": "f5345e3b45e273503be45c7b2940f4e2861aff7bed1eefc989c2191b78691160"
+  }
+}

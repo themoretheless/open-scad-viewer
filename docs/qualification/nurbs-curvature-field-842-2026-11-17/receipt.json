@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0842",
+  "testedBase": "117cd76efdefc03fc21517f3f9fa5df34e4d8580",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 191,
+  "scope": [
+    "Integrate shared definitions once and accumulate density-weighted affine central moments for each occurrence.",
+    "Compare mass, centroid and full inertia tensor to analytical results for two placements sharing one imported definition, with different densities and scale factors."
+  ],
+  "logSha256": "48d786c146e3966382224c895eb67cb91b974bea7351fe88eba48de96e01a3c4",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "ac03b10b730d731c5b98598a743840587c92d23589a96f66b865cc359e34de1b",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "a3f45b25881a67443c218840b27e08a565d644434702a213254dc06c9516cfae"
+  }
+}

@@ -2828,6 +2828,334 @@ fn shared_step_round_trips_explicit_coincident_product_occurrences() {
     assert!(crate::import_step_shared_assembly(&invalid).is_err());
 }
 
+fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = brep_core::extrude_polygon(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.]], 0., 2.).unwrap();
+    assembly.replace_definition(0, solid).unwrap();
+    let identity = [
+        [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    let reflected = [
+        [0., -3., 0., 25.], [2., 0., 0., -8.], [0., 0., -4., 40.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(0, identity).unwrap();
+    assembly.set_occurrence_orthogonal_placement(1, reflected).unwrap();
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    crate::import_step_shared_assembly(&exported).unwrap()
+}
+
+fn shared_step_admission_policy() -> brep_core::closed_solid::AdmissionPolicy {
+    brep_core::closed_solid::AdmissionPolicy {
+        tolerance_uv: 1e-8,
+        max_linear_cells: 100_000,
+        geometry: brep_core::volume_validity::Limits {
+            boundary: brep_core::boundary_embedding::Limits {
+                exact_work: 1_000_000,
+                trim_pairs: 1000,
+                trim_cells: 10_000,
+                trim_domain_cells: 100_000,
+                spans: 100,
+                contacts: brep_core::face_contacts::Limits {
+                    pairs: 1000,
+                    cells: 10_000,
+                    domain_cells: 100_000,
+                    cells_per_pair: 16,
+                    domain_cells_per_pair: 1000,
+                },
+            },
+            nesting_pairs: 100,
+            nesting_cells: 10_000,
+            nesting_domain_cells: 100_000,
+            orientation_cells: 10_000,
+            orientation_domain_cells: 100_000,
+            orientation_spans: 100,
+        },
+    }
+}
+
+#[test]
+fn shared_step_ray_material_multiplicity_detects_overlaps() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let placement = |x| [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(1, placement(1.)).unwrap();
+    assembly.add_occurrence(0, placement(1.5)).unwrap();
+    assembly.add_occurrence(0, placement(10.)).unwrap();
+    let policy = shared_step_admission_policy();
+    let coverage = |count| assembly.ray_material_coverage_at_least(
+        count, [-1., 0.75, 1.25], [1., 0., 0.], 3.75, policy, 100_000, 200_000,
+    );
+    assert!(coverage(0).is_err());
+    for (count, expected) in [(2, [2., 3.75]), (3, [2.5, 3.])] {
+        let report = coverage(count).unwrap();
+        assert_eq!(report.guaranteed.len(), 1);
+        assert_eq!(report.possible.len(), 1);
+        let [inner, outer] = [report.guaranteed[0], report.possible[0]];
+        assert!(outer[0] <= expected[0] && expected[0] <= inner[0]);
+        assert!(inner[1] <= expected[1] && expected[1] <= outer[1]);
+        assert!(inner[0] - outer[0] < 1e-6 && outer[1] - inner[1] < 1e-6);
+    }
+    let beyond = coverage(4).unwrap();
+    assert!(beyond.guaranteed.is_empty() && beyond.possible.is_empty());
+}
+
+#[test]
+fn shared_step_ray_material_coverage_merges_overlapping_placed_solids() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let placement = |x| [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(1, placement(1.)).unwrap();
+    assembly.add_occurrence(0, placement(5.)).unwrap();
+    let policy = shared_step_admission_policy();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let coverage = assembly.ray_material_coverage(origin, direction, 7., policy, 100_000, 200_000).unwrap();
+    assert_eq!(coverage.guaranteed.len(), 2);
+    assert_eq!(coverage.possible.len(), 2);
+    for ((inner, outer), expected) in coverage.guaranteed.into_iter().zip(coverage.possible)
+        .zip([[1., 4.], [6., 7.]])
+    {
+        assert!(outer[0] <= expected[0] && expected[0] <= inner[0]);
+        assert!(inner[1] <= expected[1] && expected[1] <= outer[1]);
+        assert!((inner[0] - outer[0]).abs() < 1e-6);
+        assert!((outer[1] - inner[1]).abs() < 1e-6);
+    }
+    let short = assembly.ray_material_coverage(origin, direction, 0.5, policy, 1, 1).unwrap();
+    assert!(short.guaranteed.is_empty() && short.possible.is_empty());
+    assert!(assembly.ray_material_coverage(origin, direction, 7., policy, 1, 1).is_err());
+}
+
+#[test]
+fn shared_step_qualifies_placed_occurrence_for_material_queries() {
+    let assembly = shared_step_scaled_cube_pair();
+    let policy = shared_step_admission_policy();
+    assert!(assembly.qualify_occurrence(2, policy).is_err());
+    let owned = assembly.qualify_occurrence(1, policy).unwrap();
+    let origin = [18., -6., 36.];
+    let direction = [1., 0., 0.];
+    for (end, expected) in [(3., 2.), (10., 6.)] {
+        let [lo, hi] = owned.ray_material_length_mm(origin, direction, end, 100_000, 200_000).unwrap();
+        assert!(lo <= expected && expected <= hi);
+        assert!(hi - lo < 1e-6);
+    }
+    owned.reverify().unwrap();
+    assert_eq!((assembly.definitions().len(), assembly.occurrences().len()), (1, 2));
+}
+
+#[test]
+fn shared_step_ray_candidates_filter_diagonal_misses() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let identity = assembly.occurrences()[0].transform;
+    let mut miss = identity;
+    miss[0][3] = 5.;
+    miss[1][3] = 10.;
+    assembly.set_occurrence_placement(1, miss).unwrap();
+    for (origin, direction) in [
+        ([-1., -1., 1.], [1., 1., 0.]),
+        ([3., 3., 1.], [-1., -1., 0.]),
+    ] {
+        let candidates = assembly.ray_candidates(origin, direction).unwrap();
+        assert_eq!(candidates.len(), 1);
+        let (index, [lo, hi]) = candidates[0];
+        assert_eq!(index, 0);
+        assert!(lo <= 1. && hi >= 3.);
+        assert!(1. - lo < 1e-12 && hi - 3. < 1e-12);
+    }
+    let inside = assembly.ray_candidates([1., 1., 1.], [1., 1., 0.]).unwrap();
+    assert_eq!(inside[0].1[0], 0.);
+    let corner = assembly.ray_candidates([-1., 1., 1.], [1., 1., 0.]).unwrap();
+    assert_eq!(corner.len(), 1);
+    assert!(corner[0].1[0] <= 1. && corner[0].1[1] >= 1.);
+    assert!(assembly.ray_candidates([0.; 3], [0.; 3]).is_err());
+}
+
+#[test]
+fn shared_step_nearest_ray_prunes_farther_occurrences_before_budget_exhaustion() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let identity = assembly.occurrences()[0].transform;
+    let mut farther = identity;
+    farther[0][3] = 10.;
+    assembly.set_occurrence_placement(0, farther).unwrap();
+    assembly.set_occurrence_placement(1, identity).unwrap();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let near = assembly.extract_occurrences(&[1]).unwrap();
+    let baseline = near.ray_crossings(origin, direction, 1e-7, 100_000, 200_000).unwrap();
+    let budget = baseline[0].1.as_ref().unwrap();
+    let (index, crossing) = assembly.first_ray_crossing(
+        origin, direction, 1e-7, budget.cells, budget.domain_cells,
+    ).unwrap().unwrap();
+    assert_eq!(index, 1);
+    assert!(crossing.parameter[0] <= 1. && crossing.parameter[1] >= 1.);
+    assembly.add_occurrence(0, identity).unwrap();
+    assert!(assembly.first_ray_crossing(
+        origin, direction, 1e-7, budget.cells, budget.domain_cells,
+    ).is_err());
+}
+
+#[test]
+fn shared_step_first_ray_crossing_requires_unique_nearest_interval() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let identity = assembly.occurrences()[0].transform;
+    let mut farther = identity;
+    farther[0][3] = 5.;
+    assembly.set_occurrence_placement(0, farther).unwrap();
+    assembly.set_occurrence_placement(1, identity).unwrap();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let (index, crossing) = assembly.first_ray_crossing(origin, direction, 1e-7, 100_000, 200_000)
+        .unwrap().unwrap();
+    assert_eq!(index, 1);
+    assert!(crossing.parameter[0] <= 1. && crossing.parameter[1] >= 1.);
+    assert!(assembly.first_ray_crossing(origin, direction, 1e-7, 1, 1).is_err());
+    assert!(assembly.first_ray_crossing([-1., 3., 1.], direction, 1e-7, 100_000, 200_000)
+        .unwrap().is_none());
+
+    assembly.add_occurrence(0, identity).unwrap();
+    let error = assembly.first_ray_crossing(origin, direction, 1e-7, 100_000, 200_000).unwrap_err();
+    assert!(error.message.contains("ambiguous"));
+}
+
+#[test]
+fn shared_step_ray_crossings_respect_placements_trims_and_shared_budget() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let placement = [
+        [0., -3., 0., 25.], [2., 0., 0., 0.], [0., 0., -4., 4.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(1, placement).unwrap();
+    let distant = [
+        [1., 0., 0., 0.], [0., 1., 0., 50.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.add_occurrence(0, distant).unwrap();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let reports = assembly.ray_crossings(origin, direction, 1e-7, 100_000, 200_000).unwrap();
+    assert_eq!(reports.len(), 2);
+    for ((index, report), expected) in reports.iter().zip([[1., 3.], [20., 26.]]) {
+        assert!(*index < 2);
+        let report = report.as_ref().unwrap();
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        assert_eq!(report.crossings.len(), 2);
+        let mut parameters: Vec<_> = report.crossings.iter().map(|hit| hit.parameter).collect();
+        parameters.sort_by(|a, b| a[0].total_cmp(&b[0]));
+        for ([lo, hi], expected) in parameters.into_iter().zip(expected) {
+            assert!(lo <= expected && expected <= hi, "{lo}..{hi} vs {expected}");
+        }
+    }
+
+    let limited = assembly.ray_crossings(origin, direction, 1e-7, 1, 1).unwrap();
+    assert!(!limited[0].1.as_ref().unwrap().unresolved.is_empty());
+    assert!(limited[1].1.is_err());
+    assert!(assembly.ray_crossings(origin, [0.; 3], 1e-7, 1, 1).is_err());
+}
+
+#[test]
+fn shared_step_mass_accounts_for_different_material_densities() {
+    let assembly = shared_step_scaled_cube_pair();
+    for invalid in [&[0.002][..], &[0.002, f64::NAN], &[0.002, 0.]] {
+        assert!(assembly.mass_properties_with_densities(invalid, 1e-8, 100_000).is_err());
+    }
+    let result = assembly.mass_properties_with_densities(&[0.002, 0.001], 1e-8, 100_000).unwrap();
+    let masses = [0.016, 0.192];
+    let total = masses[0] + masses[1];
+    assert!((result.mass - total).abs() < 1e-12);
+    let delta = [21., -7., 35.];
+    for (axis, offset) in delta.into_iter().enumerate() {
+        assert!((result.centroid[axis] - (1. + masses[1] / total * offset)).abs() < 1e-10);
+    }
+    let reduced_mass = masses[0] * masses[1] / total;
+    let norm_squared: f64 = delta.iter().map(|v| v * v).sum();
+    let sides_squared = [36., 16., 64.];
+    for i in 0..3 {
+        for j in 0..3 {
+            let expected = if i == j {
+                masses[0] * 8. / 12.
+                    + masses[1] * (sides_squared[(i + 1) % 3] + sides_squared[(i + 2) % 3]) / 12.
+                    + reduced_mass * (norm_squared - delta[i] * delta[i])
+            } else {
+                -reduced_mass * delta[i] * delta[j]
+            };
+            assert!((result.inertia[i][j] - expected).abs() < 1e-9);
+        }
+    }
+}
+
+#[test]
+fn shared_step_principal_inertia_recovers_rotated_axes() {
+    let mut assembly = shared_step_scaled_cube_pair().extract_occurrences(&[1]).unwrap();
+    let placement = [
+        [1.2, -2.4, 0., 25.], [1.6, 1.8, 0., -8.], [0., 0., -4., 40.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(0, placement).unwrap();
+    assert!(assembly.material_principal_inertia(1e-8, 0).is_err());
+    let principal = assembly.material_principal_inertia(1e-8, 100_000).unwrap();
+    let expected_axes = [[0.6, 0.8, 0.], [-0.8, 0.6, 0.], [0., 0., 1.]];
+    for (index, expected) in [1600., 1280., 832.].into_iter().enumerate() {
+        assert!((principal.moments_mm5[index] - expected).abs() < 1e-8);
+        let dot: f64 = principal.axes[index].iter().zip(expected_axes[index])
+            .map(|(a, b)| a * b).sum();
+        assert!((dot.abs() - 1.).abs() < 1e-10);
+    }
+    let [x, y, z] = principal.axes;
+    let handedness = (x[1] * y[2] - x[2] * y[1]) * z[0]
+        + (x[2] * y[0] - x[0] * y[2]) * z[1]
+        + (x[0] * y[1] - x[1] * y[0]) * z[2];
+    assert!((handedness - 1.).abs() < 1e-10);
+}
+
+#[test]
+fn shared_step_material_surface_area_handles_uniform_and_nonuniform_scale() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let index = assembly.add_occurrence(0, assembly.occurrences()[0].transform).unwrap();
+    let uniform = [
+        [2., 0., 0., 100.], [0., 2., 0., 0.], [0., 0., 2., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(index, uniform).unwrap();
+    assert!(assembly.material_surface_area_mm2(1e-8, 0).is_err());
+    let area = assembly.material_surface_area_mm2(1e-8, 100_000).unwrap();
+    let expected = 6. * 4. + 2. * (6. * 4. + 6. * 8. + 4. * 8.) + 6. * 16.;
+    assert!((area - expected).abs() < 1e-8);
+    assert_eq!(assembly.definitions().len(), 1);
+}
+
+#[test]
+fn shared_step_material_inertia_transforms_second_moments() {
+    let assembly = shared_step_scaled_cube_pair();
+    assert!(assembly.material_inertia_mm5(1e-8, 0).is_err());
+    let inertia = assembly.material_inertia_mm5(1e-8, 100_000).unwrap();
+    let delta = [21., -7., 35.];
+    let norm_squared: f64 = delta.iter().map(|x| x * x).sum();
+    let reduced_volume = 8. * 192. / 200.;
+    let local = [6. * 6., 4. * 4., 8. * 8.];
+    for i in 0..3 {
+        for j in 0..3 {
+            let expected = if i == j {
+                16. / 3. + 192. / 12. * (local[(i + 1) % 3] + local[(i + 2) % 3])
+                    + reduced_volume * (norm_squared - delta[i] * delta[i])
+            } else {
+                -reduced_volume * delta[i] * delta[j]
+            };
+            assert!((inertia[i][j] - expected).abs() < 1e-8);
+        }
+    }
+}
+
+#[test]
+fn shared_step_material_centroid_weights_reflected_scaled_occurrences() {
+    let back = shared_step_scaled_cube_pair();
+    assert!(back.material_centroid_mm(1e-8, 0).is_err());
+    let center = back.material_centroid_mm(1e-8, 100_000).unwrap();
+    let expected = [22., -6., 36.].map(|coordinate| (1. + 24. * coordinate) / 25.);
+    for (actual, expected) in center.into_iter().zip(expected) {
+        assert!((actual - expected).abs() < 1e-9);
+    }
+}
+
 #[test]
 fn shared_step_material_volume_accounts_for_scale_and_reflection() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
@@ -2854,6 +3182,125 @@ fn shared_step_material_volume_accounts_for_scale_and_reflection() {
     assert_eq!(back.occurrences().len(), 3);
     let volume = back.material_volume_mm3(1e-8, 100_000).unwrap();
     assert!((volume - 8. * (1. + 24. + 1.)).abs() < 1e-8);
+}
+
+#[test]
+fn shared_step_exact_sections_retain_holes_and_exclude_distant_occurrences() {
+    let mut assembly = shared_step_scaled_cube_pair().extract_occurrences(&[0]).unwrap();
+    let outer = brep_core::cuboid([0.; 3], [4.; 3]).unwrap();
+    let inner = brep_core::cuboid([1.; 3], [3.; 3]).unwrap();
+    let hollow = brep_core::minkowski3d::curved::certify_enclosed_difference(&outer, &inner, 0)
+        .unwrap().into_model();
+    assembly.replace_definition(0, hollow).unwrap();
+    let mut displaced = assembly.occurrences()[0].transform;
+    displaced[2][3] = 10.;
+    assembly.add_occurrence(0, displaced).unwrap();
+    let policy = shared_step_admission_policy();
+    let sections = assembly.exact_polyhedral_sections([0., 0., -1.], -2., policy, 100_000).unwrap();
+    assert_eq!(sections.len(), 1);
+    assert_eq!(sections[0].0, 0);
+    let section = sections[0].1.as_ref().unwrap();
+    assert_eq!(section.loops.len(), 2);
+    assert!(section.depths.contains(&0) && section.depths.contains(&1));
+    assert_eq!(section.area_squared_mm4.to_string(), "144");
+    assert!(section.loops.iter().all(|loop_| loop_.points_mm.len() == 4));
+    assert!(assembly.exact_polyhedral_sections([0., 0., 1.], 20., policy, 1).unwrap().is_empty());
+    assert!(assembly.exact_polyhedral_sections([0.; 3], 0., policy, 1).is_err());
+    let limited = assembly.exact_polyhedral_sections([0., 0., 1.], 2., policy, 1).unwrap();
+    assert!(limited[0].1.is_err());
+}
+
+#[test]
+fn shared_step_minimum_clearance_orders_pairs_and_bounds_unchecked_work() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let mut shifted = assembly.occurrences()[0].transform;
+    shifted[0][3] = 20.;
+    assembly.set_occurrence_placement(1, shifted).unwrap();
+    shifted[0][3] = 23.;
+    assembly.add_occurrence(0, shifted).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry,
+        pairs: 100,
+        contact_pairs: 1000,
+        cells: 100_000,
+        domain_cells: 1_000_000,
+    };
+    let empty = assembly.extract_occurrences(&[0]).unwrap();
+    assert!(empty.minimum_clearance(1e-5, policy.tolerance_uv, limits, 0).unwrap().is_none());
+    let unchecked = assembly.minimum_clearance(1e-5, policy.tolerance_uv, limits, 0).unwrap().unwrap();
+    assert_eq!(unchecked.checked_pairs, 0);
+    assert!(unchecked.upper_bound_mm.is_none() && !unchecked.converged);
+    assert!(unchecked.lower_bound_mm <= 1. && 1. - unchecked.lower_bound_mm < 1e-10);
+
+    let checked = assembly.minimum_clearance(1e-5, policy.tolerance_uv, limits, 1).unwrap().unwrap();
+    assert_eq!(checked.checked_pairs, 1);
+    assert_eq!(checked.upper_bound_pair, Some([1, 2]));
+    assert!(checked.lower_bound_mm <= 1. && checked.upper_bound_mm.unwrap() >= 1.);
+    assert!(checked.converged && checked.pair_errors.is_empty());
+}
+
+#[test]
+fn shared_step_batch_clearance_preserves_measurement_and_pair_budget() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let mut shifted = assembly.occurrences()[0].transform;
+    shifted[0][3] = 5.;
+    assembly.set_occurrence_placement(1, shifted).unwrap();
+    shifted[0][3] = 50.;
+    assembly.add_occurrence(0, shifted).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry,
+        pairs: 100,
+        contact_pairs: 1000,
+        cells: 100_000,
+        domain_cells: 1_000_000,
+    };
+    let check = |minimum, max_pairs| assembly.check_clearances(
+        minimum, 1e-5, policy.tolerance_uv, limits, max_pairs,
+    );
+    assert!(check(2., 0).unwrap().is_empty());
+    assert!(check(4., 0).is_err());
+    assert!(check(f64::NAN, 1).is_err());
+    let checks = check(4., 1).unwrap();
+    assert_eq!(checks.len(), 1);
+    assert_eq!(checks[0].0, [0, 1]);
+    let report = checks[0].1.as_ref().unwrap();
+    assert_eq!(report.status, crate::StepClearanceStatus::BelowMinimum);
+    let [lo, hi] = report.measurement.distance_interval_mm.unwrap();
+    assert!(lo <= 3. && 3. <= hi);
+}
+
+#[test]
+fn shared_step_occurrence_clearance_distinguishes_separation_from_containment() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let mut shifted = assembly.occurrences()[0].transform;
+    shifted[0][3] = 5.;
+    assembly.set_occurrence_placement(1, shifted).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry,
+        pairs: 100,
+        contact_pairs: 1000,
+        cells: 100_000,
+        domain_cells: 1_000_000,
+    };
+    assert!(assembly.occurrence_clearance([0, 2], 1e-5, policy.tolerance_uv, limits).is_err());
+    let gap = assembly.occurrence_clearance([0, 1], 1e-5, policy.tolerance_uv, limits).unwrap();
+    assert_eq!(gap.material_overlap, Some(false), "{}", gap.reason);
+    let [lo, hi] = gap.distance_interval_mm.unwrap();
+    assert!(lo <= 3. && 3. <= hi && hi - lo <= 1e-5, "{lo}..{hi}");
+    let first = assembly.materialize(0).unwrap();
+    let second = assembly.materialize(1).unwrap();
+    assert!(gap.separation_witness(&first, &second).is_some());
+
+    let enclosed = [
+        [0.5, 0., 0., 0.5], [0., 0.5, 0., 0.5], [0., 0., -0.5, 1.5], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(1, enclosed).unwrap();
+    let contained = assembly.occurrence_clearance([0, 1], 1e-5, policy.tolerance_uv, limits).unwrap();
+    assert_eq!(contained.material_overlap, Some(true), "{}", contained.reason);
+    assert_eq!(contained.distance_interval_mm, Some([0.; 2]));
 }
 
 #[test]
@@ -3396,13 +3843,19 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     let angles: Vec<_> = (0..18).map(|index| f64::from(index) * 20.).collect();
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &angles).unwrap();
     let sun = brep_core::gear(&brep_core::GearSpec { teeth: 32, helix_angle_deg: -35., bore: 44., ..spec.clone() }).unwrap();
-    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, ..spec.clone() }).unwrap();
+    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, rim_width: 32. - (30. + 1.5 + 0.1), ..spec.clone() }).unwrap();
     let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
     assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
     assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
     let mut imported = crate::import_step_shared_assembly(&text).unwrap();
     assert_eq!(imported.definitions().len(), 3);
     assert_eq!(imported.occurrences().len(), 20);
+    let stored_faces: usize = imported.definitions().iter().map(|body| body.faces.len()).sum();
+    let placed_faces: usize = imported.occurrences().iter()
+        .map(|item| imported.definitions()[item.definition].faces.len()).sum();
+    assert_eq!(stored_faces, sun.faces.len() + ring.faces.len() + planets.prototype().faces.len());
+    assert_eq!(placed_faces - stored_faces, 17 * planets.prototype().faces.len());
+    eprintln!("Spinner STEP: {} bytes, {stored_faces} stored faces, {placed_faces} placed faces", text.len());
     let planet_index = imported.occurrences()[2].definition;
     assert!(imported.occurrences()[2..].iter().all(|item| item.definition == planet_index));
     let first_planet = imported.materialize(2).unwrap();
