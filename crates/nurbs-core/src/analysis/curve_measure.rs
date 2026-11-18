@@ -2239,7 +2239,51 @@ pub enum FirstToolpathContact {
     },
 }
 
+#[derive(Clone, Debug)]
+pub struct MinimumToolpathClearance {
+    pub gap_bounds: [f64; 2],
+    /// Ordered parameter intervals covering every possible minimizer.
+    pub parameter_intervals: Vec<[f64; 2]>,
+    /// A cell and obstacle whose gap upper bound establishes the report's upper bound.
+    pub upper_witness: [usize; 2],
+}
+
 impl SphericalClearancePartition {
+    /// Enclose the minimum signed gap over all cells and obstacles and
+    /// localize its possible minimizers. Resolution follows the partition.
+    pub fn minimum_clearance(&self) -> Option<MinimumToolpathClearance> {
+        let mut lower = f64::INFINITY;
+        let mut upper = f64::INFINITY;
+        let mut witness = None;
+        for (cell_index, cell) in self.cells.iter().enumerate() {
+            for (obstacle_index, &[lo, hi]) in cell.gap_bounds.iter().enumerate() {
+                lower = lower.min(lo);
+                if hi < upper {
+                    upper = hi;
+                    witness = Some([cell_index, obstacle_index]);
+                }
+            }
+        }
+        let upper_witness = witness?;
+        let mut parameter_intervals: Vec<[f64; 2]> = Vec::new();
+        for cell in &self.cells {
+            if cell.gap_bounds.iter().any(|[lo, _]| *lo <= upper) {
+                let [start, end] = cell.parameter_interval;
+                match parameter_intervals.last_mut() {
+                    Some([_, previous_end]) if start <= *previous_end => {
+                        *previous_end = previous_end.max(end);
+                    }
+                    _ => parameter_intervals.push([start, end]),
+                }
+            }
+        }
+        Some(MinimumToolpathClearance {
+            gap_bounds: [lower, upper],
+            parameter_intervals,
+            upper_witness,
+        })
+    }
+
     /// Summarize the first contact in the original window. The lower bound
     /// comes from the first cell whose clearance was not proved. The upper
     /// bound is the start of the first cell proved in contact throughout.

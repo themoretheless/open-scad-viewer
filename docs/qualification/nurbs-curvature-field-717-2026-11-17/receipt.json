@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0717",
+  "testedBase": "af574cbb2945621f174a573117ea51ce50d2d8f8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 341,
+  "scope": [
+    "Enclose the minimum signed clearance and preserve every possible minimizer interval.",
+    "Check positive and negative analytic minima, obstacle witness, and disjoint tied candidate windows."
+  ],
+  "logSha256": "f5d0168ec94a11d2f8fbf8f6319e478bcef19a98124e5dda07dd0d2bd3fec2ea",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "9e6cc5fc4a62fa88a9c71704ccec3e0cfe525042eaebe8749f9dd94db5f606de",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4610c26745f92b51ffaf1b73f55159a4df566b1c187a493b33683ddc912aa7f6"
+  }
+}

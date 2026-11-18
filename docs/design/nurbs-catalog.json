@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 716,
-  "unallocatedCount": 284,
+  "specifiedCount": 717,
+  "unallocatedCount": 283,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17296,6 +17296,25 @@
       "remainingQualification": [
         "Bound the first possible and confirmed toolpath contact, with a witnessing obstacle.",
         "Check clear and unresolved windows, earliest collision versus obstacle order, initial overlap, and unresolved tangency before a later collision.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0717",
+      "name": "Границы минимального зазора и его положения на NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::SphericalClearancePartition::minimum_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-717-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-717-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum signed clearance and preserve every possible minimizer interval.",
+        "Check positive and negative analytic minima, obstacle witness, and disjoint tied candidate windows.",
         "WASM and application integration are separate."
       ]
     }

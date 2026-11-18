@@ -10129,3 +10129,59 @@ fn first_toolpath_contact_preserves_unresolved_tangency_before_later_collision()
     assert_eq!(obstacle_index, 1);
     assert!(0.24 < lo && lo <= 0.25 && hi >= 5.5 / 8.);
 }
+
+#[test]
+fn minimum_toolpath_clearance_encloses_minimum_on_clear_and_colliding_paths() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![2., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[0., 5.], radius: 1. },
+        SphericalObstacle { center: &[0., 0.], radius: 0.5 },
+    ];
+    for (radius, exact) in [(0., 0.25), (0.5, -0.25)] {
+        let report = partition_curve_spherical_clearance(
+            &curve, [0., 1.], &obstacles, radius, 0.01, 256,
+        ).unwrap();
+        let minimum = report.minimum_clearance().unwrap();
+        let [lo, hi] = minimum.gap_bounds;
+        assert!(lo <= exact && exact <= hi);
+        let [cell, obstacle] = minimum.upper_witness;
+        assert_eq!(obstacle, 1);
+        assert_eq!(report.cells[cell].gap_bounds[obstacle][1], hi);
+        assert!(minimum.parameter_intervals.iter().any(|[lo, hi]| *lo <= 0.5 && 0.5 <= *hi));
+    }
+}
+
+#[test]
+fn minimum_toolpath_clearance_preserves_disjoint_tied_intervals() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalClearanceCell, SphericalClearancePartition,
+    };
+    let make_cell = |parameter_interval, bounds| SphericalClearanceCell {
+        parameter_interval,
+        span: 1,
+        gap_bounds: vec![bounds],
+        status: Status::Within,
+    };
+    let report = SphericalClearancePartition {
+        cells: vec![
+            make_cell([0., 1.], [1., 2.]),
+            make_cell([1., 2.], [3., 4.]),
+            make_cell([2., 3.], [1., 2.]),
+            make_cell([3., 4.], [1.5, 3.]),
+        ],
+        work_obstacle_cells: 4,
+    };
+    let minimum = report.minimum_clearance().unwrap();
+    assert_eq!(minimum.gap_bounds, [1., 2.]);
+    assert_eq!(minimum.parameter_intervals, [[0., 1.], [2., 4.]]);
+    assert_eq!(minimum.upper_witness, [0, 0]);
+}
