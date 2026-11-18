@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0697",
+  "testedBase": "e9e9ca5a2ba10fef163b019fba9315959d3e5dc0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 316,
+  "scope": [
+    "Check axial motion limits in each segment clock together with spatial and derivative join limits.",
+    "Check physical-clock limits, separate segment and join violations, a fully feasible chain, and shared span budget refusal."
+  ],
+  "logSha256": "bf25ea5833b405e7689547a8b521a5b10635d47100e28d8bd9ff9ccf54d6ce54",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "e319ae2059c4cfead0c388476bdcc1068b8c1ded105801675a8d6b76cf9864d4",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "326fa1a37193054212fc9a8c0c86a135e7747ecc602422414eb7c3fc9381a893"
+  }
+}

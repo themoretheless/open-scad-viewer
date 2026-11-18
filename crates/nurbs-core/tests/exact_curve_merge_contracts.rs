@@ -9338,3 +9338,45 @@ fn motion_chain_checks_a_single_closed_segment_for_velocity_discontinuity() {
     assert_eq!(report.joins[0].join.statuses, [Status::Exceeds, Status::Within, Status::Within]);
     assert!(classify_directional_motion_chain(&[segment], false, &[1., 0.], 0.01, limits, 1).is_err());
 }
+
+#[test]
+fn timed_motion_chain_distinguishes_segment_violations_from_join_violations() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionChainLimits,
+        TimedMotionSegment, check_timed_motion_chain,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: [0., 4.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [2., 4.], duration: 1. },
+        TimedMotionSegment { curve: &curve, interval: [4., 6.], duration: 4. },
+    ];
+    let limits = TimedMotionChainLimits {
+        segment: DirectionalMotionLimits { speed: 1., acceleration: 1., jerk: 1. },
+        join: DirectionalMotionLimits { speed: 2., acceleration: 1., jerk: 1. },
+        position_gap: 0.01,
+    };
+    let check = |segments: &[TimedMotionSegment<'_>], limits, cells| {
+        check_timed_motion_chain(segments, false, &[1., 0.], limits, [1e-5; 3], cells, 1)
+    };
+    assert!(check(&segments, limits, 5).is_err());
+    let report = check(&segments, limits, 6).unwrap();
+    assert_eq!(report.cells, 6);
+    assert_eq!(report.segment_statuses, [Status::Exceeds, Status::Within]);
+    assert_eq!(report.joins.status, Status::Within);
+    assert_eq!(report.status, Status::Exceeds);
+    let mut limits = limits;
+    limits.segment.speed = 3.;
+    limits.join.speed = 1.;
+    let report = check(&segments, limits, 6).unwrap();
+    assert_eq!(report.segment_statuses, [Status::Within; 2]);
+    assert_eq!(report.joins.status, Status::Exceeds);
+    assert_eq!(report.status, Status::Exceeds);
+    limits.join.speed = 2.;
+    assert_eq!(check(&segments, limits, 6).unwrap().status, Status::Within);
+}

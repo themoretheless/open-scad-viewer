@@ -1342,32 +1342,11 @@ pub fn check_multi_axis_motion_deadline(
     check(deadline.is_finite() && deadline > 0., "Deadline must be positive and finite")?;
     curve.validate()?;
     validate_travel_interval(curve, time_window)?;
-    let exact = |value| {
-        BigRational::from_float(value).ok_or_else(|| crate::numeric_err("Nonfinite motion operand"))
-    };
-    let factor = exact(deadline)? / (exact(time_window[1])? - exact(time_window[0])?);
+    let factor = motion_clock_factor(time_window, deadline)?;
     let powers = [factor.clone(), &factor * &factor, factor.pow(3)];
     let mut axis_statuses = Vec::new();
     let cells = measure_motion_axes(curve, time_window, axes, tolerances, max_cells, |axis, report| {
-        let mut status = DirectionalMotionStatus::Within;
-        for (([lo, hi], limit), power) in [
-            (report.speed.bounds, axis.limits.speed),
-            (report.acceleration.bounds, axis.limits.acceleration),
-            (report.jerk.bounds, axis.limits.jerk),
-        ]
-        .into_iter()
-        .zip(&powers)
-        {
-            let allowed = exact(limit)? * power;
-            if exact(lo)? > allowed {
-                status = DirectionalMotionStatus::Exceeds;
-                break;
-            }
-            if exact(hi)? > allowed {
-                status = DirectionalMotionStatus::Undetermined;
-            }
-        }
-        axis_statuses.push(status);
+        axis_statuses.push(motion_status_in_clock(report, axis.limits, &powers)?);
         Ok(())
     })?;
     let status = if factor < BigRational::from_integer(1.into())
@@ -1380,6 +1359,44 @@ pub fn check_multi_axis_motion_deadline(
         DirectionalMotionStatus::Within
     };
     Ok(MultiAxisMotionDeadlineReport { status, axis_statuses, cells })
+}
+
+fn motion_clock_factor(
+    interval: [f64; 2],
+    duration: f64,
+) -> Result<num_rational::BigRational> {
+    Ok(exact_motion_operand(duration)?
+        / (exact_motion_operand(interval[1])? - exact_motion_operand(interval[0])?))
+}
+
+fn exact_motion_operand(value: f64) -> Result<num_rational::BigRational> {
+    num_rational::BigRational::from_float(value)
+        .ok_or_else(|| crate::numeric_err("Nonfinite motion operand"))
+}
+
+fn motion_status_in_clock(
+    report: &DirectionalMotionReport,
+    limits: DirectionalMotionLimits,
+    powers: &[num_rational::BigRational; 3],
+) -> Result<DirectionalMotionStatus> {
+    let mut status = DirectionalMotionStatus::Within;
+    for (([lo, hi], limit), power) in [
+        (report.speed.bounds, limits.speed),
+        (report.acceleration.bounds, limits.acceleration),
+        (report.jerk.bounds, limits.jerk),
+    ]
+    .into_iter()
+    .zip(powers)
+    {
+        let allowed = exact_motion_operand(limit)? * power;
+        if exact_motion_operand(lo)? > allowed {
+            return Ok(DirectionalMotionStatus::Exceeds);
+        }
+        if exact_motion_operand(hi)? > allowed {
+            status = DirectionalMotionStatus::Undetermined;
+        }
+    }
+    Ok(status)
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1829,6 +1846,74 @@ pub fn classify_directional_motion_chain(
         });
     }
     Ok(DirectionalMotionChainReport { joins, status })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TimedMotionChainLimits {
+    pub segment: DirectionalMotionLimits,
+    pub join: DirectionalMotionLimits,
+    pub position_gap: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct TimedMotionChainReport {
+    pub segment_statuses: Vec<DirectionalMotionStatus>,
+    pub joins: DirectionalMotionChainReport,
+    pub status: DirectionalMotionStatus,
+    /// Enclosure cells for segment derivatives. Joins have a separate budget.
+    pub cells: usize,
+}
+
+/// Certify axial limits inside each segment in its supplied physical clock,
+/// and check spatial gaps and derivative jumps at the joins.
+/// Tolerances control peak refinement in each original parameter clock.
+pub fn check_timed_motion_chain(
+    segments: &[TimedMotionSegment<'_>],
+    closed: bool,
+    direction: &[f64],
+    limits: TimedMotionChainLimits,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_joins: usize,
+) -> Result<TimedMotionChainReport> {
+    for tolerance in tolerances {
+        validate(tolerance, max_cells)?;
+    }
+    if segments.len() > max_cells / 3 {
+        return Err(resource("Motion chain segments exceed the cell budget"));
+    }
+    let joins = classify_directional_motion_chain(
+        segments, closed, direction, limits.position_gap, limits.join, max_joins,
+    )?;
+    let mut minima = Vec::with_capacity(segments.len());
+    let mut reserve = 0;
+    for segment in segments {
+        let minimum = 3 * active_spans(segment.curve, segment.interval).count();
+        reserve += minimum;
+        if reserve > max_cells {
+            return Err(resource("Initial motion chain spans exceed the cell budget"));
+        }
+        minima.push(minimum);
+    }
+    let mut remaining = max_cells;
+    let mut status = joins.status;
+    let mut segment_statuses = Vec::with_capacity(segments.len());
+    for (index, (segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = (minimum + (remaining - reserve) / (segments.len() - index)) / 3;
+        let report = check_directional_motion_limits(
+            segment.curve, segment.interval, direction, limits.segment, tolerances, budget,
+        )?;
+        let factor = motion_clock_factor(segment.interval, segment.duration)?;
+        let powers = [factor.clone(), &factor * &factor, factor.pow(3)];
+        let next = motion_status_in_clock(&report, limits.segment, &powers)?;
+        if next == DirectionalMotionStatus::Exceeds || status == DirectionalMotionStatus::Within {
+            status = next;
+        }
+        segment_statuses.push(next);
+        remaining -= report.speed.cells + report.acceleration.cells + report.jerk.cells;
+        reserve -= minimum;
+    }
+    Ok(TimedMotionChainReport { segment_statuses, joins, status, cells: max_cells - remaining })
 }
 
 fn measure_directional_derivative_peak(

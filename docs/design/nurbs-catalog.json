@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 696,
-  "unallocatedCount": 304,
+  "specifiedCount": 697,
+  "unallocatedCount": 303,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16916,6 +16916,25 @@
       "remainingQualification": [
         "Check spatial continuity and axial derivative jumps along a timed chain, including optional loop closure.",
         "Check ordered joins, independent segment timings, closing gap detection, a single-segment seam, and join budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0697",
+      "name": "Совместная проверка сегментов и стыков NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_timed_motion_chain",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-697-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-697-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check axial motion limits in each segment clock together with spatial and derivative join limits.",
+        "Check physical-clock limits, separate segment and join violations, a fully feasible chain, and shared span budget refusal.",
         "WASM and application integration are separate."
       ]
     }
