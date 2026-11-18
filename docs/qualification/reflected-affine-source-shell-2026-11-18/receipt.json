@@ -1,0 +1,32 @@
+{
+  "sourceBase": "f8878eef4e5b7f951e1606fc584467bb48bcd90d",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact affine sphere with either determinant sign. Outward orientation, retained trims, G2 and native STEP /9 re-audit for the reflected sheared specimen.",
+  "testEnvironment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "native": {
+    "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_implicit_body",
+    "file": "native.log.gz",
+    "sha256": "7c70c670f620d134ec584de3763cf3672dbe0fa5b3f1d96433205c3ac9418852",
+    "results": [
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2034 filtered out; finished in 2.50s"
+    ]
+  },
+  "json-step": {
+    "command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --test implicit_sphere_source_certificate --test implicit_sphere_step_matrix",
+    "file": "json-step.log.gz",
+    "sha256": "8a8c05691f769f1dc1767620222ab2f15be7b781b09136f1ca5d1605c9bc211c",
+    "results": [
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s",
+      "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s"
+    ]
+  },
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "c18521fb248094c485c744ec75229606f6150fb77c8e4f117e37d09149ed0931",
+    "count": 4911
+  }
+}

@@ -88,3 +88,46 @@ G1/G2, pole quotients, mixed C0/G1/G2 policies, unsupported contact/frame modes
 and arbitrary reindexed STEP gauges remain unproved and receive no success
 flag. Sharp corners and curvature jumps are preserved; a strict higher-order
 request refuses. This checkpoint does not complete the full user goal.
+
+## Exact material boundary for source charts
+
+`source_seam_tangency::vertices::material_boundary` combines the material
+volume owner, certified original face interiors, exact declared seam jets,
+material-side orientation, and complete physical vertex neighborhoods. The
+face and seam proofs must refer to the same immutable source body. Regular
+and pole-stratified face proofs use the same certificate. The edge and vertex
+projections select candidates for the native proofs.
+
+The certificate retains each declared C0/G1/G2 edge and every vertex order.
+The global order is the minimum of the face-interior, edge and vertex orders.
+A failure or budget exhaustion in any stage leaves the certificate absent and
+reports the stage and unresolved entity. This pipeline starts from admitted
+original charts. An analytic loft or sweep law still needs a separate proof
+that those charts describe its full original material boundary.
+
+Source support assembly resolves the active face-local UV clock of each
+authored whole-world coedge before reconstructing a region. Exact knot
+restriction and exact traversal reversal preserve the active trace even when
+the stored pcurve extends beyond it. The assembly also checks exact face-sense
+reflection and charges these operations to its incidence allowance. A partial
+world interval remains a diagnostic window under the model contract and
+receives no whole-shell certificate. Endpoint lift metadata must match its
+authored UV traversal.
+
+The complete closed-sweep audit also checks each face's internal knot lines.
+For nonperiodic charts, the spline basis can establish the requested interior
+order from knot multiplicity. Exact raw parameter jets can establish
+continuity when the basis does not guarantee it. The geometric route tiles
+the original clamped tensor chart at every remaining deficient knot line.
+The shared controls retain the original gauge, and the native exact strip
+proof checks each interface with positive reparameterization and regularity.
+Crossing U/V cuts contribute all adjacent tile interfaces. The audit uses the
+remaining regularity cells and exact work, and reports the unresolved face
+and number of geometric interfaces proved.
+
+For a periodic chart, the audit first opens exactly one authored period along
+each periodic axis. It checks all internal interfaces in the same grid and
+adds the physical last-to-first interface along each opened axis. A doubly
+periodic chart receives both families of wrap interfaces, including their
+intersection. Exact opening, tiling and geometric seam identities all draw
+from the shared exact work allowance.

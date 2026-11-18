@@ -1,17 +1,16 @@
 //! Source fields, limits and certificate flags remain Rust-owned. No caller
 //! success report or sampled pole normal supplies geometric proof credit.
 use crate::{Result, Value, field};
+use brep_core::{
+    boundary_embedding, face_contacts, source_implicit_body as source, volume_validity,
+};
 use value_codec::json;
-pub fn sphere(v: Value, audit: bool) -> Result<Value> {
-    use brep_core::{boundary_embedding, face_contacts, source_implicit_body as source, volume_validity};
-    let s = &v["source"];
-    let center = field::<[f64; 3]>(s, "center")?;
-    let radius = field::<f64>(s, "radius")?;
-    let l = &v["limits"];
+
+fn proof_limits(l: &Value) -> Result<source::Limits> {
     let a = &l["volume"];
     let b = &a["boundary"];
     let c = &b["contacts"];
-    let limits = source::Limits {
+    Ok(source::Limits {
         implicit_exact_work: field(l, "implicitExactWork")?,
         implicit_cells: field(l, "implicitCells")?,
         regularity_cells: field(l, "regularityCells")?,
@@ -38,7 +37,14 @@ pub fn sphere(v: Value, audit: bool) -> Result<Value> {
             orientation_domain_cells: field(a, "orientationDomainCells")?,
             orientation_spans: field(a, "orientationSpans")?,
         },
-    };
+    })
+}
+
+pub fn sphere(v: Value, audit: bool) -> Result<Value> {
+    let s = &v["source"];
+    let center = field::<[f64; 3]>(s, "center")?;
+    let radius = field::<f64>(s, "radius")?;
+    let limits = proof_limits(&v["limits"])?;
     let tolerance = field::<f64>(&v, "toleranceUV")?;
     let attempt = if audit {
         source::verify_sphere(&field(&v, "model")?, center, radius, tolerance, limits)?
@@ -65,4 +71,50 @@ pub fn sphere(v: Value, audit: bool) -> Result<Value> {
             "pairDiagnostics":p.boundary.intersections.pairs.pairs.iter().filter(|p|p.boundary.is_none()&&!p.hull_disjoint).map(|p|json!({"faces":p.faces,"reason":p.reason})).collect::<Vec<_>>(),"orientationCells":p.orientation_cells,"orientationDomainCells":p.orientation_domain_cells})),
         "reason":r.reason}),
     )
+}
+
+pub fn affine_sphere(v: Value) -> Result<Value> {
+    let s = &v["source"];
+    let authored = source::AffineSphere {
+        center: field(s, "center")?,
+        linear: field(s, "linear")?,
+        radius: field(s, "radius")?,
+    };
+    let limits = &v["limits"];
+    let attempt = source::verify_affine_sphere(
+        &field(&v, "model")?,
+        authored,
+        field(&v, "toleranceUV")?,
+        field(limits, "maxPoints")?,
+        proof_limits(limits)?,
+    )?;
+    let (model, points, reason, normalized) = match &attempt {
+        source::AffineSphereAttempt::Certified(body) => (
+            Some(body.model()),
+            body.mapped_points(),
+            None,
+            Some(body.normalized_proof()),
+        ),
+        source::AffineSphereAttempt::Refused {
+            reason,
+            mapped_points,
+            normalized,
+        } => (None, *mapped_points, Some(*reason), normalized.as_deref()),
+    };
+    let certified = model.is_some();
+    Ok(json!({
+        "model": model, "certified": certified, "solidGeometryCertified": certified,
+        "scope": "original-affine-sphere-including-complete-pole-quotients",
+        "source": {"kind": "affineSphere", "center": authored.center, "linear": authored.linear, "radius": authored.radius},
+        "sourceBoundaryExact": certified, "continuousBound": certified,
+        "boundaryErrorUpper": certified.then_some(0.), "topologyPreserved": certified,
+        "fullBoundaryG1Certified": certified, "fullBoundaryG2Certified": certified,
+        "idealSourceBoundaryG1Certified": certified, "idealSourceBoundaryG2Certified": certified,
+        "mappedPoints": points, "reason": reason,
+        "normalizedProof": normalized.map(|report| json!({
+            "reason": report.reason, "implicitExactWork": report.implicit_exact_work,
+            "implicitCells": report.implicit_cells, "poleEdges": report.collapsed_edges,
+            "quotientVertexLinksComplete": report.quotient_vertex_links_complete
+        }))
+    }))
 }

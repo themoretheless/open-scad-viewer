@@ -2,6 +2,7 @@
 //! Face jets, material-side exact seams and angular degree retain ONE source body.
 mod corner;
 mod fan;
+pub mod material_boundary;
 mod material;
 mod poles;
 use super::{Carrier, Class, material_orientation::OrientedCollection};

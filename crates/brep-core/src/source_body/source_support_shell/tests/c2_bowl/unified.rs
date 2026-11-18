@@ -1,6 +1,6 @@
 use super::*;
 use crate::source_seam_tangency::{self as seams, material_orientation, vertices};
-#[path="unified/model.rs"]
+#[path = "unified/model.rs"]
 mod model;
 fn run(hybrid: bool, jump: bool) {
     let (model, parents, target, changed) = if hybrid {
@@ -277,6 +277,48 @@ fn run(hybrid: bool, jump: bool) {
             }
         })
         .collect::<Vec<_>>();
+    if !hybrid && !jump {
+        use vertices::material_boundary as complete;
+        let report = complete::qualify_stratified(
+            &faces,
+            boundary.ordinary(),
+            complete::Projections {
+                edges: &edge_axes,
+                vertices: &axes,
+            },
+            1e-8,
+            complete::Limits {
+                exact_seams: seams::ExactSmoothLimits {
+                    incidence_steps: 1000000,
+                    exact_work: 100000000,
+                    cells: 100000,
+                    curve_spans: 100000,
+                    source_spans: 100000,
+                },
+                material_orientation: material_orientation::Limits {
+                    steps: 1000000,
+                    curve_spans: 100000,
+                    normal_spans: 100000,
+                },
+                vertices: vertices::Limits {
+                    steps: 1000000,
+                    normal_spans: 100000,
+                    domain_cells: 100000,
+                    exact_work: 100000000,
+                },
+            },
+        )
+        .unwrap();
+        let certificate = report.certificate.expect(report.reason);
+        assert!(std::ptr::eq(certificate.body(), &body));
+        assert_eq!(certificate.global_order(), 0);
+        assert!(
+            certificate
+                .vertices()
+                .iter()
+                .any(|v| matches!(v, vertices::Vertex::Pole { order: 2, .. }))
+        );
+    }
     let r = vertices::qualify_stratified(
         &faces,
         &oriented,
@@ -449,6 +491,5 @@ fn common_atlas_keeps_an_ordinary_g1_curvature_jump_beside_c2_poles() {
     run(true, true);
 }
 
-#[path="unified/c1.rs"]
-
+#[path = "unified/c1.rs"]
 mod c1;

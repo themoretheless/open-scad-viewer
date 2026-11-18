@@ -2,6 +2,7 @@
 //! Closed flags and Body records in the input confer no geometric authority.
 use crate::source_shell_incidence::{Address, Pair, Pole};
 use std::collections::BTreeMap;
+mod trim_clocks;
 pub struct Limits {
     pub tolerance_uv: f64,
     pub faces: usize,
@@ -52,9 +53,19 @@ fn prepare_using<E>(model:&crate::Model,limits:Limits,
         return Err(crate::invalid("Source support use limit"));
     }
     model.validate()?;
-    // Propose consistently oriented charts. Every proposed lift and shared
-    // carrier is freshly checked below; reflected floats grant no authority.
-    let oriented = crate::face_senses::canonical_face_senses(model)?;
+    let (active, mut work) = trim_clocks::active_pcurves(model, limits.exact_work)?;
+    let oriented = crate::face_senses::canonical_face_senses(&active)?;
+    trim_clocks::exact_face_senses(&active, &oriented, &mut work, limits.exact_work)?;
+    if work == limits.exact_work {
+        return Ok(crate::source_shell_incidence::Report {
+            shell: None,
+            work_used: work,
+            root_checks: 0,
+            driver_cells: 0,
+            uncertain_pair: None,
+            reason: "source-support-incidence-budget-exhausted",
+        });
+    }
     let model = &oriented;
     let mut regions = Vec::new();
     let mut pairs = Vec::new();
@@ -120,13 +131,10 @@ fn prepare_using<E>(model:&crate::Model,limits:Limits,
             "Source supports retain unpaired ordinary edges",
         ));
     }
-    assemble(
-        &regions,
-        &pairs,
-        &poles,
-        limits.exact_work,
-    )
-    .map_err(|e| crate::Error::new(e.code, e.message))
+    let mut report = assemble(&regions, &pairs, &poles, limits.exact_work - work)
+        .map_err(|e| crate::Error::new(e.code, e.message))?;
+    report.work_used += work;
+    Ok(report)
 }
 #[cfg(test)]
 #[path = "source_support_shell/tests/mod.rs"]

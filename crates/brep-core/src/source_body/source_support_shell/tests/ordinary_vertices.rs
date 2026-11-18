@@ -493,6 +493,7 @@ fn ordinary_vertex_has_g1_graph_with_a_proved_interior_curvature_jump() {
                 && r.exact_work <= short.exact_work
         );
     }
+    check_mixed_material_boundary(&smooth, &collection, &axes, &proposals, tight);
     // Full-carrier Hessian identity must reject an upgrade even though the
     // second-order residual vanishes at the central endpoint itself.
     for index in jumps {
@@ -541,4 +542,75 @@ fn original_interior_contact_refusal_names_the_actual_unproved_face_pair() {
             .collect::<Vec<_>>(),
         before
     );
+}
+
+fn check_mixed_material_boundary<E: seams::Carrier>(
+    faces: &crate::source_volume::regularity::smooth::SmoothFaces<'_, '_, E>,
+    seams: &seams::Collection<'_, E>,
+    edge_axes: &[usize],
+    vertex_axes: &[usize],
+    vertices: seams::vertices::Limits,
+) {
+    use seams::vertices::material_boundary::{self as boundary, Limits, Projections, Stage};
+    let run = |exact_work, orientation_steps, vertex_steps| {
+        boundary::qualify(
+            faces,
+            seams,
+            Projections {
+                edges: edge_axes,
+                vertices: vertex_axes,
+            },
+            1e-8,
+            Limits {
+                exact_seams: seams::ExactSmoothLimits {
+                    incidence_steps: 1000000,
+                    exact_work,
+                    cells: 100000,
+                    curve_spans: 100000,
+                    source_spans: 100000,
+                },
+                material_orientation: seams::material_orientation::Limits {
+                    steps: orientation_steps,
+                    curve_spans: 100000,
+                    normal_spans: 100000,
+                },
+                vertices: seams::vertices::Limits {
+                    steps: vertex_steps,
+                    ..vertices
+                },
+            },
+        )
+        .unwrap()
+    };
+    let r = run(100000000, 1000000, vertices.steps);
+    assert_eq!(r.stage, Stage::Complete);
+    let certificate = r.certificate.expect(r.reason);
+    assert!(std::ptr::eq(certificate.body(), seams.body()));
+    assert_eq!(certificate.edge_classes(), seams.classes());
+    assert_eq!(certificate.interior_order(), 2);
+    assert_eq!(certificate.global_order(), 0);
+    assert_eq!(certificate.vertices().len(), 26);
+    assert!(
+        certificate
+            .vertices()
+            .iter()
+            .any(|v| matches!(v, seams::vertices::Vertex::Smooth(n) if n.order() == 1))
+    );
+    for (short, stage) in [
+        (
+            run(r.seam_exact_work - 1, r.orientation_steps, r.vertex_steps),
+            Stage::ExactSeams,
+        ),
+        (
+            run(r.seam_exact_work, r.orientation_steps - 1, r.vertex_steps),
+            Stage::MaterialOrientation,
+        ),
+        (
+            run(r.seam_exact_work, r.orientation_steps, r.vertex_steps - 1),
+            Stage::VertexNeighborhoods,
+        ),
+    ] {
+        assert_eq!(short.stage, stage);
+        assert!(short.certificate.is_none());
+    }
 }

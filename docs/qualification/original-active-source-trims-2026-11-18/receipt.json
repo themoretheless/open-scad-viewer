@@ -1,0 +1,21 @@
+{
+  "sourceBase": "5ec7a38a60010050eeda823654f9e2065c916edf",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Native source-support admission on authored complete world coedges and exact active UV intervals. Includes reversed traversal, reflected face senses, short exact budgets and diagnostic world-window refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "native": {
+    "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell",
+    "file": "native.log.gz",
+    "sha256": "53c5357e5952226e402e402357c9bf53040799ff29fe3a01f280a115bca4b58d",
+    "result": "test result: ok. 48 passed; 0 failed; 4 ignored; 0 measured; 1990 filtered out; finished in 9.73s"
+  },
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "e0cefdcdf1dfd90e5f509d536f1fec0b3f01c2247b3bfac8d3086a5188661016",
+    "count": 4914
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "sourceBase": "2f296210e203b4f5d0c594de75d9cadff4bb92a1",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact clamped tensor tiling and positive geometric seam identity across original internal U/V knots in the complete sweep boundary audit.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 2033 filtered out; finished in 0.03s",
+      "file": "interior.log.gz",
+      "sha256": "02e496d4df2d4ebfd386975db03f48b9da860cd971bf0603763ffab128b37773"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed",
+      "result": "test result: ok. 72 passed; 0 failed; 0 ignored; 0 measured; 1972 filtered out; finished in 79.84s",
+      "file": "closed.log.gz",
+      "sha256": "a221852c2c8805dd0df6400bc5fb28b32ef2fe6dfcbf396e88bd3261cb972b86"
+    },
+    {
+      "command": "cargo check --locked --manifest-path crates/Cargo.toml -p geometry-bridge",
+      "result": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 27.58s",
+      "file": "bridge.log.gz",
+      "sha256": "a614acfb86f6dc72c15eaebb0b23ef9a0617f0318937433b2b83a36ed1a8a88f"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "83d921c9980f265f73d8b76bc0c529b7b8aac8336d74264947cda1147fbc2b35",
+    "count": 4916
+  }
+}
