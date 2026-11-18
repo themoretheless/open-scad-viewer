@@ -13372,3 +13372,24 @@ fn unordered_partition_restores_first_and_last_reversed_segments() {
     }
     assert!(assemble(&[segment(0.,0.,1.),segment(1.,1.,0.)],1_000_000).is_err());
 }
+
+#[test]
+fn endpoint_graph_assembles_independent_local_clocks_from_the_selected_end() {
+    use nurbs_core::editing::exact_curve_merge::assemble_open_endpoint_chain as assemble;
+    let line = |a:f64,b:f64,t:f64,d:f64| Curve { degree:1, knots:vec![t,t,t+d,t+d],
+        control_points:vec![vec![a,0.],vec![b,0.]], weights:vec![1.;2],periodic:false };
+    let curves = [line(4.,2.,8.,2.),line(0.,1.,9.,1.),line(2.,1.,-3.,1.)];
+    for (anchor,end) in [(0.,4.),(4.,0.)] {
+        let compact = assemble(&curves,&[anchor,-0.],1_000_000).unwrap().curve.unwrap();
+        assert_eq!(compact.knots,[0.,0.,4.,4.]);
+        assert_eq!(compact.control_points,[vec![anchor,0.],vec![end,0.]]);
+    }
+    assert!(assemble(&curves,&[2.,0.],1_000_000).is_err());
+    assert!(assemble(&curves,&[0.,0.],1).unwrap().curve.is_none());
+    let mut branch = curves.to_vec();
+    branch.push(line(2.,9.,0.,1.));
+    assert!(assemble(&branch,&[0.,0.],1_000_000).is_err());
+    let mut disconnected = curves.to_vec();
+    disconnected.extend([line(7.,8.,0.,1.),line(8.,7.,0.,1.)]);
+    assert!(assemble(&disconnected,&[0.,0.],1_000_000).is_err());
+}

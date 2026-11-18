@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0892",
+  "testedBase": "9c07cc4c20ef3418ab02ef3855d9b53d5191d15c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 458,
+  "scope": [
+    "Recover endpoint incidence and preserve local durations in both anchored directions. Reject branches, disconnected cycles, interior anchors and insufficient budget."
+  ],
+  "logSha256": "2c8d1f66072e6db45ea45557272beb58b4e1d1c883e762da89ef4e35b977f6e3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "470a9828050ee94b89c7d78b060211cb1bb572bb08c9fae14ff817dae743a97c",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "3a14fe35c98087636bc134eec31c9df0c9e3343055e215678516b223ae67417d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ee6193ba266a2d6e73f26b2d1ad6b39f3b0197902da6fb99e1a7c42d2eded924"
+  }
+}

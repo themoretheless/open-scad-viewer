@@ -1740,3 +1740,6 @@ pub fn assemble_parameter_partition(sources: &[Curve], max_work: u64) -> Result<
     result.work_used += work.used;
     Ok(result)
 }
+
+mod endpoint_chain;
+pub use endpoint_chain::assemble_open_endpoint_chain;
