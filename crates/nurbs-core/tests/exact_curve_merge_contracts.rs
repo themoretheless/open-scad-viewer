@@ -12271,3 +12271,29 @@ fn planar_angular_speed_limit_detects_interior_peak_and_zero_direction() {
     let report = partition_planar_angular_speed_limit(&fixed, [2., 4.], 0., 0.01, 1).unwrap();
     assert_eq!(report.cells[0].status, Status::Within);
 }
+
+#[test]
+fn planar_angular_acceleration_limit_detects_peak_in_a_scaled_clock() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_angular_acceleration_limit,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let report = partition_planar_angular_acceleration_limit(&direction, [2., 3.], 0.55, 0.005, 255)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    let peak = 3. - 1. / 3_f64.sqrt();
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= peak && peak <= b && cell.status == Status::Exceeds
+    }));
+    let constant = Curve { control_points: vec![vec![-1., 0.], vec![-3., 0.]], ..direction };
+    let report = partition_planar_angular_acceleration_limit(&constant, [2., 4.], 0., 0.01, 1).unwrap();
+    assert_eq!(report.cells[0].status, Status::Within);
+}

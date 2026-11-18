@@ -1452,11 +1452,39 @@ pub fn partition_planar_angular_speed_limit(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalSpeedLimitPartition> {
+    partition_planar_angular_limit(
+        direction, interval, limit, parameter_tolerance, max_cells, false,
+    )
+}
+
+/// Classify absolute angular acceleration in radians per squared unit of
+/// the curve parameter. Each span uses its one-sided derivatives, and a
+/// cell containing a potentially zero direction is unresolved.
+pub fn partition_planar_angular_acceleration_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    partition_planar_angular_limit(
+        direction, interval, limit, parameter_tolerance, max_cells, true,
+    )
+}
+
+fn partition_planar_angular_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    acceleration: bool,
+) -> Result<DirectionalSpeedLimitPartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
-    check(limit.is_finite() && limit >= 0., "Angular speed limit must be finite and nonnegative")?;
+    check(limit.is_finite() && limit >= 0., "Angular derivative limit must be finite and nonnegative")?;
     direction.validate()?;
-    check(direction.control_points[0].len() == 2, "Angular speed requires a planar direction curve")?;
+    check(direction.control_points[0].len() == 2, "Angular derivatives require a planar direction curve")?;
     let fixed = fixed_cardinal_rotation(direction).is_some();
     let (cells, work_cells) = partition_motion_cells(
         direction, interval, parameter_tolerance, max_cells,
@@ -1465,16 +1493,25 @@ pub fn partition_planar_angular_speed_limit(
                 return Ok((Within, false));
             }
             let length = norm(&jets[0])?;
-            let denominator = length.mul(length)?.mul(width)?;
-            if denominator.lo <= 0. {
+            let squared = length.mul(length)?;
+            if squared.lo <= 0. || width.lo <= 0. {
                 return Ok((Undetermined, true));
             }
-            // The jets use a cell-local clock, so divide by the source
-            // width to obtain the derivative in the caller's clock.
-            let cross = jets[0][0].mul(jets[1][1])?.sub(jets[0][1].mul(jets[1][0])?)?;
-            let speed = cross.div(denominator)?;
-            let upper = speed.lo.abs().max(speed.hi.abs());
-            let lower = speed.lo.max(-speed.hi).max(0.);
+            let cross = |order: usize| {
+                jets[0][0].mul(jets[order][1])?.sub(jets[0][1].mul(jets[order][0])?)
+            };
+            let local_speed = cross(1)?.div(squared)?;
+            // Jets use a cell-local clock. Apply the source-width factor
+            // once per derivative order.
+            let value = if acceleration {
+                let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(Interval::point(2.))?;
+                let local_acceleration = cross(2)?.sub(local_speed.mul(squared_derivative)?)?.div(squared)?;
+                local_acceleration.div(width)?.div(width)?
+            } else {
+                local_speed.div(width)?
+            };
+            let upper = value.lo.abs().max(value.hi.abs());
+            let lower = value.lo.max(-value.hi).max(0.);
             let status = if upper <= limit {
                 Within
             } else if lower > limit {
