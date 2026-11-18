@@ -21477,7 +21477,7 @@
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
       ],
       "remainingQualification": [
-        "Flat groups and rigid RGB occurrences checked through Solid export on raw WASM and independently reopened in OCCT. Packaged delivery qualification is separate."
+        "Flat groups and rigid RGB occurrences checked through Solid export on raw WASM and independently reopened in OCCT. Packaged WASM verified on grouped and styled round trips."
       ]
     },
     {
@@ -21500,7 +21500,7 @@
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
       ],
       "remainingQualification": [
-        "RGB appearance on rigid placements. Physical materials, native occurrence-style editing and packaged delivery qualification remain open."
+        "RGB appearance on rigid placements. Physical materials, and native occurrence-style editing remain open. Packaged WASM verified."
       ]
     },
     {
