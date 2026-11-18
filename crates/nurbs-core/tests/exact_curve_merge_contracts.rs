@@ -9721,3 +9721,50 @@ fn convex_workspace_partition_checks_shifted_oblique_planes_in_original_order() 
     planes[1].normal = &[0., 0.];
     assert!(check(&planes, 128).is_err());
 }
+
+#[test]
+fn obstacle_clearance_partition_distinguishes_two_separated_obstacles() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_obstacle_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = [
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1. },
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 3. },
+    ];
+    let second = [
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -5. },
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 7. },
+    ];
+    let obstacles = [&first[..], &second[..]];
+    let check = |obstacles: &[&[WorkspaceHalfSpace<'_>]], budget| {
+        partition_curve_obstacle_clearance(&curve, [0., 1.], obstacles, 0.01, budget)
+    };
+    assert!(check(&obstacles, 3).is_err());
+    assert!(check(&[&[]], 256).is_err());
+    let report = check(&obstacles, 512).unwrap();
+    assert!(report.work_plane_cells <= 512);
+    for (t, expected) in [
+        (0.25, [Status::Exceeds, Status::Within]),
+        (0.5, [Status::Within; 2]),
+        (0.75, [Status::Within, Status::Exceeds]),
+    ] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= t && t <= b && cell.obstacles == expected
+                && cell.status == if t == 0.5 { Status::Within } else { Status::Exceeds }
+        }));
+    }
+    for t in [0.125, 0.375, 0.625, 0.875] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= t && t <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}

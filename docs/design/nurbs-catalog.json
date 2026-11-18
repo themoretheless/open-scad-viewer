@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 705,
-  "unallocatedCount": 295,
+  "specifiedCount": 706,
+  "unallocatedCount": 294,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17087,6 +17087,25 @@
       "remainingQualification": [
         "Classify a curve window against intersecting closed offset half-spaces on a shared subdivision.",
         "Check two shifted oblique boundaries, residual ordering, analytic crossing windows, and invalid planes and budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0706",
+      "name": "Сертифицированная проверка NURBS-траектории относительно выпуклых препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-706-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-706-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Locate occupied, clear and unresolved intervals against a union of closed convex obstacles.",
+        "Check two independent obstacles, all four analytic crossings, clear space between obstacles, and input budget refusal.",
         "WASM and application integration are separate."
       ]
     }

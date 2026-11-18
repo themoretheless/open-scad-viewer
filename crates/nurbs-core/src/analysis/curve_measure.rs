@@ -1849,17 +1849,7 @@ pub fn partition_curve_convex_workspace(
     }
     curve.validate()?;
     let dimension = curve.control_points[0].len();
-    let planes = planes.iter().map(|plane| {
-        check(
-            plane.normal.len() == dimension
-                && plane.normal.iter().all(|x| x.is_finite())
-                && plane.normal.iter().any(|x| *x != 0.)
-                && plane.offset.is_finite(),
-            "Workspace plane requires a finite nonzero normal and finite offset",
-        )?;
-        let normal = plane.normal.iter().copied().map(Interval::point).collect::<Vec<_>>();
-        Ok((normal, Interval::point(plane.offset)))
-    }).collect::<Result<Vec<_>>>()?;
+    let planes = prepare_workspace_planes(planes, dimension)?;
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_cells,
         |jets, _| {
@@ -1881,6 +1871,103 @@ pub fn partition_curve_convex_workspace(
         WorkspaceCell { parameter_interval, span, plane_residuals, status }
     }).collect();
     Ok(WorkspacePartition { cells, work_plane_cells: work_cells * planes.len() })
+}
+
+type PreparedWorkspacePlane = (Vec<Interval>, Interval);
+
+fn prepare_workspace_planes(
+    planes: &[WorkspaceHalfSpace<'_>],
+    dimension: usize,
+) -> Result<Vec<PreparedWorkspacePlane>> {
+    planes.iter().map(|plane| {
+        check(
+            plane.normal.len() == dimension
+                && plane.normal.iter().all(|x| x.is_finite())
+                && plane.normal.iter().any(|x| *x != 0.)
+                && plane.offset.is_finite(),
+            "Workspace plane requires a finite nonzero normal and finite offset",
+        )?;
+        let normal = plane.normal.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        Ok((normal, Interval::point(plane.offset)))
+    }).collect()
+}
+
+#[derive(Clone, Debug)]
+pub struct ObstacleClearanceCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Clearance classifications in obstacle order. Exceeds means that the
+    /// whole cell is in the closed obstacle, including its boundary.
+    pub obstacles: Vec<DirectionalMotionStatus>,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct ObstacleClearancePartition {
+    pub cells: Vec<ObstacleClearanceCell>,
+    /// Reserved plane evaluations, including planes skipped after separation.
+    pub work_plane_cells: usize,
+}
+
+/// Check a curve against the union of closed convex obstacles. A cell is
+/// clear when at least one plane strictly separates it from each obstacle.
+/// Cells whose clearance cannot be decided are retained in the partition.
+pub fn partition_curve_obstacle_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!obstacles.is_empty(), "Obstacle clearance requires at least one obstacle")?;
+    let mut plane_count = 0;
+    for obstacle in obstacles {
+        check(!obstacle.is_empty(), "Each obstacle requires at least one plane")?;
+        if obstacle.len() > max_plane_cells - plane_count {
+            return Err(resource("Clearance budget must cover every obstacle plane"));
+        }
+        plane_count += obstacle.len();
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let obstacles = obstacles.iter()
+        .map(|planes| prepare_workspace_planes(planes, dimension))
+        .collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_plane_cells / plane_count,
+        |jets, _| {
+            let mut clearance = Vec::with_capacity(obstacles.len());
+            for obstacle in &obstacles {
+                let mut status = DirectionalMotionStatus::Exceeds;
+                for (normal, offset) in obstacle {
+                    let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                    if residual.lo > 0. {
+                        status = DirectionalMotionStatus::Within;
+                        break;
+                    }
+                    if residual.hi > 0. {
+                        status = DirectionalMotionStatus::Undetermined;
+                    }
+                }
+                clearance.push(status);
+            }
+            let status = if clearance.contains(&DirectionalMotionStatus::Exceeds) {
+                DirectionalMotionStatus::Exceeds
+            } else if clearance.contains(&DirectionalMotionStatus::Undetermined) {
+                DirectionalMotionStatus::Undetermined
+            } else {
+                DirectionalMotionStatus::Within
+            };
+            // Refine unresolved obstacles even when another already excludes the cell.
+            let refine = clearance.contains(&DirectionalMotionStatus::Undetermined);
+            Ok(((clearance, status), refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (obstacles, status))| {
+        ObstacleClearanceCell { parameter_interval, span, obstacles, status }
+    }).collect();
+    Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * plane_count })
 }
 
 fn partition_motion_cells<T>(
