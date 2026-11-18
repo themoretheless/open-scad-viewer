@@ -3,10 +3,13 @@ use super::super::periodic_uses;
 use crate::{Result, Surface};
 use nurbs_core::{
     continuity::{
-        ProjectiveSeam, inspect_projective_seam_collection_with_rational_scale_proposals,
+        MAX_PROJECTIVE_SEAM_COLLECTION_WORK, ProjectiveSeam,
+        inspect_projective_seam_collection_with_rational_scale_proposals,
     },
     editing::exact_surface_knot_insertion::tile_tensor_surface,
 };
+
+mod graph;
 
 fn cuts(knots: &[f64], degree: usize, count: usize, order: usize) -> Option<Vec<f64>> {
     let [lo, hi] = [knots[degree], knots[count]];
@@ -117,13 +120,29 @@ pub(super) fn inspect(surface: &Surface, order: usize, cells: usize, work: u64) 
     let proof = inspect_projective_seam_collection_with_rational_scale_proposals(
         &patches,
         &seams,
-        work - report.work,
+        (work - report.work).min(MAX_PROJECTIVE_SEAM_COLLECTION_WORK),
     )?;
     report.work += proof.exact_work;
-    report.certified = proof.certified;
-    if proof.certified {
-        report.seams = seams.len();
+    for (seam, result) in seams.iter().zip(proof.seams) {
+        if result.certified {
+            continue;
+        }
+        if !result.affine_parameter_identity {
+            return Ok(report);
+        }
+        let (certified, used) = graph::inspect(
+            seam.patches.map(|patch| &patches[patch]),
+            seam.boundaries.each_ref().map(String::as_str),
+            order,
+            work - report.work,
+        )?;
+        report.work += used;
+        if !certified {
+            return Ok(report);
+        }
     }
+    report.certified = true;
+    report.seams = seams.len();
     Ok(report)
 }
 
@@ -180,6 +199,38 @@ mod tests {
         assert_eq!(kink.geometric_seams, 0);
         assert_eq!(kink.unresolved_face, Some(0));
     }
+    #[test]
+    fn curved_graph_has_g2_across_a_jump_in_tangential_acceleration() {
+        // x(u) is a quadratic spline with a jump in its second derivative.
+        // The physical graph z = xy/8 has the same curvature on both sides.
+        let mut surface = saddle();
+        surface.degree_u = 2;
+        surface.knots_u = vec![0., 0., 0., 0.5, 1., 1., 1.];
+        surface.knots_v = vec![0., 0., 1., 1.];
+        surface.control_points = [0., 0.5, 1.75, 2.]
+            .into_iter()
+            .map(|x| {
+                [0., 2.]
+                    .into_iter()
+                    .map(|y| vec![x, y, x * y / 8.])
+                    .collect()
+            })
+            .collect();
+        surface.weights = vec![vec![1.; 2]; 4];
+        let report = inspect(&surface, 2, 100, 1_000_000).unwrap();
+        assert!(report.certified);
+        assert_eq!(report.seams, 1);
+        assert!(
+            !inspect(&surface, 2, 100, report.work - 1)
+                .unwrap()
+                .certified
+        );
+        // Changing the second-derivative field while preserving the common
+        // point and first derivative at the knot removes geometric G2.
+        surface.control_points[3][1][2] += 1. / 16.;
+        assert!(!inspect(&surface, 2, 100, 1_000_000).unwrap().certified);
+    }
+
     fn periodic_chart(torus: bool) -> Surface {
         let ring = [
             [1., -1.],

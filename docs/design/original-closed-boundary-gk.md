@@ -167,3 +167,11 @@ oblique plane, the exact rational affine hull supplies the certificate.
 Its physical interior neighborhoods lie in that plane even when raw second
 derivatives jump. The control census, knot census and affine hull share one
 work allowance. Edge classifications remain separate.
+
+An exact pair of adjacent Bézier tiles can also use geometric graph jets
+when the constant-scale strip proof is insufficient. The strip must first
+prove exact positional equality along the common boundary parameter.
+Strict matching signs for a projected Jacobian component give inverse
+charts on opposite sides of the complete seam. Exact gradient and Hessian
+identities then compare the physical graph in that projection. Normal
+enclosures and graph identities consume the remaining seam work.
