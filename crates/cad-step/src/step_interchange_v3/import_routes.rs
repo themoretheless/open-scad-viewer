@@ -1179,6 +1179,39 @@ impl StepSharedAssembly {
         Ok(results)
     }
 
+    /// Return the first trimmed-face crossing only when its ray interval
+    /// strictly precedes every other candidate. None means a resolved miss.
+    pub fn first_ray_crossing(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<Option<(usize, brep_core::ray_parity::Crossing)>> {
+        let mut candidates = Vec::new();
+        for (index, report) in self.ray_crossings(
+            origin, direction, tolerance_uv, max_cells, max_domain_cells,
+        )? {
+            let report = report?;
+            if !report.unresolved.is_empty() {
+                return Err(refuse("STEP assembly ray has unresolved trimmed-face crossings"));
+            }
+            if let Some(crossing) = report.crossings.into_iter().next() {
+                candidates.push((index, crossing));
+            }
+        }
+        candidates.sort_by(|a, b| a.1.parameter[0].total_cmp(&b.1.parameter[0]));
+        let mut ordered = candidates.into_iter();
+        let first = ordered.next();
+        if let (Some((_, first)), Some((_, next))) = (&first, ordered.next())
+            && first.parameter[1] >= next.parameter[0]
+        {
+            return Err(refuse("STEP assembly nearest ray crossing is ambiguous"));
+        }
+        Ok(first)
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

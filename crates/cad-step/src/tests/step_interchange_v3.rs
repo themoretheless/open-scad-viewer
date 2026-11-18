@@ -2848,6 +2848,29 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_first_ray_crossing_requires_unique_nearest_interval() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let identity = assembly.occurrences()[0].transform;
+    let mut farther = identity;
+    farther[0][3] = 5.;
+    assembly.set_occurrence_placement(0, farther).unwrap();
+    assembly.set_occurrence_placement(1, identity).unwrap();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let (index, crossing) = assembly.first_ray_crossing(origin, direction, 1e-7, 100_000, 200_000)
+        .unwrap().unwrap();
+    assert_eq!(index, 1);
+    assert!(crossing.parameter[0] <= 1. && crossing.parameter[1] >= 1.);
+    assert!(assembly.first_ray_crossing(origin, direction, 1e-7, 1, 1).is_err());
+    assert!(assembly.first_ray_crossing([-1., 3., 1.], direction, 1e-7, 100_000, 200_000)
+        .unwrap().is_none());
+
+    assembly.add_occurrence(0, identity).unwrap();
+    let error = assembly.first_ray_crossing(origin, direction, 1e-7, 100_000, 200_000).unwrap_err();
+    assert!(error.message.contains("ambiguous"));
+}
+
+#[test]
 fn shared_step_ray_crossings_respect_placements_trims_and_shared_budget() {
     let mut assembly = shared_step_scaled_cube_pair();
     let placement = [

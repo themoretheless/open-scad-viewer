@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 843,
-  "unallocatedCount": 157,
+  "specifiedCount": 844,
+  "unallocatedCount": 156,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19734,6 +19734,25 @@
       "remainingQualification": [
         "Exclude occurrences by conservative world bounds and trace retained trimmed surfaces under shared root and domain work limits.",
         "Check two entry and exit interval pairs for rigid and reflected scaled solids, rejection of zero direction, distant occurrence exclusion and explicit budget exhaustion.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0844",
+      "name": "Однозначный выбор ближайшей обрезанной грани STEP-сборки по лучу",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::first_ray_crossing",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-844-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-844-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return the nearest retained trimmed crossing when its complete ray interval strictly precedes all other candidates.",
+        "Check nearest crossing out of occurrence order, a resolved miss, work exhaustion and coincident independent placements.",
         "WASM and application integration are separate."
       ]
     }
