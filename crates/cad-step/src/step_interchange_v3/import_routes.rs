@@ -23,7 +23,7 @@ pub(super) const UNREACHABLE_ALLOWLIST: &[&str] = &[
     "CAMERA_MODEL_D3_MULTI_CLIPPING", "PROPERTY_DEFINITION", "PROPERTY_DEFINITION_REPRESENTATION",
     "DESCRIPTIVE_REPRESENTATION_ITEM", "MEASURE_REPRESENTATION_ITEM", "PLANAR_BOX", "INVISIBILITY",
     "VALUE_REPRESENTATION_ITEM", "CURVE_STYLE", "DRAUGHTING_CALLOUT_RELATIONSHIP",
-    "GENERAL_PROPERTY_ASSOCIATION", "PRESENTATION_STYLE_ASSIGNMENT", "DIMENSIONAL_LOCATION",
+    "GENERAL_PROPERTY_ASSOCIATION", "PRESENTATION_STYLE_BY_CONTEXT", "PRESENTATION_STYLE_ASSIGNMENT", "DIMENSIONAL_LOCATION",
     "SURFACE_PROFILE_TOLERANCE", "LINE", "GENERAL_PROPERTY",
     "FEATURE_FOR_DATUM_TARGET_RELATIONSHIP", "SHAPE_ASPECT", "PRE_DEFINED_MARKER",
     "GEOMETRIC_TOLERANCE", "FLATNESS_TOLERANCE", "ANGULARITY_TOLERANCE", "TRIMMED_CURVE",
@@ -159,7 +159,7 @@ impl DirectImportRoute<'_> {
                 .filter(|id| self.is_type(*id, EXACT_BREP_REPRESENTATION))
                 .collect());
         }
-        let selected = self.shape_definition_selections()?;
+        let selected = self.shape_definition_selections(auxiliary)?;
         if self.capability != STEP_INTERCHANGE_V10_CAPABILITY {
             self.check_admitted_products(&selected)?;
             return Ok(selected);
@@ -167,14 +167,34 @@ impl DirectImportRoute<'_> {
         self.select_exact_root(selected, auxiliary)
     }
 
-    fn shape_definition_selections(&self) -> Result<Vec<usize>> {
+    fn shape_definition_selections(&self, auxiliary: &mut BTreeSet<usize>) -> Result<Vec<usize>> {
+        let style_contexts: BTreeSet<_> = self.entities.values().filter_map(|entity| {
+            if let Value::Call(kind, args) = &entity.value
+                && kind == "PRESENTATION_STYLE_BY_CONTEXT"
+                && let [_, Value::Ref(context)] = args.as_slice() {
+                return Some(*context);
+            }
+            None
+        }).collect();
         let mut selected = Vec::<usize>::new();
         for entity in self.entities.values() {
             if let Value::Call(name, args) = &entity.value
                 && name == "SHAPE_DEFINITION_REPRESENTATION"
                 && let [_, representation] = args.as_slice()
             {
-                selected.push(one_ref(representation, "selected shape representation")?);
+                let rep = one_ref(representation, "selected shape representation")?;
+                if style_contexts.contains(&rep)
+                    && let ("SHAPE_REPRESENTATION", [_, Value::List(items), _]) = call(self.entities, rep)?
+                    && let [Value::Ref(frame)] = items.as_slice()
+                    && self.is_type(*frame, "AXIS2_PLACEMENT_3D")
+                    && let ("PRODUCT_DEFINITION_SHAPE", [_, _, Value::Ref(usage)]) =
+                        call(self.entities, one_ref(&args[0], "occurrence style shape")?)?
+                    && self.is_type(*usage, "NEXT_ASSEMBLY_USAGE_OCCURRENCE")
+                {
+                    auxiliary.insert(rep);
+                    continue;
+                }
+                selected.push(rep);
             }
         }
         selected.sort_unstable();

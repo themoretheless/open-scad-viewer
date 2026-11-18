@@ -274,7 +274,14 @@ fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
     }
 }
 
+/// Display material bound to an assembly occurrence. RGB channels are in 0..=1.
+pub struct StepOccurrenceColour<'a> {
+    pub name: &'a str,
+    pub rgb: [f64; 3],
+}
+
 struct AssemblyExport<'a> {
+    colours: Option<&'a [Option<StepOccurrenceColour<'a>>]>,
     groups: Option<(&'a [&'a str], &'a [Option<usize>])>,
     placements: &'a [(usize, [[f64; 4]; 4])],
     definition_tolerances: &'a [f64],
@@ -693,7 +700,17 @@ fn export_step_direct_impl(
                     let direction = [0, 1, 2].map(|row| matrix[row][column] / scales[column]);
                     w.emit(format!("DIRECTION('',({}))", floats(&direction)))
                 });
-                let operator = if rigid {
+                let styled_axis = if assembly.colours.is_some() {
+                    if !rigid {
+                        return Err(refuse("Styled STEP assemblies require rigid placements"));
+                    }
+                    Some(w.emit(format!("AXIS2_PLACEMENT_3D('',#{origin},#{z},#{x})")))
+                } else {
+                    None
+                };
+                let operator = if let Some(axis) = styled_axis {
+                    w.emit(format!("ITEM_DEFINED_TRANSFORMATION('','',#{frame},#{axis})"))
+                } else if rigid {
                     w.emit(format!(
                         "CARTESIAN_TRANSFORMATION_OPERATOR_3D('',#{x},#{y},#{origin},1.,#{z})"
                     ))
@@ -712,6 +729,20 @@ fn export_step_direct_impl(
                 ));
                 let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{occurrence})"));
                 w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relationship},#{shape})"));
+                if let (Some(axis), Some(style)) = (styled_axis, assembly.colours.and_then(|styles| styles[index].as_ref())) {
+                    let placement_rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{axis}),#{context})"));
+                    w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{placement_rep})"));
+                    let rgb = w.emit(format!("COLOUR_RGB({},{})", quote(style.name), floats(&style.rgb)));
+                    let colour = w.emit(format!("FILL_AREA_STYLE_COLOUR('',#{rgb})"));
+                    let fill = w.emit(format!("FILL_AREA_STYLE('',(#{colour}))"));
+                    let surface = w.emit(format!("SURFACE_STYLE_FILL_AREA(#{fill})"));
+                    let side = w.emit(format!("SURFACE_SIDE_STYLE('',(#{surface}))"));
+                    let usage = w.emit(format!("SURFACE_STYLE_USAGE(.BOTH.,#{side})"));
+                    let assignment = w.emit(format!("PRESENTATION_STYLE_BY_CONTEXT((#{usage}),#{placement_rep})"));
+                    let solid = body_entities[*body];
+                    let item = w.emit(format!("STYLED_ITEM('',(#{assignment}),#{solid})"));
+                    w.emit(format!("MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(#{item}),#{context})"));
+                }
             }
         }
         if let Some(semantic) = semantic {
@@ -889,7 +920,7 @@ pub fn export_planet_gear_occurrences_step(
     let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(AssemblyExport { placements: &placements, groups: None, names: None, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
+        None, Some(AssemblyExport { placements: &placements, groups: None, colours: None, names: None, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
     )?;
     Ok(text)
 }
@@ -918,7 +949,7 @@ pub fn export_planetary_gear_set_step(
 
 /// Serialize current shared definitions with their nonsingular orthogonal placements.
 pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
-    export_shared_products(assembly, None, None)
+    export_shared_products(assembly, None, None, None)
 }
 
 /// Name the assembly and each reusable part definition in definition-index order.
@@ -927,7 +958,7 @@ pub fn export_named_step_assembly(assembly: &crate::StepSharedAssembly, name: &s
         .any(|s| s.is_empty() || s.chars().any(char::is_control)) {
         return Err(refuse("Expected an assembly name and one nonempty printable name per definition"));
     }
-    export_shared_products(assembly, Some((name, parts)), None)
+    export_shared_products(assembly, Some((name, parts)), None, None)
 }
 
 /// Export a flat group hierarchy while retaining reusable local solid definitions.
@@ -936,6 +967,25 @@ pub fn export_grouped_step_assembly(
     groups: &[&str],
     parents: &[Option<usize>],
 ) -> Result<String> {
+    export_grouped_with_styles(assembly, groups, parents, None)
+}
+
+/// Write occurrence-specific surface colours while sharing the underlying solid.
+pub fn export_styled_step_assembly(
+    assembly: &crate::StepSharedAssembly, groups: &[&str], parents: &[Option<usize>],
+    colours: &[Option<StepOccurrenceColour<'_>>],
+) -> Result<String> {
+    if colours.len() != parents.len() || colours.iter().flatten().any(|style|
+        style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x))) {
+        return Err(refuse("Expected one optional named RGB style per occurrence"));
+    }
+    export_grouped_with_styles(assembly, groups, parents, Some(colours))
+}
+
+fn export_grouped_with_styles(
+    assembly: &crate::StepSharedAssembly, groups: &[&str], parents: &[Option<usize>],
+    colours: Option<&[Option<StepOccurrenceColour<'_>>]>,
+) -> Result<String> {
     if parents.len() != assembly.occurrences().len()
         || groups.len() > 256
         || groups.iter().any(|name| name.is_empty() || name.chars().any(char::is_control))
@@ -943,10 +993,10 @@ pub fn export_grouped_step_assembly(
     {
         return Err(refuse("Expected printable group names and a valid optional parent for every occurrence"));
     }
-    export_shared_products(assembly, None, Some((groups, parents)))
+    export_shared_products(assembly, None, Some((groups, parents)), colours)
 }
 
-fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: Option<(&[&str], &[Option<usize>])>) -> Result<String> {
+fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: Option<(&[&str], &[Option<usize>])>, colours: Option<&[Option<StepOccurrenceColour<'_>>]>) -> Result<String> {
     let definitions = assembly.definitions();
     let occurrences = assembly.occurrences();
     if definitions.is_empty() || occurrences.is_empty() || occurrences.len() > 256 {
@@ -963,7 +1013,7 @@ fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&
     let model = crate::compose_step_v7_occurrences(definitions)?;
     let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, groups, names, definition_tolerances: &tolerances }), false,
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, groups, colours, names, definition_tolerances: &tolerances }), false,
     )?;
     Ok(text)
 }

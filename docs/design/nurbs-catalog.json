@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 939,
-  "unallocatedCount": 61,
+  "specifiedCount": 940,
+  "unallocatedCount": 60,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21475,6 +21475,26 @@
       ],
       "remainingQualification": [
         "Single-level groups with optional root placements. Occurrence colors and grouped Solid editor integration remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0940",
+      "name": "Цвет поверхности отдельного экземпляра общего тела в STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_styled_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_occt.py"
+      ],
+      "remainingQualification": [
+        "Rigid occurrence RGB export; tested independent OCCT readback on a blue and red instance at 0 and 5 mm. Material parameters, native style editing, editor and WASM integration remain open."
       ]
     }
   ],

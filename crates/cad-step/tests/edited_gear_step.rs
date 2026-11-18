@@ -293,3 +293,23 @@ fn grouped_placements_share_a_solid_across_two_groups_and_root() {
     assert_eq!(endpoints(usages[2]).1, endpoints(usages[4]).1);
     assert!(export_grouped_step_assembly(&scene, &["Drive"], &parents).is_err());
 }
+
+#[test]
+fn shared_occurrences_keep_separate_surface_colours() {
+    use cad_step::{StepAssemblyOccurrence, StepOccurrenceColour, StepSharedAssembly, export_styled_step_assembly};
+    let placements = (0..2).map(|i| StepAssemblyOccurrence {
+        definition: 0,
+        transform: [[1.,0.,0.,5.*i as f64],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]],
+    }).collect();
+    let scene = StepSharedAssembly::from_placed_solids(vec![brep_core::cuboid([0.;3],[1.,2.,3.]).unwrap()], placements).unwrap();
+    let colours = [Some(StepOccurrenceColour { name: "Blue", rgb: [0.,0.,1.] }),
+                   Some(StepOccurrenceColour { name: "Red", rgb: [1.,0.,0.] })];
+    let text = export_styled_step_assembly(&scene, &[], &[None,None], &colours).unwrap();
+    assert_eq!(text.matches("=MANIFOLD_SOLID_BREP(").count(), 1);
+    assert_eq!(text.matches("=PRESENTATION_STYLE_BY_CONTEXT(").count(), 2);
+    let reopened = cad_step::import_step_shared_assembly(&text).unwrap();
+    assert_eq!(reopened.occurrences().len(), 2);
+    if let Some(path) = std::env::var_os("CAD_STEP_OCCURRENCE_COLOUR_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}
