@@ -44,6 +44,11 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  'scripts/refresh-qualification-fingerprints-v109-v126.mjs': 'aa961c7b3513db69cbe2f7526cfca71336b0a16757cccb28adf76adb9dbb712d',
+  'docs/qualification/g0-toolchain-fingerprints-v109.json': 'e60ed06cc7db090c45201bcb6e72ceaf4d8c1c8c3b53db06d967a71db6bc25a3',
+  'docs/qualification/semantic-manifold-g1-plan-v126.json': '9a6c8d9cc1e0438946464353cc2b16f881a8209fcb955cfb76062f2523d4334d',
+  'docs/qualification/g0-v109-g1-v126-refreeze-status-v1.json': 'e1fef187f5d88f39df55f46111767c09afa3d21cbd2808d0d8235e6563309728',
+  'docs/qualification/g0-v109-g1-v126-refreeze-review.md': '9da42622ee6aaedf6dbe843cb56c92f4ce4327bd4cd8f02ab4d91f8abb46e393',
   ...NATIVE_CI_RECOVERY_ARCHIVES,
   ...DELIVERY_ARCHIVES,
   ...FRONTEND_RECOVERY_ARCHIVES,
