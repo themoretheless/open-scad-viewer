@@ -2575,6 +2575,27 @@ fn automatic_support_proves(first: &Curve, second: &Curve, points: &[Vec<f64>;2]
     candidate != seam && projected_support_proves(first,second,candidate,minimum)
 }
 
+/// Signed separation of two constant-radius ball sweeps, including their end caps.
+/// The witnesses use independent centerline parameters; this is a static routing check.
+#[derive(Debug)]
+pub struct TubePairClearance {
+    pub signed_margin_mm: [f64; 2],
+    pub centerline_distance: crate::curve_distance::CurveDistance,
+}
+
+pub fn tube_pair_clearance(
+    first: (&Curve, f64), second: (&Curve, f64), tolerance: f64, max_cells: usize,
+) -> Result<TubePairClearance> {
+    for (curve, radius) in [first, second] {
+        check(radius.is_finite() && radius >= 0., "Expected finite nonnegative tube radius")?;
+        check(curve.control_points.first().is_some_and(|p| p.len() == 3), "Expected spatial tube centerline")?;
+    }
+    let centerline_distance = crate::curve_distance::distance(first.0, second.0, tolerance, max_cells)?;
+    let [lo, hi] = centerline_distance.distance_interval_mm;
+    let margin = Interval::new(lo, hi)?.sub(Interval::point(first.1))?.sub(Interval::point(second.1))?;
+    Ok(TubePairClearance { signed_margin_mm: [margin.lo, margin.hi], centerline_distance })
+}
+
 /// Check clearance to the entire untrimmed tensor patch. The distance report
 /// retains the curve and UV witness parameters. In ambiguous cases, use the
 /// witness direction to certify the full control nets, or certify a strict

@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0912",
+  "testedBase": "ca517787341e07e68938628cc8a74b1c904feda8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "curve_pair_distance",
+    "--test",
+    "curve_surface_distance"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 468,
+  "scope": [
+    "Skew weighted segments have an interior minimum. Verify signed margins for separation, tangency and overlap in both orders, end-cap overlap and invalid radius."
+  ],
+  "logSha256": "fb8ea170ac4b8389ddf83ce71553e3d8a35f515f9e21507e556c69757ba6af8e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7406016d981322f5ff640baa4984b39f47d50729b3f22a17ef1b0ff698697671",
+    "crates/nurbs-core/tests/curve_pair_distance.rs": "264f4d1f231b7792ea93f3a889471f2a6b9e59a5a057e8c974efc43e8be6e90b"
+  }
+}

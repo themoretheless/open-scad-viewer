@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 911,
-  "unallocatedCount": 89,
+  "specifiedCount": 912,
+  "unallocatedCount": 88,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20957,6 +20957,23 @@
       ],
       "remainingQualification": [
         "Constant radius ball swept along the full curve, including end caps. Signed margin refers to the retained surface image. Work limits can leave its sign unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0912",
+      "name": "Монтажный зазор двух трубок вдоль независимых пространственных NURBS-траекторий",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::tube_pair_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_pair_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Two independent full spatial curves with constant radii and spherical caps. Work limits can leave the sign unresolved."
       ]
     }
   ],

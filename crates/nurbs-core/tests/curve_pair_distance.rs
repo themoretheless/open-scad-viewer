@@ -46,3 +46,22 @@ fn invalid_dimensions_and_budgets_are_rejected() {
         assert!(distance(&a, &a, tolerance, 100).is_err());
     }
 }
+
+#[test]
+fn independently_routed_tubes_include_skew_interiors_and_end_caps() {
+    use nurbs_core::analysis::curve_measure::tube_pair_clearance;
+    let a = segment([0.,0.,0.],[4.,0.,0.]);
+    let b = segment([2.,-1.,2.],[2.,1.,2.]);
+    for (r, expected) in [(0.25,0.75), (1.,0.), (1.5,-0.5)] {
+        for (first, second) in [((&a,1.),(&b,r)), ((&b,r),(&a,1.))] {
+            let report = tube_pair_clearance(first,second,1e-5,10000).unwrap();
+            let [lo, hi] = report.signed_margin_mm;
+            assert!(lo <= expected && expected <= hi && hi-lo < 0.00002);
+            assert!(report.centerline_distance.parameters.iter().all(|&t| -2. < t && t < 5.));
+        }
+    }
+    let beyond = segment([7.,4.,0.],[8.,4.,0.]);
+    let report = tube_pair_clearance((&a,2.),(&beyond,4.),1e-5,10000).unwrap();
+    assert!(report.signed_margin_mm[0] <= -1. && report.signed_margin_mm[1] >= -1.);
+    assert!(tube_pair_clearance((&a,-1.),(&b,0.),1e-5,100).is_err());
+}
