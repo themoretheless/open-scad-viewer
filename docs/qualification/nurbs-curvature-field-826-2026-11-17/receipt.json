@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0826",
+  "testedBase": "0df9f44f518b8b1b027f89a856c29fbf7884896c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 175,
+  "scope": [
+    "Deduplicate identical indexed B-rep payloads without modifying local geometry or occurrence transforms.",
+    "Check exact duplicate collapse, idempotence, retention of an edited gear, five preserved transforms and closed materialized solids after STEP round-trip."
+  ],
+  "logSha256": "fee26e26e38679f806f405c90b7ff20ce862156b8e038e99bff3a442c383f48b",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "679654f8f74a79ccdcee3f02f7bdc09a49980b2862164987e0ebc780da2b5cbf",
+    "crates/cad-step/src/step_v3_export.rs": "0a2f23d34fb0cdf83de7d1b410acd9d27c6a0a4a259ebfe7ff5004d8cf0a4385",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "1ad9b3b69a48d9b7e00184ceacd0614aac9976f257e784ee338740bad542e31d"
+  }
+}

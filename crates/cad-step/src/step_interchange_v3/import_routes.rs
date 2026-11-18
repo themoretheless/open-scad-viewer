@@ -737,6 +737,28 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Coalesce identical indexed B-rep payloads, including the model tolerance.
+    /// The first definition supplies the retained topology identities.
+    pub fn deduplicate_definitions(&mut self) -> usize {
+        let original_count = self.definitions.len();
+        let mut unique: Vec<Model> = Vec::with_capacity(original_count);
+        let mut remap = Vec::with_capacity(original_count);
+        for model in std::mem::take(&mut self.definitions) {
+            let index = unique.iter().position(|candidate| candidate.0 == model.0)
+                .unwrap_or_else(|| {
+                    let index = unique.len();
+                    unique.push(model);
+                    index
+                });
+            remap.push(index);
+        }
+        for occurrence in &mut self.occurrences {
+            occurrence.definition = remap[occurrence.definition];
+        }
+        self.definitions = unique;
+        original_count - self.definitions.len()
+    }
+
     fn check_new_placement(&self, transform: [[f64; 4]; 4]) -> Result<()> {
         if self.occurrences.len() >= super::MAX_OCCURRENCES {
             return Err(refuse("STEP assembly exceeds the limit of 256 occurrences"));

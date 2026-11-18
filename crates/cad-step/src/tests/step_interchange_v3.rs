@@ -2802,6 +2802,47 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_deduplicates_exact_definitions_without_merging_edited_gear() {
+    let spec = brep_core::GearSpec { teeth: 4, height: 10., ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let source = crate::import_step_shared_assembly(&step).unwrap();
+    let placement = [
+        [1., 0., 0., 0.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 40.],
+        [0., 0., 0., 1.],
+    ];
+    assembly.append_assembly(source, placement).unwrap();
+    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec }).unwrap();
+    assembly.insert_solid(edited, placement).unwrap();
+    let before = assembly.occurrences().to_vec();
+    assert_eq!(assembly.deduplicate_definitions(), 1);
+    assert_eq!(assembly.deduplicate_definitions(), 0);
+    let indices: Vec<_> = assembly.occurrences().iter().map(|item| item.definition).collect();
+    assert_eq!(indices, [0, 0, 0, 0, 1]);
+
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 2);
+    let back = crate::import_step_shared_assembly(&exported).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (2, 5));
+    for (index, ((after, before), definition)) in back.occurrences().iter()
+        .zip(before).zip(indices).enumerate()
+    {
+        assert_eq!(after.definition, definition);
+        for (actual, expected) in after.transform.iter().flatten().zip(before.transform.iter().flatten()) {
+            assert!((actual - expected).abs() < 1e-10);
+        }
+        let model = back.materialize(index).unwrap();
+        let top = model.vertices.iter().map(|v| v.point[2]).fold(f64::NEG_INFINITY, f64::max);
+        let height = if index == 4 { 12. } else { 10. };
+        assert!((top - before.transform[2][3] - height).abs() < 1e-10);
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    }
+}
+
+#[test]
 fn shared_step_append_assembly_composes_placements_once_per_occurrence() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

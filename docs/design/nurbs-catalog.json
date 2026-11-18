@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 825,
-  "unallocatedCount": 175,
+  "specifiedCount": 826,
+  "unallocatedCount": 174,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19380,6 +19380,26 @@
       "remainingQualification": [
         "Append a shared assembly under a rigid transform while preserving definition sharing within each input.",
         "Check invalid parent transform, independent composition formulas, two definitions for four occurrences, unchanged target placements and closed placed solids after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0826",
+      "name": "Точное объединение одинаковых определений B-rep в STEP-сборке",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::deduplicate_definitions",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-826-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-826-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Deduplicate identical indexed B-rep payloads without modifying local geometry or occurrence transforms.",
+        "Check exact duplicate collapse, idempotence, retention of an edited gear, five preserved transforms and closed materialized solids after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }
