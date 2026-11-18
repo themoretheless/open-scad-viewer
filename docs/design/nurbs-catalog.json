@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 945,
-  "unallocatedCount": 55,
+  "specifiedCount": 946,
+  "unallocatedCount": 54,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21592,6 +21592,28 @@
       ],
       "remainingQualification": [
         "Whole nondegenerate clamped edges on a horizontal affine target. Checks indexed closure and stored UV endpoints, supports both traversals. Does not certify nesting or solid material."
+      ]
+    },
+    {
+      "id": "NURBS-0946",
+      "name": "Сшивка цилиндрической замены стенки сквозного отверстия",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::body_analysis::through_wall_cylinder::replace",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/body_analysis.rs",
+        "crates/brep-core/src/features/direct_edit.rs",
+        "crates/brep-core/src/features/direct_edit/suppression.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
+      ],
+      "remainingQualification": [
+        "Single closed shell with selected horizontal affine end caps and separated walls. Explicit wall replacement; automatic Boolean dispatch and general embedding proof remain open."
       ]
     }
   ],

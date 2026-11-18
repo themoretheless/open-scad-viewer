@@ -324,3 +324,22 @@ fn shared_occurrences_keep_separate_surface_colours() {
         std::fs::write(path, text).unwrap();
     }
 }
+
+#[test]
+fn exchanged_spinner_cylindrical_replacement_is_a_closed_single_body() {
+    let source = brep_core::gear(&GearSpec { module:1.5, teeth:32, height:10., helix_angle_deg:-35.,
+        herringbone:true, clearance:0.1, backlash:0.05, bore:42., ..Default::default() }).unwrap();
+    let caps: Vec<_> = source.faces.iter().enumerate().filter(|(_,f)| !f.holes.is_empty()).map(|(i,_)|i).collect();
+    let result = brep_core::body_analysis::through_wall_cylinder::replace(&source, [caps[0],caps[1]], 22.,10.).unwrap();
+    let (text,..) = cad_step::export_step_v9(&result).unwrap();
+    let (read,..) = cad_step::import_step_v9(&text).unwrap();
+    assert_eq!(read.bodies.len(), 1);
+    assert_eq!(read.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(read.faces.len(), result.faces.len());
+    if let Some(dir) = std::env::var_os("CAD_STEP_BORE_VOLUME_FIXTURE") {
+        let dir = std::path::Path::new(&dir);
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("before.step"), cad_step::export_step_v9(&source).unwrap().0).unwrap();
+        std::fs::write(dir.join("after.step"), text).unwrap();
+    }
+}

@@ -79,6 +79,19 @@ fn spinner_bore_difference_preserves_teeth_or_reports_unproved_coverage() {
     assert_eq!(certified_arcs, 8);
     let reference = gear(&GearSpec { bore: 44., ..spec }).unwrap();
     assert_eq!(reference.validate().unwrap().boundary_edge_count, 0);
+    let replacement = brep_core::body_analysis::through_wall_cylinder::replace(&sun,
+        ends.map(|(cap,_)| cap), 22., 10.).unwrap();
+    assert_eq!(replacement.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(replacement.bodies.len(), 1);
+    for radius in [20., 24.] {
+        assert!(brep_core::body_analysis::through_wall_cylinder::replace(&sun,
+            ends.map(|(cap,_)| cap), radius, 10.).is_err());
+    }
+    assert_eq!(replacement.faces.len(), sun.faces.len() - 32 + 4);
+    assert_eq!(replacement.shell_genus(0), sun.shell_genus(0));
+    for (i,face) in sun.faces.iter().enumerate() {
+        if !wall.contains(&i) { assert!(replacement.faces.iter().any(|f| f.surface == face.surface)); }
+    }
     match boolean(&sun, &cutter, "difference") {
         Err(error) => {
             assert_eq!(error.code, "BREP_NURBS_BOOLEAN_UNPROVED");
