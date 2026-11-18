@@ -1300,3 +1300,35 @@ fn patch_set_density_encloses_residual_after_installed_counterweights() {
     request["installedCounterweights"][0]["massBoundsKg"] = json!([-1., 1.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_checks_counterweight_mass_capacity_by_plane() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    request["counterweightMassLimitsKg"] = json!([5., 0.01]);
+    assert_eq!(run(&request)["ok"], false);
+    request["counterweightRadiiMm"] = json!([2., 4.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let capacity = &response["value"]["twoPlaneCounterweightCapacity"];
+    assert_eq!(capacity["status"], "outside");
+    let planes = capacity["planes"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    for (plane, (offset, mass_limit, status)) in
+        planes.iter().zip([(0., 5., "within"), (2., 0.01, "outside")])
+    {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        assert_eq!(plane["status"], status);
+        let exact = 1.265625_f64.hypot(0.1875) / mass_limit;
+        let bounds = &plane["minimumRadiusBoundsMm"];
+        assert!(bounds[0].as_f64().unwrap() <= exact && exact <= bounds[1].as_f64().unwrap());
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(
+        run(&request)["value"].get("twoPlaneCounterweightCapacity"),
+        Some(&Value::Null)
+    );
+    request["counterweightMassLimitsKg"] = json!([5., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}

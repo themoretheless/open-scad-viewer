@@ -38,6 +38,10 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  twoPlaneCounterweightCapacity?: {
+    status: string
+    planes: { offsetMm: number; minimumRadiusBoundsMm: [number, number]; status: string }[]
+  } | null
   twoPlaneCounterweights?: {
     offsetMm: number
     radiusMm: number
@@ -611,3 +615,18 @@ for (const plane of residualBalance.planes) {
 }
 assert.equal(call(request.maxWork, densityOp, { ...residualOptions, maxSurfaceCells: 2 }).twoPlaneResidualBalance, null)
 console.log('WASM ABI enclosed residual unbalance after installed counterweights.')
+
+const capacityOptions = { ...counterweightOptions, counterweightMassLimitsKg: [5, 0.01] }
+const capacityResult = call(request.maxWork, densityOp, capacityOptions)
+assert.deepEqual(capacityResult.twoPlaneCounterweights, counterweights)
+const capacity = capacityResult.twoPlaneCounterweightCapacity
+assert.ok(capacity)
+assert.equal(capacity.status, 'outside')
+assert.deepEqual(capacity.planes.map(plane => [plane.offsetMm, plane.status]), [[0, 'within'], [2, 'outside']])
+for (const [index, weightLimit] of [5, 0.01].entries()) {
+  const [lo, hi] = capacity.planes[index].minimumRadiusBoundsMm
+  const radius = expectedPlaneMagnitude / weightLimit
+  assert.ok(lo <= radius && radius <= hi)
+}
+assert.equal(call(request.maxWork, densityOp, { ...capacityOptions, maxSurfaceCells: 2 }).twoPlaneCounterweightCapacity, null)
+console.log('WASM ABI classified mounting radius capacity under counterweight mass limits.')

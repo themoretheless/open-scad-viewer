@@ -1448,7 +1448,8 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use nurbs_core::{
         analysis::surface_measure::{
             bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
-            bound_radius_of_gyration, bound_two_plane_counterweights, bound_two_plane_residual_unbalance,
+            bound_radius_of_gyration, bound_two_plane_counterweight_capacity,
+            bound_two_plane_counterweights, bound_two_plane_residual_unbalance,
             classify_two_plane_unbalance, InstalledCounterweightBounds,
             periodic_trim_patch_set_mass_with_density,
         },
@@ -1551,6 +1552,20 @@ pub fn exact_periodic_trim_patch_set_density_request(
                 ));
             }
             Ok(radii)
+        })
+        .transpose()?;
+    let counterweight_mass_limits = request
+        .get("counterweightMassLimitsKg")
+        .map(|_| -> Result<[f64; 2]> {
+            let limits: [f64; 2] = field(request, "counterweightMassLimitsKg")?;
+            if counterweight_radii.is_none()
+                || limits.iter().any(|limit| !limit.is_finite() || *limit <= 0.)
+            {
+                return Err(input(
+                    "Counterweight capacity requires mounting radii and positive finite mass limits",
+                ));
+            }
+            Ok(limits)
         })
         .transpose()?;
     let plane_tolerances = request
@@ -1687,6 +1702,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if installed_counterweights.is_some() {
         response["twoPlaneResidualBalance"] = Value::Null;
     }
+    if counterweight_mass_limits.is_some() {
+        response["twoPlaneCounterweightCapacity"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1735,6 +1753,17 @@ pub fn exact_periodic_trim_patch_set_density_request(
                         "radialOffsetBoundsMm": counterweights[index].radial_offset_bounds,
                     })
                 }));
+                if let Some(limits) = counterweight_mass_limits {
+                    let capacity = bound_two_plane_counterweight_capacity(vectors, radii, limits)?;
+                    response["twoPlaneCounterweightCapacity"] = json!({
+                        "status": balance_status_name(capacity.overall_status),
+                        "planes": [0, 1].map(|index| json!({
+                            "offsetMm": offsets[index],
+                            "minimumRadiusBoundsMm": capacity.minimum_radius_bounds[index],
+                            "status": balance_status_name(capacity.plane_status[index]),
+                        })),
+                    });
+                }
             }
             if let Some((counterweights, tolerances)) = installed_counterweights {
                 let (residual, balance) =
