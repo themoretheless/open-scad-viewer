@@ -33,7 +33,7 @@ fn closed_rational_curve_is_not_a_simplicity_proof() {
     assert_eq!(exact_loop_joins(&[c]).unwrap(), Some(true));
 }
 #[test]
-fn periodic_and_unclamped_endpoints_remain_unproven() {
+fn periodic_closure_requires_source_identity_and_unclamped_endpoints_remain_unproven() {
     let c = Curve {
         degree: 2,
         knots: (0..11).map(|i| i as f64).collect(),
@@ -50,7 +50,10 @@ fn periodic_and_unclamped_endpoints_remain_unproven() {
         weights: vec![1.; 8],
         periodic: true,
     };
-    assert_eq!(exact_loop_joins(&[c.clone()]).unwrap(), None);
+    assert_eq!(exact_loop_joins(std::slice::from_ref(&c)).unwrap(), Some(true));
+    let mut broken = c.clone();
+    broken.control_points[7][0] += 0.125;
+    assert!(exact_loop_joins(&[broken]).is_err());
     let mut unclamped = c;
     unclamped.periodic = false;
     assert_eq!(exact_loop_joins(&[unclamped]).unwrap(), None);

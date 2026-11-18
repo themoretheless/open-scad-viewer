@@ -132,9 +132,19 @@ fn rational_weights_are_original_data_and_unknown_root_is_not_a_sampled_seed() {
 #[test]
 fn source_knots_and_swapped_free_axis_preserve_complete_fiber_census() {
     let a = parabola(false);
-    let b = plane(0.25, true);
-    let sources = FiberSources::new(&a, &b).unwrap();
+    let mut b = plane(0.25, true);
     let d = [[0.2, 0.8], [0.4, 0.6], [0.1, 0.9], [0.3, 0.7]];
+    // Exact affine reduction retains the original knot clock and costs four rectangles.
+    let affine = FiberSources::new(&a, &b).unwrap()
+        .certify(d, FiberAxis::FirstU, Default::default()).unwrap();
+    assert_eq!(affine.report().rectangles, 4);
+    affine.fiber().unwrap().reverify().unwrap();
+
+    // Different slopes on either side of the knot require both original spans.
+    for pole in &mut b.control_points[1] {
+        pole[0] = 0.51;
+    }
+    let sources = FiberSources::new(&a, &b).unwrap();
     let r = sources
         .certify(d, FiberAxis::FirstU, Default::default())
         .unwrap();

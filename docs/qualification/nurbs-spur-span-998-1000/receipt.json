@@ -5,5 +5,18 @@
   "sha256": {
     "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs": "9ef1c367330d5bc3f26873ffc2a5afd17197a292b1b8d8afcf5b5faebfd96eda",
     "crates/nurbs-core/tests/gear_span.rs": "b0340d0605cf93cb641ed5378bbdc7cab777628467800614b7162187d69f3cde"
+  },
+  "fullCoreSuite": {
+    "integrationTargets": 388,
+    "passed": 4859,
+    "ignored": 1,
+    "logsInReplayOrder": [
+      "full.log.gz",
+      "remaining.log.gz",
+      "fiber.log.gz",
+      "uv.log.gz",
+      "doc.log.gz"
+    ],
+    "scope": "Unchanged library. Two test fixtures corrected and their complete targets rerun."
   }
 }
