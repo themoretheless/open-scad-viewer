@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0848",
+  "testedBase": "f2af8bd8802e91322eb0faa5a2c06a789c9af4a8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "closed_solid"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 26,
+  "scope": [
+    "Clip qualified material intervals to a finite ray segment and enclose the total physical length with outward rounding.",
+    "Check a cavity, segment ends before and within material, non-unit ray direction, invalid ends and work exhaustion."
+  ],
+  "logSha256": "9978e78facb84d8ea6f0064bb54f0e529b3996703505a30934432366d4a9bb37",
+  "sourceSha256": {
+    "crates/brep-core/src/model/closed_solid.rs": "f5345e3b45e273503be45c7b2940f4e2861aff7bed1eefc989c2191b78691160",
+    "crates/brep-core/src/model/ray_parity.rs": "e9b5c0b000ee5c8b3874f4762eb16f4720b293a9023c3a4c317a12461516c3e2",
+    "crates/brep-core/tests/closed_solid.rs": "5275ddc1017112d37420d600cb8d1b6d73a00ab4e754b3cbcb3c9846be8d2cdd"
+  }
+}
