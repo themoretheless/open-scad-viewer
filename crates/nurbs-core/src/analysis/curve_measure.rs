@@ -1772,6 +1772,65 @@ pub fn classify_directional_motion_join(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionChainJoin {
+    pub segment_indices: [usize; 2],
+    pub join: DirectionalMotionJoinReport,
+    pub position_status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionChainReport {
+    pub joins: Vec<DirectionalMotionChainJoin>,
+    /// Exceeds if any join violates a limit, Within if all limits are proved,
+    /// or Undetermined if some limits remain unresolved.
+    pub status: DirectionalMotionStatus,
+}
+
+/// Check adjacent joins in traversal order, optionally including the closing
+/// join. Each join is evaluated in the independent clocks of its two segments.
+pub fn classify_directional_motion_chain(
+    segments: &[TimedMotionSegment<'_>],
+    closed: bool,
+    direction: &[f64],
+    position_limit: f64,
+    derivative_limits: DirectionalMotionLimits,
+    max_joins: usize,
+) -> Result<DirectionalMotionChainReport> {
+    check(
+        segments.len() >= 2 || (closed && segments.len() == 1),
+        "An open motion chain needs two segments, and a closed chain needs one",
+    )?;
+    check(
+        position_limit.is_finite() && position_limit >= 0.,
+        "Position gap limit must be finite and nonnegative",
+    )?;
+    let join_count = if closed { segments.len() } else { segments.len() - 1 };
+    if join_count > max_joins {
+        return Err(resource("Motion chain joins exceed the work budget"));
+    }
+    let mut joins = Vec::with_capacity(join_count);
+    let mut status = DirectionalMotionStatus::Within;
+    for first in 0..join_count {
+        let second = (first + 1) % segments.len();
+        let join =
+            classify_directional_motion_join([segments[first], segments[second]], direction, derivative_limits)?;
+        let [lo, hi] = join.position_gap_bounds;
+        let position_status = classify_absolute_limit(Interval::new(lo, hi)?, position_limit);
+        for next in join.statuses.into_iter().chain([position_status]) {
+            if next == DirectionalMotionStatus::Exceeds || status == DirectionalMotionStatus::Within {
+                status = next;
+            }
+        }
+        joins.push(DirectionalMotionChainJoin {
+            segment_indices: [first, second],
+            join,
+            position_status,
+        });
+    }
+    Ok(DirectionalMotionChainReport { joins, status })
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],

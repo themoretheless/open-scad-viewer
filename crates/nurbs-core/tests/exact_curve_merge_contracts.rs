@@ -9278,3 +9278,63 @@ fn motion_join_uses_duration_powers_for_higher_derivatives() {
         assert!(lo <= expected && expected <= hi && hi - lo < 1e-8);
     }
 }
+
+#[test]
+fn motion_chain_checks_closing_gap_and_preserves_join_order() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_chain,
+    };
+    let line = |a, b| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![a, 0.], vec![b, 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let curves = [line(0., 1.), line(1., 3.), line(3., 4.)];
+    let segments = std::array::from_fn::<_, 3, _>(|index| TimedMotionSegment {
+        curve: &curves[index],
+        interval: [0., 1.],
+        duration: [1., 2., 1.][index],
+    });
+    let check = |closed, budget| {
+        classify_directional_motion_chain(
+            &segments, closed, &[1., 0.], 0.01,
+            DirectionalMotionLimits { speed: 0.01, acceleration: 0.01, jerk: 0.01 }, budget,
+        )
+    };
+    let open = check(false, 2).unwrap();
+    assert_eq!(open.status, Status::Within);
+    assert!(check(true, 2).is_err());
+    let closed = check(true, 3).unwrap();
+    assert_eq!(closed.status, Status::Exceeds);
+    assert_eq!(closed.joins.iter().map(|join| join.segment_indices).collect::<Vec<_>>(),
+        [[0, 1], [1, 2], [2, 0]]);
+    assert_eq!(closed.joins[2].position_status, Status::Exceeds);
+    assert_eq!(closed.joins[2].join.statuses, [Status::Within; 3]);
+}
+
+#[test]
+fn motion_chain_checks_a_single_closed_segment_for_velocity_discontinuity() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_chain,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [0., 1., 0.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let segment = TimedMotionSegment { curve: &curve, interval: [0., 1.], duration: 1. };
+    let limits = DirectionalMotionLimits { speed: 3., acceleration: 1., jerk: 1. };
+    let report = classify_directional_motion_chain(&[segment], true, &[1., 0.], 0.01, limits, 1)
+        .unwrap();
+    assert_eq!(report.status, Status::Exceeds);
+    assert_eq!(report.joins[0].segment_indices, [0, 0]);
+    assert_eq!(report.joins[0].position_status, Status::Within);
+    assert_eq!(report.joins[0].join.statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    assert!(classify_directional_motion_chain(&[segment], false, &[1., 0.], 0.01, limits, 1).is_err());
+}
