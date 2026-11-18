@@ -13354,3 +13354,21 @@ fn ordered_profile_orients_reversed_knots_without_rounding_the_clock() {
     right.control_points[0] = vec![1.,0.];
     assert!(join(&[left,right],1_000_000).is_err());
 }
+
+#[test]
+fn unordered_partition_restores_first_and_last_reversed_segments() {
+    use nurbs_core::editing::exact_curve_merge::assemble_parameter_partition as assemble;
+    let segment = |start:f64, a:f64, b:f64| Curve {
+        degree:1, knots:vec![start,start,start+1.,start+1.],
+        control_points:vec![vec![a,0.],vec![b,0.]], weights:vec![1.;2],periodic:false,
+    };
+    let mut pieces = [segment(2.,3.,2.),segment(0.,1.,0.),segment(1.,1.,2.)];
+    let result = assemble(&pieces,1_000_000).unwrap().curve.unwrap();
+    assert_eq!(result.knots,[0.,0.,3.,3.]);
+    assert_eq!(result.control_points,[vec![0.,0.],vec![3.,0.]]);
+    for start in [0.5,1.25] {
+        pieces[2] = segment(start,1.,2.);
+        assert!(assemble(&pieces,1_000_000).unwrap().curve.is_none());
+    }
+    assert!(assemble(&[segment(0.,0.,1.),segment(1.,1.,0.)],1_000_000).is_err());
+}

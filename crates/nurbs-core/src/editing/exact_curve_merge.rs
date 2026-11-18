@@ -1678,24 +1678,9 @@ pub fn orient_and_compress_chain(sources: &[Curve], max_work: u64) -> Result<Gau
         }
         let mut curve = next.clone();
         if backward {
-            let mut reflect = || -> std::result::Result<(), Exact> {
-                let [a,b] = curve.domain();
-                let left = work.lift(a)?;
-                let right = work.lift(b)?;
-                let sum = work.op(&left,&right,|x,y| x+y)?;
-                for knot in &mut curve.knots {
-                    let old = work.lift(*knot)?;
-                    let new = work.op(&sum,&old,|x,y| x-y)?;
-                    *knot = work.float(&new)?;
-                }
-                Ok(())
-            };
-            if let Err(reason) = reflect() {
+            if let Err(reason) = reflect_segment(&mut curve, &mut work) {
                 return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(reason)) });
             }
-            curve.knots.reverse();
-            curve.weights.reverse();
-            curve.control_points.reverse();
         }
         oriented.push(curve);
     }
@@ -1705,4 +1690,53 @@ pub fn orient_and_compress_chain(sources: &[Curve], max_work: u64) -> Result<Gau
     let mut report = compress_mixed_degree_chain(&oriented, max_work-work.used)?;
     report.work_used += work.used;
     Ok(report)
+}
+
+fn reflect_segment(curve: &mut Curve, work: &mut super::rational_edit::Work)
+    -> std::result::Result<(), super::rational_factor::Refusal> {
+                let [a,b] = curve.domain();
+                let left = work.lift(a)?;
+                let right = work.lift(b)?;
+                let sum = work.op(&left,&right,|x,y| x+y)?;
+                for knot in &mut curve.knots {
+                    let old = work.lift(*knot)?;
+                    let new = work.op(&sum,&old,|x,y| x-y)?;
+                    *knot = work.float(&new)?;
+                }
+    curve.knots.reverse();
+    curve.weights.reverse();
+    curve.control_points.reverse();
+    Ok(())
+}
+
+/// Recover a chain from unordered records with contiguous absolute domains.
+/// Infer the first orientation from the next segment's endpoints. Ambiguous
+/// initial joins, including a two-piece loop sharing both ends, need an anchor.
+pub fn assemble_parameter_partition(sources: &[Curve], max_work: u64) -> Result<GaugeMergeReport> {
+    crate::check((2..=256).contains(&sources.len()), "Expected 2..=256 partition segments")?;
+    crate::check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Invalid partition work limit")?;
+    for source in sources { source.validate()?; }
+    let mut ordered = sources.to_vec();
+    ordered.sort_by(|a,b| a.domain()[0].total_cmp(&b.domain()[0]));
+    if ordered.windows(2).any(|p| p[0].domain()[1] != p[1].domain()[0]) {
+        return Ok(GaugeMergeReport {curve: None, work_used: 0, refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))});
+    }
+    let peer = &ordered[1].control_points;
+    let matches = |point| peer.first() == point || peer.last() == point;
+    let first = &ordered[0].control_points;
+    let forward = matches(first.last());
+    let backward = matches(first.first());
+    crate::check(!(forward && backward), "Ambiguous partition orientation")?;
+    let mut work = super::rational_edit::Work { used: 0, limit: max_work };
+    if backward {
+        if let Err(reason) = reflect_segment(&mut ordered[0], &mut work) {
+            return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(reason)) });
+        }
+    }
+    if work.used == max_work {
+        return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(super::rational_factor::Refusal::ResourceLimit)) });
+    }
+    let mut result = orient_and_compress_chain(&ordered, max_work-work.used)?;
+    result.work_used += work.used;
+    Ok(result)
 }
