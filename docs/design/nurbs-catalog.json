@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 787,
-  "unallocatedCount": 213,
+  "specifiedCount": 788,
+  "unallocatedCount": 212,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18645,6 +18645,25 @@
       "remainingQualification": [
         "Enclose signed angular change and total angular variation across planar NURBS spans.",
         "Check retracing with zero net rotation and nonzero total angular travel, plus singular direction refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0788",
+      "name": "Измерение углового хода в движущейся плоской NURBS-системе отсчёта",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_relative_planar_angular_travel",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-788-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-788-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose relative net rotation and total angular travel across two synchronized knot grids.",
+        "Check opposing rotations with analytic relative travel, independent knots and exact self-reference cancellation.",
         "WASM and application integration are separate."
       ]
     }

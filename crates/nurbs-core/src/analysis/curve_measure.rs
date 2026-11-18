@@ -1938,10 +1938,61 @@ pub fn measure_planar_angular_travel(
             net_bounds: [0.; 2], total_bounds: [0.; 2], work_cells,
         });
     }
+    accumulate_angular_travel(cells.into_iter().map(|(_, _, speed)| speed), work_cells)
+}
+
+/// Bound relative angular travel for two directions on the same clock.
+/// Both original knot grids participate in integration. Discontinuous
+/// jumps are excluded, and a possible zero direction prevents a report.
+pub fn measure_relative_planar_angular_travel(
+    direction: &Curve,
+    reference: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
+    validate(parameter_tolerance, max_cells)?;
+    let curves = [direction, reference];
+    let (_, initial) = synchronized_clearance_cells(curves, interval, [0.; 2])?;
+    check(direction.control_points[0].len() == 2, "Angular travel requires planar direction curves")?;
+    let fixed = curves.map(|curve| fixed_cardinal_rotation(curve).is_some());
+    let same = std::ptr::eq(direction, reference);
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |spans, domain| {
+            let local_speed = |index: usize| -> Result<Option<Interval>> {
+                if fixed[index] {
+                    return Ok(Some(Interval::point(0.)));
+                }
+                let jets = curve_jets::enclose(curves[index], spans[index], domain)?;
+                Ok(planar_angular_jets(&jets, Interval::point(1.), 1)?.map(|jets| jets[0]))
+            };
+            let Some(moving) = local_speed(0)? else {
+                return Ok((None, true));
+            };
+            if same || fixed == [true; 2] {
+                return Ok((Some(Interval::point(0.)), false));
+            }
+            let Some(frame) = local_speed(1)? else {
+                return Ok((None, true));
+            };
+            Ok((Some(moving.sub(frame)?), true))
+        },
+    )?;
+    accumulate_angular_travel(cells.into_iter().map(|(_, _, speed)| speed), work_cells)
+}
+
+fn accumulate_angular_travel(
+    speeds: impl IntoIterator<Item = Option<Interval>>,
+    work_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
     let mut net = Interval::point(0.);
     let mut total = Interval::point(0.);
-    for (_, _, speed) in cells {
+    for speed in speeds {
         let speed = speed.ok_or_else(|| resource("Angular travel requires a certified nonzero direction in every cell"))?;
+        if speed.lo == 0. && speed.hi == 0. {
+            continue;
+        }
         net = net.add(speed)?;
         total = total.add(Interval::new(
             speed.lo.max(-speed.hi).max(0.),

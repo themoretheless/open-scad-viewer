@@ -12575,3 +12575,33 @@ fn planar_angular_travel_distinguishes_retracing_from_net_rotation() {
     };
     assert!(measure_planar_angular_travel(&singular, [2., 4.], 0.01, 511).is_err());
 }
+
+#[test]
+fn relative_planar_angular_travel_encloses_opposing_rotation() {
+    use nurbs_core::analysis::curve_measure::measure_relative_planar_angular_travel;
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let reference = Curve {
+        knots: vec![2., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 1.], vec![1., 0.], vec![1., -1.]],
+        weights: vec![1.; 3],
+        ..direction.clone()
+    };
+    let measure = |frame, budget| measure_relative_planar_angular_travel(
+        &direction, frame, [2., 4.], 0.01, budget,
+    );
+    assert!(measure(&reference, 1).is_err());
+    let report = measure(&reference, 511).unwrap();
+    for [lo, hi] in [report.net_bounds, report.total_bounds] {
+        assert!(lo <= std::f64::consts::PI && std::f64::consts::PI <= hi);
+        assert!(hi - lo < 0.025);
+    }
+    let zero = measure(&direction, 1).unwrap();
+    assert_eq!(zero.net_bounds, [0.; 2]);
+    assert_eq!(zero.total_bounds, [0.; 2]);
+}
