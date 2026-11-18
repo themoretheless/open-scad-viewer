@@ -859,7 +859,22 @@ pub fn bound_inertia_about_line(
     point: [f64; 3],
     direction: [f64; 3],
 ) -> Result<[f64; 2]> {
-    let axis = InertiaAxis::new(direction)?;
+    inertia_about_line(
+        central,
+        mass_bounds,
+        centroid_bounds,
+        point,
+        &InertiaAxis::new(direction)?,
+    )
+}
+
+fn inertia_about_line(
+    central: [[[f64; 2]; 3]; 3],
+    mass_bounds: [f64; 2],
+    centroid_bounds: [[f64; 2]; 3],
+    point: [f64; 3],
+    axis: &InertiaAxis,
+) -> Result<[f64; 2]> {
     let centroid = centroid_intervals(centroid_bounds)?;
     let mass = Interval::new(mass_bounds[0], mass_bounds[1])?;
     check(mass.lo >= 0., "Inertia mass bounds must be nonnegative")?;
@@ -867,7 +882,7 @@ pub fn bound_inertia_about_line(
         point.iter().all(|x| x.is_finite()),
         "Inertia axis point must be finite",
     )?;
-    let moment = directional_inertia(central, &axis)?;
+    let moment = directional_inertia(central, axis)?;
     if mass.hi == 0. {
         return Ok(moment);
     }
@@ -1086,6 +1101,32 @@ fn combine_mass_properties(
         centroid_bounds: centroid.map(|coordinate| [coordinate.lo, coordinate.hi]),
         central_inertia_bounds: inertia.map(|row| row.map(|value| [value.lo, value.hi])),
     })
+}
+
+/// Enclose the moment of a surface assembly about a fixed spatial line by
+/// adding each piece's moment about that same line.
+pub fn bound_assembly_inertia_about_line(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+) -> Result<[f64; 2]> {
+    check(
+        !pieces.is_empty(),
+        "Surface mass properties require at least one piece",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let mut total = Interval::point(0.);
+    for piece in pieces {
+        let [lo, hi] = inertia_about_line(
+            piece.central_inertia_bounds,
+            piece.mass_bounds,
+            piece.centroid_bounds,
+            point,
+            &axis,
+        )?;
+        total = add_component_masses(total, Interval::new(lo.max(0.), hi)?)?;
+    }
+    Ok([total.lo, total.hi])
 }
 
 /// Enclose the common center of positive-mass pieces. The extremal mass
@@ -1555,6 +1596,17 @@ impl TrimmedPatchSetDensityReport {
             .map(|_| {
                 bound_mass_weighted_centroid_plane_distance(&self.weighted_components, point, normal)
             })
+            .transpose()
+    }
+
+    /// Enclose inertia about a fixed line using the weighted component tensors.
+    pub fn bound_inertia_about_line(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<[f64; 2]>> {
+        self.mass_properties
+            .map(|_| bound_assembly_inertia_about_line(&self.weighted_components, point, direction))
             .transpose()
     }
 

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0639",
+  "testedBase": "d089aefa261203f29dc5a930f86ddca4f0fc5e7d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 236,
+  "scope": [
+    "Sum density-weighted component moments about one fixed axis without propagating uncertainty through the aggregate centroid.",
+    "Check analytic independent offsets with interval masses, an offset axis on a weighted nested island, and refusal of incomplete integration."
+  ],
+  "logSha256": "bc88b9497f621d9c9fc7cf0bd75150ae6e86864b8ae931b247f8bb99708d593d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "6fda98abfc0d31f556ddeeba7cf596bc4953abc55e6c8a9f31b38520ff1d2c74",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f04416b0a96c03b71b8df2fd0c476e1f0f226b6f47f8122140288481c5b1b618"
+  }
+}

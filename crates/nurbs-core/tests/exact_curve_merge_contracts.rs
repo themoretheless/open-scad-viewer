@@ -7571,3 +7571,48 @@ fn weighted_center_plane_distance_brackets_uncertain_positions_and_masses() {
         bound_mass_weighted_centroid_plane_distance(&pieces, [0.; 3], [0.; 3]).is_err()
     );
 }
+
+#[test]
+fn assembly_line_inertia_adds_separate_offsets_without_shared_center_uncertainty() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_inertia_about_line,
+    };
+    let pieces = [([1., 2.], 2.), ([2., 4.], -3.)].map(|(mass, x)| SurfaceAssemblyMassBounds {
+        mass_bounds: mass,
+        centroid_bounds: [[x; 2], [0.; 2], [0.; 2]],
+        central_inertia_bounds: [[1., 0., 0.], [0., 1., 0.], [0., 0., 2.]]
+            .map(|row| row.map(|value| [value; 2])),
+    });
+    let [lo, hi] =
+        bound_assembly_inertia_about_line(&pieces, [0., 0., 100.], [0., 0., -2.]).unwrap();
+    assert!(lo <= 26. && 48. <= hi);
+    assert!((lo - 26.).abs() < 1e-12 && (hi - 48.).abs() < 1e-12);
+    assert!(bound_assembly_inertia_about_line(&pieces, [0.; 3], [0.; 3]).is_err());
+    assert!(bound_assembly_inertia_about_line(&[], [0.; 3], [0., 0., 1.]).is_err());
+}
+
+#[test]
+fn weighted_periodic_trim_inertia_about_line_accounts_for_nested_island() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2.; 2], [6.; 2]];
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &densities, 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let [lo, hi] = report
+        .bound_inertia_about_line([1., 0., 5.], [0., 0., 1.])
+        .unwrap()
+        .unwrap();
+    let expected = 2. * 83. / 768. + 6. * 49. / 12288. - 2. * 0.34375 + 2.875;
+    assert!(lo <= expected && expected <= hi);
+
+    let incomplete =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 2, 1_000_000)
+            .unwrap();
+    assert_eq!(
+        incomplete.bound_inertia_about_line([1., 0., 5.], [0., 0., 1.]).unwrap(),
+        None
+    );
+}
