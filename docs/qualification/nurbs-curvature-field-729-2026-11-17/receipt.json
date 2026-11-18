@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0729",
+  "testedBase": "1d680a7c1e161936bb6d741774d1eb90ce79fe7d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 354,
+  "scope": [
+    "Bracket the first clearance violation in elapsed chain time across independent segment clocks.",
+    "Check elapsed time mapping, earlier unresolved tangency, later confirmed witness, clipped clear prefix, and shared budget refusal."
+  ],
+  "logSha256": "2f5c8888439b2454f120c685ae83b44d82001d9076c5fe7c20cd49abfa4c935e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "38e2746ce37bdb2c9e931cb1a653d8bd0ccd4bc43ca5e5a037052e4627ac8dab",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9e9f36698276e208396f3ceb7428a86d31b7e73cddbcc9e34c4efb7c69185dcb"
+  }
+}

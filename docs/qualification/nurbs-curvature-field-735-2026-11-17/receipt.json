@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0735",
+  "testedBase": "cd1541ded349329066fb76c8a997067addad6990",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 360,
+  "scope": [
+    "Partition simultaneous tool motion into clear, colliding and unresolved intervals.",
+    "Check both analytic contact boundaries, distinct knot grids, a confirmed interior collision, and mandatory initial cell coverage."
+  ],
+  "logSha256": "7af7c769f42d86b6286727e32d4309f1d5c39af764776eb1d12be87dc475ec32",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "6c88c365dc2256aecefce1a947dd75fdee627ea6ebfff65fe5258cc886792fea",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1abe0d40018acaec193944b34ba1201ea960576510717e73efc2c5ad06699f0a"
+  }
+}

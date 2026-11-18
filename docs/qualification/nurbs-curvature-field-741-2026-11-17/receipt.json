@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0741",
+  "testedBase": "429af8cf59675f1fd682f7704897166ed6dd620a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 366,
+  "scope": [
+    "Refine a certified gap minimum across the full schedule, including endpoint holds.",
+    "Check negative minimum during a parked phase, exact absolute witness time, retained coarse bounds, and mandatory phase budget."
+  ],
+  "logSha256": "516b5297c4d0add3c3daeefe07d650a8f349e41faaed586e926d63ae29958f18",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "0c343cfca5749e29f3c3f8005f2e69ebffb1ec4fe9f6bd547d6816850f2cf311",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9059398a6871de2bb75698975f180aacbc5308971ad239b52646462e4ca5029e"
+  }
+}

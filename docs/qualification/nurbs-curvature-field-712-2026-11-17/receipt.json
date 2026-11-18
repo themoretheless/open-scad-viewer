@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0712",
+  "testedBase": "eb75c446a2dd68dfcdbe11020095454db5f4cbc6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 335,
+  "scope": [
+    "Enclose signed sphere clearance and certify collision even when the tool center lies outside the obstacle.",
+    "Check radius-induced collision, both analytic contact boundaries, ordered per-obstacle gap bounds, and mandatory budget coverage."
+  ],
+  "logSha256": "a15bd74492db46d828e9f800ff6022925b61768adc65e3dbdf613ea7e4ddcff3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d74d09734600b0e0a61eeb93a6b5e0575764e924bc0e7ebc8442b08441416b00",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "bc1fd2d672453ff2d68eab9b7cc9487277b57183e3d912860dfc9d6ab102ce39"
+  }
+}

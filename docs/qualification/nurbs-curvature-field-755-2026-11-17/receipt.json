@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0755",
+  "testedBase": "edd397c3afe73d935a4bde3cda5efdc618de60a1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 380,
+  "scope": [
+    "Classify clearance against mixed obstacles while the tool radius varies affinely.",
+    "Check sphere and box contacts on a shared grid, original obstacle order, analytic crossings and budget refusal."
+  ],
+  "logSha256": "310b2739cd1cfc39f07a4b1d0ff8ad12aa6813419651bf8451d91cc197ba7e89",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "284fe631bd04568d98be2a652315a94337192487ca0d07da36cec53df49182bc",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "25d632748c2e7f3ecd4df3b684afa345fa2015d0e45be83a0976045ed4ed19e3"
+  }
+}

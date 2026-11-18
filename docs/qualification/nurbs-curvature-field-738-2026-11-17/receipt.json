@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0738",
+  "testedBase": "bb06ec32b38cc64c36b525c1a58462c507dd2053",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 363,
+  "scope": [
+    "Enclose clearance on the exact time overlap of independently scheduled curve traversals.",
+    "Check partial overlap, unequal durations, independently parameterized curves, a single shared endpoint, and disjoint schedules."
+  ],
+  "logSha256": "f8ea00fd25c2361cc6bf59ac27da24f051622fddf15a0524eb94bd827066b41b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "eeba71405385b25d1ec031d33af358bf498bc2c7893f2ca1b28a6a79b0fec221",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "65d8406a90f7230434df35a3d98912392901c768e75a7fe6b948da70883db747"
+  }
+}

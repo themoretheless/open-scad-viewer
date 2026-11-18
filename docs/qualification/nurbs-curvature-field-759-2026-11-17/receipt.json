@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0759",
+  "testedBase": "44e2e8228b1c0631ecfcbc5fb64b1ab1f52ee6a7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 384,
+  "scope": [
+    "Classify containment of a spherical tool with a piecewise-linear radius against workspace planes.",
+    "Check workspace overtravel caused by an interior radius peak, analytic crossings, nonunit plane residuals and mandatory combined coverage."
+  ],
+  "logSha256": "4cfc072929ff6fb39d92d086659f80cc8e3cd1e8e7f996f5087fe116fd037c92",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "df932ff17c7435898181ce8a1c381c2549a84d8492b37352b80c783c126b7cd0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "60a133b6134b79c382b379fffc49e4ed3d2507f7d48cbed1a2e648ea48da1dc0"
+  }
+}

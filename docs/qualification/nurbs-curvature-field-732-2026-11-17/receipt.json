@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0732",
+  "testedBase": "3ec772fb5f14437f3704ed25a5a2558a0dfdea0f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 357,
+  "scope": [
+    "Map certified clearance classes to ordered elapsed-time intervals across timed segments.",
+    "Check independent clocks, exact shared time boundaries, separated violations with clear gaps, and merged same-status cells."
+  ],
+  "logSha256": "1e237e0915140e90abdd137010a17e619bcd852b9ce0227d71764e706342edc3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "aa1223610a429d99f470a6dd115a91da52dc0041103e0af93ed02bff2f5e890e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b06c32a6929c2bad57d03016186b7cb3249475e57b38d756761b9831464ae326"
+  }
+}

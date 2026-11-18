@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0721",
+  "testedBase": "4dc0a79c47040621c8b07f3e90e368016149e322",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 346,
+  "scope": [
+    "Refine the minimum swept-ball clearance to capsule bodies and rounded tips.",
+    "Check an analytic rounded tip minimum, certified tolerance and witness, degenerate capsule support, and retained coarse bounds."
+  ],
+  "logSha256": "6a3de79b0db937583fddd0305a5fca6d259a0a3328ab1441a8af4c1b0da9f7dd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "fab28793390933ce7c0bfb56324aae8b6fdc64a049b41533bd1570630e4b31b3",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "89ba5549e966831310f91e3e04ede475e99695ee942077af68a868519d01f2f2"
+  }
+}

@@ -9768,3 +9768,1862 @@ fn obstacle_clearance_partition_distinguishes_two_separated_obstacles() {
         }));
     }
 }
+
+#[test]
+fn ball_obstacle_clearance_respects_tool_radius_and_normal_scale() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_curve_ball_obstacle_clearance,
+    };
+    let line = |height| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., height], vec![2., height]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = [WorkspaceHalfSpace { normal: &[0., 4.], offset: 0. }];
+    let check = |curve: &Curve, radius| {
+        partition_curve_ball_obstacle_clearance(&curve, [0., 1.], &[&obstacle], radius, 0.01, 1)
+    };
+    assert_eq!(check(&line(0.25), 0.125).unwrap().cells[0].status, Status::Within);
+    assert_eq!(check(&line(0.25), 0.25).unwrap().cells[0].status, Status::Undetermined);
+    assert_eq!(check(&line(0.25), 0.5).unwrap().cells[0].status, Status::Undetermined);
+    assert_eq!(check(&line(-0.25), 0.5).unwrap().cells[0].status, Status::Exceeds);
+    assert!(check(&line(0.25), -1.).is_err());
+}
+
+#[test]
+fn ball_workspace_partition_finds_overtravel_before_the_center_crosses() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_ball_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let plane = [WorkspaceHalfSpace { normal: &[3., 4.], offset: 6. }];
+    let check = |radius, budget| {
+        partition_curve_ball_convex_workspace(&curve, [0., 1.], &plane, radius, 0.01, budget)
+    };
+    let report = check(0.6, 128).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+    for (parameter, status) in [(0.5, Status::Undetermined), (0.75, Status::Exceeds)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && cell.status == status
+        }));
+    }
+    let [lo, hi] = report.cells.last().unwrap().plane_residuals[0];
+    assert!(lo > 0. && hi >= 3.);
+    assert_eq!(check(0., 128).unwrap().cells.first().unwrap().status, Status::Within);
+    assert_eq!(check(0.6, 1).unwrap().cells[0].status, Status::Undetermined);
+    assert!(check(f64::NAN, 128).is_err());
+}
+
+#[test]
+fn capsule_workspace_partition_accounts_for_offset_and_radius() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceCapsule, WorkspaceHalfSpace,
+        partition_curve_capsule_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 4. }];
+    let check = |offsets, radius| {
+        partition_curve_capsule_convex_workspace(
+            &curve, [0., 1.], &planes,
+            WorkspaceCapsule { endpoint_offsets: offsets, radius }, 0.01, 128,
+        )
+    };
+    let offsets = [&[0., 0.][..], &[0.5, 1.][..]];
+    for (radius, crossing) in [(0., 0.75), (0.5, 0.5)] {
+        let report = check(offsets, radius).unwrap();
+        assert_eq!(report.cells.first().unwrap().status, Status::Within);
+        assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(check([&[0.], &[0., 1.]], 0.).is_err());
+}
+
+#[test]
+fn rounded_hull_workspace_selects_distinct_support_vertices_per_plane() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_rounded_hull_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 2.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let planes = [
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 5. },
+        WorkspaceHalfSpace { normal: &[0., 1.], offset: 2.75 },
+    ];
+    let vertices = [&[0., 1.5][..], &[1., 0.][..], &[-1., -1.][..]];
+    let verify = |vertices: &[&[f64]], radius| {
+        partition_curve_rounded_hull_workspace(
+            &curve, [0., 1.], &planes, vertices, radius, 0.01, 256,
+        )
+    };
+    let report = verify(&vertices, 0.25).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    let last = report.cells.last().unwrap();
+    assert_eq!(last.status, Status::Exceeds);
+    for ([lo, hi], expected) in last.plane_residuals.iter().copied().zip([1.5, 1.]) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+    }));
+    assert!(verify(&[], 0.).is_err());
+    assert!(verify(&[&[1.]], 0.).is_err());
+}
+
+#[test]
+fn rounded_hull_obstacle_clearance_detects_contact_away_from_curve_origin() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_curve_rounded_hull_obstacle_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 2.], vec![1., 2.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = [
+        WorkspaceHalfSpace { normal: &[0., 2.], offset: 0. },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: 1. },
+    ];
+    let check = |vertices: &[&[f64]], radius, budget| {
+        partition_curve_rounded_hull_obstacle_clearance(
+            &curve, [0., 1.], &[&obstacle], vertices, radius, 0.01, budget,
+        )
+    };
+    let colliding = [&[0., 0.][..], &[0., -3.][..], &[1., 0.][..]];
+    assert!(check(&colliding, 0., 5).is_err());
+    let report = check(&colliding, 0., 6).unwrap();
+    assert_eq!(report.work_plane_cells, 6);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+    let clear = [&[0., -1.][..], &[1., 0.][..]];
+    assert_eq!(check(&clear, 0.5, 4).unwrap().cells[0].status, Status::Within);
+    assert_eq!(check(&clear, 1.5, 4).unwrap().cells[0].status, Status::Undetermined);
+}
+
+#[test]
+fn spherical_clearance_certifies_collision_with_center_outside_obstacle() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![2., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[0., 0.], radius: 0.5 },
+        SphericalObstacle { center: &[0., 5.], radius: 1. },
+    ];
+    let check = |radius, budget| {
+        partition_curve_spherical_clearance(&curve, [0., 1.], &obstacles, radius, 0.01, budget)
+    };
+    assert!(check(0.5, 1).is_err());
+    assert_eq!(check(0., 2).unwrap().cells[0].status, Status::Within);
+    let report = check(0.5, 256).unwrap();
+    assert!(report.work_obstacle_cells <= 256);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.status == Status::Exceeds
+            && cell.gap_bounds[0][0] <= -0.25 && cell.gap_bounds[0][1] >= -0.25
+            && cell.gap_bounds[1][0] > 0.
+    }));
+    for parameter in [0.5 - 7_f64.sqrt() / 16., 0.5 + 7_f64.sqrt() / 16.] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && b - a <= 0.01
+                && cell.status == Status::Undetermined
+        }));
+    }
+}
+
+#[test]
+fn capsule_clearance_checks_body_caps_and_degenerate_axis() {
+    use nurbs_core::analysis::curve_measure::{
+        CapsuleObstacle, DirectionalMotionStatus as Status, partition_curve_capsule_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![4., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        CapsuleObstacle { endpoints: [&[0., 0.], &[2., 0.]], radius: 0.5 },
+        CapsuleObstacle { endpoints: [&[1., 5.]; 2], radius: 1. },
+    ];
+    let report = partition_curve_capsule_clearance(
+        &curve, [0., 1.], &obstacles, 0.5, 0.01, 512,
+    ).unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.status == Status::Exceeds
+            && cell.gap_bounds[0][0] <= -0.25 && cell.gap_bounds[1][0] > 0.
+    }));
+    let cap = 7_f64.sqrt() / 4.;
+    for t in [(2. - cap) / 6., (4. + cap) / 6.] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= t && t <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
+
+#[test]
+fn box_clearance_checks_euclidean_corner_and_solid_interior() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, DirectionalMotionStatus as Status, partition_curve_box_clearance,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = BoxObstacle { minimum: &[0., 0.], maximum: &[1., 1.] };
+    let measure = |curve: &Curve, radius| {
+        partition_curve_box_clearance(curve, [0., 1.], &[obstacle], radius, 0.01, 128)
+            .unwrap()
+    };
+    let outside_corner = line([[1.6, 1.8], [2., 2.]]);
+    let report = measure(&outside_corner, 0.9);
+    assert_eq!(report.cells[0].status, Status::Within);
+    assert!(report.cells[0].gap_bounds[0][0] > 0.);
+    let report = measure(&outside_corner, 1.1);
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    let inside = line([[0.2, 0.2], [0.8, 0.8]]);
+    let report = measure(&inside, 0.);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+    assert_eq!(report.cells[0].gap_bounds[0], [0.; 2]);
+    let invalid = BoxObstacle { minimum: &[2., 0.], ..obstacle };
+    assert!(partition_curve_box_clearance(&inside, [0., 1.], &[invalid], 0., 0.01, 1).is_err());
+}
+
+#[test]
+fn oriented_box_clearance_uses_local_axis_extents() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, OrientedBoxObstacle, partition_curve_oriented_box_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![10., 20.], vec![13., 24.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let box_shape = OrientedBoxObstacle {
+        center: &[10., 20.],
+        axes: &[&[3., 4.], &[-8., 6.]],
+        half_extents: &[2., 0.25],
+    };
+    let measure = |obstacle, radius| {
+        partition_curve_oriented_box_clearance(&curve, [0., 1.], &[obstacle], radius, 0.01, 128)
+    };
+    let report = measure(box_shape, 0.5).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+    }));
+    let [lo, hi] = report.cells.last().unwrap().gap_bounds[0];
+    assert!(lo <= 2.5 && hi >= 2.5);
+    let skew = OrientedBoxObstacle { axes: &[&[3., 4.], &[-8., 7.]], ..box_shape };
+    assert!(measure(skew, 0.5).is_err());
+}
+
+#[test]
+fn first_toolpath_contact_bounds_earliest_contact_across_multiple_obstacles() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathContact, SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 10., 10.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[6., 0.], radius: 0.5 },
+        SphericalObstacle { center: &[3., 0.], radius: 0.5 },
+    ];
+    let check = |window, budget| {
+        partition_curve_spherical_clearance(&curve, window, &obstacles, 0., 0.01, budget)
+            .unwrap()
+            .first_contact()
+    };
+    assert_eq!(check([2., 4.], 2), FirstToolpathContact::Clear);
+    assert_eq!(check([2., 10.], 2), FirstToolpathContact::Possible { earliest_parameter: 2. });
+    let FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } =
+        check([2., 10.], 512)
+    else {
+        panic!("expected confirmed contact");
+    };
+    assert_eq!(obstacle_index, 1);
+    assert!(lo <= 4.5 && hi >= 4.5 && hi - lo < 0.025, "{lo}..{hi}");
+    assert_eq!(check([4.75, 5.25], 2), FirstToolpathContact::Confirmed {
+        parameter_bounds: [4.75; 2],
+        obstacle_index: 1,
+    });
+}
+
+#[test]
+fn first_toolpath_contact_preserves_unresolved_tangency_before_later_collision() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathContact, SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[2., 1.], radius: 1. },
+        SphericalObstacle { center: &[6., 0.], radius: 0.5 },
+    ];
+    let report = partition_curve_spherical_clearance(&curve, [0., 1.], &obstacles, 0., 0.002, 512)
+        .unwrap();
+    let FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } =
+        report.first_contact()
+    else {
+        panic!("expected a later confirmed contact");
+    };
+    assert_eq!(obstacle_index, 1);
+    assert!(0.24 < lo && lo <= 0.25 && hi >= 5.5 / 8.);
+}
+
+#[test]
+fn minimum_toolpath_clearance_encloses_minimum_on_clear_and_colliding_paths() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![2., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[0., 5.], radius: 1. },
+        SphericalObstacle { center: &[0., 0.], radius: 0.5 },
+    ];
+    for (radius, exact) in [(0., 0.25), (0.5, -0.25)] {
+        let report = partition_curve_spherical_clearance(
+            &curve, [0., 1.], &obstacles, radius, 0.01, 256,
+        ).unwrap();
+        let minimum = report.minimum_clearance().unwrap();
+        let [lo, hi] = minimum.gap_bounds;
+        assert!(lo <= exact && exact <= hi);
+        let [cell, obstacle] = minimum.upper_witness;
+        assert_eq!(obstacle, 1);
+        assert_eq!(report.cells[cell].gap_bounds[obstacle][1], hi);
+        assert!(minimum.parameter_intervals.iter().any(|[lo, hi]| *lo <= 0.5 && 0.5 <= *hi));
+    }
+}
+
+#[test]
+fn minimum_toolpath_clearance_preserves_disjoint_tied_intervals() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalClearanceCell, SphericalClearancePartition,
+    };
+    let make_cell = |parameter_interval, bounds| SphericalClearanceCell {
+        parameter_interval,
+        span: 1,
+        gap_bounds: vec![bounds],
+        status: Status::Within,
+    };
+    let report = SphericalClearancePartition {
+        cells: vec![
+            make_cell([0., 1.], [1., 2.]),
+            make_cell([1., 2.], [3., 4.]),
+            make_cell([2., 3.], [1., 2.]),
+            make_cell([3., 4.], [1.5, 3.]),
+        ],
+        work_obstacle_cells: 4,
+    };
+    let minimum = report.minimum_clearance().unwrap();
+    assert_eq!(minimum.gap_bounds, [1., 2.]);
+    assert_eq!(minimum.parameter_intervals, [[0., 1.], [2., 4.]]);
+    assert_eq!(minimum.upper_witness, [0, 0]);
+}
+
+#[test]
+fn minimum_spherical_clearance_refines_an_oblique_clear_path() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, StopReason, measure_minimum_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[10., 10.], radius: 1. },
+        SphericalObstacle { center: &[2., 0.], radius: 0.25 },
+    ];
+    let exact = 2_f64.sqrt() - 0.5;
+    let check = |budget| {
+        measure_minimum_spherical_clearance(&curve, [2., 6.], &obstacles, 0.25, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - 3.).abs() < 0.01);
+    assert!(fine.work_obstacle_cells <= 4096);
+}
+
+#[test]
+fn minimum_box_clearance_refines_a_corner_approach_and_reports_the_obstacle() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, StopReason, measure_minimum_box_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        BoxObstacle { minimum: &[10., 10.], maximum: &[11., 11.] },
+        BoxObstacle { minimum: &[2., -1.], maximum: &[3., 0.] },
+    ];
+    let exact = 2_f64.sqrt() - 0.5;
+    let check = |budget| {
+        measure_minimum_box_clearance(&curve, [2., 6.], &obstacles, 0.5, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - 3.).abs() < 0.01);
+}
+
+#[test]
+fn minimum_oriented_box_clearance_refines_rotated_corner_distance() {
+    use nurbs_core::analysis::curve_measure::{
+        OrientedBoxObstacle, StopReason, measure_minimum_oriented_box_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![-1., 7.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = OrientedBoxObstacle {
+        center: &[3., 4.],
+        axes: &[&[3., 4.], &[-4., 3.]],
+        half_extents: &[1., 1.],
+    };
+    let check = |obstacle, budget| {
+        measure_minimum_oriented_box_clearance(&curve, [2., 6.], &[obstacle], 0.5, 1e-4, budget)
+    };
+    let exact = 3. / 2_f64.sqrt() - 0.5;
+    let coarse = check(obstacle, 1).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(obstacle, 4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert!((fine.witness_parameter - 4.).abs() < 0.01);
+    let skew = OrientedBoxObstacle { axes: &[&[3., 4.], &[-4., 2.]], ..obstacle };
+    assert!(check(skew, 4096).is_err());
+}
+
+#[test]
+fn minimum_capsule_clearance_refines_to_a_rounded_tip() {
+    use nurbs_core::analysis::curve_measure::{
+        CapsuleObstacle, StopReason, measure_minimum_capsule_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        CapsuleObstacle { endpoints: [&[10., 10.]; 2], radius: 1. },
+        CapsuleObstacle { endpoints: [&[2., 0.], &[3., -1.]], radius: 0.25 },
+    ];
+    let exact = 2_f64.sqrt() - 0.5;
+    let check = |budget| {
+        measure_minimum_capsule_clearance(&curve, [2., 6.], &obstacles, 0.25, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - 3.).abs() < 0.01);
+}
+
+#[test]
+fn minimum_toolpath_clearance_measures_mixed_obstacles_in_input_order() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, CapsuleObstacle, OrientedBoxObstacle, SphericalObstacle, StopReason,
+        ToolpathObstacle, measure_minimum_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[9., 9.], radius: 1. }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[2., -1.], maximum: &[3., 0.] }),
+        ToolpathObstacle::Capsule(CapsuleObstacle { endpoints: [&[1., 4.], &[0., 4.]], radius: 0.1 }),
+        ToolpathObstacle::OrientedBox(OrientedBoxObstacle {
+            center: &[8., 0.], axes: &[&[3., 4.], &[-4., 3.]], half_extents: &[1., 2.],
+        }),
+    ];
+    let check = |obstacles: &[ToolpathObstacle<'_>], budget| {
+        measure_minimum_toolpath_clearance(&curve, [2., 6.], obstacles, 0.5, 1e-4, budget)
+    };
+    assert!(check(&obstacles, 3).is_err());
+    let exact = 2_f64.sqrt() - 0.5;
+    let report = check(&obstacles, 8192).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = report.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(report.witness_obstacle, 1);
+    assert!(report.work_obstacle_cells <= 8192);
+    obstacles.swap(1, 3);
+    assert_eq!(check(&obstacles, 8192).unwrap().witness_obstacle, 3);
+}
+
+#[test]
+fn mixed_toolpath_partition_reports_separated_contacts_in_one_grid() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, DirectionalMotionStatus as Status, FirstToolpathContact,
+        SphericalObstacle, ToolpathObstacle, partition_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[5., -1.], maximum: &[7., 1.] }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 0.5 }),
+    ];
+    let check = |budget| partition_toolpath_clearance(&curve, [0., 1.], &obstacles, 0.25, 0.01, budget);
+    assert!(check(1).is_err());
+    let report = check(512).unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    let FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } =
+        report.first_contact()
+    else {
+        panic!("expected a confirmed contact");
+    };
+    assert_eq!(obstacle_index, 1);
+    assert!(lo <= 1.25 / 8. && hi >= 1.25 / 8. && hi - lo < 0.02);
+    for (parameter, status) in [(0.5, Status::Within), (0.75, Status::Exceeds)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && cell.status == status
+                && cell.gap_bounds[1][0] > 0.
+        }));
+    }
+    for pair in report.cells.windows(2) {
+        assert_eq!(pair[0].parameter_interval[1], pair[1].parameter_interval[0]);
+    }
+}
+
+#[test]
+fn toolpath_clearance_margin_detects_near_miss_before_contact() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathContact, SphericalObstacle, ToolpathObstacle,
+        partition_toolpath_clearance_with_margin,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![2., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[0., 0.], radius: 0.25,
+    })];
+    let check = |margin| {
+        partition_toolpath_clearance_with_margin(&curve, [0., 1.], &obstacles, 0.25, margin, 0.01, 128)
+    };
+    assert_eq!(check(0.).unwrap().first_contact(), FirstToolpathContact::Clear);
+    assert!(check(-0.1).is_err());
+    let report = check(0.5).unwrap();
+    let FirstToolpathContact::Confirmed { parameter_bounds: [a, b], obstacle_index: 0 } =
+        report.first_contact()
+    else {
+        panic!("expected confirmed margin violation");
+    };
+    let crossing = 0.5 - 7_f64.sqrt() / 16.;
+    assert!(a <= crossing && crossing <= b && b - a < 0.02);
+    let bounds = report.minimum_clearance().unwrap().gap_bounds;
+    assert!(bounds[0] <= -0.25 && -0.25 <= bounds[1]);
+}
+
+#[test]
+fn toolpath_violation_length_measures_union_in_model_units() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, ToolpathObstacle, measure_toolpath_clearance_violation_length,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[3., 0.], radius: 1. }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[4., 0.], radius: 1. }),
+    ];
+    let check = |window, obstacle_budget, length_budget| {
+        measure_toolpath_clearance_violation_length(
+            &curve, window, &obstacles, 0., 0.25, 0.001, 1e-6, obstacle_budget, length_budget,
+        )
+    };
+    let fine = check([2., 3.], 512, 256).unwrap();
+    let [lo, hi] = fine.bounds;
+    assert!(lo <= 3.5 && 3.5 <= hi && hi - lo < 0.04, "{fine:?}");
+    assert!(fine.work_obstacle_cells <= 512 && fine.work_length_cells <= 256);
+    let coarse = check([2., 3.], 2, 1).unwrap();
+    assert_eq!(coarse.bounds[0], 0.);
+    assert!(coarse.bounds[1] >= 8.);
+    assert_eq!(check([2., 2.125], 2, 1).unwrap().bounds, [0.; 2]);
+    assert!(check([2., 3.], 512, 1).is_err());
+}
+
+#[test]
+fn toolpath_violation_lengths_attribute_shared_cells_to_each_obstacle() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, SphericalObstacle, ToolpathObstacle,
+        measure_toolpath_violation_lengths_by_obstacle,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[3., 0.], radius: 1. }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[3., -1.], maximum: &[6., 1.] }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[0., 9.], radius: 1. }),
+    ];
+    let check = |obstacle_budget, length_budget| {
+        measure_toolpath_violation_lengths_by_obstacle(
+            &curve, [2., 3.], &obstacles, 0., 0.25, 0.001, 1e-6, obstacle_budget, length_budget,
+        )
+    };
+    let report = check(768, 128).unwrap();
+    for (bounds, exact) in report.by_obstacle.iter().zip([2.5, 3.5, 0.]) {
+        assert!(bounds[0] <= exact && exact <= bounds[1] && bounds[1] - bounds[0] < 0.04);
+    }
+    let [lo, hi] = report.union.bounds;
+    assert!(lo <= 4.5 && 4.5 <= hi && hi - lo < 0.04);
+    let coarse = check(3, 1).unwrap();
+    assert_eq!(coarse.union.work_length_cells, 1);
+    assert_eq!(coarse.by_obstacle[0][0], 0.);
+    assert!(coarse.by_obstacle[0][1] >= 8.);
+    assert_eq!(coarse.by_obstacle[2], [0.; 2]);
+}
+
+#[test]
+fn toolpath_violation_duration_uses_time_window_and_preserves_overlap() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        measure_toolpath_clearance_violation_duration,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[3., 0.], radius: 1. }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[3., -1.], maximum: &[6., 1.] }),
+    ];
+    let segment = TimedMotionSegment { curve: &curve, interval: [2.5, 5.5], duration: 9. };
+    let check = |segment, budget| {
+        measure_toolpath_clearance_violation_duration(segment, &obstacles, 0., 0., 0.001, budget)
+    };
+    let coarse = check(segment, 2).unwrap();
+    assert_eq!(coarse.bounds, [0., 9.]);
+    let fine = check(segment, 512).unwrap();
+    for ([lo, hi], expected) in fine.by_obstacle.into_iter().zip([3., 4.5]) {
+        assert!(lo <= expected && expected <= hi && hi - lo < 0.02);
+    }
+    let [lo, hi] = fine.bounds;
+    assert!(lo <= 6. && 6. <= hi && hi - lo < 0.02);
+    assert!(check(TimedMotionSegment { duration: 0., ..segment }, 512).is_err());
+}
+
+#[test]
+fn toolpath_chain_violation_duration_uses_each_clock_and_one_work_budget() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, TimedMotionSegment, ToolpathObstacle, measure_toolpath_chain_violation_duration,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![2., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [0., 2.], duration: 8. },
+        TimedMotionSegment { curve: &curve, interval: [1., 2.], duration: 3. },
+    ];
+    let obstacles = [ToolpathObstacle::Box(BoxObstacle {
+        minimum: &[1., -1.], maximum: &[3., 1.],
+    })];
+    let check = |budget| {
+        measure_toolpath_chain_violation_duration(&segments, &obstacles, 0., 0., 0.001, budget)
+    };
+    assert!(check(2).is_err());
+    assert_eq!(check(3).unwrap().total.bounds, [0., 11.]);
+    let report = check(256).unwrap();
+    for (segment, exact) in report.segments.iter().zip([4., 1.5]) {
+        assert!(segment.bounds[0] <= exact && segment.bounds[1] >= exact);
+    }
+    let [lo, hi] = report.total.bounds;
+    assert!(lo <= 5.5 && 5.5 <= hi && hi - lo < 0.03);
+    assert_eq!(report.total.by_obstacle, [report.total.bounds]);
+    assert!(report.total.work_obstacle_cells <= 256);
+}
+
+#[test]
+fn first_toolpath_chain_violation_maps_witness_and_earlier_uncertainty_to_time() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathChainViolation, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        first_toolpath_chain_violation,
+    };
+    let line = |y| Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., y], vec![4., y]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let tangent = line(1.);
+    let crossing = line(0.);
+    let mut segments = [
+        TimedMotionSegment { curve: &tangent, interval: [2., 6.], duration: 8. },
+        TimedMotionSegment { curve: &crossing, interval: [2., 6.], duration: 4. },
+    ];
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 1. })];
+    let search = |segments: &[TimedMotionSegment<'_>], budget| {
+        first_toolpath_chain_violation(segments, &obstacles, 0., 0., 0.01, budget)
+    };
+    assert!(search(&segments, 1).is_err());
+    let FirstToolpathChainViolation::Confirmed {
+        time_bounds: [lo, hi], earliest_segment: 0, witness_segment: 1, obstacle_index: 0,
+    } = search(&segments, 512).unwrap()
+    else { panic!("expected the second segment to supply a contact witness"); };
+    assert!(3.97 < lo && lo <= 4. && 9. <= hi && hi < 9.02);
+    segments[0].interval = [2., 3.];
+    let FirstToolpathChainViolation::Confirmed {
+        time_bounds: [lo, hi], earliest_segment: 1, witness_segment: 1, ..
+    } = search(&segments, 512).unwrap()
+    else { panic!("expected first possible contact on the second segment"); };
+    assert!(lo <= 9. && 9. <= hi && hi - lo < 0.03);
+}
+
+#[test]
+fn minimum_toolpath_chain_clearance_reports_elapsed_witness_time() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        measure_minimum_toolpath_chain_clearance,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line([[0., 5.], [0., 0.]]);
+    let second = line([[0., 0.], [4., 4.]]);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [2., 6.], duration: 7. },
+        TimedMotionSegment { curve: &second, interval: [2., 6.], duration: 3. },
+    ];
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[2., 0.], radius: 0.25,
+    })];
+    let check = |budget| {
+        measure_minimum_toolpath_chain_clearance(&segments, &obstacles, 0.25, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let exact = 2_f64.sqrt() - 0.5;
+    let coarse = check(2).unwrap();
+    assert!(!coarse.within_tolerance);
+    assert!(coarse.gap_bounds[0] <= exact && coarse.gap_bounds[1] >= exact);
+    let fine = check(4096).unwrap();
+    assert!(fine.within_tolerance);
+    assert!(fine.gap_bounds[0] <= exact && fine.gap_bounds[1] >= exact);
+    assert_eq!(fine.witness_segment, 1);
+    assert_eq!(fine.witness_obstacle, 0);
+    assert_eq!(fine.witness_parameter, 3.);
+    assert_eq!(fine.witness_time_bounds, [7.75; 2]);
+    assert!(fine.work_obstacle_cells <= 4096);
+}
+
+#[test]
+fn last_toolpath_chain_violation_retains_later_unresolved_tangency() {
+    use nurbs_core::analysis::curve_measure::{
+        LastToolpathChainViolation, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        last_toolpath_chain_violation,
+    };
+    let line = |y| Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., y], vec![4., y]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let crossing = line(0.);
+    let tangent = line(1.);
+    let mut segments = [
+        TimedMotionSegment { curve: &crossing, interval: [2., 6.], duration: 4. },
+        TimedMotionSegment { curve: &tangent, interval: [2., 6.], duration: 8. },
+    ];
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 1. })];
+    let search = |segments: &[TimedMotionSegment<'_>], budget| {
+        last_toolpath_chain_violation(segments, &obstacles, 0., 0., 0.01, budget)
+    };
+    assert!(search(&segments, 1).is_err());
+    let LastToolpathChainViolation::Confirmed {
+        time_bounds: [lo, hi], latest_segment: 1, witness_segment: 0, obstacle_index: 0,
+    } = search(&segments, 512).unwrap()
+    else { panic!("expected a confirmed earlier contact"); };
+    assert!(2.98 < lo && lo <= 3. && 8. <= hi && hi < 8.03);
+    segments[1].interval = [5., 6.];
+    let LastToolpathChainViolation::Confirmed {
+        time_bounds: [lo, hi], latest_segment: 0, witness_segment: 0, ..
+    } = search(&segments, 512).unwrap()
+    else { panic!("expected last possible contact on the first segment"); };
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.03);
+}
+
+#[test]
+fn toolpath_chain_timeline_keeps_clear_gaps_and_shared_time_boundaries() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        toolpath_chain_clearance_timeline,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [0., 1.], duration: 3. },
+        TimedMotionSegment { curve: &curve, interval: [1., 8.], duration: 2. },
+    ];
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 0.5 }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[6., 0.], radius: 0.5 }),
+    ];
+    let report = toolpath_chain_clearance_timeline(&segments, &obstacles, 0., 0., 0.01, 512)
+        .unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    let cells = &report.intervals;
+    assert_eq!(cells[0].status, Status::Within);
+    assert_eq!(cells[0].time_endpoint_bounds, [[0.; 2], [3.; 2]]);
+    assert_eq!(cells.last().unwrap().time_endpoint_bounds[1], [5.; 2]);
+    assert_eq!(cells.iter().filter(|cell| cell.status == Status::Exceeds).count(), 2);
+    assert!(cells.iter().any(|cell| {
+        cell.segment_index == 1 && cell.status == Status::Within
+            && cell.parameter_interval[0] < 4. && 4. < cell.parameter_interval[1]
+    }));
+    for pair in cells.windows(2) {
+        assert_eq!(pair[0].time_endpoint_bounds[1], pair[1].time_endpoint_bounds[0]);
+        assert!(pair[0].segment_index != pair[1].segment_index || pair[0].status != pair[1].status);
+    }
+}
+
+#[test]
+fn longest_toolpath_violation_brackets_a_run_across_segment_boundaries() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, TimedMotionSegment, ToolpathObstacle, toolpath_chain_clearance_timeline,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [0., 2.], duration: 4. },
+        TimedMotionSegment { curve: &curve, interval: [2., 8.], duration: 6. },
+    ];
+    let obstacles = [
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[1., -1.], maximum: &[3., 1.] }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[5., -1.], maximum: &[7., 1.] }),
+    ];
+    let measure = |budget| {
+        toolpath_chain_clearance_timeline(&segments, &obstacles, 0., 0., 0.001, budget)
+            .unwrap().longest_violation_duration()
+    };
+    let [lo, hi] = measure(1024);
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.02, "{lo}..{hi}");
+    let [lo, hi] = measure(4);
+    assert_eq!(lo, 0.);
+    assert!(hi >= 10.);
+    let free = [ToolpathObstacle::Box(BoxObstacle { minimum: &[10., -1.], maximum: &[12., 1.] })];
+    let report = toolpath_chain_clearance_timeline(&segments, &free, 0., 0., 0.001, 2).unwrap();
+    assert_eq!(report.longest_violation_duration(), [0.; 2]);
+}
+
+#[test]
+fn synchronized_curve_clearance_measures_simultaneous_positions_with_distinct_knots() {
+    use nurbs_core::analysis::curve_measure::{StopReason, measure_synchronized_curve_clearance};
+    let first = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots[2] = 0.75;
+    second.control_points = vec![vec![4., 1.], vec![1., 1.], vec![0., 1.]];
+    let verify = |budget| {
+        measure_synchronized_curve_clearance([&first, &second], [0., 1.], [0.2, 0.3], 1e-6, budget)
+    };
+    assert!(verify(2).is_err());
+    let report = verify(64).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.gap_bounds[0] <= 0.5 && 0.5 <= report.gap_bounds[1]);
+    assert_eq!(report.witness_parameter, 0.5);
+    assert!(report.work_cells <= 64);
+}
+
+#[test]
+fn synchronized_clearance_partition_brackets_contact_and_preserves_both_knot_grids() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_synchronized_curve_clearance,
+    };
+    let first = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots[2] = 0.75;
+    second.control_points = vec![vec![4., 0.], vec![1., 0.], vec![0., 0.]];
+    let check = |budget| {
+        partition_synchronized_curve_clearance([&first, &second], [0., 1.], [0.5, 0.5], 0.01, budget)
+    };
+    assert!(check(2).is_err());
+    let report = check(128).unwrap();
+    assert!(report.work_cells <= 128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for crossing in [0.375, 0.625] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.spans == [2, 1] && cell.status == Status::Exceeds
+    }));
+}
+
+#[test]
+fn affine_synchronized_clearance_handles_different_clocks_and_internal_knots() {
+    use nurbs_core::analysis::curve_measure::{StopReason, measure_affine_synchronized_curve_clearance};
+    let first = Curve {
+        degree: 1,
+        knots: vec![-4., -4., -2., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots = vec![10., 10., 19., 22., 22.];
+    second.control_points = vec![vec![4., 1.], vec![1., 1.], vec![0., 1.]];
+    let report = measure_affine_synchronized_curve_clearance(
+        [&first, &second], [[-4., 4.], [10., 22.]], [0.25, 0.25], 1e-6, 64,
+    ).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.gap_bounds[0] <= 0.5 && report.gap_bounds[1] >= 0.5);
+    assert_eq!(report.witness_parameter, 0.5);
+}
+
+#[test]
+fn affine_synchronized_partition_brackets_contact_on_different_source_windows() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_affine_synchronized_curve_clearance,
+    };
+    let mut first = Curve {
+        degree: 1,
+        knots: vec![-4., -4., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![4., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let second = Curve {
+        degree: 1,
+        knots: vec![10., 10., 19., 22., 22.],
+        control_points: vec![vec![4., 0.], vec![1., 0.], vec![0., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let check = |first: &Curve, budget| {
+        partition_affine_synchronized_curve_clearance(
+            [first, &second], [[-4., 4.], [10., 22.]], [0.5, 0.5], 0.01, budget,
+        )
+    };
+    let coarse = check(&first, 1).unwrap();
+    assert_eq!(coarse.cells[0].status, Status::Undetermined);
+    let report = check(&first, 128).unwrap();
+    assert!(report.work_cells <= 128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for boundary in [0.375, 0.625] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.progress_interval;
+            a <= boundary && boundary <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Exceeds));
+    first.control_points[0].push(0.);
+    first.control_points[1].push(0.);
+    assert!(check(&first, 128).is_err());
+}
+
+#[test]
+fn scheduled_curve_clearance_handles_partial_overlap_and_separate_durations() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, TimedMotionSegment, measure_scheduled_curve_clearance,
+    };
+    let make = |knots, points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots,
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = make(vec![0., 0., 1., 1.], [[0., 0.], [8., 0.]]);
+    let second = make(vec![10., 10., 16., 16.], [[6., 1.], [2., 1.]]);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [0., 1.], duration: 8. },
+        TimedMotionSegment { curve: &second, interval: [10., 16.], duration: 4. },
+    ];
+    let check = |starts| measure_scheduled_curve_clearance(segments, starts, [0.25; 2], 1e-5, 128);
+    assert!(check([0., 9.]).unwrap().is_none());
+    let report = check([0., 2.]).unwrap().unwrap();
+    assert_eq!(report.minimum.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_time_bounds, [4.; 2]);
+    let [lo, hi] = report.minimum.gap_bounds;
+    assert!(lo <= 0.5 && 0.5 <= hi && hi - lo <= 1e-5);
+    let instant = check([0., 8.]).unwrap().unwrap();
+    assert_eq!(instant.witness_time_bounds, [8.; 2]);
+}
+
+#[test]
+fn scheduled_clearance_partition_maps_contact_to_absolute_time() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, TimedMotionSegment, partition_scheduled_curve_clearance,
+    };
+    let mut first = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots = vec![10., 10., 16., 16.];
+    second.control_points = vec![vec![6., 0.], vec![2., 0.]];
+    let check = |first: &Curve, starts| {
+        let segments = [
+            TimedMotionSegment { curve: first, interval: [0., 1.], duration: 8. },
+            TimedMotionSegment { curve: &second, interval: [10., 16.], duration: 4. },
+        ];
+        partition_scheduled_curve_clearance(segments, starts, [0.5; 2], 0.01, 128)
+    };
+    assert!(check(&first, [0., 9.]).unwrap().is_none());
+    let report = check(&first, [0., 2.]).unwrap().unwrap();
+    assert_eq!(report.cells.first().unwrap().time_endpoint_bounds[0], [2.; 2]);
+    assert_eq!(report.cells.last().unwrap().time_endpoint_bounds[1], [6.; 2]);
+    for crossing in [3.5, 4.5] {
+        assert!(report.cells.iter().any(|cell| {
+            let [[lo, _], [_, hi]] = cell.time_endpoint_bounds;
+            lo <= crossing && crossing <= hi && hi - lo < 0.04 && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Exceeds));
+    first.control_points[1] = vec![6., 0.];
+    let instant = check(&first, [0., 8.]).unwrap().unwrap();
+    assert_eq!(instant.work_cells, 1);
+    assert_eq!(instant.cells[0].time_endpoint_bounds, [[8.; 2]; 2]);
+    assert_eq!(instant.cells[0].status, Status::Exceeds);
+}
+
+#[test]
+fn scheduled_clearance_with_holds_finds_collision_after_first_tool_stops() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, TimedMotionSegment,
+        partition_scheduled_clearance_with_holds, partition_scheduled_curve_clearance,
+    };
+    let line = |a, b| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![a, 0.], vec![b, 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line(0., 2.);
+    let second = line(4., 0.);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [0., 1.], duration: 1. },
+        TimedMotionSegment { curve: &second, interval: [0., 1.], duration: 4. },
+    ];
+    assert!(partition_scheduled_curve_clearance(segments, [0., 2.], [0.25; 2], 0.01, 128)
+        .unwrap().is_none());
+    assert!(partition_scheduled_clearance_with_holds(segments, [0., 2.], [0.25; 2], 0.01, 2)
+        .is_err());
+    let report = partition_scheduled_clearance_with_holds(
+        segments, [0., 2.], [0.25; 2], 0.01, 128,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().time_endpoint_bounds[0], [0.; 2]);
+    assert_eq!(report.cells.last().unwrap().time_endpoint_bounds[1], [6.; 2]);
+    assert!(report.cells.iter().any(|cell| {
+        let [[a, _], [_, b]] = cell.time_endpoint_bounds;
+        a <= 4. && 4. <= b && cell.status == Status::Exceeds
+    }));
+    for pair in report.cells.windows(2) {
+        assert_eq!(pair[0].time_endpoint_bounds[1], pair[1].time_endpoint_bounds[0]);
+    }
+}
+
+#[test]
+fn minimum_scheduled_clearance_with_holds_finds_witness_during_a_hold() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, TimedMotionSegment, measure_scheduled_clearance_with_holds,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line([[0., 0.], [2., 0.]]);
+    let second = line([[4., 0.25], [0., 0.25]]);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [0., 1.], duration: 1. },
+        TimedMotionSegment { curve: &second, interval: [0., 1.], duration: 4. },
+    ];
+    let check = |budget| measure_scheduled_clearance_with_holds(
+        segments, [0., 2.], [0.25; 2], 1e-6, budget,
+    );
+    assert!(check(2).is_err());
+    let coarse = check(3).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.25 && coarse.gap_bounds[1] >= -0.25);
+    let fine = check(128).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    assert_eq!(fine.witness_time_bounds, [4.; 2]);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= -0.25 && -0.25 <= hi && hi - lo < 1e-6);
+}
+
+#[test]
+fn scheduled_tools_clearance_reports_closest_pair_under_one_budget() {
+    use nurbs_core::analysis::curve_measure::{
+        ScheduledTool, StopReason, TimedMotionSegment, measure_scheduled_tools_clearance,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let distant = line([[0., 10.], [2., 10.]]);
+    let first = line([[0., 0.], [2., 0.]]);
+    let second = line([[4., 0.25], [0., 0.25]]);
+    let tool = |curve, start_time, duration| ScheduledTool {
+        segment: TimedMotionSegment { curve, interval: [0., 1.], duration },
+        start_time,
+        radius: 0.25,
+    };
+    let tools = [tool(&distant, 0., 1.), tool(&first, 0., 1.), tool(&second, 2., 4.)];
+    assert!(measure_scheduled_tools_clearance(&tools, 1e-6, 6).is_err());
+    let report = measure_scheduled_tools_clearance(&tools, 1e-6, 128).unwrap();
+    assert_eq!(report.witness_tools, [1, 2]);
+    assert_eq!(report.minimum.witness_time_bounds, [4.; 2]);
+    assert_eq!(report.minimum.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = report.minimum.gap_bounds;
+    assert!(lo <= -0.25 && -0.25 <= hi && hi - lo < 1e-6);
+    assert!(report.minimum.work_cells <= 128);
+}
+
+#[test]
+fn scheduled_tools_partition_retains_pair_identity_and_contact_windows() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledTool, TimedMotionSegment,
+        partition_scheduled_tools_clearance,
+    };
+    let line = |a, b, height| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![a, height], vec![b, height]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let far = line(0., 2., 10.);
+    let first = line(0., 2., 0.);
+    let second = line(4., 0., 0.);
+    let tool = |curve, start_time, duration| ScheduledTool {
+        segment: TimedMotionSegment { curve, interval: [0., 1.], duration },
+        start_time,
+        radius: 0.25,
+    };
+    let tools = [tool(&far, 0., 1.), tool(&first, 0., 1.), tool(&second, 2., 4.)];
+    assert!(partition_scheduled_tools_clearance(&tools, 0.01, 6).is_err());
+    let result = partition_scheduled_tools_clearance(&tools, 0.01, 128).unwrap();
+    assert!(result.work_cells <= 128);
+    assert!(result.cells.iter().filter(|cell| cell.tools.contains(&0))
+        .all(|cell| cell.clearance.status == Status::Within));
+    assert!(result.cells.iter().any(|cell| {
+        let [[a, _], [_, b]] = cell.clearance.time_endpoint_bounds;
+        cell.tools == [1, 2] && a <= 4. && 4. <= b && cell.clearance.status == Status::Exceeds
+    }));
+    for pair in result.cells.windows(2) {
+        if pair[0].tools == pair[1].tools {
+            assert_eq!(pair[0].clearance.time_endpoint_bounds[1], pair[1].clearance.time_endpoint_bounds[0]);
+        }
+    }
+}
+
+#[test]
+fn first_scheduled_tool_contact_compares_times_across_pair_groups() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, FirstScheduledToolContact, ScheduledClearanceCell,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: match status {
+                Status::Within => [1., 2.],
+                Status::Exceeds => [-2., -1.],
+                Status::Undetermined => [-1., 1.],
+            },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [3.; 2], [4.; 2], Status::Exceeds),
+            cell([0, 2], [0.9, 1.], [1.1; 2], Status::Undetermined),
+            cell([1, 2], [1.9, 2.], [2.5; 2], Status::Exceeds),
+        ],
+        work_cells: 3,
+    };
+    assert_eq!(report.first_contact(), FirstScheduledToolContact::Confirmed {
+        time_bounds: [0.9, 2.],
+        witness_tools: [1, 2],
+    });
+    report.cells.retain(|cell| cell.clearance.status != Status::Exceeds);
+    assert_eq!(report.first_contact(), FirstScheduledToolContact::Possible { earliest_time: 0.9 });
+    report.cells[0].clearance.status = Status::Within;
+    assert_eq!(report.first_contact(), FirstScheduledToolContact::Clear);
+}
+
+#[test]
+fn last_scheduled_tool_contact_compares_times_across_pair_groups() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, LastScheduledToolContact, ScheduledClearanceCell,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: match status {
+                Status::Within => [1., 2.],
+                Status::Exceeds => [-2., -1.],
+                Status::Undetermined => [-1., 1.],
+            },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [3.; 2], [4.; 2], Status::Exceeds),
+            cell([0, 2], [0.9, 1.], [5.9, 6.], Status::Undetermined),
+            cell([1, 2], [1.9, 2.], [2.5; 2], Status::Exceeds),
+        ],
+        work_cells: 3,
+    };
+    assert_eq!(report.last_contact(), LastScheduledToolContact::Confirmed {
+        time_bounds: [4., 6.],
+        witness_tools: [0, 1],
+    });
+    report.cells.retain(|cell| cell.clearance.status != Status::Exceeds);
+    assert_eq!(report.last_contact(), LastScheduledToolContact::Possible { latest_time: 6. });
+    report.cells[0].clearance.status = Status::Within;
+    assert_eq!(report.last_contact(), LastScheduledToolContact::Clear);
+}
+
+#[test]
+fn scheduled_contact_duration_counts_overlapping_pairs_once() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: match status {
+                Status::Within => [1., 2.],
+                Status::Exceeds => [-2., -1.],
+                Status::Undetermined => [-1., 1.],
+            },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [3., 3.25], [5., 5.25], Status::Exceeds),
+            cell([0, 2], [1., 1.25], [4., 4.25], Status::Exceeds),
+            cell([1, 2], [7., 7.25], [8., 8.25], Status::Undetermined),
+        ],
+        work_cells: 3,
+    };
+    assert_eq!(report.contact_duration_bounds().unwrap(), [3.75, 5.5]);
+    report.cells[2].clearance.time_endpoint_bounds[1] = [f64::MAX, f64::INFINITY];
+    assert_eq!(report.contact_duration_bounds().unwrap(), [3.75, f64::INFINITY]);
+    report.cells.clear();
+    assert_eq!(report.contact_duration_bounds().unwrap(), [0.; 2]);
+}
+
+#[test]
+fn longest_scheduled_contact_duration_handles_pair_handoffs_and_uncertain_bridges() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [0., 0.25], [2., 2.25], Status::Exceeds),
+            cell([0, 2], [1., 1.25], [3., 3.25], Status::Exceeds),
+            cell([1, 2], [5.; 2], [7.; 2], Status::Exceeds),
+            cell([0, 1], [3.25; 2], [5.; 2], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    assert_eq!(report.longest_contact_duration_bounds().unwrap(), [2.75, 7.]);
+    report.cells.pop();
+    assert_eq!(report.longest_contact_duration_bounds().unwrap(), [2.75, 3.25]);
+    assert_eq!(report.contact_duration_bounds().unwrap(), [4.75, 5.25]);
+}
+
+#[test]
+fn peak_scheduled_contact_pairs_counts_distinct_pairs_at_shared_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [-1.; 2], [-0.; 2], Status::Exceeds),
+            cell([0, 1], [0.; 2], [1.; 2], Status::Exceeds),
+            cell([0, 2], [0.; 2], [0.; 2], Status::Exceeds),
+            cell([1, 2], [-0.25, 0.25], [0.5; 2], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    assert_eq!(report.peak_contact_pair_count_bounds(), [2, 3]);
+}
+
+#[test]
+fn simultaneous_contact_duration_measures_distinct_pairs_and_excludes_isolated_instants() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [[0.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 1], [[2.; 2], [4.; 2]], Status::Exceeds),
+            cell([0, 2], [[2., 2.25], [5., 5.25]], Status::Exceeds),
+            cell([1, 2], [[3.; 2]; 2], Status::Exceeds),
+            cell([1, 2], [[4.; 2], [5.; 2]], Status::Undetermined),
+        ],
+        work_cells: 5,
+    };
+    assert_eq!(report.peak_contact_pair_count_bounds(), [3, 3]);
+    assert_eq!(report.simultaneous_contact_duration_bounds(2).unwrap(), [1.75, 3.]);
+    assert_eq!(report.simultaneous_contact_duration_bounds(3).unwrap(), [0.; 2]);
+    assert!(report.simultaneous_contact_duration_bounds(0).is_err());
+}
+
+#[test]
+fn simultaneous_contact_windows_include_isolated_instants_and_uncertain_extensions() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [[0.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 1], [[2.; 2], [4.; 2]], Status::Exceeds),
+            cell([0, 2], [[2., 2.25], [5., 5.25]], Status::Exceeds),
+            cell([1, 2], [[3.; 2]; 2], Status::Exceeds),
+            cell([1, 2], [[4.; 2], [5.; 2]], Status::Undetermined),
+        ],
+        work_cells: 5,
+    };
+    let two = report.simultaneous_contact_windows(2).unwrap();
+    assert_eq!(two.confirmed, [[2.25, 4.]]);
+    assert_eq!(two.possible, [[2., 5.]]);
+    let three = report.simultaneous_contact_windows(3).unwrap();
+    assert_eq!(three.confirmed, [[3.; 2]]);
+    assert_eq!(three.possible, [[3.; 2], [4.; 2]]);
+    assert!(report.simultaneous_contact_windows(0).is_err());
+}
+
+#[test]
+fn scheduled_peak_contact_report_returns_sorted_confirmed_pairs_and_time() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, PeakScheduledContactWitness, ScheduledClearanceCell,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([1, 2], [[2., 2.25], [4.; 2]], Status::Exceeds),
+            cell([0, 1], [[-1.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 1], [[0.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 2], [[2.5; 2], [3.; 2]], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    let peak = report.peak_contact_report();
+    assert_eq!(peak.pair_count_bounds, [2, 3]);
+    assert_eq!(peak.witness, Some(PeakScheduledContactWitness {
+        time: 2.25,
+        tools: vec![[0, 1], [1, 2]],
+    }));
+    report.cells.retain(|cell| cell.clearance.status == Status::Undetermined);
+    let uncertain = report.peak_contact_report();
+    assert_eq!(uncertain.pair_count_bounds, [0, 1]);
+    assert_eq!(uncertain.witness, None);
+}
+
+#[test]
+fn scheduled_contact_query_accounts_for_rounding_and_shared_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledContactPairs,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([1, 2], [[2., 2.25], [4.; 2]], Status::Exceeds),
+            cell([0, 1], [[-1.; 2], [2.; 2]], Status::Exceeds),
+            cell([0, 1], [[2.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 2], [[2.; 2]; 2], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    assert_eq!(report.contact_pairs_at_time(2.).unwrap(), ScheduledContactPairs {
+        confirmed: vec![[0, 1]],
+        possible: vec![[0, 1], [0, 2], [1, 2]],
+    });
+    assert_eq!(report.contact_pairs_at_time(2.25).unwrap(), ScheduledContactPairs {
+        confirmed: vec![[0, 1], [1, 2]],
+        possible: vec![[0, 1], [1, 2]],
+    });
+    assert!(report.contact_pairs_at_time(f64::NAN).is_err());
+}
+
+#[test]
+fn variable_radius_clearance_brackets_growth_and_shrinkage_contacts() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, partition_variable_radius_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![2., 0.], vec![3., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [SphericalObstacle { center: &[0., 0.], radius: 0.5 }];
+    let check = |radii| {
+        partition_variable_radius_spherical_clearance(&curve, [2., 6.], &obstacles, radii, 0.01, 128)
+    };
+    for (radii, first, last) in [
+        ([0., 4.], Status::Within, Status::Exceeds),
+        ([4., 0.], Status::Exceeds, Status::Within),
+    ] {
+        let report = check(radii).unwrap();
+        assert_eq!(report.cells.first().unwrap().status, first);
+        assert_eq!(report.cells.last().unwrap().status, last);
+        assert!(report.cells.iter().any(|cell| {
+            let [lo, hi] = cell.parameter_interval;
+            lo <= 4. && 4. <= hi && hi - lo <= 0.01 && cell.status == Status::Undetermined
+        }));
+        assert!(report.work_obstacle_cells <= 128);
+    }
+    assert!(check([-1., 0.]).is_err());
+}
+
+#[test]
+fn minimum_variable_radius_clearance_couples_the_witness_position_and_radius() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, StopReason, measure_minimum_variable_radius_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 1.], vec![2., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [SphericalObstacle { center: &[0., 0.], radius: 0.25 }];
+    let check = |budget| measure_minimum_variable_radius_spherical_clearance(
+        &curve, [0., 1.], &obstacles, [0.25, 2.25], 1e-4, budget,
+    ).unwrap();
+    let exact = 3_f64.sqrt() / 2. - 1.5;
+    let coarse = check(1);
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096);
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo < 1e-4);
+    assert!((fine.witness_parameter - (0.5 + 1. / (4. * 3_f64.sqrt()))).abs() < 0.01);
+}
+
+#[test]
+fn variable_radius_mixed_clearance_tracks_sphere_and_box_contacts() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, DirectionalMotionStatus as Status, SphericalObstacle, ToolpathObstacle,
+        partition_variable_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[5., -1.], maximum: &[6., 1.] }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 0.25 }),
+    ];
+    let check = |budget| partition_variable_radius_toolpath_clearance(
+        &curve, [0., 8.], &obstacles, [0., 1.], 0.01, budget,
+    );
+    assert!(check(1).is_err());
+    let report = check(512).unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    for (parameter, obstacle) in [(2., 1), (5.5, 0)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && cell.status == Status::Exceeds
+                && cell.gap_bounds[obstacle][1] < 0.
+                && cell.gap_bounds[1 - obstacle][0] > 0.
+        }));
+    }
+    for crossing in [14. / 9., 40. / 9.] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
+
+#[test]
+fn minimum_variable_radius_mixed_clearance_finds_a_box_corner_witness() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, SphericalObstacle, StopReason, ToolpathObstacle,
+        measure_minimum_variable_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 1.], vec![2., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[0., 8.], radius: 0.25 }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[-3., -2.], maximum: &[0., 0.] }),
+    ];
+    let check = |budget| measure_minimum_variable_radius_toolpath_clearance(
+        &curve, [0., 1.], &obstacles, [0.25, 2.25], 1e-4, budget,
+    );
+    assert!(check(1).is_err());
+    let exact = 3_f64.sqrt() / 2. - 1.25;
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(8192).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo < 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - (0.5 + 1. / (4. * 3_f64.sqrt()))).abs() < 0.01);
+    assert!(fine.work_obstacle_cells <= 8192);
+}
+
+#[test]
+fn profiled_radius_clearance_preserves_radius_breaks_and_curve_knots() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, ToolpathObstacle,
+        partition_profiled_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 2.], vec![1., 2.], vec![4., 2.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[2., 0.], radius: 0.5,
+    })];
+    let check = |profile: &[(f64, f64)], budget| {
+        partition_profiled_radius_toolpath_clearance(&curve, profile, &obstacles, 0.01, budget)
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    assert!(check(&profile, 2).is_err());
+    assert!(check(&[(0., 0.), (0., 1.), (1., 0.)], 128).is_err());
+    let report = check(&profile, 128).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for boundary in [0.25, 0.5] {
+        assert!(report.cells.iter().any(|cell| cell.parameter_interval[1] == boundary));
+        assert!(report.cells.iter().any(|cell| cell.parameter_interval[0] == boundary));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds
+    }));
+    assert!(report.work_obstacle_cells <= 128);
+}
+
+#[test]
+fn minimum_profiled_radius_clearance_samples_a_radius_break_directly() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, StopReason, ToolpathObstacle,
+        measure_minimum_profiled_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 2.], vec![1., 2.], vec![4., 2.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[1.5, 0.], radius: 0.5,
+    })];
+    let profile = [(0., 0.), (0.375, 3.), (1., 0.)];
+    let check = |budget| measure_minimum_profiled_radius_toolpath_clearance(
+        &curve, &profile, &obstacles, 1e-8, budget,
+    );
+    assert!(check(2).is_err());
+    let report = check(3).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_parameter, 0.375);
+    assert_eq!(report.work_obstacle_cells, 3);
+    let [lo, hi] = report.gap_bounds;
+    assert!(lo <= -1.5 && -1.5 <= hi && hi - lo <= 1e-8);
+}
+
+#[test]
+fn profiled_radius_workspace_detects_overtravel_between_clear_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_profiled_radius_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 9. }];
+    let check = |budget| partition_profiled_radius_convex_workspace(
+        &curve, &profile, &planes, 0.01, budget,
+    );
+    assert!(check(2).is_err());
+    let report = check(128).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [lo, hi] = cell.plane_residuals[0];
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1. && hi >= 1.
+    }));
+    for crossing in [0.45, 0.75] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
+
+#[test]
+fn minimum_profiled_workspace_clearance_normalizes_the_limiting_plane() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_profiled_radius_workspace_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., -1.], offset: 4. },
+        WorkspaceHalfSpace { normal: &[10., 0.], offset: 45. },
+    ];
+    let check = |budget| measure_minimum_profiled_radius_workspace_clearance(
+        &curve, &profile, &planes, 1e-5, budget,
+    );
+    assert!(check(5).is_err());
+    let coarse = check(6).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.5 && coarse.gap_bounds[1] >= -0.5);
+    let report = check(4096).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_parameter, 0.5);
+    assert_eq!(report.witness_plane, 1);
+    let [lo, hi] = report.gap_bounds;
+    assert!(lo <= -0.5 && -0.5 <= hi && hi - lo <= 1e-5);
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0756",
+  "testedBase": "cee1bb97b48cf5e1328d0a4c04a1191c343b32ce",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 381,
+  "scope": [
+    "Refine minimum signed clearance to mixed obstacles with position and tool radius coupled at the witness.",
+    "Check a mixed scene, analytic shifted box corner minimum, its obstacle witness, and certified coarse and refined bounds."
+  ],
+  "logSha256": "23ec41a467cf861bbd20c9673910a4320131d73e03bbe2f8c3d247f1280c8edb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "707fafa9cce6832726ae4d31552f52476beeaa40065195169b9ab5b377e01acf",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0bc97bcace288c2e2cdc2ad7034128c25a280e2b9204a9a00da6ae937147a2fa"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0731",
+  "testedBase": "759c2b317276e8ad95db1f688ad973b5646a0fb5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 356,
+  "scope": [
+    "Bracket the last clearance violation in elapsed chain time while retaining later uncertainty.",
+    "Check reverse search, elapsed clocks, later unresolved tangency, earlier witness, and a clipped clear suffix."
+  ],
+  "logSha256": "5ec6973c7920a65ce198a0b694d76d2313b0f7b6f2eaef31270d52bc7541452e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "f19f35cfd7b7b04f46459243d71a60c40adae3c5a091440b98c484c39c17d963",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9243897afa867d2a20ac3d9188dcbfa1a3d15d2b1fb91823671b1ff83c5ea657"
+  }
+}

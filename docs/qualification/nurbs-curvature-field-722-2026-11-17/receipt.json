@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0722",
+  "testedBase": "1cfd6992e3c26406b5526e17ac2a3fafcfdcb4bd",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 347,
+  "scope": [
+    "Find a certified minimum across mixed sphere, capsule and box obstacles in one search.",
+    "Check a mixed scene with four geometric types, certified corner minimum, reordered obstacle witness and initial budget refusal."
+  ],
+  "logSha256": "cbfd982b46fb98dbb1037c2832335c3e2ec842dba6f1fddb81a54404c9faaf1f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ad0af00b22c52c611042c0c8dc11c0025e45da84178bd27275a9e6c77b19d39f",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "707fcdd588bf37f4cbd190d5f5efc22e27d7295d8f66e497e769fa98af2421ce"
+  }
+}

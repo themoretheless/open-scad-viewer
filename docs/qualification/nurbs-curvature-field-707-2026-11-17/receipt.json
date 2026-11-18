@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0707",
+  "testedBase": "adb5e016015340d452ebc7803838d2037057c450",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 330,
+  "scope": [
+    "Certify separation for a swept ball with plane-normal scaling and conservative contact classification.",
+    "Check radius-aware separation with a non-unit plane normal, tangency uncertainty, known collision and invalid radius."
+  ],
+  "logSha256": "e005633ef095af391ff7fb0b618e3d3ae6b6e6778e68efc582be9385d15f2c2e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "6bcdf442f521e1e51e4cf4c399e9bd9d4c7f4e9bba9abdbf729d105039e89ab9",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ef0e5f3e5af2ea5474976ae1439fd6b7e4088fd9d06480b24394f2ae851a0334"
+  }
+}

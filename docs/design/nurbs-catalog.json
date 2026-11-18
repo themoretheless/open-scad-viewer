@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 706,
-  "unallocatedCount": 294,
+  "specifiedCount": 760,
+  "unallocatedCount": 240,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17106,6 +17106,1032 @@
       "remainingQualification": [
         "Locate occupied, clear and unresolved intervals against a union of closed convex obstacles.",
         "Check two independent obstacles, all four analytic crossings, clear space between obstacles, and input budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0707",
+      "name": "Сертифицированный зазор сферического инструмента до выпуклых препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_ball_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-707-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-707-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separation for a swept ball with plane-normal scaling and conservative contact classification.",
+        "Check radius-aware separation with a non-unit plane normal, tangency uncertainty, known collision and invalid radius.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0708",
+      "name": "Проверка сферического инструмента внутри выпуклой рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_ball_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-708-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-708-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify containment of a swept ball using plane support radii.",
+        "Check radius-induced overtravel before the center crosses a nonunit oblique plane, residual bounds, zero radius, and work exhaustion.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0709",
+      "name": "Проверка капсульного инструмента внутри выпуклой рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_capsule_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-709-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-709-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify containment of a translating fixed-orientation capsule with asymmetric endpoint offsets.",
+        "Check distinct overtravel thresholds for a segment and capsule, nonunit plane normals, asymmetric offsets, and invalid dimensions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0710",
+      "name": "Проверка выпуклого профиля инструмента вдоль NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_rounded_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-710-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-710-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify containment of a translating convex vertex hull with optional spherical rounding.",
+        "Check independent support vertices, rounded residuals, the analytic crossing, and invalid hull inputs.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0711",
+      "name": "Проверка зазора выпуклого инструмента до препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_rounded_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-711-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-711-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separation and vertex-witnessed collision for translating rounded convex tools.",
+        "Check collision witnessed by an offset hull vertex, rounded separation, unresolved contact, and vertex/plane budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0712",
+      "name": "Сертифицированный зазор сферического инструмента до сферических препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-712-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-712-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed sphere clearance and certify collision even when the tool center lies outside the obstacle.",
+        "Check radius-induced collision, both analytic contact boundaries, ordered per-obstacle gap bounds, and mandatory budget coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0713",
+      "name": "Сертифицированный зазор сферического инструмента до капсульных препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_capsule_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-713-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-713-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed clearance against capsule bodies and rounded ends.",
+        "Check straight body collision, two analytical cap crossings, and a degenerate capsule.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0714",
+      "name": "Сертифицированный зазор сферического инструмента до прямоугольных препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_box_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-714-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-714-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify Euclidean clearance against solid axis-aligned boxes, including corner contacts.",
+        "Check Euclidean corner clearance, radius-induced corner contact, zero-radius solid containment, and invalid box bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0715",
+      "name": "Сертифицированный зазор сферического инструмента до повёрнутых коробок",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_oriented_box_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-715-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-715-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check Euclidean swept-ball clearance against oriented solid boxes.",
+        "Check translated oblique axes of unequal length, analytic contact, and exact rejection of a skew frame.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0716",
+      "name": "Сертифицированная оценка параметра первого контакта на NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::SphericalClearancePartition::first_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-716-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-716-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the first possible and confirmed toolpath contact, with a witnessing obstacle.",
+        "Check clear and unresolved windows, earliest collision versus obstacle order, initial overlap, and unresolved tangency before a later collision.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0717",
+      "name": "Границы минимального зазора и его положения на NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::SphericalClearancePartition::minimum_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-717-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-717-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum signed clearance and preserve every possible minimizer interval.",
+        "Check positive and negative analytic minima, obstacle witness, and disjoint tied candidate windows.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0718",
+      "name": "Адаптивная оценка минимального зазора до сферических препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-718-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-718-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine signed clearance minima by lower bounds with a certified endpoint witness.",
+        "Check guaranteed tolerance for an oblique clear path, preserved bounds on exhaustion, and the closest obstacle and witness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0719",
+      "name": "Адаптивная оценка минимального зазора до прямоугольных препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_box_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-719-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-719-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine the minimum swept-ball clearance against solid axis-aligned boxes.",
+        "Check analytic closest corner, requested clearance tolerance, budget exhaustion and obstacle witness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0720",
+      "name": "Адаптивная оценка минимального зазора до повёрнутых коробок",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_oriented_box_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-720-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-720-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum swept-ball clearance to oriented solid boxes.",
+        "Check an analytic rotated corner minimum, certified tolerance and witness, retained coarse bounds, and skew-axis refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0721",
+      "name": "Адаптивная оценка минимального зазора до капсульных препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_capsule_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-721-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-721-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine the minimum swept-ball clearance to capsule bodies and rounded tips.",
+        "Check an analytic rounded tip minimum, certified tolerance and witness, degenerate capsule support, and retained coarse bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0722",
+      "name": "Адаптивный поиск минимального зазора в сцене с разными типами препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-722-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-722-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Find a certified minimum across mixed sphere, capsule and box obstacles in one search.",
+        "Check a mixed scene with four geometric types, certified corner minimum, reordered obstacle witness and initial budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0723",
+      "name": "Сертифицированное разбиение траектории по контактам в смешанной сцене",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-723-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-723-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition the full sweep by obstacle clearance using a shared mixed-scene grid.",
+        "Check separated contacts for different obstacle geometries, clear space between them, first-contact order, and contiguous grid coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0724",
+      "name": "Проверка запаса зазора вдоль NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_toolpath_clearance_with_margin",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-724-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-724-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify and localize violations of a required toolpath clearance margin.",
+        "Check a collision-free near miss, analytic first margin crossing, surplus bounds, and invalid margins.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0725",
+      "name": "Сертифицированная длина участков с нарушением зазора",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_clearance_violation_length",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-725-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-725-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the geometric length of the union of clearance violations.",
+        "Check physical length of overlapping violations without double counting, zero-length clear windows, and enclosure under separate work budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0726",
+      "name": "Сертифицированная длина нарушений зазора по каждому препятствию",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_violation_lengths_by_obstacle",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-726-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-726-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Attribute bounded arc length to individual obstacles and their union with one integration per cell.",
+        "Check individual lengths, overlapping mixed obstacles, distant obstacles, union length, and shared coarse integration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0727",
+      "name": "Сертифицированная длительность нарушения зазора вдоль NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_clearance_violation_duration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-727-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-727-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound clearance violation duration in the traversal clock, for each obstacle and their union.",
+        "Check a clipped source clock, exact coarse total duration, overlap without double counting, and invalid duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0728",
+      "name": "Сертифицированная длительность нарушения зазора для составной траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_chain_violation_duration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-728-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-728-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose violation duration across independently timed segments under one obstacle-cell budget.",
+        "Check independent segment clocks, clipped multispan coverage, exact coarse duration, and shared budget reservation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0729",
+      "name": "Сертифицированное время первого нарушения зазора на составной траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::first_toolpath_chain_violation",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-729-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-729-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bracket the first clearance violation in elapsed chain time across independent segment clocks.",
+        "Check elapsed time mapping, earlier unresolved tangency, later confirmed witness, clipped clear prefix, and shared budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0730",
+      "name": "Сертифицированный минимальный зазор составной NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_toolpath_chain_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-730-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-730-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum chain clearance with a segment, obstacle and elapsed-time witness.",
+        "Check a closest approach on the later segment, exact elapsed witness time, retained coarse bounds, and a shared work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0731",
+      "name": "Сертифицированное время последнего нарушения зазора на составной траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::last_toolpath_chain_violation",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-731-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-731-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bracket the last clearance violation in elapsed chain time while retaining later uncertainty.",
+        "Check reverse search, elapsed clocks, later unresolved tangency, earlier witness, and a clipped clear suffix.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0732",
+      "name": "Временная карта зазора для составной NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::toolpath_chain_clearance_timeline",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-732-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-732-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Map certified clearance classes to ordered elapsed-time intervals across timed segments.",
+        "Check independent clocks, exact shared time boundaries, separated violations with clear gaps, and merged same-status cells.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0733",
+      "name": "Границы длительности самого долгого непрерывного нарушения зазора",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ToolpathChainClearanceTimeline::longest_violation_duration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-733-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-733-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the longest contiguous clearance violation across segment boundaries.",
+        "Check a confirmed run spanning independent clocks, a separated shorter run, coarse uncertainty, and a wholly clear chain.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0734",
+      "name": "Сертифицированный минимальный зазор между синхронными NURBS-траекториями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_synchronized_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-734-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-734-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose minimum instantaneous gap for two spherical tools sharing a curve clock.",
+        "Check simultaneous motion, different knot grids, the closest time, radius subtraction, and initial budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0735",
+      "name": "Сертифицированные интервалы контакта двух синхронных NURBS-траекторий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_synchronized_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-735-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-735-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition simultaneous tool motion into clear, colliding and unresolved intervals.",
+        "Check both analytic contact boundaries, distinct knot grids, a confirmed interior collision, and mandatory initial cell coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0736",
+      "name": "Минимальный зазор синхронных NURBS-траекторий с независимыми параметрами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_affine_synchronized_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-736-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-736-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose simultaneous clearance with separate affine parameter windows and shared elapsed progress.",
+        "Check separate signed and shifted clocks, distinct internal knots, normalized witness and analytic gap.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0737",
+      "name": "Интервалы контакта синхронных NURBS-траекторий с независимыми параметрами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_affine_synchronized_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-737-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-737-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify contact across independent affine parameter windows on shared elapsed progress.",
+        "Check independent source domains, a nonmatching internal knot, both analytic contact boundaries, coarse budget and dimension refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0738",
+      "name": "Минимальный зазор NURBS-траекторий с разными временами начала и прохода",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-738-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-738-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose clearance on the exact time overlap of independently scheduled curve traversals.",
+        "Check partial overlap, unequal durations, independently parameterized curves, a single shared endpoint, and disjoint schedules.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0739",
+      "name": "Карта контактов NURBS-траекторий с независимым расписанием",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-739-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-739-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify contact cells on the exact scheduled overlap and enclose their absolute time endpoints.",
+        "Check partial overlap, two analytic contact transitions, absolute time endpoints, disjoint schedules, and a point overlap.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0740",
+      "name": "Проверка контактов с остановившимся инструментом на NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_clearance_with_holds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-740-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-740-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify tool clearance through all scheduled phases with endpoint holds.",
+        "Check disjoint motion schedules, collision after a tool stops, exact shared phase boundaries, and shared budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0741",
+      "name": "Минимальный зазор в расписании с остановками инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_clearance_with_holds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-741-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-741-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine a certified gap minimum across the full schedule, including endpoint holds.",
+        "Check negative minimum during a parked phase, exact absolute witness time, retained coarse bounds, and mandatory phase budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0742",
+      "name": "Минимальный попарный зазор в расписании нескольких инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_tools_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-742-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-742-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine the global minimum among all scheduled tool pairs under one phase-cell budget.",
+        "Check three independently scheduled tools, correct pair and absolute witness, stationary-phase collision and mandatory phase coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0743",
+      "name": "Карта попарных контактов для расписания нескольких инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_tools_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-743-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-743-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify ordered contact windows for every scheduled tool pair under one budget.",
+        "Check all three pairs, isolated parked-tool collision, contiguous per-pair time coverage, and reserved phase budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0744",
+      "name": "Время первого контакта в попарной карте расписания инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::first_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-744-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-744-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bracket first contact across pair timelines, retaining earlier uncertainty.",
+        "Check pair order versus time order, earlier unresolved contact, time enclosure endpoints, and clear and possible outcomes.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0745",
+      "name": "Время последнего контакта в попарной карте расписания инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::last_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-745-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-745-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bracket last contact across pair timelines, retaining later uncertainty.",
+        "Check later uncertainty across pair groups, a confirmed earlier witness, and clear and possible outcomes.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0746",
+      "name": "Суммарное время контакта по карте пар инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::contact_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-746-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-746-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound total scheduled contact duration without double counting overlapping pairs.",
+        "Check overlap without double counting, outward and inward time endpoints, disjoint uncertainty, and unbounded upper endpoints.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0747",
+      "name": "Самый долгий непрерывный контакт по карте пар инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::longest_contact_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-747-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-747-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the longest continuous contact across scheduled pairs, including pair handoffs.",
+        "Check pair handoffs, an unresolved bridge, separate episodes, and unchanged total duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0748",
+      "name": "Пиковое число одновременно контактирующих пар инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::peak_contact_pair_count_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-748-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-748-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound maximum simultaneous contact multiplicity over distinct scheduled tool pairs.",
+        "Check distinct pairs, adjacent cells, instantaneous contact, signed zero endpoints and unresolved contacts.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0749",
+      "name": "Длительность одновременного контакта заданного числа пар инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::simultaneous_contact_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-749-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-749-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound elapsed time when at least a specified number of distinct pairs are in contact.",
+        "Check distinct pairs, overlapping cells of one pair, uncertain duration, and instantaneous contacts with zero duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0750",
+      "name": "Временные интервалы одновременного контакта заданного числа пар",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::simultaneous_contact_windows",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-750-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-750-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Locate confirmed and possible simultaneous contact windows, including isolated instants.",
+        "Check merged confirmed and possible windows, distinct-pair thresholds, isolated instants, and retained duration bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0751",
+      "name": "Время и пары подтверждённого пика одновременных контактов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::peak_contact_report",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-751-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-751-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return a certified time and distinct contacting pairs for the peak lower bound.",
+        "Check the inward-rounded witness time, sorted distinct pairs, a larger possible peak and lack of a confirmed witness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0752",
+      "name": "Подтверждённые и возможные пары контактов в заданный момент",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::contact_pairs_at_time",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-752-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-752-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Query concrete confirmed and possible tool pairs at a given absolute time.",
+        "Check inward and outward rounding, shared endpoints, distinct sorted pairs, and invalid time.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0753",
+      "name": "Проверка зазора инструмента с линейно меняющимся радиусом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_variable_radius_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-753-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-753-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify clearance against balls while the moving tool radius varies affinely.",
+        "Check growing and shrinking radii, analytic contact boundaries, original parameter scaling, and invalid radii.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0754",
+      "name": "Минимальный зазор инструмента с линейно меняющимся радиусом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_variable_radius_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-754-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-754-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine the signed gap minimum while evaluating radius and position at the same witness parameter.",
+        "Check shifted analytic minimum, synchronized radius and position witness, coarse enclosure and requested tolerance.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0755",
+      "name": "Проверка зазора инструмента с переменным радиусом в смешанной сцене",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_variable_radius_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-755-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-755-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify clearance against mixed obstacles while the tool radius varies affinely.",
+        "Check sphere and box contacts on a shared grid, original obstacle order, analytic crossings and budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0756",
+      "name": "Минимальный зазор инструмента с переменным радиусом в смешанной сцене",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_variable_radius_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-756-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-756-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum signed clearance to mixed obstacles with position and tool radius coupled at the witness.",
+        "Check a mixed scene, analytic shifted box corner minimum, its obstacle witness, and certified coarse and refined bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0757",
+      "name": "Проверка зазора с кусочно-линейным профилем радиуса инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_radius_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-757-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-757-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify mixed-obstacle clearance with a continuous piecewise-linear tool radius.",
+        "Check a radius peak with clear endpoints, nonmatching curve knots and radius breaks, and mandatory combined span coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0758",
+      "name": "Минимальный зазор прибора с кусочно-линейным профилем радиуса",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_radius_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-758-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-758-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum mixed-obstacle clearance across all curve and radius profile spans.",
+        "Check exact witness at a nonmatching radius break, retained curve knots, certified clearance, and initial budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0759",
+      "name": "Проверка выпуклой рабочей области с кусочно-линейным радиусом инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_radius_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-759-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-759-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify containment of a spherical tool with a piecewise-linear radius against workspace planes.",
+        "Check workspace overtravel caused by an interior radius peak, analytic crossings, nonunit plane residuals and mandatory combined coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0760",
+      "name": "Минимальный запас до границ рабочей области с переменным радиусом инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_radius_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-760-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-760-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum signed workspace clearance in model units and identify a witnessing plane.",
+        "Check normalized clearance against nonunit planes, the limiting plane and radius break witness, and a certified coarse enclosure.",
         "WASM and application integration are separate."
       ]
     }

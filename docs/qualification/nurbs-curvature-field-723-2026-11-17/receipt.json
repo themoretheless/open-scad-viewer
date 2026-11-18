@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0723",
+  "testedBase": "edf946926b35b11262463f6b5c95e2bbbf80877e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 348,
+  "scope": [
+    "Partition the full sweep by obstacle clearance using a shared mixed-scene grid.",
+    "Check separated contacts for different obstacle geometries, clear space between them, first-contact order, and contiguous grid coverage."
+  ],
+  "logSha256": "317402d198039a5e8b012629b9a3628d328dea3240dfc1a4da2fe73c66f5be25",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "be9d9221702ea705450e94da03833cda6c890aad1c21d8525ed3ab57fcfcc2f7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "960236715a92acfe6ab23f06d4ffff4fa48c079213739e7142566a8c9d752b1a"
+  }
+}

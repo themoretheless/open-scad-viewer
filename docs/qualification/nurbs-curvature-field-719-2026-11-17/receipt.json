@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0719",
+  "testedBase": "7ddfed2ed99acdd116f4d394550d61b4d4cb6a78",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 344,
+  "scope": [
+    "Refine the minimum swept-ball clearance against solid axis-aligned boxes.",
+    "Check analytic closest corner, requested clearance tolerance, budget exhaustion and obstacle witness."
+  ],
+  "logSha256": "1cf98f5f67727fff1ef5c741143c7d8d2268a4cab475e8b3765532becc1aa3d0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "bb646dcd451bf05a14f46b87b386e9524d39f9a7573ba1e46a788621578f9bd7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "08068df6fb0f91942e71237cedc09892f99fd501b6fa7993c80032b5afeef085"
+  }
+}

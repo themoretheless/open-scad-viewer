@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0747",
+  "testedBase": "59c7a6311105a08632792edc43fcfc7f65579fb5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 372,
+  "scope": [
+    "Bound the longest continuous contact across scheduled pairs, including pair handoffs.",
+    "Check pair handoffs, an unresolved bridge, separate episodes, and unchanged total duration."
+  ],
+  "logSha256": "49bca41edf1aed782e05d7e7a8687a262f0ab944da919c27cf171a23159c2eb9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "adfbc5652187aeea6baf4e27b85d833e9c02b82afd97e6d0febc0ed4b8770566",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "3b9aef488f4a0529deb7e9f47a4cdd3b77a011156f6a04ccff25eabaa07ff951"
+  }
+}

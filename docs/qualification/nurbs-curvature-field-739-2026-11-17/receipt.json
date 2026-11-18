@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0739",
+  "testedBase": "552d519def9e77260ec53610b2cdf2ea1ad46a9f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 364,
+  "scope": [
+    "Classify contact cells on the exact scheduled overlap and enclose their absolute time endpoints.",
+    "Check partial overlap, two analytic contact transitions, absolute time endpoints, disjoint schedules, and a point overlap."
+  ],
+  "logSha256": "c9f5bbfdba0b1990b33bc71026f476f34d291aec5c225b27e9ddd2235733da3b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7b7154ce8bb76053f27049c3d4c028e7b83ec1381cb3d5b2dac97e1c3c8b5bbb",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "3999a6d1f69491b4a7ab0206372cd462e0413a745570dacea1454f02c632d093"
+  }
+}

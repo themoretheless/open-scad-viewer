@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0750",
+  "testedBase": "f88405395ea4ffde6ea80fb76f11cbfa4a24d279",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 375,
+  "scope": [
+    "Locate confirmed and possible simultaneous contact windows, including isolated instants.",
+    "Check merged confirmed and possible windows, distinct-pair thresholds, isolated instants, and retained duration bounds."
+  ],
+  "logSha256": "6a7672d2329eca1e207f933b6ba47da417f7d06134fd0859ee07c47b6f6a6525",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c126aeea332281ef850e645e4ee13a8afa17a9772c3e53ab891e0b55ad194981",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9b95716d3e8ca8ade54e321427316346672ab225829bafd139d5c956c40f63cb"
+  }
+}

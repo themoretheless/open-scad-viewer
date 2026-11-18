@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0716",
+  "testedBase": "1b799e7daeaf6694bbd269215bd9c4478074870f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 339,
+  "scope": [
+    "Bound the first possible and confirmed toolpath contact, with a witnessing obstacle.",
+    "Check clear and unresolved windows, earliest collision versus obstacle order, initial overlap, and unresolved tangency before a later collision."
+  ],
+  "logSha256": "e1de8218e36eacfef0f370ad6fe0d324b11bcef12b24d0e8b8df8742d2d92cbe",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b4f43789d2a51207826ae83dd77e7e65301ee01f26be3dae43d21bb2ed7654b7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "687245f91e86100c25aa36e6489413a75785247a70d978e4566d8941f7ac7ea9"
+  }
+}

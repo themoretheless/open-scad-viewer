@@ -2,7 +2,8 @@ import { parseDirectDocument, type DirectDocument } from '../app/directModeling'
 import { pushPullFace, bevelBrepBody, shellSolid, splitSolid } from '../app/directSolidTools'
 import { solidExactEdgeFeature } from './solidExactEdgeFeature'
 import { stringifyMeshJson } from '../exchange/meshJson'
-export type SolidBodyEditOperation = 'push' | 'chamfer' | 'edge-fillet' | 'shell' | 'split'
+import type { SolidBodyEditOperation } from './solidBodyEditOperation'
+export { isSolidBodyEdit, type SolidBodyEditOperation } from './solidBodyEditOperation'
 export interface SolidBodyEditOptions {
   operation: SolidBodyEditOperation
   id: string
@@ -15,9 +16,6 @@ export interface SolidBodyEditOptions {
   endRadius: number
   filletMode: 'constant' | 'variable' | 'corner'
   axis: 'x' | 'y' | 'z'
-}
-export function isSolidBodyEdit(operation: unknown): operation is SolidBodyEditOperation {
-  return ['push', 'chamfer', 'edge-fillet', 'shell', 'split'].includes(String(operation))
 }
 /** Worker-owned snapshot; the source document and its body identities are preserved. */
 export function applySolidBodyEdit(document: DirectDocument, p: SolidBodyEditOptions): DirectDocument {

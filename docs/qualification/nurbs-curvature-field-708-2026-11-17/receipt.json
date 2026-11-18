@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0708",
+  "testedBase": "77c2a70f71503ddd7d2be11c1d6d0a3b4c9b3192",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 331,
+  "scope": [
+    "Certify containment of a swept ball using plane support radii.",
+    "Check radius-induced overtravel before the center crosses a nonunit oblique plane, residual bounds, zero radius, and work exhaustion."
+  ],
+  "logSha256": "dcda842f0ecfe1b50f8a7dd8b0e1d415436de86aee6fa7140983052a03da4ac1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c423e285c26784ad14daae910c79dbef96510299ef3d7c438fb51ec00756ad72",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0de26bbba1d3f1abae1b7f2dbd99bccd357687c6f1e10499c30cdaa52379bd31"
+  }
+}

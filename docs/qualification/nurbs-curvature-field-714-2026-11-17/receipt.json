@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0714",
+  "testedBase": "382e2222a1e0d537f4b971f5beafb5c914e020ab",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 337,
+  "scope": [
+    "Certify Euclidean clearance against solid axis-aligned boxes, including corner contacts.",
+    "Check Euclidean corner clearance, radius-induced corner contact, zero-radius solid containment, and invalid box bounds."
+  ],
+  "logSha256": "e0ef8d72f4ad7a57cc709949b5727438e7ce172d4ebb674ec69056d462b5ad34",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d67acbdaaedfcf293f8edae575b2eecee8b2f05ce76bbe37dfbf100c3361cffc",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fd8f95bb58f92b59d4a0606f7686b1dc0185ef1ac8b010b68212a8cefdb31619"
+  }
+}

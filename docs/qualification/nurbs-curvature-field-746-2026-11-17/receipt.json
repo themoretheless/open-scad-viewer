@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0746",
+  "testedBase": "0f7f80f85eee961da11aa803ab53e096e446bba6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 371,
+  "scope": [
+    "Bound total scheduled contact duration without double counting overlapping pairs.",
+    "Check overlap without double counting, outward and inward time endpoints, disjoint uncertainty, and unbounded upper endpoints."
+  ],
+  "logSha256": "8fe1c3bd03c6fc07675cc816b8c576d17f48c7657f5f2e9ed3c6031b827cd08e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b1557b014fc7b9fa4b923752e8949ef42eb916800ca84fd200b8e51f774f34d8",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "efa46d07a19af83d10a83a6ecf6a594ef465e191886a7f7538d7cdb94ee28a5c"
+  }
+}

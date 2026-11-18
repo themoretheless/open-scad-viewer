@@ -207,9 +207,11 @@ function getAsyncCacheKey(loaderStr: string): string {
 }
 
 export function defineAsyncComponent<T extends Component = Component>(
-  source: (() => Promise<T | { default: T }>) | { loader: () => Promise<T | { default: T }> },
+  source:
+    (() => Promise<T | { default: T }>) | { loader: () => Promise<T | { default: T }>; loadingComponent?: Component },
 ): Component {
   const loader = typeof source === 'function' ? source : source.loader
+  const loadingComponent = typeof source === 'function' ? undefined : source.loadingComponent
   const cacheKey = getAsyncCacheKey(loader.toString())
   let resolvedComp: Component | null = asyncResolvedCache.get(cacheKey) ?? null
   let loadPromise: Promise<Component> | null = asyncPromiseCache.get(cacheKey) ?? null
@@ -248,7 +250,10 @@ export function defineAsyncComponent<T extends Component = Component>(
       }
       return () => {
         const comp = loaded.value
-        if (!comp) return createCommentVNode('async')
+        if (!comp)
+          return loadingComponent
+            ? createVNode(loadingComponent, { ...(attrs as Record<string, unknown>) })
+            : createCommentVNode('async')
         return createVNode(comp, { ...(attrs as Record<string, unknown>), ref: innerRef }, slots)
       }
     },

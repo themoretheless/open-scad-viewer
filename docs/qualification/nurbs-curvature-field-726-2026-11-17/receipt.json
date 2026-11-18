@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0726",
+  "testedBase": "813cda9e8ca2c50ee7c73cfdeb258aaef99704ca",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 351,
+  "scope": [
+    "Attribute bounded arc length to individual obstacles and their union with one integration per cell.",
+    "Check individual lengths, overlapping mixed obstacles, distant obstacles, union length, and shared coarse integration."
+  ],
+  "logSha256": "5245d8e8cc6f56dcbad8fd18fa8fc51c0e80d4f0a13719112c7b4ff28d8d747c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "4eeb4e85898b5d49303f95884b5c09e052e036046f11b37be68ad6c0182dc514",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "37514308618abaec113c5dfff9b2715d48c29419989ffd9753f533d36ace28ba"
+  }
+}

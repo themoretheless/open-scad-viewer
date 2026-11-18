@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0749",
+  "testedBase": "9748b571ba6f1672078b771ee57064ba6f7b74e4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 374,
+  "scope": [
+    "Bound elapsed time when at least a specified number of distinct pairs are in contact.",
+    "Check distinct pairs, overlapping cells of one pair, uncertain duration, and instantaneous contacts with zero duration."
+  ],
+  "logSha256": "20f93fec975027a0ae261e0563260ea452524652ec3fa8160d832b1b7d7a5648",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "f7780f020418816be4cad39a281ebcba157e7312f2271535beaeceed2b43b66d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "525246113ea3406eafe2f76a07141b9c051b4d726096f88a9669f4e021e58463"
+  }
+}

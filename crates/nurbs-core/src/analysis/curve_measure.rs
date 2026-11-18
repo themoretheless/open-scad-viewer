@@ -1280,41 +1280,42 @@ pub fn multi_axis_motion_duration_bounds(
     tolerances: [f64; 3],
     max_cells: usize,
 ) -> Result<MultiAxisMotionDurationReport> {
-    use num_rational::BigRational;
-    use num_traits::ToPrimitive;
-
     let slowdown =
         multi_axis_motion_slowdown_bounds(curve, time_window, axes, tolerances, max_cells)?;
-    let exact = |value| {
-        BigRational::from_float(value)
-            .ok_or_else(|| crate::numeric_err("Nonfinite duration operand"))
-    };
-    let width = exact(time_window[1])? - exact(time_window[0])?;
+    let width = exact_motion_operand(time_window[1])? - exact_motion_operand(time_window[0])?;
     let duration_endpoint = |factor: f64, upper: bool| -> Result<f64> {
         if factor == f64::INFINITY {
             return Ok(f64::INFINITY);
         }
-        let duration = &width * exact(factor)?;
-        let rounded = duration
-            .to_f64()
-            .ok_or_else(|| crate::numeric_err("Cannot represent duration endpoint"))?;
-        if rounded == f64::INFINITY {
-            return Ok(if upper { f64::INFINITY } else { f64::MAX });
-        }
-        let represented = exact(rounded)?;
-        Ok(if upper && represented < duration {
-            rounded.next_up()
-        } else if !upper && represented > duration {
-            rounded.next_down()
-        } else {
-            rounded
-        })
+        round_motion_duration(&(&width * exact_motion_operand(factor)?), upper)
     };
     let duration_bounds = [
         duration_endpoint(slowdown.bounds[0], false)?,
         duration_endpoint(slowdown.bounds[1], true)?,
     ];
     Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
+fn round_motion_duration(duration: &num_rational::BigRational, upper: bool) -> Result<f64> {
+    use num_traits::ToPrimitive;
+
+    let rounded = duration
+        .to_f64()
+        .ok_or_else(|| crate::numeric_err("Cannot represent duration endpoint"))?;
+    if rounded == f64::INFINITY {
+        return Ok(if upper { f64::INFINITY } else { f64::MAX });
+    }
+    if rounded == f64::NEG_INFINITY {
+        return Ok(if upper { -f64::MAX } else { f64::NEG_INFINITY });
+    }
+    let represented = exact_motion_operand(rounded)?;
+    Ok(if upper && &represented < duration {
+        rounded.next_up()
+    } else if !upper && &represented > duration {
+        rounded.next_down()
+    } else {
+        rounded
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -1820,7 +1821,8 @@ pub struct WorkspaceHalfSpace<'a> {
 pub struct WorkspaceCell {
     pub parameter_interval: [f64; 2],
     pub span: usize,
-    /// Enclosures of `normal · point - offset`, in input order.
+    /// Maximum plane residual over the tool at each center, in input order.
+    /// A point tool has residual `normal · point - offset`.
     pub plane_residuals: Vec<[f64; 2]>,
     pub status: DirectionalMotionStatus,
 }
@@ -1841,6 +1843,116 @@ pub fn partition_curve_convex_workspace(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
+    partition_curve_ball_convex_workspace(
+        curve, interval, planes, 0., parameter_tolerance, max_plane_cells,
+    )
+}
+
+/// Test containment of a closed ball at every center along the curve.
+/// The plane residual includes the support radius, `radius * |normal|`.
+/// A positive residual throughout a cell proves the ball exceeds that plane.
+pub fn partition_curve_ball_convex_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
+    partition_curve_workspace_with_support(
+        curve, interval, planes, parameter_tolerance, max_plane_cells,
+        |normal| {
+            if radius == 0. {
+                Ok(None)
+            } else {
+                Ok(Some(norm(normal)?.mul(Interval::point(radius))?))
+            }
+        },
+    )
+}
+
+/// A fixed-orientation capsule whose segment endpoints are offsets from
+/// the curve point. A zero radius describes the segment itself.
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceCapsule<'a> {
+    pub endpoint_offsets: [&'a [f64]; 2],
+    pub radius: f64,
+}
+
+/// Check a translating capsule against the workspace planes. At each curve
+/// point the support is the greater endpoint projection plus the ball support.
+pub fn partition_curve_capsule_convex_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    capsule: WorkspaceCapsule<'_>,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    partition_curve_rounded_hull_workspace(
+        curve, interval, planes, &capsule.endpoint_offsets, capsule.radius,
+        parameter_tolerance, max_plane_cells,
+    )
+}
+
+/// Check a translating convex hull of vertex offsets, optionally rounded by
+/// a ball of the specified radius. The profile keeps its orientation and
+/// vertices may be unordered. At most one million vertex/plane pairs are
+/// evaluated during support preprocessing.
+pub fn partition_curve_rounded_hull_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
+    check(!vertex_offsets.is_empty(), "Tool hull requires at least one vertex")?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    if vertex_offsets.len() > 1_000_000 / planes.len() {
+        return Err(resource("Tool hull support preprocessing exceeds one million vertex/plane pairs"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let mut offsets = Vec::with_capacity(vertex_offsets.len());
+    for &offset in vertex_offsets {
+        check(
+            offset.len() == dimension && offset.iter().all(|value| value.is_finite()),
+            "Tool hull vertices must be finite vectors matching the curve dimension",
+        )?;
+        offsets.push(offset.iter().copied().map(Interval::point).collect::<Vec<_>>());
+    }
+    partition_curve_workspace_with_support(
+        curve, interval, planes, parameter_tolerance, max_plane_cells,
+        |normal| {
+            let mut lo = f64::NEG_INFINITY;
+            let mut hi = f64::NEG_INFINITY;
+            for offset in &offsets {
+                let projected = project_jet(offset, normal)?;
+                lo = lo.max(projected.lo);
+                hi = hi.max(projected.hi);
+            }
+            let support = Interval::new(lo, hi)?;
+            if radius == 0. {
+                Ok(Some(support))
+            } else {
+                Ok(Some(support.add(norm(normal)?.mul(Interval::point(radius))?)?))
+            }
+        },
+    )
+}
+
+fn partition_curve_workspace_with_support(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+    support: impl Fn(&[Interval]) -> Result<Option<Interval>>,
+) -> Result<WorkspacePartition> {
     validate(parameter_tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -1849,21 +1961,21 @@ pub fn partition_curve_convex_workspace(
     }
     curve.validate()?;
     let dimension = curve.control_points[0].len();
-    let planes = prepare_workspace_planes(planes, dimension)?;
+    let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+        let margin = support(&normal)?;
+        Ok((normal, offset, margin))
+    }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_cells,
         |jets, _| {
-            let residuals = planes.iter().map(|(normal, offset)| {
-                let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+            let residuals = planes.iter().map(|(normal, offset, margin)| {
+                let mut residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                if let Some(margin) = margin {
+                    residual = residual.add(*margin)?;
+                }
                 Ok([residual.lo, residual.hi])
             }).collect::<Result<Vec<_>>>()?;
-            let status = if residuals.iter().any(|[lo, _]| *lo > 0.) {
-                DirectionalMotionStatus::Exceeds
-            } else if residuals.iter().all(|[_, hi]| *hi <= 0.) {
-                DirectionalMotionStatus::Within
-            } else {
-                DirectionalMotionStatus::Undetermined
-            };
+            let status = workspace_residual_status(&residuals);
             Ok(((residuals, status), status == DirectionalMotionStatus::Undetermined))
         },
     )?;
@@ -1871,6 +1983,100 @@ pub fn partition_curve_convex_workspace(
         WorkspaceCell { parameter_interval, span, plane_residuals, status }
     }).collect();
     Ok(WorkspacePartition { cells, work_plane_cells: work_cells * planes.len() })
+}
+
+/// Check containment in closed half-spaces as the ball radius follows a
+/// continuous piecewise-linear profile in the original curve parameter.
+pub fn partition_profiled_radius_convex_workspace(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let max_cells = max_plane_cells / planes.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let dimension = curve.control_points[0].len();
+    let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, profile], domain| {
+            let radius = profiles[profile](domain)?;
+            let jets = curve_jets::enclose(curve, span, domain)?;
+            let plane_residuals = planes.iter().map(|(normal, offset, length)| {
+                let residual = project_jet(&jets[0], normal)?.sub(*offset)?.add(length.mul(radius)?)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = workspace_residual_status(&plane_residuals);
+            Ok((WorkspaceCell {
+                parameter_interval: domain, span, plane_residuals, status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    Ok(WorkspacePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * planes.len(),
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceMinimumClearance {
+    /// Signed clearance to the most restrictive plane, in model units.
+    /// Negative values indicate that the tool extends outside the workspace.
+    pub gap_bounds: [f64; 2],
+    pub witness_parameter: f64,
+    pub witness_plane: usize,
+    pub work_plane_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Refine the smallest signed plane clearance along a ball toolpath with a
+/// piecewise-linear radius. Plane normals need not be normalized.
+pub fn measure_minimum_profiled_radius_workspace_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    validate(tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let max_cells = max_plane_cells / planes.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let dimension = curve.control_points[0].len();
+    let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let minimum = measure_minimum_radial_cells(
+        curve, initial, radius_profile[0].0, tolerance, max_cells, planes.len(),
+        |point, index, profile, domain| {
+            let (normal, offset, length) = &planes[index];
+            offset.sub(project_jet(point, normal)?)?.div(*length)?.sub(profiles[profile](domain)?)
+        },
+    )?;
+    Ok(WorkspaceMinimumClearance {
+        gap_bounds: minimum.gap_bounds,
+        witness_parameter: minimum.witness_parameter,
+        witness_plane: minimum.witness_obstacle,
+        work_plane_cells: minimum.work_obstacle_cells,
+        stop_reason: minimum.stop_reason,
+    })
+}
+
+fn workspace_residual_status(residuals: &[[f64; 2]]) -> DirectionalMotionStatus {
+    if residuals.iter().any(|[lo, _]| *lo > 0.) {
+        DirectionalMotionStatus::Exceeds
+    } else if residuals.iter().all(|[_, hi]| *hi <= 0.) {
+        DirectionalMotionStatus::Within
+    } else {
+        DirectionalMotionStatus::Undetermined
+    }
 }
 
 type PreparedWorkspacePlane = (Vec<Interval>, Interval);
@@ -1906,6 +2112,7 @@ pub struct ObstacleClearanceCell {
 pub struct ObstacleClearancePartition {
     pub cells: Vec<ObstacleClearanceCell>,
     /// Reserved plane evaluations, including planes skipped after separation.
+    /// For vertex hulls this counts vertex/plane pairs.
     pub work_plane_cells: usize,
 }
 
@@ -1919,6 +2126,24 @@ pub fn partition_curve_obstacle_clearance(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<ObstacleClearancePartition> {
+    partition_curve_ball_obstacle_clearance(
+        curve, interval, obstacles, 0., parameter_tolerance, max_plane_cells,
+    )
+}
+
+/// Certify clearance for a closed ball centered on the curve. A strictly
+/// separating plane must leave room for the radius. A cell is classified
+/// as colliding when every center in it lies in an obstacle. Other possible
+/// contacts, including at edges and corners, may remain undetermined.
+pub fn partition_curve_ball_obstacle_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_plane_cells)?;
     check(!obstacles.is_empty(), "Obstacle clearance requires at least one obstacle")?;
     let mut plane_count = 0;
@@ -1931,18 +2156,25 @@ pub fn partition_curve_obstacle_clearance(
     }
     curve.validate()?;
     let dimension = curve.control_points[0].len();
-    let obstacles = obstacles.iter()
-        .map(|planes| prepare_workspace_planes(planes, dimension))
-        .collect::<Result<Vec<_>>>()?;
+    let obstacles = obstacles.iter().map(|planes| {
+        prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+            let margin = if radius == 0. {
+                0.
+            } else {
+                norm(&normal)?.mul(Interval::point(radius))?.hi
+            };
+            Ok((normal, offset, margin))
+        }).collect::<Result<Vec<_>>>()
+    }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_plane_cells / plane_count,
         |jets, _| {
             let mut clearance = Vec::with_capacity(obstacles.len());
             for obstacle in &obstacles {
                 let mut status = DirectionalMotionStatus::Exceeds;
-                for (normal, offset) in obstacle {
+                for (normal, offset, margin) in obstacle {
                     let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
-                    if residual.lo > 0. {
+                    if residual.lo > *margin {
                         status = DirectionalMotionStatus::Within;
                         break;
                     }
@@ -1970,6 +2202,2723 @@ pub fn partition_curve_obstacle_clearance(
     Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * plane_count })
 }
 
+/// Check clearance for a translating convex hull of offsets, rounded by a
+/// ball of the specified radius. A separating plane certifies clearance.
+/// A translated vertex inside all planes certifies collision. Other contact
+/// configurations may remain undetermined. The work budget accounts for
+/// every vertex/plane pair per enclosed cell.
+pub fn partition_curve_rounded_hull_obstacle_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_vertex_plane_cells)?;
+    check(!obstacles.is_empty() && !vertex_offsets.is_empty(), "Clearance requires obstacles and hull vertices")?;
+    let plane_budget = max_vertex_plane_cells / vertex_offsets.len();
+    let mut plane_count = 0;
+    for obstacle in obstacles {
+        check(!obstacle.is_empty(), "Each obstacle requires at least one plane")?;
+        if obstacle.len() > plane_budget - plane_count {
+            return Err(resource("Clearance budget must cover every vertex and plane"));
+        }
+        plane_count += obstacle.len();
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let vertices = vertex_offsets.iter().map(|vertex| {
+        check(
+            vertex.len() == dimension && vertex.iter().all(|value| value.is_finite()),
+            "Tool hull vertices must be finite vectors matching the curve dimension",
+        )?;
+        Ok(vertex.iter().copied().map(Interval::point).collect::<Vec<_>>())
+    }).collect::<Result<Vec<_>>>()?;
+    let obstacles = obstacles.iter().map(|planes| {
+        prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+            let projected = vertices.iter().map(|vertex| project_jet(vertex, &normal))
+                .collect::<Result<Vec<_>>>()?;
+            let minimum = projected.iter().map(|value| value.lo).fold(f64::INFINITY, f64::min);
+            let support = if radius == 0. {
+                minimum
+            } else {
+                Interval::point(minimum).sub(norm(&normal)?.mul(Interval::point(radius))?)?.lo
+            };
+            Ok((normal, offset, projected, support))
+        }).collect::<Result<Vec<_>>>()
+    }).collect::<Result<Vec<_>>>()?;
+    let pairs = plane_count * vertices.len();
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_vertex_plane_cells / pairs,
+        |jets, _| {
+            let mut clearance = Vec::with_capacity(obstacles.len());
+            let mut candidates = vec![true; vertices.len()];
+            for obstacle in &obstacles {
+                candidates.fill(true);
+                let mut separated = false;
+                for (normal, offset, projected, minimum) in obstacle {
+                    let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                    if residual.add(Interval::point(*minimum))?.lo > 0. {
+                        separated = true;
+                        break;
+                    }
+                    for (candidate, projection) in candidates.iter_mut().zip(projected) {
+                        *candidate &= residual.add(*projection)?.hi <= 0.;
+                    }
+                }
+                clearance.push(if separated {
+                    DirectionalMotionStatus::Within
+                } else if candidates.contains(&true) {
+                    DirectionalMotionStatus::Exceeds
+                } else {
+                    DirectionalMotionStatus::Undetermined
+                });
+            }
+            let refine = clearance.contains(&DirectionalMotionStatus::Undetermined);
+            let status = if clearance.contains(&DirectionalMotionStatus::Exceeds) {
+                DirectionalMotionStatus::Exceeds
+            } else if refine {
+                DirectionalMotionStatus::Undetermined
+            } else {
+                DirectionalMotionStatus::Within
+            };
+            Ok(((clearance, status), refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (obstacles, status))| {
+        ObstacleClearanceCell { parameter_interval, span, obstacles, status }
+    }).collect();
+    Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * pairs })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SphericalObstacle<'a> {
+    pub center: &'a [f64],
+    pub radius: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct SphericalClearanceCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Signed surface gaps in obstacle order. A nonpositive gap is contact.
+    pub gap_bounds: Vec<[f64; 2]>,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct SphericalClearancePartition {
+    pub cells: Vec<SphericalClearanceCell>,
+    pub work_obstacle_cells: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FirstToolpathContact {
+    Clear,
+    Possible {
+        earliest_parameter: f64,
+    },
+    Confirmed {
+        parameter_bounds: [f64; 2],
+        /// An obstacle proved to be in contact at the upper endpoint.
+        obstacle_index: usize,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct MinimumToolpathClearance {
+    pub gap_bounds: [f64; 2],
+    /// Ordered parameter intervals covering every possible minimizer.
+    pub parameter_intervals: Vec<[f64; 2]>,
+    /// A cell and obstacle whose gap upper bound establishes the report's upper bound.
+    pub upper_witness: [usize; 2],
+}
+
+impl SphericalClearancePartition {
+    /// Enclose the minimum signed gap over all cells and obstacles and
+    /// localize its possible minimizers. Resolution follows the partition.
+    pub fn minimum_clearance(&self) -> Option<MinimumToolpathClearance> {
+        let mut lower = f64::INFINITY;
+        let mut upper = f64::INFINITY;
+        let mut witness = None;
+        for (cell_index, cell) in self.cells.iter().enumerate() {
+            for (obstacle_index, &[lo, hi]) in cell.gap_bounds.iter().enumerate() {
+                lower = lower.min(lo);
+                if hi < upper {
+                    upper = hi;
+                    witness = Some([cell_index, obstacle_index]);
+                }
+            }
+        }
+        let upper_witness = witness?;
+        let mut parameter_intervals: Vec<[f64; 2]> = Vec::new();
+        for cell in &self.cells {
+            if cell.gap_bounds.iter().any(|[lo, _]| *lo <= upper) {
+                let [start, end] = cell.parameter_interval;
+                match parameter_intervals.last_mut() {
+                    Some([_, previous_end]) if start <= *previous_end => {
+                        *previous_end = previous_end.max(end);
+                    }
+                    _ => parameter_intervals.push([start, end]),
+                }
+            }
+        }
+        Some(MinimumToolpathClearance {
+            gap_bounds: [lower, upper],
+            parameter_intervals,
+            upper_witness,
+        })
+    }
+
+    /// Summarize the first contact in the original window. The lower bound
+    /// comes from the first cell whose clearance was not proved. The upper
+    /// bound is the start of the first cell proved in contact throughout.
+    pub fn first_contact(&self) -> FirstToolpathContact {
+        let mut earliest = None;
+        for cell in &self.cells {
+            let start = cell.parameter_interval[0];
+            if cell.status != DirectionalMotionStatus::Within {
+                let lower = *earliest.get_or_insert(start);
+                if let Some(obstacle_index) = cell.gap_bounds.iter().position(|[_, hi]| *hi <= 0.) {
+                    return FirstToolpathContact::Confirmed {
+                        parameter_bounds: [lower, start],
+                        obstacle_index,
+                    };
+                }
+            }
+        }
+        match earliest {
+            None => FirstToolpathContact::Clear,
+            Some(earliest_parameter) => FirstToolpathContact::Possible { earliest_parameter },
+        }
+    }
+}
+
+/// Bound clearance for a ball swept along the curve against closed balls.
+/// A cell is clear if all gap lower bounds are positive, and colliding if
+/// one obstacle has a nonpositive gap upper bound throughout the cell.
+pub fn partition_curve_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every sphere"));
+    }
+    curve.validate()?;
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, tool_radius)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+type PreparedSphere = (Vec<Interval>, Interval);
+
+fn prepare_spherical_obstacles(
+    curve: &Curve,
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radius: f64,
+) -> Result<Vec<PreparedSphere>> {
+    let dimension = curve.control_points[0].len();
+    obstacles.iter().map(|obstacle| {
+        check(
+            obstacle.center.len() == dimension
+                && obstacle.center.iter().all(|value| value.is_finite())
+                && obstacle.radius.is_finite()
+                && obstacle.radius >= 0.,
+            "Sphere requires a finite matching center and nonnegative finite radius",
+        )?;
+        let center = obstacle.center.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
+        Ok((center, radius))
+    }).collect()
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SphericalMinimumClearance {
+    pub gap_bounds: [f64; 2],
+    /// Evaluated parameter and obstacle providing an upper bound.
+    pub witness_parameter: f64,
+    pub witness_obstacle: usize,
+    pub work_obstacle_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Refine the smallest gap bound first until the signed minimum is enclosed
+/// to the requested tolerance or refinement reaches a work or precision limit.
+pub fn measure_minimum_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, tool_radius)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, _| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+fn measure_minimum_radial_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    gap: impl Fn(&[Interval], usize, [f64; 2]) -> Result<Interval>,
+) -> Result<SphericalMinimumClearance> {
+    let initial = active_spans(curve, interval).map(|span| {
+        ([span, 0], [curve.knots[span].max(interval[0]), curve.knots[span + 1].min(interval[1])])
+    });
+    measure_minimum_radial_cells(
+        curve, initial, interval[0], tolerance, max_cells, obstacle_count,
+        |point, index, _, domain| gap(point, index, domain),
+    )
+}
+
+fn measure_minimum_radial_cells(
+    curve: &Curve,
+    initial: impl IntoIterator<Item = ([usize; 2], [f64; 2])>,
+    start_parameter: f64,
+    tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    gap: impl Fn(&[Interval], usize, usize, [f64; 2]) -> Result<Interval>,
+) -> Result<SphericalMinimumClearance> {
+    let measure = |[span, profile]: [usize; 2], domain: [f64; 2], witness: &mut (f64, f64, usize)| -> Result<f64> {
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        let start = curve_jets::endpoint(curve, span, domain, false)?;
+        let end = curve_jets::endpoint(curve, span, domain, true)?;
+        let mut lower = f64::INFINITY;
+        for index in 0..obstacle_count {
+            lower = lower.min(gap(&jets[0], index, profile, domain)?.lo);
+            for (point, parameter) in [(&start[0], domain[0]), (&end[0], domain[1])] {
+                let bound = gap(point, index, profile, [parameter; 2])?.hi;
+                if bound < witness.0 {
+                    *witness = (bound, parameter, index);
+                }
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, cells, stop_reason) =
+        refine_minimum_clearance(initial, start_parameter, tolerance, max_cells, measure)?;
+    Ok(SphericalMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        witness_obstacle: witness.2,
+        work_obstacle_cells: cells * obstacle_count,
+        stop_reason,
+    })
+}
+
+type ClearanceWitness = (f64, f64, usize);
+
+fn refine_minimum_clearance<Span: Copy>(
+    initial: impl IntoIterator<Item = (Span, [f64; 2])>,
+    start: f64,
+    tolerance: f64,
+    max_cells: usize,
+    measure: impl Fn(Span, [f64; 2], &mut ClearanceWitness) -> Result<f64>,
+) -> Result<(f64, ClearanceWitness, usize, StopReason)> {
+    let mut pending = BTreeMap::new();
+    let mut cells = 0;
+    let mut witness = (f64::INFINITY, start, 0);
+    // Map finite signed floats to unsigned keys preserving ascending order.
+    let order = |value: f64| {
+        let bits = value.to_bits();
+        if value.is_sign_negative() { !bits } else { bits ^ (1 << 63) }
+    };
+    for (span, domain) in initial {
+        if cells == max_cells {
+            return Err(resource("Clearance budget must cover every initial cell"));
+        }
+        let lower = measure(span, domain, &mut witness)?;
+        pending.insert((order(lower), cells), (lower, span, domain));
+        cells += 1;
+    }
+    let (lower, stop_reason) = loop {
+        let (&key, &(lower, span, [a, b])) = pending.first_key_value()
+            .ok_or_else(|| crate::numeric_err("Missing clearance span coverage"))?;
+        if (witness.0 - lower).next_up() <= tolerance {
+            break (lower, StopReason::Tolerance);
+        }
+        if cells + 2 > max_cells {
+            break (lower, StopReason::WorkLimit);
+        }
+        let middle = crate::distance_bounds::midpoint(a, b);
+        if !(a < middle && middle < b) {
+            break (lower, StopReason::PrecisionLimit);
+        }
+        pending.remove(&key);
+        for domain in [[a, middle], [middle, b]] {
+            let child = measure(span, domain, &mut witness)?.max(lower);
+            pending.insert((order(child), cells), (child, span, domain));
+            cells += 1;
+        }
+    };
+    Ok((lower, witness, cells, stop_reason))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SynchronizedCurveClearance {
+    pub gap_bounds: [f64; 2],
+    pub witness_parameter: f64,
+    pub work_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Enclose the minimum signed gap between balls moving on two curves with
+/// the same parameter clock. Both curves must contain the requested window.
+pub fn measure_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    interval: [f64; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<SynchronizedCurveClearance> {
+    validate(tolerance, max_cells)?;
+    let [first, second] = curves;
+    let (radius, initial) = synchronized_clearance_cells(curves, interval, radii)?;
+    let measure = |[a, b]: [usize; 2], domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let left = curve_jets::enclose(first, a, domain)?;
+        let right = curve_jets::enclose(second, b, domain)?;
+        let (lo, hi) = box_distance(&left[0], &right[0])?;
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let left = curve_jets::endpoint(first, a, domain, end)?;
+            let right = curve_jets::endpoint(second, b, domain, end)?;
+            let (lo, hi) = box_distance(&left[0], &right[0])?;
+            let upper = Interval::new(lo, hi)?.sub(radius)?.hi;
+            if upper < witness.0 {
+                *witness = (upper, parameter, 0);
+            }
+        }
+        Ok(Interval::new(lo, hi)?.sub(radius)?.lo)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance(initial, interval[0], tolerance, max_cells, measure)?;
+    Ok(SynchronizedCurveClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        work_cells,
+        stop_reason,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SynchronizedClearanceCell {
+    pub parameter_interval: [f64; 2],
+    pub spans: [usize; 2],
+    pub gap_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct SynchronizedClearancePartition {
+    pub cells: Vec<SynchronizedClearanceCell>,
+    pub work_cells: usize,
+}
+
+/// Classify simultaneous ball clearance over a shared parameter window.
+/// Every cell is evaluated against both curves' original knot grids.
+pub fn partition_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    interval: [f64; 2],
+    radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<SynchronizedClearancePartition> {
+    validate(parameter_tolerance, max_cells)?;
+    let (radius, initial) = synchronized_clearance_cells(curves, interval, radii)?;
+    let [first, second] = curves;
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[a, b], domain| {
+            let left = curve_jets::enclose(first, a, domain)?;
+            let right = curve_jets::enclose(second, b, domain)?;
+            let (lo, hi) = box_distance(&left[0], &right[0])?;
+            let gap = Interval::new(lo, hi)?.sub(radius)?;
+            let status = if gap.lo > 0. {
+                DirectionalMotionStatus::Within
+            } else if gap.hi <= 0. {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((gap, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(spans, parameter_interval, (gap, status))| {
+        SynchronizedClearanceCell { parameter_interval, spans, gap_bounds: [gap.lo, gap.hi], status }
+    }).collect();
+    Ok(SynchronizedClearancePartition { cells, work_cells })
+}
+
+/// Compare two windows traversed at uniform parameter rates over the same
+/// elapsed time. The witness parameter is normalized progress in [0, 1].
+/// Each work cell may enclose multiple source spans across the two curves.
+pub fn measure_affine_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<SynchronizedCurveClearance> {
+    validate(tolerance, max_cells)?;
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    let gap = |progress| affine_clearance_gap(curves, windows, radius, progress);
+    let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let lower = gap(domain)?.lo;
+        for parameter in domain {
+            let upper = gap([parameter; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, parameter, 0);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance([((), [0., 1.])], 0., tolerance, max_cells, measure)?;
+    Ok(SynchronizedCurveClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        work_cells,
+        stop_reason,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AffineSynchronizedClearanceCell {
+    /// Fraction of the shared traversal time, in [0, 1].
+    pub progress_interval: [f64; 2],
+    pub gap_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct AffineSynchronizedClearancePartition {
+    pub cells: Vec<AffineSynchronizedClearanceCell>,
+    pub work_cells: usize,
+}
+
+/// Classify contact between two balls traversing independent curve windows
+/// over the same elapsed time. The tolerance bounds the normalized width
+/// of refined unresolved cells, subject to the work and precision limits.
+pub fn partition_affine_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radii: [f64; 2],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<AffineSynchronizedClearancePartition> {
+    validate(progress_tolerance, max_cells)?;
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    let (cells, work_cells) = partition_enclosed_cells(
+        [((), [0., 1.])], progress_tolerance, max_cells,
+        |(), progress_interval| {
+            let gap = affine_clearance_gap(curves, windows, radius, progress_interval)?;
+            let status = if gap.lo > 0. {
+                DirectionalMotionStatus::Within
+            } else if gap.hi <= 0. {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok((AffineSynchronizedClearanceCell {
+                progress_interval,
+                gap_bounds: [gap.lo, gap.hi],
+                status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(_, _, cell)| cell).collect();
+    Ok(AffineSynchronizedClearancePartition { cells, work_cells })
+}
+
+fn validate_affine_clearance(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radii: [f64; 2],
+) -> Result<Interval> {
+    check(radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    for (curve, window) in curves.into_iter().zip(windows) {
+        curve.validate()?;
+        validate_travel_interval(curve, window)?;
+    }
+    check(curves[0].control_points[0].len() == curves[1].control_points[0].len(),
+        "Synchronized curves must have matching dimensions")?;
+    Interval::point(radii[0]).add(Interval::point(radii[1]))
+}
+
+fn affine_clearance_gap(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radius: Interval,
+    progress: [f64; 2],
+) -> Result<Interval> {
+    let left = affine_progress_position(curves[0], windows[0], progress)?;
+    let right = affine_progress_position(curves[1], windows[1], progress)?;
+    let (lo, hi) = box_distance(&left, &right)?;
+    Interval::new(lo, hi)?.sub(radius)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledCurveClearance {
+    pub minimum: SynchronizedCurveClearance,
+    /// Scheduled time of the witness, rounded outwards.
+    pub witness_time_bounds: [f64; 2],
+}
+
+/// Measure simultaneous clearance during the overlap of two scheduled
+/// traversals. Each segment moves uniformly in its own parameter window.
+/// Returns None when the closed traversal times do not overlap.
+pub fn measure_scheduled_curve_clearance(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<Option<ScheduledCurveClearance>> {
+    validate(tolerance, max_cells)?;
+    let Some(overlap) = prepare_scheduled_overlap(segments, start_times, radii)? else {
+        return Ok(None);
+    };
+    let gap = |progress| overlap.gap(progress);
+    let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let lower = gap(domain)?.lo;
+        for progress in domain {
+            let upper = gap([progress; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, progress, 0);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance([((), [0., 1.])], 0., tolerance, max_cells, measure)?;
+    let time = overlap.time(witness.1)?;
+    Ok(Some(ScheduledCurveClearance {
+        minimum: SynchronizedCurveClearance {
+            gap_bounds: [lower, witness.0],
+            witness_parameter: witness.1,
+            work_cells,
+            stop_reason,
+        },
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+    }))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledClearanceCell {
+    /// Time enclosures for the start and end. Status holds between the exact endpoints.
+    pub time_endpoint_bounds: [[f64; 2]; 2],
+    pub gap_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct ScheduledClearancePartition {
+    pub cells: Vec<ScheduledClearanceCell>,
+    pub work_cells: usize,
+}
+
+/// Classify clearance over the time when both tools are scheduled to move.
+/// Progress tolerance is a fraction of the overlap duration.
+pub fn partition_scheduled_curve_clearance(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<Option<ScheduledClearancePartition>> {
+    validate(progress_tolerance, max_cells)?;
+    let Some(overlap) = prepare_scheduled_overlap(segments, start_times, radii)? else {
+        return Ok(None);
+    };
+    partition_scheduled_phase(&overlap, progress_tolerance, max_cells).map(Some)
+}
+
+/// Check the schedule from the first start to the last finish. Each tool
+/// holds its start position before moving and its final position afterward.
+/// Progress tolerance is relative to each phase between start or finish events.
+pub fn partition_scheduled_clearance_with_holds(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledClearancePartition> {
+    validate(progress_tolerance, max_cells)?;
+    let phases = prepare_schedule_with_holds(segments, start_times, radii)?;
+    let phase_count = phases.len();
+    if phase_count > max_cells {
+        return Err(resource("Clearance budget must cover every scheduled phase"));
+    }
+    let mut cells = Vec::new();
+    let mut remaining = max_cells;
+    for (index, phase) in phases.iter().enumerate() {
+        let report = partition_scheduled_phase(
+            phase, progress_tolerance, remaining / (phase_count - index),
+        )?;
+        remaining -= report.work_cells;
+        cells.extend(report.cells);
+    }
+    Ok(ScheduledClearancePartition { cells, work_cells: max_cells - remaining })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledMinimumClearance {
+    pub gap_bounds: [f64; 2],
+    pub witness_time_bounds: [f64; 2],
+    pub work_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Refine the minimum gap over the full schedule, holding each tool at the
+/// corresponding endpoint outside its move. All phases share one work budget.
+pub fn measure_scheduled_clearance_with_holds(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledMinimumClearance> {
+    validate(tolerance, max_cells)?;
+    let phases = prepare_schedule_with_holds(segments, start_times, radii)?;
+    measure_scheduled_phase_minimum(&phases, tolerance, max_cells).map(|(report, _)| report)
+}
+
+/// A spherical tool with an independently scheduled curve traversal.
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledTool<'a> {
+    pub segment: TimedMotionSegment<'a>,
+    pub start_time: f64,
+    pub radius: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledToolsMinimumClearance {
+    pub minimum: ScheduledMinimumClearance,
+    /// Input indices of the pair supplying the upper-bound witness.
+    pub witness_tools: [usize; 2],
+}
+
+/// Refine the smallest gap among all unordered tool pairs with one budget.
+/// Each tool stays at its corresponding endpoint outside its traversal.
+pub fn measure_scheduled_tools_clearance(
+    tools: &[ScheduledTool<'_>],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledToolsMinimumClearance> {
+    validate(tolerance, max_cells)?;
+    let (phases, pairs) = prepare_scheduled_tool_pairs(tools, max_cells)?;
+    let (minimum, phase) = measure_scheduled_phase_minimum(&phases, tolerance, max_cells)?;
+    Ok(ScheduledToolsMinimumClearance { minimum, witness_tools: pairs[phase] })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledToolPairCell {
+    pub tools: [usize; 2],
+    pub clearance: ScheduledClearanceCell,
+}
+
+#[derive(Clone, Debug)]
+pub struct ScheduledToolsClearancePartition {
+    /// Cells grouped by pair and ordered in time within each pair.
+    pub cells: Vec<ScheduledToolPairCell>,
+    pub work_cells: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FirstScheduledToolContact {
+    Clear,
+    Possible { earliest_time: f64 },
+    Confirmed {
+        time_bounds: [f64; 2],
+        /// Pair whose contact supplies the upper time bound.
+        witness_tools: [usize; 2],
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LastScheduledToolContact {
+    Clear,
+    Possible { latest_time: f64 },
+    Confirmed {
+        time_bounds: [f64; 2],
+        /// Pair whose contact supplies the lower time bound.
+        witness_tools: [usize; 2],
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SimultaneousContactWindows {
+    /// Closed intervals in which the requested number of pairs is confirmed.
+    pub confirmed: Vec<[f64; 2]>,
+    /// Closed intervals covering every time the threshold could be met.
+    pub possible: Vec<[f64; 2]>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeakScheduledContactWitness {
+    pub time: f64,
+    /// Distinct pairs whose simultaneous contact is confirmed at this time.
+    pub tools: Vec<[usize; 2]>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeakScheduledContactReport {
+    pub pair_count_bounds: [usize; 2],
+    /// First time attaining the confirmed lower bound, if it is positive.
+    pub witness: Option<PeakScheduledContactWitness>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ScheduledContactPairs {
+    /// Sorted distinct pairs proved to be in contact.
+    pub confirmed: Vec<[usize; 2]>,
+    /// Sorted distinct pairs whose contact remains possible, including confirmed pairs.
+    pub possible: Vec<[usize; 2]>,
+}
+
+impl ScheduledToolsClearancePartition {
+    /// Query contact at a finite absolute time within the represented
+    /// pair timelines. Shared endpoints are included in both adjacent cells.
+    pub fn contact_pairs_at_time(&self, time: f64) -> Result<ScheduledContactPairs> {
+        check(time.is_finite(), "Contact query time must be finite")?;
+        let mut confirmed = Vec::new();
+        let mut possible = Vec::new();
+        for cell in &self.cells {
+            let [[start_lo, start_hi], [end_lo, end_hi]] = cell.clearance.time_endpoint_bounds;
+            if cell.clearance.status != DirectionalMotionStatus::Within
+                && start_lo <= time && time <= end_hi
+            {
+                possible.push(cell.tools);
+            }
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && start_hi <= time && time <= end_lo
+            {
+                confirmed.push(cell.tools);
+            }
+        }
+        for pairs in [&mut confirmed, &mut possible] {
+            pairs.sort_unstable();
+            pairs.dedup();
+        }
+        Ok(ScheduledContactPairs { confirmed, possible })
+    }
+
+    /// Bound the maximum number of distinct pairs in simultaneous contact
+    /// across the represented timelines. Contacts include shared endpoints.
+    pub fn peak_contact_pair_count_bounds(&self) -> [usize; 2] {
+        self.contact_pair_intervals().map(|intervals| peak_pair_count(&intervals))
+    }
+
+    /// Identify a concrete time and the contacting pairs that establish
+    /// the lower bound on peak contact multiplicity.
+    pub fn peak_contact_report(&self) -> PeakScheduledContactReport {
+        let [confirmed, possible] = self.contact_pair_intervals();
+        let pair_count_bounds = [peak_pair_count(&confirmed), peak_pair_count(&possible)];
+        let mut witness = None;
+        if pair_count_bounds[0] > 0 {
+            sweep_contact_pairs(&confirmed, |active, [start, _]| {
+                if witness.is_none() && active.len() == pair_count_bounds[0] {
+                    witness = Some(PeakScheduledContactWitness {
+                        time: start,
+                        tools: active.keys().copied().collect(),
+                    });
+                }
+            });
+        }
+        PeakScheduledContactReport { pair_count_bounds, witness }
+    }
+
+    /// Bound elapsed time with at least the requested number of distinct
+    /// pairs in contact. An isolated instant contributes zero duration.
+    pub fn simultaneous_contact_duration_bounds(&self, minimum_pairs: usize) -> Result<[f64; 2]> {
+        let windows = self.simultaneous_contact_windows(minimum_pairs)?;
+        let duration = |intervals: Vec<[f64; 2]>, upper| {
+            let intervals = intervals.into_iter().filter(|[a, b]| a < b).collect::<Vec<_>>();
+            if intervals.iter().flatten().any(|time| !time.is_finite()) {
+                return Ok(f64::INFINITY);
+            }
+            round_motion_duration(&time_interval_union_duration(intervals, |a, b| a + b)?, upper)
+        };
+        Ok([duration(windows.confirmed, false)?, duration(windows.possible, true)?])
+    }
+
+    /// Locate intervals where at least the requested number of distinct
+    /// pairs are in contact. Instantaneous contacts appear as point intervals.
+    pub fn simultaneous_contact_windows(
+        &self,
+        minimum_pairs: usize,
+    ) -> Result<SimultaneousContactWindows> {
+        check(minimum_pairs > 0, "Simultaneous contact requires a positive pair count")?;
+        let [confirmed, possible] = self.contact_pair_intervals().map(|intervals| {
+            let mut windows: Vec<[f64; 2]> = Vec::new();
+            sweep_contact_pairs(&intervals, |active, [start, end]| {
+                if active.len() >= minimum_pairs {
+                    match windows.last_mut() {
+                        Some([_, previous_end]) if start == *previous_end => *previous_end = end,
+                        _ => windows.push([start, end]),
+                    }
+                }
+            });
+            windows
+        });
+        Ok(SimultaneousContactWindows { confirmed, possible })
+    }
+
+    fn contact_pair_intervals(&self) -> [Vec<ToolPairInterval>; 2] {
+        let mut confirmed = Vec::new();
+        let mut possible = Vec::new();
+        for cell in &self.cells {
+            let [[start_lo, start_hi], [end_lo, end_hi]] = cell.clearance.time_endpoint_bounds;
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && start_hi.is_finite() && end_lo.is_finite() && start_hi <= end_lo
+            {
+                confirmed.push((cell.tools, [start_hi, end_lo]));
+            }
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                possible.push((cell.tools, [start_lo, end_hi]));
+            }
+        }
+        [confirmed, possible]
+    }
+
+    /// Bound the total duration of contact across the represented pair
+    /// timelines. Simultaneous contacts contribute once. Confirmed cells
+    /// contribute inward-rounded intervals to the lower bound; all nonclear
+    /// cells contribute outward-rounded intervals to the upper bound.
+    pub fn contact_duration_bounds(&self) -> Result<[f64; 2]> {
+        self.contact_duration_bounds_with(|total, next| total + next)
+    }
+
+    /// Bound the longest continuous interval with contact on at least one
+    /// pair, including transitions between different pairs.
+    pub fn longest_contact_duration_bounds(&self) -> Result<[f64; 2]> {
+        self.contact_duration_bounds_with(num_rational::BigRational::max)
+    }
+
+    fn contact_duration_bounds_with(
+        &self,
+        combine: impl Fn(num_rational::BigRational, num_rational::BigRational) -> num_rational::BigRational,
+    ) -> Result<[f64; 2]> {
+        let mut confirmed = Vec::new();
+        let mut possible = Vec::new();
+        let mut unbounded_upper = false;
+        for cell in &self.cells {
+            let [[start_lo, start_hi], [end_lo, end_hi]] = cell.clearance.time_endpoint_bounds;
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && start_hi.is_finite() && end_lo.is_finite() && start_hi < end_lo
+            {
+                confirmed.push([start_hi, end_lo]);
+            }
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                if start_lo.is_finite() && end_hi.is_finite() {
+                    possible.push([start_lo, end_hi]);
+                } else {
+                    unbounded_upper = true;
+                }
+            }
+        }
+        let lower = round_motion_duration(&time_interval_union_duration(confirmed, &combine)?, false)?;
+        let upper = if unbounded_upper {
+            f64::INFINITY
+        } else {
+            round_motion_duration(&time_interval_union_duration(possible, &combine)?, true)?
+        };
+        Ok([lower, upper])
+    }
+
+    /// Bracket the last contact across the represented pair timelines.
+    /// A possible later contact on any pair contributes to the upper bound.
+    pub fn last_contact(&self) -> LastScheduledToolContact {
+        let mut latest: Option<f64> = None;
+        let mut witness: Option<(f64, [usize; 2])> = None;
+        for cell in &self.cells {
+            let [lo, hi] = cell.clearance.time_endpoint_bounds[1];
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                latest = Some(latest.map_or(hi, |previous| previous.max(hi)));
+            }
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && witness.is_none_or(|(time, tools)| lo > time || (lo == time && cell.tools < tools))
+            {
+                witness = Some((lo, cell.tools));
+            }
+        }
+        match (latest, witness) {
+            (Some(upper), Some((lower, witness_tools))) => LastScheduledToolContact::Confirmed {
+                time_bounds: [lower, upper],
+                witness_tools,
+            },
+            (Some(latest_time), None) => LastScheduledToolContact::Possible { latest_time },
+            (None, _) => LastScheduledToolContact::Clear,
+        }
+    }
+
+    /// Bracket the first contact across the represented pair timelines.
+    /// A possible earlier contact on any pair contributes to the lower bound.
+    pub fn first_contact(&self) -> FirstScheduledToolContact {
+        let mut earliest: Option<f64> = None;
+        let mut witness: Option<(f64, [usize; 2])> = None;
+        for cell in &self.cells {
+            let [lo, hi] = cell.clearance.time_endpoint_bounds[0];
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                earliest = Some(earliest.map_or(lo, |previous| previous.min(lo)));
+            }
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && witness.is_none_or(|(time, tools)| (hi, cell.tools) < (time, tools))
+            {
+                witness = Some((hi, cell.tools));
+            }
+        }
+        match (earliest, witness) {
+            (Some(lower), Some((upper, witness_tools))) => FirstScheduledToolContact::Confirmed {
+                time_bounds: [lower, upper],
+                witness_tools,
+            },
+            (Some(earliest_time), None) => FirstScheduledToolContact::Possible { earliest_time },
+            (None, _) => FirstScheduledToolContact::Clear,
+        }
+    }
+}
+
+type ToolPairInterval = ([usize; 2], [f64; 2]);
+
+fn peak_pair_count(intervals: &[ToolPairInterval]) -> usize {
+    let mut peak = 0;
+    sweep_contact_pairs(intervals, |active, _| peak = peak.max(active.len()));
+    peak
+}
+
+fn sweep_contact_pairs(
+    intervals: &[ToolPairInterval],
+    mut visit: impl FnMut(&BTreeMap<[usize; 2], usize>, [f64; 2]),
+) {
+    let mut events = Vec::with_capacity(2 * intervals.len());
+    for &(pair, [start, end]) in intervals {
+        events.push((if start == 0. { 0. } else { start }, false, pair));
+        events.push((if end == 0. { 0. } else { end }, true, pair));
+    }
+    // Starts precede ends at the same instant because the cells are closed.
+    events.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    let mut active = BTreeMap::<[usize; 2], usize>::new();
+    let mut previous = events.first().map_or(0., |event| event.0);
+    for (time, ending, pair) in events {
+        visit(&active, [previous, time]);
+        previous = time;
+        if ending {
+            if let std::collections::btree_map::Entry::Occupied(mut entry) = active.entry(pair) {
+                *entry.get_mut() -= 1;
+                if *entry.get() == 0 {
+                    entry.remove();
+                }
+            }
+        } else {
+            *active.entry(pair).or_default() += 1;
+        }
+    }
+}
+
+fn time_interval_union_duration(
+    mut intervals: Vec<[f64; 2]>,
+    combine: impl Fn(num_rational::BigRational, num_rational::BigRational) -> num_rational::BigRational,
+) -> Result<num_rational::BigRational> {
+    intervals.sort_by(|a, b| a[0].total_cmp(&b[0]));
+    let mut total = num_rational::BigRational::default();
+    let mut current: Option<[f64; 2]> = None;
+    for [start, end] in intervals {
+        match current {
+            Some([a, b]) if start <= b => current = Some([a, b.max(end)]),
+            Some([a, b]) => {
+                total = combine(total, exact_motion_operand(b)? - exact_motion_operand(a)?);
+                current = Some([start, end]);
+            }
+            None => current = Some([start, end]),
+        }
+    }
+    if let Some([a, b]) = current {
+        total = combine(total, exact_motion_operand(b)? - exact_motion_operand(a)?);
+    }
+    Ok(total)
+}
+
+/// Classify clearance for every unordered tool pair with one budget.
+/// A pair's timeline runs from its first start to its last finish.
+/// Outside that window the pair retains its corresponding endpoint poses.
+pub fn partition_scheduled_tools_clearance(
+    tools: &[ScheduledTool<'_>],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledToolsClearancePartition> {
+    validate(progress_tolerance, max_cells)?;
+    let (phases, pairs) = prepare_scheduled_tool_pairs(tools, max_cells)?;
+    let mut remaining = max_cells;
+    let mut cells = Vec::new();
+    for (index, (phase, tools)) in phases.iter().zip(pairs).enumerate() {
+        let report = partition_scheduled_phase(
+            phase, progress_tolerance, remaining / (phases.len() - index),
+        )?;
+        remaining -= report.work_cells;
+        cells.extend(report.cells.into_iter().map(|clearance| ScheduledToolPairCell {
+            tools,
+            clearance,
+        }));
+    }
+    Ok(ScheduledToolsClearancePartition { cells, work_cells: max_cells - remaining })
+}
+
+fn prepare_scheduled_tool_pairs<'a>(
+    tools: &[ScheduledTool<'a>],
+    max_cells: usize,
+) -> Result<(Vec<ScheduledOverlap<'a>>, Vec<[usize; 2]>)> {
+    check(tools.len() >= 2, "Scheduled clearance requires at least two tools")?;
+    if tools.len().saturating_mul(tools.len() - 1) / 2 > max_cells {
+        return Err(resource("Clearance budget must cover every tool pair"));
+    }
+    let mut phases = Vec::new();
+    let mut pairs = Vec::new();
+    for (second, b) in tools.iter().enumerate() {
+        for (first, a) in tools[..second].iter().enumerate() {
+            let pair_phases = prepare_schedule_with_holds(
+                [a.segment, b.segment], [a.start_time, b.start_time], [a.radius, b.radius],
+            )?;
+            if pair_phases.len() > max_cells - phases.len() {
+                return Err(resource("Clearance budget must cover every tool pair phase"));
+            }
+            pairs.extend(pair_phases.iter().map(|_| [first, second]));
+            phases.extend(pair_phases);
+        }
+    }
+    Ok((phases, pairs))
+}
+
+fn measure_scheduled_phase_minimum(
+    phases: &[ScheduledOverlap<'_>],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<(ScheduledMinimumClearance, usize)> {
+    let initial = (0..phases.len()).map(|index| (index, [0., 1.]));
+    let measure = |index: usize, domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let phase = &phases[index];
+        let lower = phase.gap(domain)?.lo;
+        for progress in domain {
+            let upper = phase.gap([progress; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, progress, index);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance(initial, 0., tolerance, max_cells, measure)?;
+    let time = phases[witness.2].time(witness.1)?;
+    Ok((ScheduledMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+        work_cells,
+        stop_reason,
+    }, witness.2))
+}
+
+fn prepare_schedule_with_holds<'a>(
+    segments: [TimedMotionSegment<'a>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+) -> Result<Vec<ScheduledOverlap<'a>>> {
+    let (starts, durations, radius) = validate_motion_schedule(segments, start_times, radii)?;
+    let mut events = [starts[0].clone(), starts[1].clone(),
+        &starts[0] + &durations[0], &starts[1] + &durations[1]].to_vec();
+    events.sort();
+    events.dedup();
+    events.windows(2).map(|times| {
+        let origin = &times[0];
+        let end = &times[1];
+        let map = |tool: usize| -> Result<_> {
+            let [a, b] = segments[tool].interval;
+            let a = exact_motion_operand(a)?;
+            let width = exact_motion_operand(b)? - &a;
+            let parameter = |time: &num_rational::BigRational| {
+                let elapsed = (time - &starts[tool])
+                    .max(num_rational::BigRational::default())
+                    .min(durations[tool].clone());
+                &a + &width * elapsed / &durations[tool]
+            };
+            let first = parameter(origin);
+            Ok((first.clone(), parameter(end) - first))
+        };
+        Ok(ScheduledOverlap {
+            segments,
+            origin: origin.clone(),
+            duration: end - origin,
+            maps: [map(0)?, map(1)?],
+            radius,
+        })
+    }).collect()
+}
+
+fn partition_scheduled_phase(
+    overlap: &ScheduledOverlap<'_>,
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledClearancePartition> {
+    use num_traits::Zero;
+
+    let progress = if overlap.duration.is_zero() { [0.; 2] } else { [0., 1.] };
+    let (cells, work_cells) = partition_enclosed_cells(
+        [((), progress)], progress_tolerance, max_cells,
+        |(), domain| {
+            let gap = overlap.gap(domain)?;
+            let status = if gap.lo > 0. {
+                DirectionalMotionStatus::Within
+            } else if gap.hi <= 0. {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((gap, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(_, [a, b], (gap, status))| {
+        let endpoint = |progress| -> Result<[f64; 2]> {
+            let time = overlap.time(progress)?;
+            Ok([round_motion_duration(&time, false)?, round_motion_duration(&time, true)?])
+        };
+        Ok(ScheduledClearanceCell {
+            time_endpoint_bounds: [endpoint(a)?, endpoint(b)?],
+            gap_bounds: [gap.lo, gap.hi],
+            status,
+        })
+    }).collect::<Result<Vec<_>>>()?;
+    Ok(ScheduledClearancePartition { cells, work_cells })
+}
+
+struct ScheduledOverlap<'a> {
+    segments: [TimedMotionSegment<'a>; 2],
+    origin: num_rational::BigRational,
+    duration: num_rational::BigRational,
+    maps: [(num_rational::BigRational, num_rational::BigRational); 2],
+    radius: Interval,
+}
+
+impl ScheduledOverlap<'_> {
+    fn time(&self, progress: f64) -> Result<num_rational::BigRational> {
+        Ok(&self.origin + &self.duration * exact_motion_operand(progress)?)
+    }
+
+    fn gap(&self, progress: [f64; 2]) -> Result<Interval> {
+        let position = |index: usize| {
+            let (start, width) = &self.maps[index];
+            let lo = start + width * exact_motion_operand(progress[0])?;
+            let hi = start + width * exact_motion_operand(progress[1])?;
+            let segment = self.segments[index];
+            rounded_window_position(segment.curve, segment.interval, [&lo, &hi])
+        };
+        let (lo, hi) = box_distance(&position(0)?, &position(1)?)?;
+        Interval::new(lo, hi)?.sub(self.radius)
+    }
+}
+
+fn prepare_scheduled_overlap<'a>(
+    segments: [TimedMotionSegment<'a>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+) -> Result<Option<ScheduledOverlap<'a>>> {
+    let (starts, durations, radius) = validate_motion_schedule(segments, start_times, radii)?;
+    let windows = segments.map(|segment| segment.interval);
+    let origin = starts[0].clone().max(starts[1].clone());
+    let end = (&starts[0] + &durations[0]).min(&starts[1] + &durations[1]);
+    if end < origin {
+        return Ok(None);
+    }
+    let overlap = end - &origin;
+    let map = |index: usize| -> Result<_> {
+        let [a, b] = windows[index];
+        let a = exact_motion_operand(a)?;
+        let rate = (exact_motion_operand(b)? - &a) / &durations[index];
+        Ok((&a + (&origin - &starts[index]) * &rate, &overlap * rate))
+    };
+    let maps = [map(0)?, map(1)?];
+    Ok(Some(ScheduledOverlap { segments, origin, duration: overlap, maps, radius }))
+}
+
+fn validate_motion_schedule(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+) -> Result<([num_rational::BigRational; 2], [num_rational::BigRational; 2], Interval)> {
+    let curves = segments.map(|segment| segment.curve);
+    let windows = segments.map(|segment| segment.interval);
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    check(start_times.iter().all(|time| time.is_finite()), "Start times must be finite")?;
+    check(segments.iter().all(|segment| segment.duration.is_finite() && segment.duration > 0.),
+        "Motion segment duration must be finite and positive")?;
+    let starts = [exact_motion_operand(start_times[0])?, exact_motion_operand(start_times[1])?];
+    let durations = [
+        exact_motion_operand(segments[0].duration)?,
+        exact_motion_operand(segments[1].duration)?,
+    ];
+    Ok((starts, durations, radius))
+}
+
+fn affine_progress_position(
+    curve: &Curve,
+    window: [f64; 2],
+    progress: [f64; 2],
+) -> Result<Vec<Interval>> {
+    let start = exact_motion_operand(window[0])?;
+    let width = exact_motion_operand(window[1])? - &start;
+    let lo = &start + &width * exact_motion_operand(progress[0])?;
+    let hi = &start + &width * exact_motion_operand(progress[1])?;
+    rounded_window_position(curve, window, [&lo, &hi])
+}
+
+fn rounded_window_position(
+    curve: &Curve,
+    window: [f64; 2],
+    parameters: [&num_rational::BigRational; 2],
+) -> Result<Vec<Interval>> {
+    let lo = round_motion_duration(parameters[0], false)?.max(window[0]);
+    let hi = round_motion_duration(parameters[1], true)?.min(window[1]);
+    if lo == hi {
+        let end = lo > window[0];
+        let adjacent = if end { [window[0], lo] } else { window };
+        let (span, domain) = motion_window_endpoint(curve, adjacent, end)?;
+        return Ok(curve_jets::endpoint(curve, span, domain, end)?.swap_remove(0));
+    }
+    let mut position: Option<Vec<Interval>> = None;
+    for span in active_spans(curve, [lo, hi]) {
+        let domain = [lo.max(curve.knots[span]), hi.min(curve.knots[span + 1])];
+        let enclosed = curve_jets::enclose(curve, span, domain)?.swap_remove(0);
+        if let Some(hull) = &mut position {
+            for (axis, bound) in hull.iter_mut().zip(enclosed) {
+                axis.lo = axis.lo.min(bound.lo);
+                axis.hi = axis.hi.max(bound.hi);
+            }
+        } else {
+            position = Some(enclosed);
+        }
+    }
+    position.ok_or_else(|| crate::numeric_err("Missing affine progress span coverage"))
+}
+
+fn synchronized_clearance_cells(
+    curves: [&Curve; 2],
+    interval: [f64; 2],
+    radii: [f64; 2],
+) -> Result<(Interval, Vec<([usize; 2], [f64; 2])>)> {
+    check(radii.iter().all(|radius| radius.is_finite() && *radius >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    let [first, second] = curves;
+    for curve in curves {
+        curve.validate()?;
+        validate_travel_interval(curve, interval)?;
+    }
+    check(first.control_points[0].len() == second.control_points[0].len(),
+        "Synchronized curves must have matching dimensions")?;
+    let radius = Interval::point(radii[0]).add(Interval::point(radii[1]))?;
+    let mut first_spans = active_spans(first, interval).peekable();
+    let mut second_spans = active_spans(second, interval).peekable();
+    let mut initial = Vec::new();
+    let mut start = interval[0];
+    while let (Some(&a), Some(&b)) = (first_spans.peek(), second_spans.peek()) {
+        let first_end = first.knots[a + 1];
+        let second_end = second.knots[b + 1];
+        let end = first_end.min(second_end).min(interval[1]);
+        initial.push(([a, b], [start, end]));
+        start = end;
+        if end == interval[1] {
+            break;
+        }
+        if end == first_end {
+            first_spans.next();
+        }
+        if end == second_end {
+            second_spans.next();
+        }
+    }
+    Ok((radius, initial))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct CapsuleObstacle<'a> {
+    pub endpoints: [&'a [f64]; 2],
+    pub radius: f64,
+}
+
+/// Check a swept ball against closed capsules using the distance to the
+/// clamped projection onto each capsule axis. Coincident endpoints give a ball.
+pub fn partition_curve_capsule_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[CapsuleObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Capsule clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every capsule"));
+    }
+    curve.validate()?;
+    let obstacles = prepare_capsules(curve, obstacles, tool_radius)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point),
+    )
+}
+
+/// Refine the minimum signed gap between a swept ball and fixed capsules.
+pub fn measure_minimum_capsule_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[CapsuleObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Capsule clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_capsules(curve, obstacles, tool_radius)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, _| obstacles[index].gap(point),
+    )
+}
+
+struct PreparedCapsule {
+    start: Vec<Interval>,
+    axis: Option<(Vec<Interval>, Interval)>,
+    radius: Interval,
+}
+
+impl PreparedCapsule {
+    fn gap(&self, point: &[Interval]) -> Result<Interval> {
+        let distance = if let Some((delta, length_squared)) = &self.axis {
+            let relative = point.iter().zip(&self.start).map(|(&p, &a)| p.sub(a))
+                .collect::<Result<Vec<_>>>()?;
+            let projected = project_jet(&relative, delta)?.div(*length_squared)?;
+            let t = Interval::new(projected.lo.clamp(0., 1.), projected.hi.clamp(0., 1.))?;
+            let residual = relative.into_iter().zip(delta).map(|(p, &d)| p.sub(d.mul(t)?))
+                .collect::<Result<Vec<_>>>()?;
+            norm(&residual)?
+        } else {
+            let (lo, hi) = box_distance(point, &self.start)?;
+            Interval::new(lo, hi)?
+        };
+        distance.sub(self.radius)
+    }
+}
+
+fn prepare_capsules(
+    curve: &Curve,
+    obstacles: &[CapsuleObstacle<'_>],
+    tool_radius: f64,
+) -> Result<Vec<PreparedCapsule>> {
+    let dimension = curve.control_points[0].len();
+    obstacles.iter().map(|obstacle| {
+        let [a, b] = obstacle.endpoints;
+        check(
+            [a, b].iter().all(|p| p.len() == dimension && p.iter().all(|x| x.is_finite()))
+                && obstacle.radius.is_finite() && obstacle.radius >= 0.,
+            "Capsule requires finite matching endpoints and nonnegative finite radius",
+        )?;
+        let start = a.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        let axis = if a == b {
+            None
+        } else {
+            let delta = b.iter().zip(a).map(|(&b, &a)| {
+                if a == b { Ok(Interval::point(0.)) }
+                else { Interval::point(b).sub(Interval::point(a)) }
+            }).collect::<Result<Vec<_>>>()?;
+            let length = norm(&delta)?;
+            Some((delta, length.mul(length)?))
+        };
+        let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
+        Ok(PreparedCapsule { start, axis, radius })
+    }).collect()
+}
+
+/// A closed axis-aligned box, including boxes of zero thickness.
+#[derive(Clone, Copy, Debug)]
+pub struct BoxObstacle<'a> {
+    pub minimum: &'a [f64],
+    pub maximum: &'a [f64],
+}
+
+/// Enclose distance from the swept ball's center to each solid box, minus
+/// the tool radius. Euclidean distance accounts for rounded edge and corner
+/// contacts when the radius is positive.
+pub fn partition_curve_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[BoxObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every box"));
+    }
+    curve.validate()?;
+    validate_box_obstacles(curve, obstacles)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let obstacle = obstacles[index];
+            solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
+        },
+    )
+}
+
+/// Refine the minimum signed gap to solid axis-aligned boxes. The report
+/// includes a parameter attaining the sampled upper bound within rounding.
+pub fn measure_minimum_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[BoxObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    validate_box_obstacles(curve, obstacles)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, _| {
+            let obstacle = obstacles[index];
+            solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
+        },
+    )
+}
+
+fn validate_box_obstacles(curve: &Curve, obstacles: &[BoxObstacle<'_>]) -> Result<()> {
+    let dimension = curve.control_points[0].len();
+    for obstacle in obstacles {
+        check(
+            obstacle.minimum.len() == dimension && obstacle.maximum.len() == dimension
+                && obstacle.minimum.iter().zip(obstacle.maximum).all(|(&a, &b)| {
+                    a.is_finite() && b.is_finite() && a <= b
+                }),
+            "Box requires finite ordered bounds matching the curve dimension",
+        )?;
+    }
+    Ok(())
+}
+
+/// A rectangular box centered at a world point. Axes must be pairwise
+/// orthogonal, but need not have unit length. Extents are physical lengths.
+#[derive(Clone, Copy, Debug)]
+pub struct OrientedBoxObstacle<'a> {
+    pub center: &'a [f64],
+    pub axes: &'a [&'a [f64]],
+    pub half_extents: &'a [f64],
+}
+
+/// Check swept ball clearance in each obstacle's orthonormal frame.
+/// Orthogonality is checked exactly for the supplied binary64 directions.
+pub fn partition_curve_oriented_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[OrientedBoxObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every box"));
+    }
+    curve.validate()?;
+    let obstacles = prepare_oriented_boxes(curve, obstacles)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+/// Refine the minimum signed gap to oriented solid boxes with a certified
+/// endpoint witness. Directions follow the same rules as the partition API.
+pub fn measure_minimum_oriented_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[OrientedBoxObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_oriented_boxes(curve, obstacles)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, _| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+struct PreparedOrientedBox<'a> {
+    center: Vec<Interval>,
+    units: Vec<Vec<Interval>>,
+    minimum: Vec<f64>,
+    maximum: &'a [f64],
+}
+
+impl PreparedOrientedBox<'_> {
+    fn gap(&self, point: &[Interval], radius: f64) -> Result<Interval> {
+        let relative = point.iter().zip(&self.center).map(|(&p, &c)| p.sub(c))
+            .collect::<Result<Vec<_>>>()?;
+        let local = self.units.iter().map(|unit| project_jet(&relative, unit))
+            .collect::<Result<Vec<_>>>()?;
+        solid_box_gap(&local, &self.minimum, self.maximum, radius)
+    }
+}
+
+fn prepare_oriented_boxes<'a>(
+    curve: &Curve,
+    obstacles: &[OrientedBoxObstacle<'a>],
+) -> Result<Vec<PreparedOrientedBox<'a>>> {
+    use num_traits::Zero;
+
+    let dimension = curve.control_points[0].len();
+    obstacles.iter().map(|obstacle| {
+        check(
+            obstacle.center.len() == dimension
+                && obstacle.center.iter().all(|value| value.is_finite())
+                && obstacle.axes.len() == dimension
+                && obstacle.half_extents.len() == dimension
+                && obstacle.half_extents.iter().all(|value| value.is_finite() && *value >= 0.),
+            "Oriented box requires a finite center, a full frame and nonnegative half-extents",
+        )?;
+        let units = obstacle.axes.iter().map(|axis| travel_direction(curve, axis))
+            .collect::<Result<Vec<_>>>()?;
+        let exact = obstacle.axes.iter().map(|axis| {
+            axis.iter().copied().map(exact_motion_operand).collect::<Result<Vec<_>>>()
+        }).collect::<Result<Vec<_>>>()?;
+        for (i, a) in exact.iter().enumerate() {
+            for b in &exact[..i] {
+                let dot: num_rational::BigRational = a.iter().zip(b).map(|(a, b)| a * b).sum();
+                check(dot.is_zero(), "Oriented box axes must be pairwise orthogonal")?;
+            }
+        }
+        let center = obstacle.center.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        let minimum = obstacle.half_extents.iter().map(|value| -*value).collect::<Vec<_>>();
+        Ok(PreparedOrientedBox { center, units, minimum, maximum: obstacle.half_extents })
+    }).collect()
+}
+
+/// A fixed obstacle for a spherical tool moving along a NURBS curve.
+#[derive(Clone, Copy, Debug)]
+pub enum ToolpathObstacle<'a> {
+    Sphere(SphericalObstacle<'a>),
+    Capsule(CapsuleObstacle<'a>),
+    Box(BoxObstacle<'a>),
+    OrientedBox(OrientedBoxObstacle<'a>),
+}
+
+enum PreparedToolpathObstacle<'a> {
+    Sphere(PreparedSphere),
+    Capsule(PreparedCapsule),
+    Box(BoxObstacle<'a>),
+    OrientedBox(PreparedOrientedBox<'a>),
+}
+
+impl PreparedToolpathObstacle<'_> {
+    fn gap(&self, point: &[Interval], tool_radius: f64) -> Result<Interval> {
+        match self {
+            Self::Sphere((center, radius)) => {
+                let (lo, hi) = box_distance(point, center)?;
+                Interval::new(lo, hi)?.sub(*radius)
+            }
+            Self::Capsule(capsule) => capsule.gap(point),
+            Self::Box(bounds) => solid_box_gap(point, bounds.minimum, bounds.maximum, tool_radius),
+            Self::OrientedBox(bounds) => bounds.gap(point, tool_radius),
+        }
+    }
+}
+
+/// Refine the minimum signed clearance against mixed obstacle shapes in one
+/// search. The witness obstacle index refers to the original input order.
+pub fn measure_minimum_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, tool_radius)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, _| obstacles[index].gap(point, tool_radius),
+    )
+}
+
+/// Classify clearance for a spherical tool in a mixed obstacle scene.
+/// The gap arrays preserve scene order, including on unresolved cells.
+pub fn partition_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    partition_toolpath_clearance_with_margin(
+        curve, interval, obstacles, tool_radius, 0., parameter_tolerance, max_obstacle_cells,
+    )
+}
+
+/// Classify a required clearance margin in the same units as the tool radius.
+/// Gap bounds express surplus over the margin. A nonpositive surplus is a
+/// violation, and `first_contact` reports the first possible such violation.
+pub fn partition_toolpath_clearance_with_margin(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(margin.is_finite() && margin >= 0., "Clearance margin must be finite and nonnegative")?;
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every obstacle"));
+    }
+    curve.validate()?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, tool_radius)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let gap = obstacles[index].gap(point, tool_radius)?;
+            if margin == 0. { Ok(gap) } else { gap.sub(Interval::point(margin)) }
+        },
+    )
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ToolpathViolationLength {
+    /// Arc length of the union of all clearance violations, in model units.
+    pub bounds: [f64; 2],
+    pub work_obstacle_cells: usize,
+    pub work_length_cells: usize,
+}
+
+/// Bound arc length on the part of the curve with clearance at or below
+/// the margin. Unresolved cells contribute only to the upper bound. The
+/// length tolerance controls integration error separately from contact
+/// localization, which uses the parameter tolerance.
+pub fn measure_toolpath_clearance_violation_length(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_obstacle_cells: usize,
+    max_length_cells: usize,
+) -> Result<ToolpathViolationLength> {
+    measure_toolpath_violation_lengths(
+        curve, interval, obstacles, tool_radius, margin, parameter_tolerance,
+        length_tolerance, max_obstacle_cells, max_length_cells, false,
+    ).map(|report| report.union)
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathObstacleViolationLengths {
+    pub union: ToolpathViolationLength,
+    /// Arc length bounds in obstacle order. Overlaps contribute to each
+    /// relevant obstacle, while the union counts the shared length once.
+    pub by_obstacle: Vec<[f64; 2]>,
+}
+
+/// Integrate each candidate cell once and attribute its bounded length to
+/// every obstacle whose clearance may violate the margin.
+pub fn measure_toolpath_violation_lengths_by_obstacle(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_obstacle_cells: usize,
+    max_length_cells: usize,
+) -> Result<ToolpathObstacleViolationLengths> {
+    measure_toolpath_violation_lengths(
+        curve, interval, obstacles, tool_radius, margin, parameter_tolerance,
+        length_tolerance, max_obstacle_cells, max_length_cells, true,
+    )
+}
+
+fn measure_toolpath_violation_lengths(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_obstacle_cells: usize,
+    max_length_cells: usize,
+    by_obstacle: bool,
+) -> Result<ToolpathObstacleViolationLengths> {
+    validate(length_tolerance, max_length_cells)?;
+    let partition = partition_toolpath_clearance_with_margin(
+        curve, interval, obstacles, tool_radius, margin, parameter_tolerance, max_obstacle_cells,
+    )?;
+    let candidates = partition.cells.iter()
+        .filter(|cell| cell.status != DirectionalMotionStatus::Within)
+        .collect::<Vec<_>>();
+    if candidates.len() > max_length_cells {
+        return Err(resource("Violation length budget must cover every candidate cell"));
+    }
+    let tolerance = length_tolerance / candidates.len().max(1) as f64;
+    let mut bounds = Interval::point(0.);
+    let mut per_obstacle = if by_obstacle {
+        vec![Interval::point(0.); obstacles.len()]
+    } else {
+        Vec::new()
+    };
+    let mut remaining = max_length_cells;
+    for (index, candidate) in candidates.iter().enumerate() {
+        let budget = remaining / (candidates.len() - index);
+        let length = measure(curve, candidate.parameter_interval, tolerance, budget)?;
+        remaining -= length.cells;
+        let lower = if candidate.status == DirectionalMotionStatus::Exceeds {
+            length.bounds[0]
+        } else {
+            0.
+        };
+        bounds = bounds.add(Interval::new(lower, length.bounds[1])?)?;
+        for (total, &[lo, hi]) in per_obstacle.iter_mut().zip(&candidate.gap_bounds) {
+            if lo <= 0. {
+                let lower = if hi <= 0. { length.bounds[0] } else { 0. };
+                *total = total.add(Interval::new(lower, length.bounds[1])?)?;
+            }
+        }
+    }
+    Ok(ToolpathObstacleViolationLengths {
+        union: ToolpathViolationLength {
+            bounds: [bounds.lo.max(0.), bounds.hi],
+            work_obstacle_cells: partition.work_obstacle_cells,
+            work_length_cells: max_length_cells - remaining,
+        },
+        by_obstacle: per_obstacle.into_iter().map(|value| [value.lo.max(0.), value.hi]).collect(),
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathViolationDuration {
+    /// Time spent at or below the required clearance from any obstacle.
+    pub bounds: [f64; 2],
+    /// Time bounds per obstacle, in input order.
+    pub by_obstacle: Vec<[f64; 2]>,
+    pub work_obstacle_cells: usize,
+}
+
+/// Bound the duration of clearance violations under a uniform parameter clock.
+/// The union counts overlapping violations once and unresolved cells only
+/// contribute to upper bounds.
+pub fn measure_toolpath_clearance_violation_duration(
+    segment: TimedMotionSegment<'_>,
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathViolationDuration> {
+    use num_rational::BigRational;
+
+    check(segment.duration.is_finite() && segment.duration > 0., "Motion segment duration must be finite and positive")?;
+    let partition = partition_toolpath_clearance_with_margin(
+        segment.curve, segment.interval, obstacles, tool_radius, margin,
+        parameter_tolerance, max_obstacle_cells,
+    )?;
+    let rate = motion_clock_factor(segment.interval, segment.duration)?;
+    let zero = [BigRational::default(), BigRational::default()];
+    let mut union = zero.clone();
+    let mut per_obstacle = vec![zero; obstacles.len()];
+    for cell in &partition.cells {
+        if cell.status == DirectionalMotionStatus::Within {
+            continue;
+        }
+        let [a, b] = cell.parameter_interval;
+        let width = exact_motion_operand(b)? - exact_motion_operand(a)?;
+        union[1] += &width;
+        if cell.status == DirectionalMotionStatus::Exceeds {
+            union[0] += &width;
+        }
+        for (total, &[lo, hi]) in per_obstacle.iter_mut().zip(&cell.gap_bounds) {
+            if lo <= 0. {
+                total[1] += &width;
+            }
+            if hi <= 0. {
+                total[0] += &width;
+            }
+        }
+    }
+    let bounds = |[lo, hi]: [BigRational; 2]| -> Result<[f64; 2]> {
+        Ok([
+            round_motion_duration(&(lo * &rate), false)?,
+            round_motion_duration(&(hi * &rate), true)?,
+        ])
+    };
+    Ok(ToolpathViolationDuration {
+        bounds: bounds(union)?,
+        by_obstacle: per_obstacle.into_iter().map(bounds).collect::<Result<Vec<_>>>()?,
+        work_obstacle_cells: partition.work_obstacle_cells,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathChainViolationDuration {
+    pub total: ToolpathViolationDuration,
+    /// Reports in traversal order, each using its own segment clock.
+    pub segments: Vec<ToolpathViolationDuration>,
+}
+
+/// Bound violation time across a sequence of timed curve windows. The
+/// obstacle-cell budget reserves coverage for every span of every segment.
+/// Segment durations describe movement only.
+pub fn measure_toolpath_chain_violation_duration(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathChainViolationDuration> {
+    use num_rational::BigRational;
+
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let zero = [BigRational::default(), BigRational::default()];
+    let mut total = zero.clone();
+    let mut per_obstacle = vec![zero; obstacles.len()];
+    let mut reports = Vec::with_capacity(segments.len());
+    let mut remaining = max_obstacle_cells;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - index);
+        let report = measure_toolpath_clearance_violation_duration(
+            segment, obstacles, tool_radius, margin, parameter_tolerance, budget,
+        )?;
+        for (sum, bounds) in std::iter::once(&mut total).chain(&mut per_obstacle)
+            .zip(std::iter::once(report.bounds).chain(report.by_obstacle.iter().copied()))
+        {
+            sum[0] += exact_motion_operand(bounds[0])?;
+            sum[1] += exact_motion_operand(bounds[1])?;
+        }
+        reserve -= minimum;
+        remaining -= report.work_obstacle_cells;
+        reports.push(report);
+    }
+    let bounds = |[lo, hi]: [BigRational; 2]| -> Result<[f64; 2]> {
+        Ok([round_motion_duration(&lo, false)?, round_motion_duration(&hi, true)?])
+    };
+    Ok(ToolpathChainViolationDuration {
+        total: ToolpathViolationDuration {
+            bounds: bounds(total)?,
+            by_obstacle: per_obstacle.into_iter().map(bounds).collect::<Result<Vec<_>>>()?,
+            work_obstacle_cells: max_obstacle_cells - remaining,
+        },
+        segments: reports,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ToolpathChainMinimumClearance {
+    pub gap_bounds: [f64; 2],
+    pub within_tolerance: bool,
+    pub witness_segment: usize,
+    pub witness_obstacle: usize,
+    pub witness_parameter: f64,
+    /// Outward-rounded elapsed time of the witness.
+    pub witness_time_bounds: [f64; 2],
+    pub work_obstacle_cells: usize,
+}
+
+/// Measure the minimum signed gap along a timed sequence using one work
+/// budget. Segment clocks affect witness time, while geometry determines gap.
+pub fn measure_minimum_toolpath_chain_clearance(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathChainMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let mut remaining = max_obstacle_cells;
+    let mut elapsed = num_rational::BigRational::default();
+    let mut lower = f64::INFINITY;
+    let mut witness: Option<(usize, SphericalMinimumClearance, num_rational::BigRational)> = None;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - index);
+        let report = measure_minimum_toolpath_clearance(
+            segment.curve, segment.interval, obstacles, tool_radius, tolerance, budget,
+        )?;
+        lower = lower.min(report.gap_bounds[0]);
+        if witness.as_ref().is_none_or(|(_, current, _)| report.gap_bounds[1] < current.gap_bounds[1]) {
+            let rate = motion_clock_factor(segment.interval, segment.duration)?;
+            let parameter = exact_motion_operand(report.witness_parameter)?;
+            let start = exact_motion_operand(segment.interval[0])?;
+            let time = &elapsed + (parameter - start) * rate;
+            witness = Some((index, report, time));
+        }
+        elapsed += exact_motion_operand(segment.duration)?;
+        reserve -= minimum;
+        remaining -= report.work_obstacle_cells;
+    }
+    let (witness_segment, report, time) =
+        witness.ok_or_else(|| crate::numeric_err("Missing chain clearance witness"))?;
+    let upper = report.gap_bounds[1];
+    Ok(ToolpathChainMinimumClearance {
+        gap_bounds: [lower, upper],
+        within_tolerance: (upper - lower).next_up() <= tolerance,
+        witness_segment,
+        witness_obstacle: report.witness_obstacle,
+        witness_parameter: report.witness_parameter,
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+        work_obstacle_cells: max_obstacle_cells - remaining,
+    })
+}
+
+fn reserve_toolpath_chain_cells(
+    segments: &[TimedMotionSegment<'_>],
+    obstacle_count: usize,
+    max_obstacle_cells: usize,
+) -> Result<(Vec<usize>, usize)> {
+    check(!segments.is_empty() && obstacle_count != 0, "Chain clearance requires segments and obstacles")?;
+    if segments.len() > max_obstacle_cells / obstacle_count {
+        return Err(resource("Clearance budget must cover every segment and obstacle"));
+    }
+    let mut minima = Vec::with_capacity(segments.len());
+    let mut reserve = 0;
+    for segment in segments {
+        segment.curve.validate()?;
+        validate_travel_interval(segment.curve, segment.interval)?;
+        check(segment.duration.is_finite() && segment.duration > 0., "Motion segment duration must be finite and positive")?;
+        let spans = active_spans(segment.curve, segment.interval).count();
+        if spans > (max_obstacle_cells - reserve) / obstacle_count {
+            return Err(resource("Clearance budget must cover every segment span"));
+        }
+        let minimum = spans * obstacle_count;
+        reserve += minimum;
+        minima.push(minimum);
+    }
+    Ok((minima, reserve))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FirstToolpathChainViolation {
+    Clear,
+    Possible {
+        earliest_time: f64,
+        earliest_segment: usize,
+    },
+    Confirmed {
+        time_bounds: [f64; 2],
+        earliest_segment: usize,
+        witness_segment: usize,
+        obstacle_index: usize,
+    },
+}
+
+/// Locate the first possible or confirmed clearance violation in elapsed
+/// chain time. Earlier unresolved contacts still bound the lower endpoint
+/// when a later segment provides the first confirmed witness.
+pub fn first_toolpath_chain_violation(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<FirstToolpathChainViolation> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let dimension = segments[0].curve.control_points[0].len();
+    check(
+        segments.iter().all(|segment| segment.curve.control_points[0].len() == dimension),
+        "Toolpath segments must match obstacle dimensions",
+    )?;
+    let mut elapsed = num_rational::BigRational::default();
+    let mut earliest = None;
+    let mut remaining = max_obstacle_cells;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - index);
+        let partition = partition_toolpath_clearance_with_margin(
+            segment.curve, segment.interval, obstacles, tool_radius, margin,
+            parameter_tolerance, budget,
+        )?;
+        let rate = motion_clock_factor(segment.interval, segment.duration)?;
+        let start = exact_motion_operand(segment.interval[0])?;
+        let time = |parameter, upper| {
+            let exact = &elapsed + (exact_motion_operand(parameter)? - &start) * &rate;
+            round_motion_duration(&exact, upper)
+        };
+        match partition.first_contact() {
+            FirstToolpathContact::Clear => {}
+            FirstToolpathContact::Possible { earliest_parameter } => {
+                if earliest.is_none() {
+                    earliest = Some((time(earliest_parameter, false)?, index));
+                }
+            }
+            FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } => {
+                let (lower, earliest_segment) = match earliest {
+                    Some(bound) => bound,
+                    None => (time(lo, false)?, index),
+                };
+                return Ok(FirstToolpathChainViolation::Confirmed {
+                    time_bounds: [lower, time(hi, true)?],
+                    earliest_segment,
+                    witness_segment: index,
+                    obstacle_index,
+                });
+            }
+        }
+        elapsed += exact_motion_operand(segment.duration)?;
+        reserve -= minimum;
+        remaining -= partition.work_obstacle_cells;
+    }
+    Ok(match earliest {
+        None => FirstToolpathChainViolation::Clear,
+        Some((earliest_time, earliest_segment)) => FirstToolpathChainViolation::Possible {
+            earliest_time,
+            earliest_segment,
+        },
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LastToolpathChainViolation {
+    Clear,
+    Possible {
+        latest_time: f64,
+        latest_segment: usize,
+    },
+    Confirmed {
+        time_bounds: [f64; 2],
+        latest_segment: usize,
+        witness_segment: usize,
+        obstacle_index: usize,
+    },
+}
+
+/// Bracket the last clearance violation in elapsed chain time. An unresolved
+/// later cell sets the upper endpoint even if the witness is earlier.
+pub fn last_toolpath_chain_violation(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<LastToolpathChainViolation> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let dimension = segments[0].curve.control_points[0].len();
+    check(
+        segments.iter().all(|segment| segment.curve.control_points[0].len() == dimension),
+        "Toolpath segments must match obstacle dimensions",
+    )?;
+    let durations = segments.iter().map(|segment| exact_motion_operand(segment.duration))
+        .collect::<Result<Vec<_>>>()?;
+    let mut elapsed: num_rational::BigRational = durations.iter().cloned().sum();
+    let mut latest = None;
+    let mut remaining = max_obstacle_cells;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate().rev() {
+        let budget = minimum + (remaining - reserve) / (index + 1);
+        let partition = partition_toolpath_clearance_with_margin(
+            segment.curve, segment.interval, obstacles, tool_radius, margin,
+            parameter_tolerance, budget,
+        )?;
+        elapsed -= &durations[index];
+        let rate = motion_clock_factor(segment.interval, segment.duration)?;
+        let start = exact_motion_operand(segment.interval[0])?;
+        let time = |parameter, upper| {
+            let exact = &elapsed + (exact_motion_operand(parameter)? - &start) * &rate;
+            round_motion_duration(&exact, upper)
+        };
+        for cell in partition.cells.iter().rev() {
+            if cell.status == DirectionalMotionStatus::Within {
+                continue;
+            }
+            let end = cell.parameter_interval[1];
+            let (upper, latest_segment) = match latest {
+                Some(bound) => bound,
+                None => {
+                    let bound = (time(end, true)?, index);
+                    latest = Some(bound);
+                    bound
+                }
+            };
+            if let Some(obstacle_index) = cell.gap_bounds.iter().position(|[_, hi]| *hi <= 0.) {
+                return Ok(LastToolpathChainViolation::Confirmed {
+                    time_bounds: [time(end, false)?, upper],
+                    latest_segment,
+                    witness_segment: index,
+                    obstacle_index,
+                });
+            }
+        }
+        reserve -= minimum;
+        remaining -= partition.work_obstacle_cells;
+    }
+    Ok(match latest {
+        None => LastToolpathChainViolation::Clear,
+        Some((latest_time, latest_segment)) => LastToolpathChainViolation::Possible {
+            latest_time,
+            latest_segment,
+        },
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TimedToolpathClearanceInterval {
+    pub segment_index: usize,
+    pub parameter_interval: [f64; 2],
+    /// Elapsed-time enclosures for the start and end, respectively. The
+    /// classification applies between the exact endpoints.
+    pub time_endpoint_bounds: [[f64; 2]; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathChainClearanceTimeline {
+    pub intervals: Vec<TimedToolpathClearanceInterval>,
+    pub work_obstacle_cells: usize,
+}
+
+impl ToolpathChainClearanceTimeline {
+    /// Bound the longest continuous clearance violation. Confirmed intervals
+    /// establish the lower bound, and runs without a clear interval establish
+    /// the upper bound. Both runs may extend across segment boundaries.
+    pub fn longest_violation_duration(&self) -> [f64; 2] {
+        let mut confirmed_start = None;
+        let mut possible_start = None;
+        let mut longest = [0_f64; 2];
+        for interval in &self.intervals {
+            let [start, end] = interval.time_endpoint_bounds;
+            if interval.status == DirectionalMotionStatus::Within {
+                confirmed_start = None;
+                possible_start = None;
+                continue;
+            }
+            let earliest = *possible_start.get_or_insert(start[0]);
+            let upper = if end[1].is_infinite() {
+                f64::INFINITY
+            } else {
+                (end[1] - earliest).next_up()
+            };
+            longest[1] = longest[1].max(upper);
+            if interval.status == DirectionalMotionStatus::Exceeds {
+                let latest = *confirmed_start.get_or_insert(start[1]);
+                let lower = if latest.is_infinite() {
+                    0.
+                } else {
+                    (end[0] - latest).next_down()
+                };
+                longest[0] = longest[0].max(lower);
+            } else {
+                confirmed_start = None;
+            }
+        }
+        longest
+    }
+}
+
+/// Map clearance cells to elapsed chain time and merge adjacent cells with
+/// equal status within each segment. Each segment uses its own uniform clock.
+pub fn toolpath_chain_clearance_timeline(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathChainClearanceTimeline> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let mut elapsed = num_rational::BigRational::default();
+    let mut remaining = max_obstacle_cells;
+    let mut intervals: Vec<TimedToolpathClearanceInterval> = Vec::new();
+    for (segment_index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - segment_index);
+        let partition = partition_toolpath_clearance_with_margin(
+            segment.curve, segment.interval, obstacles, tool_radius, margin,
+            parameter_tolerance, budget,
+        )?;
+        let rate = motion_clock_factor(segment.interval, segment.duration)?;
+        let start = exact_motion_operand(segment.interval[0])?;
+        let time = |parameter| -> Result<[f64; 2]> {
+            let exact = &elapsed + (exact_motion_operand(parameter)? - &start) * &rate;
+            Ok([round_motion_duration(&exact, false)?, round_motion_duration(&exact, true)?])
+        };
+        for cell in &partition.cells {
+            let [a, b] = cell.parameter_interval;
+            if let Some(last) = intervals.last_mut()
+                && last.segment_index == segment_index
+                && last.status == cell.status
+                && last.parameter_interval[1] == a
+            {
+                last.parameter_interval[1] = b;
+                last.time_endpoint_bounds[1] = time(b)?;
+                continue;
+            }
+            intervals.push(TimedToolpathClearanceInterval {
+                segment_index,
+                parameter_interval: [a, b],
+                time_endpoint_bounds: [time(a)?, time(b)?],
+                status: cell.status,
+            });
+        }
+        elapsed += exact_motion_operand(segment.duration)?;
+        reserve -= minimum;
+        remaining -= partition.work_obstacle_cells;
+    }
+    Ok(ToolpathChainClearanceTimeline {
+        intervals,
+        work_obstacle_cells: max_obstacle_cells - remaining,
+    })
+}
+
+fn prepare_toolpath_obstacles<'a>(
+    curve: &Curve,
+    obstacles: &[ToolpathObstacle<'a>],
+    tool_radius: f64,
+) -> Result<Vec<PreparedToolpathObstacle<'a>>> {
+    obstacles.iter().map(|obstacle| {
+        Ok(match obstacle {
+            ToolpathObstacle::Sphere(sphere) => PreparedToolpathObstacle::Sphere(
+                prepare_spherical_obstacles(curve, std::slice::from_ref(sphere), tool_radius)?.remove(0),
+            ),
+            ToolpathObstacle::Capsule(capsule) => PreparedToolpathObstacle::Capsule(
+                prepare_capsules(curve, std::slice::from_ref(capsule), tool_radius)?.remove(0),
+            ),
+            ToolpathObstacle::Box(bounds) => {
+                validate_box_obstacles(curve, std::slice::from_ref(bounds))?;
+                PreparedToolpathObstacle::Box(*bounds)
+            }
+            ToolpathObstacle::OrientedBox(bounds) => PreparedToolpathObstacle::OrientedBox(
+                prepare_oriented_boxes(curve, std::slice::from_ref(bounds))?.remove(0),
+            ),
+        })
+    }).collect()
+}
+
+fn solid_box_gap(
+    point: &[Interval],
+    minimum: &[f64],
+    maximum: &[f64],
+    tool_radius: f64,
+) -> Result<Interval> {
+    let mut residuals = Vec::with_capacity(point.len());
+    for ((coord, &a), &b) in point.iter().zip(minimum).zip(maximum) {
+        if a <= coord.lo && coord.hi <= b {
+            residuals.push(Interval::point(0.));
+            continue;
+        }
+        let below = Interval::point(a).sub(*coord)?;
+        let above = coord.sub(Interval::point(b))?;
+        residuals.push(Interval::new(
+            below.lo.max(above.lo).max(0.),
+            below.hi.max(above.hi).max(0.),
+        )?);
+    }
+    if residuals.iter().all(|axis| axis.hi == 0.) {
+        return Ok(Interval::point(-tool_radius));
+    }
+    let distance = norm(&residuals)?;
+    if tool_radius == 0. { Ok(distance) } else { distance.sub(Interval::point(tool_radius)) }
+}
+
+/// Classify clearance against spherical obstacles with a tool radius that
+/// varies linearly over the source parameter window. Radii are in model units.
+pub fn partition_variable_radius_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every sphere"));
+    }
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, 0.)?;
+    partition_variable_radial_clearance(
+        curve, interval, tool_radii, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+/// Check a linearly changing tool radius against a mixed obstacle scene.
+/// Every gap array follows the original obstacle order.
+pub fn partition_variable_radius_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every obstacle"));
+    }
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    partition_variable_radial_clearance(
+        curve, interval, tool_radii, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, 0.),
+    )
+}
+
+fn partition_variable_radial_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    tool_radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    base_gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalClearancePartition> {
+    let radius_range = linear_tool_radius(interval, tool_radii)?;
+    let initial = active_spans(curve, interval).map(|span| ([span, 0], [
+        curve.knots[span].max(interval[0]),
+        curve.knots[span + 1].min(interval[1]),
+    ]));
+    partition_profile_clearance_cells(
+        curve, initial, parameter_tolerance, max_cells, obstacle_count,
+        |_, domain| radius_range(domain), base_gap,
+    )
+}
+
+/// Check a continuous piecewise-linear radius profile against a mixed scene.
+/// Each entry is `(source parameter, radius)`. The first and last entries
+/// define the traversal window; parameters must be strictly increasing.
+pub fn partition_profiled_radius_toolpath_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[ToolpathObstacle<'_>],
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    partition_profile_clearance_cells(
+        curve, initial, parameter_tolerance, max_cells, obstacles.len(),
+        |index, domain| profiles[index](domain),
+        |point, index| obstacles[index].gap(point, 0.),
+    )
+}
+
+/// Refine the minimum signed gap in a mixed scene with a continuous
+/// piecewise-linear tool radius. Radius breaks are sampled exactly.
+pub fn measure_minimum_profiled_radius_toolpath_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[ToolpathObstacle<'_>],
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    measure_minimum_radial_cells(
+        curve, initial, radius_profile[0].0, tolerance, max_cells, obstacles.len(),
+        |point, index, profile, domain| {
+            obstacles[index].gap(point, 0.)?.sub(profiles[profile](domain)?)
+        },
+    )
+}
+
+fn prepare_radius_profile(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    max_cells: usize,
+) -> Result<(Vec<([usize; 2], [f64; 2])>, Vec<impl Fn([f64; 2]) -> Result<Interval>>)> {
+    check(radius_profile.len() >= 2, "Radius profile requires at least two entries")?;
+    if radius_profile.len() - 1 > max_cells {
+        return Err(resource("Clearance budget must cover every radius profile span"));
+    }
+    curve.validate()?;
+    check(radius_profile.iter().all(|(u, radius)| {
+        u.is_finite() && radius.is_finite() && *radius >= 0.
+    }), "Radius profile entries must have finite parameters and nonnegative finite radii")?;
+    let mut initial = Vec::new();
+    let mut profiles = Vec::with_capacity(radius_profile.len() - 1);
+    for (index, pair) in radius_profile.windows(2).enumerate() {
+        let [(a, r0), (b, r1)] = [pair[0], pair[1]];
+        let interval = [a, b];
+        validate_travel_interval(curve, interval)?;
+        for span in active_spans(curve, interval) {
+            if initial.len() == max_cells {
+                return Err(resource("Clearance budget must cover the combined knot and radius spans"));
+            }
+            initial.push(([span, index], [a.max(curve.knots[span]), b.min(curve.knots[span + 1])]));
+        }
+        profiles.push(linear_tool_radius(interval, [r0, r1])?);
+    }
+    Ok((initial, profiles))
+}
+
+fn partition_profile_clearance_cells(
+    curve: &Curve,
+    initial: impl IntoIterator<Item = ([usize; 2], [f64; 2])>,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    radius_range: impl Fn(usize, [f64; 2]) -> Result<Interval>,
+    base_gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalClearancePartition> {
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, profile], domain| {
+            let tool = radius_range(profile, domain)?;
+            let jets = curve_jets::enclose(curve, span, domain)?;
+            let gaps = (0..obstacle_count).map(|index| {
+                let gap = base_gap(&jets[0], index)?.sub(tool)?;
+                Ok([gap.lo, gap.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let (status, refine) = classify_radial_gaps(&gaps);
+            Ok((SphericalClearanceCell {
+                parameter_interval: domain,
+                span,
+                gap_bounds: gaps,
+                status,
+            }, refine))
+        },
+    )?;
+    Ok(SphericalClearancePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_obstacle_cells: work_cells * obstacle_count,
+    })
+}
+
+/// Refine the minimum signed gap while the tool radius varies linearly.
+/// The witness evaluates position and radius at the same source parameter.
+pub fn measure_minimum_variable_radius_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radii: [f64; 2],
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, 0.)?;
+    let radius_range = linear_tool_radius(interval, tool_radii)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, domain| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)?.sub(radius_range(domain)?)
+        },
+    )
+}
+
+/// Refine the minimum signed gap against a mixed obstacle scene while the
+/// spherical tool's radius varies linearly over the parameter window.
+pub fn measure_minimum_variable_radius_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radii: [f64; 2],
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    let radius_range = linear_tool_radius(interval, tool_radii)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, domain| obstacles[index].gap(point, 0.)?.sub(radius_range(domain)?),
+    )
+}
+
+fn linear_tool_radius(
+    interval: [f64; 2],
+    tool_radii: [f64; 2],
+) -> Result<impl Fn([f64; 2]) -> Result<Interval>> {
+    let start = exact_motion_operand(interval[0])?;
+    let width = exact_motion_operand(interval[1])? - &start;
+    let radius_start = exact_motion_operand(tool_radii[0])?;
+    let slope = (exact_motion_operand(tool_radii[1])? - &radius_start) / width;
+    Ok(move |domain: [f64; 2]| {
+            let radius_at = |parameter| -> Result<_> {
+                Ok(&radius_start + &slope * (exact_motion_operand(parameter)? - &start))
+            };
+            let a = radius_at(domain[0])?;
+            let b = radius_at(domain[1])?;
+            Interval::new(
+                round_motion_duration(std::cmp::min(&a, &b), false)?,
+                round_motion_duration(std::cmp::max(&a, &b), true)?,
+            )
+    })
+}
+
+fn classify_radial_gaps(gaps: &[[f64; 2]]) -> (DirectionalMotionStatus, bool) {
+    let status = if gaps.iter().any(|[_, hi]| *hi <= 0.) {
+        DirectionalMotionStatus::Exceeds
+    } else if gaps.iter().all(|[lo, _]| *lo > 0.) {
+        DirectionalMotionStatus::Within
+    } else {
+        DirectionalMotionStatus::Undetermined
+    };
+    let refine = gaps.iter().any(|[lo, hi]| *lo <= 0. && *hi > 0.);
+    (status, refine)
+}
+
+fn partition_radial_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalClearancePartition> {
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let gaps = (0..obstacle_count).map(|index| {
+                let gap = gap(&jets[0], index)?;
+                Ok([gap.lo, gap.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let (status, refine) = classify_radial_gaps(&gaps);
+            Ok(((gaps, status), refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (gap_bounds, status))| {
+        SphericalClearanceCell { parameter_interval, span, gap_bounds, status }
+    }).collect();
+    Ok(SphericalClearancePartition { cells, work_obstacle_cells: work_cells * obstacle_count })
+}
+
 fn partition_motion_cells<T>(
     curve: &Curve,
     interval: [f64; 2],
@@ -1977,28 +4926,37 @@ fn partition_motion_cells<T>(
     max_cells: usize,
     mut classify: impl FnMut(&[Vec<Interval>], Interval) -> Result<(T, bool)>,
 ) -> Result<(Vec<(usize, [f64; 2], T)>, usize)> {
-    use std::collections::VecDeque;
-
     validate(parameter_tolerance, max_cells)?;
     validate_travel_interval(curve, interval)?;
-    let mut pending = VecDeque::new();
-    for span in active_spans(curve, interval) {
-        if pending.len() == max_cells {
-            return Err(resource("Initial motion spans exceed the work budget"));
-        }
-        pending.push_back((span, [
-            curve.knots[span].max(interval[0]),
-            curve.knots[span + 1].min(interval[1]),
-        ]));
+    let initial = active_spans(curve, interval).map(|span| (span, [
+        curve.knots[span].max(interval[0]),
+        curve.knots[span + 1].min(interval[1]),
+    ]));
+    partition_enclosed_cells(initial, parameter_tolerance, max_cells, |span, domain| {
+        let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        classify(&jets, width)
+    })
+}
+
+fn partition_enclosed_cells<Span: Copy, T>(
+    initial: impl IntoIterator<Item = (Span, [f64; 2])>,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    mut classify: impl FnMut(Span, [f64; 2]) -> Result<(T, bool)>,
+) -> Result<(Vec<(Span, [f64; 2], T)>, usize)> {
+    use std::collections::VecDeque;
+
+    let mut pending: VecDeque<_> = initial.into_iter().collect();
+    if pending.len() > max_cells {
+        return Err(resource("Initial motion spans exceed the work budget"));
     }
 
     let mut cells = Vec::new();
     let mut work_cells = 0;
     while let Some((span, domain @ [a, b])) = pending.pop_front() {
         work_cells += 1;
-        let width = Interval::point(b).sub(Interval::point(a))?;
-        let jets = curve_jets::enclose(curve, span, domain)?;
-        let (statuses, refine) = classify(&jets, width)?;
+        let (statuses, refine) = classify(span, domain)?;
         let middle = crate::distance_bounds::midpoint(a, b);
         if refine
             && (b - a).next_up() > parameter_tolerance

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0734",
+  "testedBase": "47f2aa4b174cf67084bca9fb9057c197bd4ef8ca",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 359,
+  "scope": [
+    "Enclose minimum instantaneous gap for two spherical tools sharing a curve clock.",
+    "Check simultaneous motion, different knot grids, the closest time, radius subtraction, and initial budget refusal."
+  ],
+  "logSha256": "0159d0f23f8d5b17481edc8c55a18d7088cd0b9ccb9d434e9213fb6f35b7ce3c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "8164a497dd3a8d41f17e58907fcf379ec2920af29f700aa5bf8a752e78dc4b31",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8190f6778808fb7d9affce0b200633df9a0ed1c94f2dff59a15eff1f8822a4aa"
+  }
+}
