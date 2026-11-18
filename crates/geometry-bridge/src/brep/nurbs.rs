@@ -1447,6 +1447,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
+            BalanceTolerance,
             bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
             bound_radius_of_gyration,
             periodic_trim_patch_set_mass_with_density,
@@ -1511,6 +1512,18 @@ pub fn exact_periodic_trim_patch_set_density_request(
         })
         .transpose()?;
     let inertia_axis = optional_inertia_axis(request)?;
+    let axis_balance_tolerance = request
+        .get("axisBalanceToleranceMm")
+        .map(|_| -> Result<f64> {
+            let tolerance: f64 = field(request, "axisBalanceToleranceMm")?;
+            if !tolerance.is_finite() || tolerance < 0. || inertia_axis.is_none() {
+                return Err(input(
+                    "Axis balance requires an inertia axis and a finite nonnegative tolerance",
+                ));
+            }
+            Ok(tolerance)
+        })
+        .transpose()?;
     let include_axis_radius = include_axis_radius(request, inertia_axis.is_some())?;
     let center_plane = request
         .get("centerOfMassPlane")
@@ -1571,6 +1584,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_principal_axes {
         response["principalAxes"] = Value::Null;
     }
+    if axis_balance_tolerance.is_some() {
+        response["axisBalance"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1603,6 +1619,17 @@ pub fn exact_periodic_trim_patch_set_density_request(
             json!(report.first_mass_moment_about_plane(point, normal)?);
     }
     if let Some((point, direction)) = inertia_axis {
+        if let Some(tolerance) = axis_balance_tolerance
+            && let Some((bounds, status)) =
+                report.bound_balance_about_line(point, direction, tolerance)?
+        {
+            let status = match status {
+                BalanceTolerance::Within => "within",
+                BalanceTolerance::Outside => "outside",
+                BalanceTolerance::Undetermined => "undetermined",
+            };
+            response["axisBalance"] = json!({"eccentricityBoundsMm": bounds, "status": status});
+        }
         let moment = report.bound_inertia_about_line(point, direction)?;
         response["axisMomentBoundsKgMm2"] = json!(moment);
         if include_axis_radius

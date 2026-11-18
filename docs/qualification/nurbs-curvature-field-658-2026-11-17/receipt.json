@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0658",
+  "testedBase": "12719e6f5f94c97a289b4fe905d99a4dc349d860",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 307,
+  "scope": [
+    "Expose certified eccentricity and the tolerance classification for a requested rotation axis.",
+    "Check analytic weighted eccentricity, tolerance classification, incomplete integration and validation through the compiled ABI."
+  ],
+  "logSha256": "8c77942eab364d25510718a7c872c6cfcb0f24f3d247045309d5caf58143e747",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "5cf6f64731e8c77b937eef151fdc4e1ce8d8996ef463b2016c6e01dd46cb2298",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "d5e081070e99f103be6554e2665736681f538a4843b15a3eef4e27073f2ea272",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "39adc6eba5f04f179e76786c65182fd41c6d23436e5254cb8acc7b4cee9566ba"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

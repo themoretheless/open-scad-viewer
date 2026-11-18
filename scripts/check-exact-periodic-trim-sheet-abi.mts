@@ -38,6 +38,7 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  axisBalance?: { eccentricityBoundsMm: [number, number]; status: string } | null
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
@@ -485,3 +486,13 @@ const axisAlignment = alignmentAxes?.[0]?.angleSineBounds
 assert.ok(axisAlignment && axisAlignment[0] <= Math.SQRT1_2 && Math.SQRT1_2 <= axisAlignment[1])
 assert.deepEqual(alignmentAxes?.slice(1), [null, null])
 console.log('WASM ABI enclosed the probe angle sine to a certified principal axis.')
+
+assert.equal(weightedAxis.axisBalance, undefined)
+const balanceOptions = { ...weightedAxisOptions, axisBalanceToleranceMm: 0.5 }
+const balance = call(request.maxWork, densityOp, balanceOptions).axisBalance
+const expectedEccentricity = Math.hypot(1 - expectedCenterX, expectedCenterY)
+assert.ok(balance && balance.eccentricityBoundsMm[0] <= expectedEccentricity
+  && expectedEccentricity <= balance.eccentricityBoundsMm[1])
+assert.equal(balance.status, 'outside')
+assert.equal(call(request.maxWork, densityOp, { ...balanceOptions, maxSurfaceCells: 2 }).axisBalance, null)
+console.log('WASM ABI classified certified eccentricity against the balance tolerance.')

@@ -1101,3 +1101,29 @@ fn patch_set_density_encloses_direction_angle_to_principal_axis() {
     request["principalAxisProbeDirection"] = json!([0., 0., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_classifies_eccentricity_of_requested_balance_axis() {
+    let mut request = patch_set_density_request(20_000);
+    request["axisBalanceToleranceMm"] = json!(0.5);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    let expected = (1. - 0.34375_f64 / 2.875).hypot(0.375 / 2.875);
+    for (tolerance, status) in [(0.5, "outside"), (2., "within")] {
+        request["axisBalanceToleranceMm"] = json!(tolerance);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let balance = &response["value"]["axisBalance"];
+        let bounds = &balance["eccentricityBoundsMm"];
+        assert!(
+            bounds[0].as_f64().unwrap() <= expected && expected <= bounds[1].as_f64().unwrap()
+        );
+        assert_eq!(balance["status"], status);
+    }
+    request["maxSurfaceCells"] = json!(2);
+    let limited = run(&request);
+    assert_eq!(limited["ok"], true, "{limited}");
+    assert_eq!(limited["value"].get("axisBalance"), Some(&Value::Null));
+    request["axisBalanceToleranceMm"] = json!(-1.);
+    assert_eq!(run(&request)["ok"], false);
+}
