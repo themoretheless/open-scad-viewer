@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0690",
+  "testedBase": "c92480dfb3b09d7025d1dd42a1fc19010251a1e2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 302,
+  "scope": [
+    "Classify uniform-clock traversal at an inclusive deadline for all motion axes.",
+    "Check nonbinary clock ratios, an independently limiting axis, the original-duration floor, invalid deadlines, and coarse uncertainty resolved by refinement."
+  ],
+  "logSha256": "bbc58fa5eef201d8ba23a1bec9f613ba324119723d6ad91e7accbd1714536a44",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7040cc4a98c452aff91eecd144526593db3f057febb64b4fc79d35d56a22779d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c6f3a216d39295f751f552c6aac93566a776f7405fc2d16ae83466060375be51"
+  }
+}

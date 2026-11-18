@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 689,
-  "unallocatedCount": 311,
+  "specifiedCount": 690,
+  "unallocatedCount": 310,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16783,6 +16783,25 @@
       "remainingQualification": [
         "Enclose the minimum uniform-clock traversal time under simultaneous axis limits.",
         "Check the clipped source time window, common jerk-limited duration, unit slowdown, and duration overflow with finite dilation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0690",
+      "name": "Сертифицированная проверка срока прохода NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_multi_axis_motion_deadline",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-690-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-690-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify uniform-clock traversal at an inclusive deadline for all motion axes.",
+        "Check nonbinary clock ratios, an independently limiting axis, the original-duration floor, invalid deadlines, and coarse uncertainty resolved by refinement.",
         "WASM and application integration are separate."
       ]
     }

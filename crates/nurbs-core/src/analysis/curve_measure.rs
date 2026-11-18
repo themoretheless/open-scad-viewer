@@ -1220,36 +1220,47 @@ pub fn multi_axis_motion_slowdown_bounds(
     tolerances: [f64; 3],
     max_cells: usize,
 ) -> Result<MultiAxisSlowdownReport> {
+    let mut axis_bounds = Vec::new();
+    let mut bounds = [1_f64; 2];
+    let cells = measure_motion_axes(curve, interval, axes, tolerances, max_cells, |axis, report| {
+        let axis_bound = slowdown_from_motion_report(report, axis.limits)?;
+        bounds[0] = bounds[0].max(axis_bound[0]);
+        bounds[1] = bounds[1].max(axis_bound[1]);
+        axis_bounds.push(axis_bound);
+        Ok(())
+    })?;
+    Ok(MultiAxisSlowdownReport { bounds, axis_bounds, cells })
+}
+
+fn measure_motion_axes(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    tolerances: [f64; 3],
+    max_cells: usize,
+    mut visit: impl FnMut(&MotionAxis<'_>, &DirectionalMotionReport) -> Result<()>,
+) -> Result<usize> {
     curve.validate()?;
     for tolerance in tolerances {
         validate(tolerance, max_cells)?;
     }
     validate_travel_interval(curve, interval)?;
-    check(!axes.is_empty(), "Motion slowdown requires at least one axis")?;
+    check(!axes.is_empty(), "Motion analysis requires at least one axis")?;
     let minimum = 3 * active_spans(curve, interval).count();
     if axes.len() > max_cells / minimum {
         return Err(resource("Initial motion spans exceed the shared budget"));
     }
 
     let mut remaining = max_cells;
-    let mut axis_bounds = Vec::with_capacity(axes.len());
-    let mut bounds = [1_f64; 2];
     for (index, axis) in axes.iter().enumerate() {
         let budget = remaining / (axes.len() - index) / 3;
         let report = check_directional_motion_limits(
             curve, interval, axis.direction, axis.limits, tolerances, budget,
         )?;
         remaining -= report.speed.cells + report.acceleration.cells + report.jerk.cells;
-        let axis_bound = slowdown_from_motion_report(&report, axis.limits)?;
-        bounds[0] = bounds[0].max(axis_bound[0]);
-        bounds[1] = bounds[1].max(axis_bound[1]);
-        axis_bounds.push(axis_bound);
+        visit(axis, &report)?;
     }
-    Ok(MultiAxisSlowdownReport {
-        bounds,
-        axis_bounds,
-        cells: max_cells - remaining,
-    })
+    Ok(max_cells - remaining)
 }
 
 #[derive(Clone, Debug)]
@@ -1304,6 +1315,71 @@ pub fn multi_axis_motion_duration_bounds(
         duration_endpoint(slowdown.bounds[1], true)?,
     ];
     Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionDeadlineReport {
+    pub status: DirectionalMotionStatus,
+    /// Results for the axis limits in input order. The original-duration floor
+    /// applies to the overall status.
+    pub axis_statuses: Vec<DirectionalMotionStatus>,
+    pub cells: usize,
+}
+
+/// Check an inclusive deadline for uniform traversal with slowdown only.
+/// Compare derivative bounds in the proposed clock using exact rational
+/// arithmetic, even when the duration ratio is not representable as binary64.
+pub fn check_multi_axis_motion_deadline(
+    curve: &Curve,
+    time_window: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    deadline: f64,
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<MultiAxisMotionDeadlineReport> {
+    use num_rational::BigRational;
+
+    check(deadline.is_finite() && deadline > 0., "Deadline must be positive and finite")?;
+    curve.validate()?;
+    validate_travel_interval(curve, time_window)?;
+    let exact = |value| {
+        BigRational::from_float(value).ok_or_else(|| crate::numeric_err("Nonfinite motion operand"))
+    };
+    let factor = exact(deadline)? / (exact(time_window[1])? - exact(time_window[0])?);
+    let powers = [factor.clone(), &factor * &factor, factor.pow(3)];
+    let mut axis_statuses = Vec::new();
+    let cells = measure_motion_axes(curve, time_window, axes, tolerances, max_cells, |axis, report| {
+        let mut status = DirectionalMotionStatus::Within;
+        for (([lo, hi], limit), power) in [
+            (report.speed.bounds, axis.limits.speed),
+            (report.acceleration.bounds, axis.limits.acceleration),
+            (report.jerk.bounds, axis.limits.jerk),
+        ]
+        .into_iter()
+        .zip(&powers)
+        {
+            let allowed = exact(limit)? * power;
+            if exact(lo)? > allowed {
+                status = DirectionalMotionStatus::Exceeds;
+                break;
+            }
+            if exact(hi)? > allowed {
+                status = DirectionalMotionStatus::Undetermined;
+            }
+        }
+        axis_statuses.push(status);
+        Ok(())
+    })?;
+    let status = if factor < BigRational::from_integer(1.into())
+        || axis_statuses.contains(&DirectionalMotionStatus::Exceeds)
+    {
+        DirectionalMotionStatus::Exceeds
+    } else if axis_statuses.contains(&DirectionalMotionStatus::Undetermined) {
+        DirectionalMotionStatus::Undetermined
+    } else {
+        DirectionalMotionStatus::Within
+    };
+    Ok(MultiAxisMotionDeadlineReport { status, axis_statuses, cells })
 }
 
 fn measure_directional_derivative_peak(

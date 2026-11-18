@@ -8913,3 +8913,64 @@ fn multi_axis_motion_duration_encloses_overflow_with_finite_dilation() {
     assert!(report.slowdown.bounds[1].is_finite());
     assert_eq!(report.duration_bounds, [f64::MAX, f64::INFINITY]);
 }
+
+#[test]
+fn motion_deadline_distinguishes_limiting_axis_and_slowdown_floor() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        check_multi_axis_motion_deadline,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 8. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[1., 0.],
+            limits: DirectionalMotionLimits { speed: 100., acceleration: 100., jerk: 100. },
+        },
+        MotionAxis {
+            direction: &[0., 1.],
+            limits: DirectionalMotionLimits { speed: 96., acceleration: 96., jerk: 0.75 },
+        },
+    ];
+    let check = |axes: &[MotionAxis<'_>], deadline| {
+        check_multi_axis_motion_deadline(&curve, [2.5, 4.], axes, deadline, [1e-6; 3], 64)
+    };
+    let short = check(&axes, 5.).unwrap();
+    assert_eq!(short.axis_statuses, [Status::Within, Status::Exceeds]);
+    assert_eq!(short.status, Status::Exceeds);
+    assert_eq!(check(&axes, 7.).unwrap().status, Status::Within);
+    let floor = check(&axes[..1], 1.).unwrap();
+    assert_eq!(floor.axis_statuses, [Status::Within]);
+    assert_eq!(floor.status, Status::Exceeds);
+    assert!(check(&axes, f64::INFINITY).is_err());
+}
+
+#[test]
+fn motion_deadline_retains_unknown_status_until_the_peak_is_resolved() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        check_multi_axis_motion_deadline,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 0.3, acceleration: 1., jerk: 1. },
+    }];
+    let check = |cells| {
+        check_multi_axis_motion_deadline(&curve, [2., 6.], &axes, 5.5, [1e-5; 3], cells).unwrap()
+    };
+    assert_eq!(check(3).status, Status::Undetermined);
+    assert_eq!(check(3).cells, 3);
+    assert_eq!(check(96).status, Status::Within);
+}
