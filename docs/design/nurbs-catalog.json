@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 988,
-  "unallocatedCount": 12,
+  "specifiedCount": 989,
+  "unallocatedCount": 11,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22452,6 +22452,26 @@
       ],
       "remainingQualification": [
         "Named path prefix; additive mass of independent occurrences, including overlaps. Positive densities in kg/mm3. Independent OCCT mass properties on rotated translated two-density bracket pair."
+      ]
+    },
+    {
+      "id": "NURBS-0989",
+      "name": "Массовый момент инерции NURBS-сборки относительно смещённой оси вращения",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::moment_about_axis",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/mechanics.log.gz",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Derived from additive component mass properties. Verified offset bearing by OCCT, nonuniformly scaled mirrored component by analytic box dimensions, and axis magnitude invariance."
       ]
     }
   ],

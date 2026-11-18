@@ -30,16 +30,9 @@ pub fn inertia_about_axis(
             "Axis, point and nonnegative density must be finite",
         ));
     }
-    let n = dot(axis, axis);
-    if n <= 1e-28 {
-        return Err(indeterminate("Inertia axis is numerically zero"));
-    }
-    let a = axis.map(|v| v / n.sqrt());
-    let d: [f64; 3] = std::array::from_fn(|i| p.centroid[i] - point[i]);
-    let d2 = dot(d, d) - dot(d, a).powi(2);
-    let central = dot(a, std::array::from_fn(|i| dot(p.inertia_mm5[i], a)));
     let mass = p.signed_volume_mm3 * density;
-    let moment = (central + p.signed_volume_mm3 * d2) * density;
+    let moment =
+        axial_moment(p.centroid, p.inertia_mm5, p.signed_volume_mm3, point, axis)? * density;
     if !moment.is_finite() {
         return Err(indeterminate("Non-finite axial inertia"));
     }
@@ -124,6 +117,41 @@ pub struct AssemblyMass {
     pub centroid: [f64; 3],
     pub inertia: [[f64; 3]; 3],
 }
+impl AssemblyMass {
+    /// Mass moment in kg mm² for a world-space axis when mass is in kg
+    /// and positions are in mm. Axis direction need not be normalized.
+    pub fn moment_about_axis(&self, point: [f64; 3], direction: [f64; 3]) -> Result<f64> {
+        axial_moment(self.centroid, self.inertia, self.mass, point, direction)
+    }
+}
+
+fn axial_moment(
+    center: [f64; 3],
+    tensor: [[f64; 3]; 3],
+    mass: f64,
+    point: [f64; 3],
+    axis: [f64; 3],
+) -> Result<f64> {
+    if axis.iter().chain(&point).any(|v| !v.is_finite()) {
+        return Err(indeterminate("Non-finite inertia axis"));
+    }
+    let scale = axis.iter().map(|v| v.abs()).fold(0., f64::max);
+    if scale == 0. {
+        return Err(indeterminate("Zero inertia axis"));
+    }
+    let scaled = axis.map(|v| v / scale);
+    let norm = dot(scaled, scaled).sqrt();
+    let unit = scaled.map(|v| v / norm);
+    let offset = std::array::from_fn(|i| center[i] - point[i]);
+    let perpendicular = cross(offset, unit);
+    let moment =
+        dot(unit, tensor.map(|row| dot(row, unit))) + mass * dot(perpendicular, perpendicular);
+    if !moment.is_finite() {
+        return Err(indeterminate("Non-finite axial inertia"));
+    }
+    Ok(moment)
+}
+
 /// Composite properties of instances under nonsingular affine maps.
 pub fn assembly_mass(components: &[AssemblyComponent<'_>]) -> Result<AssemblyMass> {
     if components.is_empty() || components.len() > 4096 {
@@ -154,15 +182,29 @@ pub fn assembly_mass(components: &[AssemblyComponent<'_>]) -> Result<AssemblyMas
         let m = c.properties.signed_volume_mm3 * scale * c.density;
         let center: [f64; 3] =
             std::array::from_fn(|i| c.transform[i][3] + dot(j[i], c.properties.centroid));
-        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+        // Second moments transform by J C Jᵀ. Convert to and from the
+        // inertia tensor I = trace(C) Id - C around the affine map.
+        let local = c.properties.inertia_mm5;
+        let half_trace = (local[0][0] + local[1][1] + local[2][2]) * 0.5;
+        let second: [[f64; 3]; 3] = std::array::from_fn(|i| {
             std::array::from_fn(|k| {
                 let mut value = 0.;
                 for p in 0..3 {
                     for q in 0..3 {
-                        value += j[i][p] * c.properties.inertia_mm5[p][q] * j[k][q];
+                        let entry = (if p == q { half_trace } else { 0. }) - local[p][q];
+                        value += j[i][p] * entry * j[k][q];
                     }
                 }
                 scale * c.density * value
+            })
+        });
+        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+            std::array::from_fn(|k| {
+                if i == k {
+                    second[(i + 1) % 3][(i + 1) % 3] + second[(i + 2) % 3][(i + 2) % 3]
+                } else {
+                    -second[i][k]
+                }
             })
         });
         mass += m;
@@ -203,6 +245,27 @@ mod tests {
     fn box_properties() -> MassProperties {
         mass_properties(&cuboid([0.; 3], [2., 4., 6.]).unwrap(), 1e-8, 200000).unwrap()
     }
+    #[test]
+    fn reflected_scaled_box_matches_axial_moment_of_world_box() {
+        let properties = box_properties();
+        let assembly = assembly_mass(&[AssemblyComponent {
+            properties: &properties,
+            density: 0.5,
+            transform: [[0., -3., 0., 0.], [2., 0., 0., 0.], [0., 0., -1., 0.]],
+        }])
+        .unwrap();
+        let expected = 144. * (144. + 16.) / 12. + 144. * 25.;
+        for dir in [1e-300, -1e300] {
+            near(
+                assembly
+                    .moment_about_axis([-3., 6., 1e15], [0., 0., dir])
+                    .unwrap(),
+                expected,
+            );
+        }
+        assert!(assembly.moment_about_axis([0.; 3], [0.; 3]).is_err());
+    }
+
     #[test]
     fn central_box_tensor_matches_independent_dimensions_formula() {
         let m = box_properties();

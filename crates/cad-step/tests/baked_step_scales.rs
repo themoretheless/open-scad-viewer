@@ -382,6 +382,8 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
     for (v, w) in mass.centroid.iter().zip([8., 8., 3.]) {
         assert!((*v - w).abs() < 1e-9);
     }
+    let bearing = mass.moment_about_axis([5.,4.,0.], [0.,0.,-2.]).unwrap();
+    assert!((bearing - 4.128).abs() < 1e-9);
     // Rotated box sides in world coordinates are 4, 2, 6 mm. The two
     // centres are separated by 3 mm along Y.
     let shift = 0.048 * 0.096 / 0.144 * 9.;
