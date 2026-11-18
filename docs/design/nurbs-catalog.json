@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 757,
-  "unallocatedCount": 243,
+  "specifiedCount": 758,
+  "unallocatedCount": 242,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18075,6 +18075,25 @@
       "remainingQualification": [
         "Classify mixed-obstacle clearance with a continuous piecewise-linear tool radius.",
         "Check a radius peak with clear endpoints, nonmatching curve knots and radius breaks, and mandatory combined span coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0758",
+      "name": "Минимальный зазор прибора с кусочно-линейным профилем радиуса",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_radius_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-758-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-758-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum mixed-obstacle clearance across all curve and radius profile spans.",
+        "Check exact witness at a nonmatching radius break, retained curve knots, certified clearance, and initial budget refusal.",
         "WASM and application integration are separate."
       ]
     }

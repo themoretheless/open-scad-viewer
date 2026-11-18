@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0758",
+  "testedBase": "debc5467ef164392cb6efa5a2c7b4b2aeb8579ac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 383,
+  "scope": [
+    "Refine minimum mixed-obstacle clearance across all curve and radius profile spans.",
+    "Check exact witness at a nonmatching radius break, retained curve knots, certified clearance, and initial budget refusal."
+  ],
+  "logSha256": "bc84394bb3ccf233fe95d7a2fe64271aebcce4cf2d9e0efe0eb08d0e508d0ba2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b87721a1ce2d13fa5c7ca0e28adbbe7ed9feb5edf4951c21257c74f4d1674951",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "62cfd8eb90df3655da5f643f4409a2d11f07bd47ef907dd9ba466d9aa0d137a4"
+  }
+}

@@ -2409,15 +2409,33 @@ fn measure_minimum_radial_clearance(
     obstacle_count: usize,
     gap: impl Fn(&[Interval], usize, [f64; 2]) -> Result<Interval>,
 ) -> Result<SphericalMinimumClearance> {
-    let measure = |span, domain: [f64; 2], witness: &mut (f64, f64, usize)| -> Result<f64> {
+    let initial = active_spans(curve, interval).map(|span| {
+        ([span, 0], [curve.knots[span].max(interval[0]), curve.knots[span + 1].min(interval[1])])
+    });
+    measure_minimum_radial_cells(
+        curve, initial, interval[0], tolerance, max_cells, obstacle_count,
+        |point, index, _, domain| gap(point, index, domain),
+    )
+}
+
+fn measure_minimum_radial_cells(
+    curve: &Curve,
+    initial: impl IntoIterator<Item = ([usize; 2], [f64; 2])>,
+    start_parameter: f64,
+    tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    gap: impl Fn(&[Interval], usize, usize, [f64; 2]) -> Result<Interval>,
+) -> Result<SphericalMinimumClearance> {
+    let measure = |[span, profile]: [usize; 2], domain: [f64; 2], witness: &mut (f64, f64, usize)| -> Result<f64> {
         let jets = curve_jets::enclose(curve, span, domain)?;
         let start = curve_jets::endpoint(curve, span, domain, false)?;
         let end = curve_jets::endpoint(curve, span, domain, true)?;
         let mut lower = f64::INFINITY;
         for index in 0..obstacle_count {
-            lower = lower.min(gap(&jets[0], index, domain)?.lo);
+            lower = lower.min(gap(&jets[0], index, profile, domain)?.lo);
             for (point, parameter) in [(&start[0], domain[0]), (&end[0], domain[1])] {
-                let bound = gap(point, index, [parameter; 2])?.hi;
+                let bound = gap(point, index, profile, [parameter; 2])?.hi;
                 if bound < witness.0 {
                     *witness = (bound, parameter, index);
                 }
@@ -2425,11 +2443,8 @@ fn measure_minimum_radial_clearance(
         }
         Ok(lower)
     };
-    let initial = active_spans(curve, interval).map(|span| {
-        (span, [curve.knots[span].max(interval[0]), curve.knots[span + 1].min(interval[1])])
-    });
     let (lower, witness, cells, stop_reason) =
-        refine_minimum_clearance(initial, interval[0], tolerance, max_cells, measure)?;
+        refine_minimum_clearance(initial, start_parameter, tolerance, max_cells, measure)?;
     Ok(SphericalMinimumClearance {
         gap_bounds: [lower, witness.0],
         witness_parameter: witness.1,
@@ -4602,9 +4617,45 @@ pub fn partition_profiled_radius_toolpath_clearance(
     max_obstacle_cells: usize,
 ) -> Result<SphericalClearancePartition> {
     validate(parameter_tolerance, max_obstacle_cells)?;
-    check(radius_profile.len() >= 2, "Radius profile requires at least two entries")?;
     check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
     let max_cells = max_obstacle_cells / obstacles.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    partition_profile_clearance_cells(
+        curve, initial, parameter_tolerance, max_cells, obstacles.len(),
+        |index, domain| profiles[index](domain),
+        |point, index| obstacles[index].gap(point, 0.),
+    )
+}
+
+/// Refine the minimum signed gap in a mixed scene with a continuous
+/// piecewise-linear tool radius. Radius breaks are sampled exactly.
+pub fn measure_minimum_profiled_radius_toolpath_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[ToolpathObstacle<'_>],
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    measure_minimum_radial_cells(
+        curve, initial, radius_profile[0].0, tolerance, max_cells, obstacles.len(),
+        |point, index, profile, domain| {
+            obstacles[index].gap(point, 0.)?.sub(profiles[profile](domain)?)
+        },
+    )
+}
+
+fn prepare_radius_profile(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    max_cells: usize,
+) -> Result<(Vec<([usize; 2], [f64; 2])>, Vec<impl Fn([f64; 2]) -> Result<Interval>>)> {
+    check(radius_profile.len() >= 2, "Radius profile requires at least two entries")?;
     if radius_profile.len() - 1 > max_cells {
         return Err(resource("Clearance budget must cover every radius profile span"));
     }
@@ -4626,12 +4677,7 @@ pub fn partition_profiled_radius_toolpath_clearance(
         }
         profiles.push(linear_tool_radius(interval, [r0, r1])?);
     }
-    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
-    partition_profile_clearance_cells(
-        curve, initial, parameter_tolerance, max_cells, obstacles.len(),
-        |index, domain| profiles[index](domain),
-        |point, index| obstacles[index].gap(point, 0.),
-    )
+    Ok((initial, profiles))
 }
 
 fn partition_profile_clearance_cells(

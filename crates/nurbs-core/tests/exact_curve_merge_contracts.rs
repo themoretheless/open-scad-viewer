@@ -11533,3 +11533,32 @@ fn profiled_radius_clearance_preserves_radius_breaks_and_curve_knots() {
     }));
     assert!(report.work_obstacle_cells <= 128);
 }
+
+#[test]
+fn minimum_profiled_radius_clearance_samples_a_radius_break_directly() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, StopReason, ToolpathObstacle,
+        measure_minimum_profiled_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 2.], vec![1., 2.], vec![4., 2.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[1.5, 0.], radius: 0.5,
+    })];
+    let profile = [(0., 0.), (0.375, 3.), (1., 0.)];
+    let check = |budget| measure_minimum_profiled_radius_toolpath_clearance(
+        &curve, &profile, &obstacles, 1e-8, budget,
+    );
+    assert!(check(2).is_err());
+    let report = check(3).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_parameter, 0.375);
+    assert_eq!(report.work_obstacle_cells, 3);
+    let [lo, hi] = report.gap_bounds;
+    assert!(lo <= -1.5 && -1.5 <= hi && hi - lo <= 1e-8);
+}
