@@ -26,7 +26,8 @@ directory = Path(sys.argv[1])
 before = read(directory / "before.step")
 after = read(directory / "after.step")
 valid = BRepCheck_Analyzer(after).IsValid()
-cut = BRepAlgoAPI_Cut(before, BRepPrimAPI_MakeCylinder(22., 10.).Shape())
+cutter_height = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
+cut = BRepAlgoAPI_Cut(before, BRepPrimAPI_MakeCylinder(22., cutter_height).Shape())
 assert cut.IsDone()
 original, sewn, reference = map(volume, (before, after, cut.Shape()))
 removed = original - sewn

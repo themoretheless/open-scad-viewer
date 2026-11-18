@@ -93,6 +93,9 @@ fn spinner_bore_difference_preserves_teeth_and_closes_the_new_wall() {
         if !wall.contains(&i) { assert!(replacement.faces.iter().any(|f| f.surface == face.surface)); }
     }
     let result = boolean(&sun, &cutter, "difference").unwrap();
+    // Extra cutter length above the stock must leave exactly the same topology.
+    let through = boolean(&sun, &cylinder(22., 15.).unwrap(), "difference").unwrap();
+    assert_eq!(through.0, result.0);
     let short = cylinder(22., 9.).unwrap();
     assert!(boolean(&sun, &short, "difference").is_err());
     let mut altered = cutter.clone();

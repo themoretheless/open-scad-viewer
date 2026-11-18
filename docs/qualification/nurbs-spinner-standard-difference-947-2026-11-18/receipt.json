@@ -20,5 +20,24 @@
     "crates/brep-core/tests/spinner_bore_boolean.rs": "5e6b3ce4385a8a283a969a44ed764e8c10da3bc7672f2a9628c0a1069580f4b3",
     "crates/cad-step/tests/edited_gear_step.rs": "c5736c9f97d83fb6f09c91885ca068eed8e7dbca2576e8b7c75ad53fb834feaf"
   },
-  "logSha256": "4fe0406f6d4d4c883dc67d8deb27c1d826300cca0290077769a80a8df3385e6a"
+  "logSha256": "4fe0406f6d4d4c883dc67d8deb27c1d826300cca0290077769a80a8df3385e6a",
+  "extendedThroughCutter": {
+    "testedBase": "ca157bbaf505abce5a17dbf72d10eb1b95d56cd8",
+    "heightMm": 15,
+    "nativeResult": "Identical indexed geometry to the 10 mm cut",
+    "independentOcctVolume": {
+      "valid": true,
+      "original": 4145.355114907374,
+      "sewn": 2794.4703309483602,
+      "reference": 2794.4702644229446,
+      "removed": 1350.8847839590135,
+      "difference": 6.652541560470127e-05,
+      "nominal": 1350.884841043611
+    },
+    "sourceSha256": {
+      "crates/brep-core/src/body_analysis/through_wall_cylinder.rs": "0bcfd23031252647f1cb88694b042c214d9f4f1acc6c1e18db09610dad346c7c",
+      "crates/brep-core/tests/spinner_bore_boolean.rs": "88a01c12df60516e4ad7464a9a8ce6e47142cd76260e27e434bf0b2b43cb665b"
+    },
+    "log": "extended-through.log.gz"
+  }
 }

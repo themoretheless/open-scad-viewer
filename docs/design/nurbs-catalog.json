@@ -21633,7 +21633,7 @@
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
       ],
       "remainingQualification": [
-        "Single closed shell with selected horizontal affine end caps and separated walls. Canonical coaxial cylinder with matching end elevations. Other cutter representations and general embedding remain outside this qualification."
+        "Single closed shell with selected horizontal affine end caps and separated walls. Canonical coaxial cylinder starts at the lower cap and reaches or exceeds the upper cap. Other cutter representations and general embedding remain outside this qualification."
       ]
     }
   ],

@@ -154,15 +154,14 @@ pub(crate) fn try_difference(stock: &Model, tool: &Model) -> Option<Model> {
     let radius = tool.vertices.iter().map(|v| v.point[0]).fold(0., f64::max);
     let height = tool.vertices.iter().map(|v| v.point[2]).fold(0., f64::max);
     let mut caps = [None; 2];
+    let mut stock_height = 0.;
+    let mut carrier_top = 0.0_f64;
     for (index, face) in stock.faces.iter().enumerate() {
-        if face
-            .surface
-            .control_points
-            .iter()
-            .flatten()
-            .any(|p| p[2] < 0. || p[2] > height)
-        {
-            return None;
+        for point in face.surface.control_points.iter().flatten() {
+            if !(0.0..=height).contains(&point[2]) {
+                return None;
+            }
+            carrier_top = carrier_top.max(point[2]);
         }
         if face.holes.is_empty() {
             continue;
@@ -170,7 +169,8 @@ pub(crate) fn try_difference(stock: &Model, tool: &Model) -> Option<Model> {
         let z = face.surface.control_points[0][0][2];
         let end = if z == 0. {
             0
-        } else if z == height {
+        } else if z > 0. && z <= height {
+            stock_height = z;
             1
         } else {
             return None;
@@ -180,9 +180,12 @@ pub(crate) fn try_difference(stock: &Model, tool: &Model) -> Option<Model> {
         }
     }
     let caps = [caps[0]?, caps[1]?];
+    if carrier_top > stock_height {
+        return None;
+    }
     let canonical = crate::cylinder(radius, height).ok()?;
     if tool.0 != canonical.0 {
         return None;
     }
-    replace(stock, caps, radius, height).ok()
+    replace(stock, caps, radius, stock_height).ok()
 }
