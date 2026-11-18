@@ -56,11 +56,16 @@ impl CircularProfilePattern {
     pub fn compress(segments: &[Curve], tolerance: f64) -> Result<Option<(Self, f64)>> {
         check(tolerance.is_finite() && tolerance >= 0., "Expected finite nonnegative tolerance")?;
         check((1..=65536).contains(&segments.len()), "Expected 1..65536 profile segments")?;
-        let seed = &segments[0];
-        let pattern = Self::new(seed.clone(), segments.len())?;
         for segment in segments { segment.validate()?; }
+        Self::compress_column(segments, 0, 1, tolerance)
+    }
+
+    fn compress_column(segments: &[Curve], offset: usize, stride: usize, tolerance: f64)
+        -> Result<Option<(Self, f64)>> {
+        let seed = &segments[offset];
+        let pattern = Self::new(seed.clone(), segments.len() / stride)?;
         let mut maximum: f64 = 0.;
-        for (index, segment) in segments.iter().enumerate().skip(1) {
+        for (index, segment) in segments[offset..].iter().step_by(stride).enumerate().skip(1) {
             if segment.degree != seed.degree || segment.knots != seed.knots ||
                 segment.weights != seed.weights || segment.periodic != seed.periodic ||
                 segment.control_points[0].len() != seed.control_points[0].len() {
@@ -80,5 +85,41 @@ impl CircularProfilePattern {
             }
         }
         Ok(Some((pattern, maximum)))
+    }
+}
+
+/// Repeated sectors of an ordered profile. Different pieces within a sector
+/// may have different degrees, knots and weights.
+pub struct CircularSectorPattern {
+    pieces: Vec<CircularProfilePattern>,
+    sector_count: usize,
+}
+
+impl CircularSectorPattern {
+    /// Input order is sector-major. The caller supplies the number of pieces
+    /// per sector; the bound applies pointwise to each reconstructed piece.
+    pub fn compress(segments: &[Curve], pieces_per_sector: usize, tolerance: f64)
+        -> Result<Option<(Self, f64)>> {
+        check(tolerance.is_finite() && tolerance >= 0., "Expected finite nonnegative tolerance")?;
+        check(pieces_per_sector > 0 && !segments.is_empty() && segments.len() % pieces_per_sector == 0,
+              "Expected complete nonempty profile sectors")?;
+        let sector_count = segments.len() / pieces_per_sector;
+        check(sector_count <= 65536, "Expected at most 65536 profile sectors")?;
+        for segment in segments { segment.validate()?; }
+        let mut pieces = Vec::with_capacity(pieces_per_sector);
+        let mut maximum: f64 = 0.;
+        for offset in 0..pieces_per_sector {
+            let Some((piece, error)) = CircularProfilePattern::compress_column(
+                segments, offset, pieces_per_sector, tolerance,
+            )? else { return Ok(None); };
+            maximum = maximum.max(error);
+            pieces.push(piece);
+        }
+        Ok(Some((Self { pieces, sector_count }, maximum)))
+    }
+
+    pub fn sector(&self, index: usize) -> Result<Vec<Curve>> {
+        check(index < self.sector_count, "Profile sector index outside pattern")?;
+        self.pieces.iter().map(|piece| piece.instance(index).map(|(curve, _)| curve)).collect()
     }
 }

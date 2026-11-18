@@ -498,3 +498,29 @@ fn compresses_ordered_profile_segments_and_bounds_actual_reconstruction() {
     assert!(Pattern::compress(&segments,1.).unwrap().is_none());
     assert!(Pattern::compress(&[],0.).is_err());
 }
+
+#[test]
+fn compound_sector_compression_preserves_piece_order_and_distinct_bases() {
+    use involute::{CircularProfilePattern, CircularSectorPattern};
+    use nurbs_core::curve::Curve;
+    let flank = Curve::from_polyline(vec![vec![2.,0.],vec![3.,1.]]).unwrap();
+    let tip = Curve { degree: 2, knots: vec![0.,0.,0.,1.,1.,1.], periodic: false,
+        control_points: vec![vec![3.,1.],vec![3.,2.],vec![2.,3.]], weights: vec![1.,0.75,1.] };
+    let pieces = [flank,tip].map(|c| CircularProfilePattern::new(c,4).unwrap());
+    let mut outline: Vec<_> = (0..4).flat_map(|i| pieces.iter().map(move |p| p.instance(i).unwrap().0)).collect();
+    let (pattern, error) = CircularSectorPattern::compress(&outline,2,0.).unwrap().unwrap();
+    assert_eq!(error,0.);
+    for (i, original) in outline.chunks_exact(2).enumerate() {
+        for (actual, expected) in pattern.sector(i).unwrap().iter().zip(original) {
+            assert_eq!(actual.control_points, expected.control_points);
+            assert_eq!(actual.weights, expected.weights);
+            assert_eq!(actual.knots, expected.knots);
+        }
+    }
+    assert!(pattern.sector(4).is_err());
+    outline[7].control_points[1][0] += 0.25;
+    assert!(CircularSectorPattern::compress(&outline,2,0.).unwrap().is_none());
+    let (_, error) = CircularSectorPattern::compress(&outline,2,0.26).unwrap().unwrap();
+    assert!((0.25..=0.26).contains(&error));
+    assert!(CircularSectorPattern::compress(&outline,3,0.).is_err());
+}
