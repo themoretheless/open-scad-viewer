@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0887",
+  "testedBase": "f9d6d979dfffed0b970d078906d77e1053c4cc4d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_degree_reduction_contracts",
+    "--test",
+    "exact_knot_removal_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 24,
+  "scope": [
+    "Shared arithmetic budget for exact knot and degree edits. Verified combined compression, retained intermediate result and restart."
+  ],
+  "logSha256": "421b5859bb0ab6af6ef6b851107f97ab8b50ea140943480471ba3a173fe23b8a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_knot_removal.rs": "10d02de8c3d56fe79509e7f1749cf5cc6e7b17f12b52f7bf409c09f648042f14",
+    "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs": "4bc817ec5c5ac6393f9ac110ab7c360496feae82bf4c8fb0c40e326ad2450fd4",
+    "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs": "a0fe46a854033d8c6cc09d00f6bb472a3c5911f3ec471a9d0354719badbbf6b2"
+  }
+}

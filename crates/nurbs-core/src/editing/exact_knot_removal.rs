@@ -118,3 +118,6 @@ pub fn simplify(source: &Curve, max_work: u64) -> Result<SimplificationReport> {
     }
     Ok(report)
 }
+
+mod compression;
+pub use compression::{CurveCompression, compress_curve};

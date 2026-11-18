@@ -73,3 +73,23 @@ fn smooth_extraction_keeps_existing_control_limit_and_refuses_atomic_growth(){
  let source=Curve{degree:3,knots:[vec![0.;4],(1..253).map(|i|i as f64/253.).collect(),vec![1.;4]].concat(),control_points:(0..256).map(|i|vec![i as f64,0.]).collect(),weights:vec![1.;256],periodic:false};
  source.validate().unwrap();let r=reduce_smooth(&source,1_000_000).unwrap();assert!(!r.reduced);assert_eq!(r.curve,source);assert_eq!(r.refusal,Some(Refusal::InvalidProposedDefinition));assert_eq!(r.work_used,0);
 }
+
+#[test]
+fn joint_curve_compression_keeps_proved_steps_under_one_budget() {
+    use nurbs_core::editing::exact_knot_removal::{compress_curve, simplify};
+    let source = cubic().insert(3.5, 1).unwrap();
+    let full = compress_curve(&source, 1_000_000).unwrap();
+    assert!(full.completed);
+    assert_eq!((full.removed_knots, full.reduced_degrees), (1, 1));
+    assert_eq!(full.curve, reduce(&cubic(), 1_000_000).unwrap().curve);
+    let first = simplify(&source, 1_000_000).unwrap();
+    let partial = compress_curve(&source, first.work_used).unwrap();
+    assert!(!partial.completed);
+    assert_eq!(partial.curve, cubic());
+    assert_eq!(partial.work_used, first.work_used);
+    assert_eq!(compress_curve(&partial.curve, 1_000_000).unwrap().curve, full.curve);
+    let short = compress_curve(&source, 1).unwrap();
+    assert!(!short.completed);
+    assert_eq!(short.curve, source);
+    assert!(compress_curve(&source, 0).is_err());
+}
