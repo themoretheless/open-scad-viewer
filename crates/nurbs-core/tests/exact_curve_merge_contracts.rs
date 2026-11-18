@@ -11464,3 +11464,37 @@ fn variable_radius_mixed_clearance_tracks_sphere_and_box_contacts() {
         }));
     }
 }
+
+#[test]
+fn minimum_variable_radius_mixed_clearance_finds_a_box_corner_witness() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, SphericalObstacle, StopReason, ToolpathObstacle,
+        measure_minimum_variable_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 1.], vec![2., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[0., 8.], radius: 0.25 }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[-3., -2.], maximum: &[0., 0.] }),
+    ];
+    let check = |budget| measure_minimum_variable_radius_toolpath_clearance(
+        &curve, [0., 1.], &obstacles, [0.25, 2.25], 1e-4, budget,
+    );
+    assert!(check(1).is_err());
+    let exact = 3_f64.sqrt() / 2. - 1.25;
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(8192).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo < 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - (0.5 + 1. / (4. * 3_f64.sqrt()))).abs() < 0.01);
+    assert!(fine.work_obstacle_cells <= 8192);
+}

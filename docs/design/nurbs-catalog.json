@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 755,
-  "unallocatedCount": 245,
+  "specifiedCount": 756,
+  "unallocatedCount": 244,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18037,6 +18037,25 @@
       "remainingQualification": [
         "Classify clearance against mixed obstacles while the tool radius varies affinely.",
         "Check sphere and box contacts on a shared grid, original obstacle order, analytic crossings and budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0756",
+      "name": "Минимальный зазор инструмента с переменным радиусом в смешанной сцене",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_variable_radius_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-756-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-756-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum signed clearance to mixed obstacles with position and tool radius coupled at the witness.",
+        "Check a mixed scene, analytic shifted box corner minimum, its obstacle witness, and certified coarse and refined bounds.",
         "WASM and application integration are separate."
       ]
     }

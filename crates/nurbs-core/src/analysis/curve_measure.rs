@@ -4641,6 +4641,34 @@ pub fn measure_minimum_variable_radius_spherical_clearance(
     )
 }
 
+/// Refine the minimum signed gap against a mixed obstacle scene while the
+/// spherical tool's radius varies linearly over the parameter window.
+pub fn measure_minimum_variable_radius_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radii: [f64; 2],
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    let radius_range = linear_tool_radius(interval, tool_radii)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index, domain| obstacles[index].gap(point, 0.)?.sub(radius_range(domain)?),
+    )
+}
+
 fn linear_tool_radius(
     interval: [f64; 2],
     tool_radii: [f64; 2],
