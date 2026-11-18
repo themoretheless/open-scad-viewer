@@ -8,6 +8,17 @@ use std::collections::BTreeSet;
 /// horizontal caps at 0 and height. Returns a validated B-rep; does not
 /// estimate the removed volume or establish global embedding of the input.
 pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Result<Model> {
+    cylindrical_region(source, caps, radius, height, Region::Outside)
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum Region {
+    Inside,
+    Outside,
+}
+
+fn cylindrical_region(source: &Model, caps: [usize; 2], radius: f64, height: f64, region: Region) -> Result<Model> {
+    let outside = region == Region::Outside;
     let refuse = || {
         Error::new(
             "BREP_CYLINDRICAL_WALL_UNPROVED",
@@ -29,7 +40,8 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
         return Err(refuse());
     }
     let cutter = crate::cylinder(radius, height)?;
-    let mut removed_faces: BTreeSet<_> = old_wall.into_iter().collect();
+    let wall: BTreeSet<_> = old_wall.into_iter().collect();
+    let mut removed_faces = BTreeSet::new();
     let mut removed_loops = BTreeSet::new();
     let mut new_loops = Vec::new();
     let mut cutter_caps = BTreeSet::new();
@@ -58,11 +70,11 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
             &cutter,
             tool_cap.outer,
             &face.surface,
-            true,
+            outside,
             source.tolerance_mm,
         )?;
         new_loops.push((cap, tool_cap.outer, rim));
-        removed_loops.insert(face.holes[0]);
+        removed_loops.insert(if outside { face.holes[0] } else { face.outer });
     }
     let radial = |f: &crate::Face| {
         piecewise_axis_radius_bounds(&f.surface, 2, [0.; 3], 256)?.ok_or_else(refuse)
@@ -79,13 +91,16 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
             continue;
         }
         let r = radial(f)?;
-        if removed_faces.contains(&index) {
+        if wall.contains(&index) {
             if r[1] >= tool[0] {
                 return Err(refuse());
             }
-            removed_loops.extend(std::iter::once(f.outer).chain(f.holes.iter().copied()));
         } else if r[0] <= tool[1] {
             return Err(refuse());
+        }
+        if wall.contains(&index) == outside {
+            removed_faces.insert(index);
+            removed_loops.extend(std::iter::once(f.outer).chain(f.holes.iter().copied()));
         }
     }
     let mut stage = crate::boolean_support::concatenate_bodies(source, &cutter)?;
@@ -95,7 +110,11 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
         }
         let l = l + source.loops.len();
         stage.loops[l] = wire;
-        stage.faces[cap].holes[0] = l;
+        if outside {
+            stage.faces[cap].holes[0] = l;
+        } else {
+            stage.faces[cap].outer = l;
+        }
     }
     removed_faces.extend(cutter_caps.iter().map(|f| f + source.faces.len()));
     let sides: Vec<_> = stage.shells[1]
@@ -104,7 +123,7 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
         .cloned()
         .filter(|f| !removed_faces.contains(&f.face))
         .map(|mut f| {
-            f.reversed = !f.reversed;
+            f.reversed ^= outside;
             f
         })
         .collect();
@@ -143,7 +162,7 @@ pub fn replace(source: &Model, caps: [usize; 2], radius: f64, height: f64) -> Re
 /// Automatic dispatch is limited to the complete indexed geometry of the native
 /// cylinder and stock whose positive-weight carriers stay in its axial slab.
 /// A changed control net or trim falls back to the other Boolean classifiers.
-pub(crate) fn try_difference(stock: &Model, tool: &Model) -> Option<Model> {
+pub(crate) fn try_boolean(stock: &Model, tool: &Model, region: Region) -> Option<Model> {
     if tool.faces.len() != 6
         || tool.vertices.len() != 8
         || !tool.1.local_tolerances_mm.is_empty()
@@ -187,5 +206,5 @@ pub(crate) fn try_difference(stock: &Model, tool: &Model) -> Option<Model> {
     if tool.0 != canonical.0 {
         return None;
     }
-    replace(stock, caps, radius, stock_height).ok()
+    cylindrical_region(stock, caps, radius, stock_height, region).ok()
 }

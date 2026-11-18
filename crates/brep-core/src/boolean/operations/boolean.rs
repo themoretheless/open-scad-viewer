@@ -77,9 +77,14 @@ pub(super) fn boolean_impl(
         return match curved_boolean_exact(a, b, operation) {
             Ok(model) => Ok(model),
             Err(error) if proof_refusal(error.code) => {
-                if operation == "difference"
-                    && let Some(result) = crate::body_analysis::through_wall_cylinder::try_difference(a, b)
-                {
+                use crate::body_analysis::through_wall_cylinder::{Region, try_boolean};
+                let cylindrical = match operation {
+                    "difference" => try_boolean(a, b, Region::Outside),
+                    "intersection" => try_boolean(a, b, Region::Inside)
+                        .or_else(|| try_boolean(b, a, Region::Inside)),
+                    _ => None,
+                };
+                if let Some(result) = cylindrical {
                     return Ok(result);
                 }
                 if retry_seams {

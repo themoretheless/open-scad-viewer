@@ -8,7 +8,7 @@ from OCP.IFSelect import IFSelect_RetDone
 from OCP.BRepGProp import BRepGProp
 from OCP.BRepCheck import BRepCheck_Analyzer
 from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
-from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Common
 from OCP.GProp import GProp_GProps
 
 def read(path):
@@ -35,3 +35,12 @@ assert original > sewn > 0
 print(json.dumps(dict(valid=valid, original=original, sewn=sewn, reference=reference, removed=removed,
                       difference=sewn-reference, nominal=430*math.pi)), flush=True)
 assert valid and abs(sewn-reference) < 0.01
+
+if (directory / "sleeve.step").exists():
+    sleeve = read(directory / "sleeve.step")
+    common = BRepAlgoAPI_Common(before, BRepPrimAPI_MakeCylinder(22., cutter_height).Shape())
+    assert common.IsDone() and BRepCheck_Analyzer(sleeve).IsValid()
+    actual, expected = volume(sleeve), volume(common.Shape())
+    assert actual > 0 and abs(actual - expected) < 0.01
+    assert abs(actual + sewn - original) < 0.01
+    print(json.dumps(dict(sleeve=actual, common=expected, balance=actual + sewn - original)))
