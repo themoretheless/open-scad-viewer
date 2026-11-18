@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 970,
-  "unallocatedCount": 30,
+  "specifiedCount": 971,
+  "unallocatedCount": 29,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22081,6 +22081,29 @@
       ],
       "remainingQualification": [
         "Clamped polynomial tensor surfaces with exact full-grid affine coordinate projection. Rational curves are checked along their entire domain and cell crossings must be certifiable. Nonuniform unequal surface weights on multi-cell charts remain outside this proof."
+      ]
+    },
+    {
+      "id": "NURBS-0971",
+      "name": "Восстановление UV-контура IGES на многопролётной рациональной поверхности с переменными весами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/affine_projection.rs",
+        "crates/nurbs-core/tests/surface_rectangle_injectivity.rs",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/projection.log.gz",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Clamped rational tensor surfaces with two Cartesian coordinates globally affine in UV. A bounded homogeneous polynomial identity is checked on every nonempty knot cell; both the coordinate projection and the complete edge trace must be certified."
       ]
     }
   ],

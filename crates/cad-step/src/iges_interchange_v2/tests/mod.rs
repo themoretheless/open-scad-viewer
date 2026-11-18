@@ -1532,6 +1532,27 @@ fn model_only_trim_recovers_a_nonplanar_saddle_loop() {
     let restored = import_iges_v2(&multi).unwrap().0;
     assert_eq!(restored.faces[0].surface, grid);
     assert_eq!(restored.loops[0].coedges[0].pcurve, *uv);
+    // A piecewise-linear weight function (1 -> 3 -> 1) times the
+    // saddle gives a quadratic homogeneous net with dyadic stored poles.
+    let rational = Surface {
+        degree_u: 2, degree_v: 1,
+        knots_u: vec![0.,0.,0.,0.5,0.5,1.,1.,1.], knots_v: vec![0.,0.,0.25,1.,1.],
+        control_points: [0.,0.5,2.,3.5,4.].map(|x| {
+            [0.,1.,4.].map(|y| vec![x,y,x*y/4.]).to_vec()
+        }).to_vec(),
+        weights: [1.,2.,3.,2.,1.].map(|w| vec![w;3]).to_vec(),
+        periodic_u: false, periodic_v: false,
+    };
+    let (weighted, support_de) = append_entity(&text, 128, 0, "00000000", |_| surface_values(&rational).unwrap());
+    let weighted = rewire_reference(&rewire_reference(&weighted, pair, 2, support_de), face, 1, support_de);
+    let rational_model = import_iges_v2(&weighted).unwrap().0;
+    assert_eq!(rational_model.faces[0].surface, rational);
+    assert_eq!(rational_model.loops[0].coedges[0].pcurve, *uv);
+    if let Some(path) = std::env::var_os("CAD_IGES_WEIGHTED_GRID_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, weighted).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&rational_model).unwrap().0).unwrap();
+    }
     if let Some(path) = std::env::var_os("CAD_IGES_GRID_BOUNDARY_FIXTURE") {
         let path = std::path::Path::new(&path);
         std::fs::write(path, multi).unwrap();

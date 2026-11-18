@@ -119,3 +119,27 @@ fn multi_cell_affine_projection_uses_every_greville_coefficient() {
     patch.control_points[1][1][2] += 0.000_000_001;
     assert_eq!(certify_affine_coordinate_pair(&patch), None);
 }
+
+#[test]
+fn rational_projection_checks_all_cells_with_a_shared_limit() {
+    use nurbs_core::editing::exact_surface_derivative::rational_affine_coordinate_pair;
+    // Simple interior U knot, quadratic in both directions. Multiplying
+    // the affine V clock by W(v)=1+2v yields V poles [0,1/4,1].
+    let mut patch = Surface {
+        degree_u: 2, degree_v: 2,
+        knots_u: vec![0.,0.,0.,0.5,1.,1.,1.], knots_v: vec![0.,0.,0.,1.,1.,1.],
+        control_points: [0.,0.25,0.75,1.].iter().enumerate().map(|(i,u)| {
+            [0.,0.25,1.].iter().enumerate().map(|(j,v)| vec![
+                if i == 2 && j == 1 { 1. } else { 0. }, u+v, 2.*u-v
+            ]).collect()
+        }).collect(),
+        weights: vec![vec![1.,2.,3.];4],
+        periodic_u: false, periodic_v: false,
+    };
+    let (axes, work) = rational_affine_coordinate_pair(&patch, 1_000_000).unwrap();
+    assert_eq!(axes, Some([1,2]));
+    assert!(work > 1);
+    assert_eq!(rational_affine_coordinate_pair(&patch, 1).unwrap().0, None);
+    patch.control_points[2][1][2] += 1e-10;
+    assert_eq!(rational_affine_coordinate_pair(&patch, 1_000_000).unwrap().0, None);
+}

@@ -22,8 +22,17 @@ pub(super) fn recover(
             .into_iter()
             .max_by(|a, b| determinant(*a).abs().total_cmp(&determinant(*b).abs()))
             .unwrap()
+    } else if let Some(pair) = certify_affine_coordinate_pair(surface) {
+        pair
     } else {
-        certify_affine_coordinate_pair(surface).ok_or_else(|| {
+        let limit = MAX_GRAPH_WORK.saturating_sub(*work).min(1_000_000);
+        let (pair, used) =
+            nurbs_core::editing::exact_surface_derivative::rational_affine_coordinate_pair(
+                surface,
+                limit as u64,
+            )?;
+        graph_work(work, used as usize)?;
+        pair.ok_or_else(|| {
             trimmed_unsupported(
                 de,
                 "model-only boundary needs an invertible affine coordinate pair",
