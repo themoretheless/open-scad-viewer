@@ -19,6 +19,7 @@ const OPS: &[&str] = &[
     "brep_nurbs_export_step_v8",
     "brep_nurbs_import_step_v8",
     "brep_nurbs_export_step_v9",
+    "brep_nurbs_export_shared_step",
     "brep_nurbs_import_step_v9",
     "brep_nurbs_import_step_scene",
     "brep_nurbs_import_step_lod0",
@@ -274,6 +275,21 @@ fn handle(v: Value) -> Result<Value> {
                 "definitionIdentities":report.definition_identities,"occurrenceIdentities":report.occurrence_identities,
                 "productHierarchy":report.product_hierarchy,"externalReferences":report.external_references,
             }))
+        }
+        "brep_nurbs_export_shared_step" => {
+            let rows = v["occurrences"].as_array()
+                .ok_or_else(|| input("STEP assembly requires an occurrence array"))?;
+            let models = v["definitions"].as_array()
+                .ok_or_else(|| input("STEP assembly requires a definition array"))?;
+            if rows.is_empty() || rows.len() > 256 || models.is_empty() || models.len() > rows.len() {
+                return Err(input("STEP assembly requires 1 to 256 occurrences referencing local solids"));
+            }
+            let occurrences = rows.iter().map(|row| Ok(cad_step::StepAssemblyOccurrence {
+                definition: field(row, "definition")?,
+                transform: field(row, "transform")?,
+            })).collect::<Result<Vec<_>>>()?;
+            let assembly = cad_step::StepSharedAssembly::from_placed_solids(field(&v, "definitions")?, occurrences)?;
+            Ok(json!({"text":cad_step::export_step_shared_assembly(&assembly)?}))
         }
         "brep_nurbs_export_step_v9" => {
             let (text, cert, report) = cad_step::export_step_v9(&field(&v, "model")?)?;
