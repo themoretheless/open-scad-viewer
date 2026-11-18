@@ -2590,7 +2590,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 0,
+        parameter_tolerance, max_vertex_plane_cells, 0, false,
     )
 }
 
@@ -2609,7 +2609,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 1,
+        parameter_tolerance, max_vertex_plane_cells, 1, false,
     )
 }
 
@@ -2627,7 +2627,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_corner_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 2,
+        parameter_tolerance, max_vertex_plane_cells, 2, false,
     )
 }
 
@@ -2646,7 +2646,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 3,
+        parameter_tolerance, max_vertex_plane_cells, 3, false,
     )
 }
 
@@ -2664,7 +2664,25 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_skew_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 4,
+        parameter_tolerance, max_vertex_plane_cells, 4, false,
+    )
+}
+
+/// Test convex-hull chord midpoints as additional contact witnesses, using
+/// the same rounding and whole-cell half-space checks as vertex witnesses.
+/// Every unordered vertex pair contributes one midpoint to the work budget.
+pub fn partition_planar_rotating_profiled_hull_obstacle_chord_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, true,
     )
 }
 
@@ -2677,6 +2695,7 @@ fn partition_rotating_profiled_obstacles(
     parameter_tolerance: f64,
     max_vertex_plane_cells: usize,
     witness_passes: usize,
+    include_chord_midpoints: bool,
 ) -> Result<ObstacleClearancePartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
@@ -2691,10 +2710,36 @@ fn partition_rotating_profiled_obstacles(
         }
         plane_count += obstacle.len();
     }
-    let pairs = plane_count * vertex_offsets.len() * (1 + witness_passes);
+    let vertex_count = vertex_offsets.len();
+    let midpoint_count = if include_chord_midpoints {
+        vertex_count.checked_mul(vertex_count - 1)
+            .ok_or_else(|| resource("Tool chord count exceeds the work budget"))? / 2
+    } else {
+        0
+    };
+    let witness_count = vertex_count + midpoint_count;
+    if witness_count > max_vertex_plane_cells / plane_count / (1 + witness_passes) {
+        return Err(resource("Clearance budget must cover every witness and plane"));
+    }
+    let pairs = plane_count * witness_count * (1 + witness_passes);
     let max_cells = max_vertex_plane_cells / pairs;
     let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
-    let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
+    let mut vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
+    if include_chord_midpoints {
+        let half = Interval::point(0.5);
+        vertices.reserve(midpoint_count);
+        for end in 1..vertex_count {
+            for start in 0..end {
+                let a = &vertices[start];
+                let b = &vertices[end];
+                let midpoint = vec![
+                    a[0].mul(half)?.add(b[0].mul(half)?)?,
+                    a[1].mul(half)?.add(b[1].mul(half)?)?,
+                ];
+                vertices.push(midpoint);
+            }
+        }
+    }
     let has_rounding = radius_profile.iter().any(|&(_, radius)| radius > 0.);
     let obstacles = obstacles.iter().map(|planes| {
         prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {

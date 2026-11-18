@@ -12126,3 +12126,41 @@ fn rotating_rounded_skew_contact_solves_coupled_plane_deficits() {
     let impossible = [corner[0], corner[1], WorkspaceHalfSpace { normal: &[0., 1.], offset: 0.3 }];
     assert_ne!(measure(&impossible, 15).unwrap().cells[0].status, Status::Exceeds);
 }
+
+#[test]
+fn rotating_hull_chord_contact_detects_a_strip_between_tool_vertices() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_chord_contact,
+        partition_planar_rotating_profiled_hull_obstacle_skew_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 0.1]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.1]],
+        ..position.clone()
+    };
+    let strip = [
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 0.1 },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: 0.1 },
+    ];
+    let hull = [&[-2., 0.][..], &[2., 0.][..]];
+    let profile = [(0., 0.), (1., 0.)];
+    let vertices = partition_planar_rotating_profiled_hull_obstacle_skew_contact(
+        &position, &direction, &profile, &[&strip], &hull, 0.01, 20,
+    ).unwrap();
+    assert_eq!(vertices.cells[0].status, Status::Undetermined);
+    let measure = |budget| partition_planar_rotating_profiled_hull_obstacle_chord_contact(
+        &position, &direction, &profile, &[&strip], &hull, 0.01, budget,
+    );
+    assert!(measure(29).is_err());
+    let report = measure(30).unwrap();
+    assert_eq!(report.work_plane_cells, 30);
+    assert_eq!(report.cells.len(), 1);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+}

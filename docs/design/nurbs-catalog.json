@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 773,
-  "unallocatedCount": 227,
+  "specifiedCount": 774,
+  "unallocatedCount": 226,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18379,6 +18379,25 @@
       "remainingQualification": [
         "Certify rounded contact with coupled oblique half-spaces using a two-plane solve and whole-cell verification.",
         "Check an oblique corner requiring the two-plane solve, extra half-space refusal and the reserved five-pass budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0774",
+      "name": "Подтверждение контакта между вершинами вращающегося выпуклого инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_chord_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-774-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-774-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify convex hull contact through interval-enclosed chord midpoints on the rotating tool.",
+        "Check a strip crossing a rotating hull between its vertices and reserve budget for the chord midpoint.",
         "WASM and application integration are separate."
       ]
     }
