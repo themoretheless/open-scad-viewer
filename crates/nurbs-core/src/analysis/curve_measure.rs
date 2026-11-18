@@ -2839,6 +2839,53 @@ pub fn measure_scheduled_tools_clearance(
     max_cells: usize,
 ) -> Result<ScheduledToolsMinimumClearance> {
     validate(tolerance, max_cells)?;
+    let (phases, pairs) = prepare_scheduled_tool_pairs(tools, max_cells)?;
+    let (minimum, phase) = measure_scheduled_phase_minimum(&phases, tolerance, max_cells)?;
+    Ok(ScheduledToolsMinimumClearance { minimum, witness_tools: pairs[phase] })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledToolPairCell {
+    pub tools: [usize; 2],
+    pub clearance: ScheduledClearanceCell,
+}
+
+#[derive(Clone, Debug)]
+pub struct ScheduledToolsClearancePartition {
+    /// Cells grouped by pair and ordered in time within each pair.
+    pub cells: Vec<ScheduledToolPairCell>,
+    pub work_cells: usize,
+}
+
+/// Classify clearance for every unordered tool pair with one budget.
+/// A pair's timeline runs from its first start to its last finish.
+/// Outside that window the pair retains its corresponding endpoint poses.
+pub fn partition_scheduled_tools_clearance(
+    tools: &[ScheduledTool<'_>],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledToolsClearancePartition> {
+    validate(progress_tolerance, max_cells)?;
+    let (phases, pairs) = prepare_scheduled_tool_pairs(tools, max_cells)?;
+    let mut remaining = max_cells;
+    let mut cells = Vec::new();
+    for (index, (phase, tools)) in phases.iter().zip(pairs).enumerate() {
+        let report = partition_scheduled_phase(
+            phase, progress_tolerance, remaining / (phases.len() - index),
+        )?;
+        remaining -= report.work_cells;
+        cells.extend(report.cells.into_iter().map(|clearance| ScheduledToolPairCell {
+            tools,
+            clearance,
+        }));
+    }
+    Ok(ScheduledToolsClearancePartition { cells, work_cells: max_cells - remaining })
+}
+
+fn prepare_scheduled_tool_pairs<'a>(
+    tools: &[ScheduledTool<'a>],
+    max_cells: usize,
+) -> Result<(Vec<ScheduledOverlap<'a>>, Vec<[usize; 2]>)> {
     check(tools.len() >= 2, "Scheduled clearance requires at least two tools")?;
     if tools.len().saturating_mul(tools.len() - 1) / 2 > max_cells {
         return Err(resource("Clearance budget must cover every tool pair"));
@@ -2857,8 +2904,7 @@ pub fn measure_scheduled_tools_clearance(
             phases.extend(pair_phases);
         }
     }
-    let (minimum, phase) = measure_scheduled_phase_minimum(&phases, tolerance, max_cells)?;
-    Ok(ScheduledToolsMinimumClearance { minimum, witness_tools: pairs[phase] })
+    Ok((phases, pairs))
 }
 
 fn measure_scheduled_phase_minimum(

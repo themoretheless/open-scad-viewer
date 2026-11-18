@@ -11036,3 +11036,41 @@ fn scheduled_tools_clearance_reports_closest_pair_under_one_budget() {
     assert!(lo <= -0.25 && -0.25 <= hi && hi - lo < 1e-6);
     assert!(report.minimum.work_cells <= 128);
 }
+
+#[test]
+fn scheduled_tools_partition_retains_pair_identity_and_contact_windows() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledTool, TimedMotionSegment,
+        partition_scheduled_tools_clearance,
+    };
+    let line = |a, b, height| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![a, height], vec![b, height]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let far = line(0., 2., 10.);
+    let first = line(0., 2., 0.);
+    let second = line(4., 0., 0.);
+    let tool = |curve, start_time, duration| ScheduledTool {
+        segment: TimedMotionSegment { curve, interval: [0., 1.], duration },
+        start_time,
+        radius: 0.25,
+    };
+    let tools = [tool(&far, 0., 1.), tool(&first, 0., 1.), tool(&second, 2., 4.)];
+    assert!(partition_scheduled_tools_clearance(&tools, 0.01, 6).is_err());
+    let result = partition_scheduled_tools_clearance(&tools, 0.01, 128).unwrap();
+    assert!(result.work_cells <= 128);
+    assert!(result.cells.iter().filter(|cell| cell.tools.contains(&0))
+        .all(|cell| cell.clearance.status == Status::Within));
+    assert!(result.cells.iter().any(|cell| {
+        let [[a, _], [_, b]] = cell.clearance.time_endpoint_bounds;
+        cell.tools == [1, 2] && a <= 4. && 4. <= b && cell.clearance.status == Status::Exceeds
+    }));
+    for pair in result.cells.windows(2) {
+        if pair[0].tools == pair[1].tools {
+            assert_eq!(pair[0].clearance.time_endpoint_bounds[1], pair[1].clearance.time_endpoint_bounds[0]);
+        }
+    }
+}

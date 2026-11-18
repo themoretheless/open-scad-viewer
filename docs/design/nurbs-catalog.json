@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 742,
-  "unallocatedCount": 258,
+  "specifiedCount": 743,
+  "unallocatedCount": 257,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17790,6 +17790,25 @@
       "remainingQualification": [
         "Refine the global minimum among all scheduled tool pairs under one phase-cell budget.",
         "Check three independently scheduled tools, correct pair and absolute witness, stationary-phase collision and mandatory phase coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0743",
+      "name": "Карта попарных контактов для расписания нескольких инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_tools_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-743-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-743-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify ordered contact windows for every scheduled tool pair under one budget.",
+        "Check all three pairs, isolated parked-tool collision, contiguous per-pair time coverage, and reserved phase budgets.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0743",
+  "testedBase": "613701beef8ef1dd36da58dea6f2b001d9b06b7c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 368,
+  "scope": [
+    "Classify ordered contact windows for every scheduled tool pair under one budget.",
+    "Check all three pairs, isolated parked-tool collision, contiguous per-pair time coverage, and reserved phase budgets."
+  ],
+  "logSha256": "61d1542547cc7606756e0d16de63b99de5a16a9569a05dee56af05e211b3a784",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "798db25c394ec4d43eb70df4a9d625bf7a73c7568b31169b579d07041a443d22",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "14651edee6f02c1c82ed1f259b4aabac2808208652f34d450df5ffe5ab1b92ea"
+  }
+}
