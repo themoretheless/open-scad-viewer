@@ -1,0 +1,15 @@
+{
+  "id": "NURBS-0959",
+  "testedBase": "7a96e0770c8c22d4ee2eabedff80b74a192d4525",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "1dd43b21be5dcc23b95cc2de746ddb819a69cead94ca99fb0482811babe01556",
+    "crates/cad-step/src/iges_interchange_v2/placement.rs": "bc853ca5cd2407d4725f046e9059bdc389662a69bb13194a78a90cfe9bebcc17",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "5cd13ac5910b458b5a1a49685c239ed2fc86e3de1a7a27d32bac602826ce0144"
+  },
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Member translation and composite rotation preserve the rational rim of the closed cylinder",
+    "Rotated local XZ composite becomes a planar UV polyline",
+    "Refusal when the placed profile leaves the UV plane"
+  ]
+}

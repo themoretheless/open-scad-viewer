@@ -899,7 +899,7 @@ struct CompositeSegment {
 
 enum CompositeVisit {
     Enter(usize, usize),
-    Exit(usize, usize),
+    Exit(usize, usize, usize),
 }
 
 mod circular_arc;
@@ -1032,7 +1032,7 @@ impl<'a> CurveDispatcher<'a> {
     fn composite(&mut self, root: usize) -> Result<Curve> {
         let mut stack = vec![CompositeVisit::Enter(root, 0)];
         let mut active = BTreeSet::new();
-        let mut memo = BTreeMap::<usize, Curve>::new();
+        let mut memo = BTreeMap::<(usize, usize), Curve>::new();
         let mut segments = Vec::<CompositeSegment>::new();
         let mut result = None;
         while let Some(visit) = stack.pop() {
@@ -1045,7 +1045,7 @@ impl<'a> CurveDispatcher<'a> {
                             format!("IGES composite cycle at DE {de}"),
                         ));
                     }
-                    if let Some(curve) = memo.get(&de) {
+                    if let Some(curve) = memo.get(&(de, self.dim)) {
                         if segments.len() >= MAX_COMPOSITE_SEGMENTS {
                             return Err(composite_error(
                                 "BREP_IGES_V2_COMPOSITE_BUDGET",
@@ -1081,7 +1081,8 @@ impl<'a> CurveDispatcher<'a> {
                             format!("IGES composite DE {root} depth budget exceeded at DE {de}"),
                         ));
                     }
-                    let refs = entity_references(de, entity)?;
+                    let mut refs = entity_references(de, entity)?;
+                    refs.retain(|reference| reference.role == "composite segment");
                     if refs.is_empty() {
                         return Err(composite_error(
                             "BREP_IGES_V2_COMPOSITE_DANGLING",
@@ -1089,16 +1090,30 @@ impl<'a> CurveDispatcher<'a> {
                         ));
                     }
                     active.insert(de);
-                    stack.push(CompositeVisit::Exit(de, segments.len()));
+                    stack.push(CompositeVisit::Exit(de, segments.len(), self.dim));
+                    if entity.directory.transform != 0 {
+                        self.dim = 3;
+                    }
                     for reference in refs.iter().rev() {
                         self.budget(root, 1)?;
                         stack.push(CompositeVisit::Enter(reference.target, depth + 1));
                     }
                 }
-                CompositeVisit::Exit(de, start) => {
+                CompositeVisit::Exit(de, start, destination_dim) => {
                     active.remove(&de);
-                    let curve = self.join_segments(de, &segments[start..], self.tolerance_mm)?;
-                    memo.insert(de, curve.clone());
+                    let mut curve = self.join_segments(de, &segments[start..], self.tolerance_mm)?;
+                    self.dim = destination_dim;
+                    let transform = self.entities[&de].directory.transform;
+                    if transform != 0 {
+                        let matrix = placement::read(self.entities, transform)?;
+                        for point in &mut curve.control_points {
+                            *point = placement::apply(&matrix, point, self.scale, self.dim)?;
+                        }
+                        curve.validate()?;
+                        segments.truncate(start);
+                        segments.push(CompositeSegment { de, curve: curve.clone() });
+                    }
+                    memo.insert((de, self.dim), curve.clone());
                     if de == root {
                         result = Some(curve);
                     }
@@ -2304,7 +2319,7 @@ pub fn import_iges_v2_with_options(
             ignored.insert("directory-label".into());
         }
         if e.directory.transform != 0 {
-            if !matches!(e.directory.ty, 100 | 110 | 124 | 126 | 128) {
+            if !matches!(e.directory.ty, 100 | 102 | 110 | 124 | 126 | 128) {
                 return Err(refuse("IGES directory placement is supported only on curves, spline surfaces and placement matrices"));
             }
             placement::read(&entities, e.directory.transform)?;

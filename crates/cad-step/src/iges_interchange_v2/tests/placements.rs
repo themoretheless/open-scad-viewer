@@ -64,6 +64,13 @@ fn placed_arc_survives_a_composite_rim_and_preserves_the_cylinder() {
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     let curve = &restored.edges[(at - 2) / 5].curve;
     assert_eq!(nested.edges[(at - 2) / 5].curve.control_points, curve.control_points);
+    // Place the arc in the composite frame, then rotate the composite in the rim frame.
+    let grouped = attach(&attach(&chain, local, 0), composite, parent);
+    let (grouped, outer) = append_composite(&grouped, &[composite]);
+    let grouped = rewire_reference(&grouped, edges, at, outer);
+    let grouped = import_iges_v2(&grouped).unwrap().0;
+    assert_eq!(grouped.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(grouped.edges[(at - 2) / 5].curve.control_points, curve.control_points);
     let (start, end) = CurveDispatcher::endpoints(curve).unwrap();
     for (p, expected) in [(start, &a), (end, &b)] {
         assert!(p.iter().zip(expected).all(|(x, y)| (x - y).abs() < 1e-12));
@@ -230,4 +237,21 @@ fn solid_directory_counts_match_parameter_records() {
     if let Some(path) = std::env::var_os("CAD_IGES_SOLID_FIXTURE") {
         std::fs::write(path, text).unwrap();
     }
+}
+
+#[test]
+fn rotated_composite_profile_maps_local_z_to_uv_before_projection() {
+    let (text, a) = append_line(&base_text(), vec![1., 0., 2.], vec![2., 0., 2.], false);
+    let (text, b) = append_line(&text, vec![2., 0., 2.], vec![2., 0., 4.], false);
+    let (text, composite) = append_composite(&text, &[a, b]);
+    let (text, turn) = matrix(&text, [1., 0., 0., 0., 0., 0., 1., 0., 0., -1., 0., 0.]);
+    let read = |source: &str| {
+        let (entities, _, _) = parse(source).unwrap();
+        CurveDispatcher { entities: &entities, dim: 2, scale: 1., tolerance_mm: 1e-7, work: 0 }
+            .dispatch(composite)
+    };
+    let placed = read(&attach(&text, composite, turn)).unwrap();
+    assert_eq!(placed.control_points, [[1., 2.], [2., 2.], [2., 4.]]);
+    let (text, shift) = matrix(&text, [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 1.]);
+    assert!(read(&attach(&text, composite, shift)).is_err());
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 958,
-  "unallocatedCount": 42,
+  "specifiedCount": 959,
+  "unallocatedCount": 41,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21849,6 +21849,24 @@
       ],
       "remainingQualification": [
         "Up to 32 proper rigid form-zero matrices. Native cylinder edge and surface placement verified."
+      ]
+    },
+    {
+      "id": "NURBS-0959",
+      "name": "Импорт размещённых составных IGES-кривых в пространственных рёбрах и UV-контурах",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/receipt.json"
+      ],
+      "remainingQualification": [
+        "Rigid form-zero placements on type 102. Tested in a nested circular edge of a closed cylinder and on a rotated two-segment UV profile."
       ]
     }
   ],
