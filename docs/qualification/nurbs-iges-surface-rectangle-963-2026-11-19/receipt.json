@@ -1,0 +1,23 @@
+{
+  "id": "NURBS-0963",
+  "testedBase": "aef222ab06c5594bc1bb4d9fa1e54f731e247c97",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "8d00c82c27cd5f0328f6009c9ba2af8a5bea7520874978dd74ff6fce7436abf6",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "c35aa253c5cd7d1e865c7572961b506f1d81fb498c91a7a368bbe7c709197446"
+  },
+  "occtSamples": 1122,
+  "maxDistance": 0.0,
+  "fixtureSha256": {
+    "patch-trimmed.igs": "aaec3faf38d65da39fb576def27a207a5c0c1751a22d3d335f1c4bc95a494060",
+    "patch-source.igs": "7545154b75a558e5014c726acd7d1d1848d70591a50ed09ffaa649602939671c",
+    "band-trimmed.igs": "cb220a5f578f61c685643446940322d61ba0435a15bb4ae8325c26b3e4c90151",
+    "band-source.igs": "f14f321936617d28ce48cc45831bf83552a14996b1a77d916c9ee551d942f4fe"
+  },
+  "fixtureEnvironment": "CAD_IGES_PATCH_RECTANGLE_FIXTURE=/tmp/osv963-rect",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Extended support surface restricted to a face of a closed cuboid",
+    "Out-of-domain bound rejected",
+    "Uncut periodic band and two-axis patch compared independently on 33 by 17 grids"
+  ]
+}

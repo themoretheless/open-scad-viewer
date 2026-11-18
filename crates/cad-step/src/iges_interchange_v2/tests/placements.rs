@@ -400,3 +400,83 @@ fn declared_iges_subinterval_preserves_weighted_multispan_geometry() {
         std::fs::write(dir.join("trimmed.igs"), exported).unwrap();
     }
 }
+
+#[test]
+fn declared_surface_rectangle_preserves_geometry_and_uncut_periodicity() {
+    let base = Surface {
+        degree_u: 1, degree_v: 1,
+        knots_u: vec![-1., 0., 1., 2., 3., 4.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [[0., 0.], [2., 0.], [0., 3.], [0., 0.]].map(|[x,y]| {
+            vec![vec![x,y,0.], vec![x,y,4.]]
+        }).to_vec(),
+        weights: vec![vec![1.,1.],vec![0.5,0.5],vec![1.,1.],vec![1.,1.]],
+        periodic_u: true, periodic_v: false,
+    };
+    for range in [[0.,3.,0.25,0.75], [0.5,2.25,0.25,0.75], [-1.,2.,0.,1.]] {
+        let mut values = surface_values(&base).unwrap();
+        let at = values.len() - 4;
+        values[at..].clone_from_slice(&range.map(number));
+        let (text, de) = append_entity(&base_text(), 128, 0, "00000000", |_| values);
+        let (entities, _, _) = parse(&text).unwrap();
+        let patch = surface128(&entities, de, 1.);
+        if range[0] < 0. {
+            assert!(patch.is_err());
+            continue;
+        }
+        let patch = patch.unwrap();
+        assert_eq!(patch.periodic_u, range[0] == 0.);
+        assert_eq!(patch.knots_u[patch.degree_u], range[0]);
+        assert_eq!(patch.knots_u[patch.control_points.len()], range[1]);
+        assert_eq!(patch.knots_v[patch.degree_v], range[2]);
+        assert_eq!(patch.knots_v[patch.control_points[0].len()], range[3]);
+        for u in [range[0], 1., 1.5, 2., range[1]] {
+            for v in [range[2], 0.5, range[3]] {
+                assert!(CurveDispatcher::distance(&patch.evaluate(u,v).unwrap().point,
+                    &base.evaluate(u,v).unwrap().point).unwrap() < 1e-12);
+            }
+        }
+        if let Some(dir) = std::env::var_os("CAD_IGES_PATCH_RECTANGLE_FIXTURE") {
+            let dir = std::path::Path::new(&dir);
+            std::fs::create_dir_all(dir).unwrap();
+            let file = if patch.periodic_u { "band" } else { "patch" };
+            std::fs::write(dir.join(format!("{file}-source.igs")), text).unwrap();
+            let (out, _) = append_entity(&base_text(), 128, 0, "00000000", |_| surface_values(&patch).unwrap());
+            std::fs::write(dir.join(format!("{file}-trimmed.igs")), out).unwrap();
+        }
+    }
+}
+
+#[test]
+fn restricted_support_surface_retains_the_closed_cuboid_face() {
+    let text = composite_base_text();
+    let (entities, _, _) = parse(&text).unwrap();
+    let face = directory_entity(&text, 510, 0);
+    let de = u(&entities[&face].values, 1, "face surface").unwrap();
+    let original = surface128(&entities, de, 1.).unwrap();
+    let mut extended = original.clone();
+    assert_eq!((extended.degree_u, extended.degree_v), (1, 1));
+    for row in 0..2 {
+        for column in 0..2 {
+            let a = original.control_points[row][column].clone();
+            let b = &original.control_points[1-row][column];
+            extended.control_points[row][column] = a.iter().zip(b).map(|(x,y)| 2.*x-y).collect();
+        }
+    }
+    let (lo, hi) = (original.knots_u[1], original.knots_u[2]);
+    extended.knots_u = vec![2.*lo-hi, 2.*lo-hi, 2.*hi-lo, 2.*hi-lo];
+    let mut values = surface_values(&extended).unwrap();
+    let at = values.len()-4;
+    values[at] = number(lo);
+    values[at+1] = number(hi);
+    let (text, support) = append_entity(&text, 128, 0, "00000000", |_| values);
+    let text = rewire_reference(&text, face, 1, support);
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(model.faces.len(), 6);
+    let (entities, _, _) = parse(&text).unwrap();
+    let patch = surface128(&entities, support, 1.).unwrap();
+    for (a,b) in patch.control_points.iter().flatten().zip(original.control_points.iter().flatten()) {
+        assert!(CurveDispatcher::distance(a,b).unwrap() < 1e-12);
+    }
+}

@@ -1159,6 +1159,9 @@ fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Resu
     let kv = u(v, 2, "surface V upper index")?;
     let du = u(v, 3, "surface U degree")?;
     let dv = u(v, 4, "surface V degree")?;
+    if ku >= 16384 || kv >= 16384 || du > ku || dv > kv {
+        return Err(refuse("Malformed IGES rational B-spline surface dimensions"));
+    }
     let nu = ku + 1;
     let nv = kv + 1;
     let n = nu
@@ -1197,7 +1200,7 @@ fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Resu
     let index = |u: usize, v: usize| if surface_entity.legacy_surface_order { u * nv + v } else { v * nu + u };
     let control_points = (0..nu).map(|u| (0..nv).map(|v| flat_p[index(u,v)].clone()).collect()).collect();
     let weights = (0..nu).map(|u| (0..nv).map(|v| flat_w[index(u,v)]).collect()).collect();
-    let s = Surface {
+    let mut s = Surface {
         degree_u: du,
         degree_v: dv,
         knots_u,
@@ -1208,6 +1211,16 @@ fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Resu
         periodic_v: u(v, if surface_entity.legacy_surface_flags { 8 } else { 9 }, "surface V periodic flag")? != 0,
     };
     s.validate()?;
+    let at = at + 3 * n;
+    let ranges = [
+        (Axis::U, [s.knots_u[du], s.knots_u[nu]], [f(v, at, "surface U start")?, f(v, at + 1, "surface U end")?]),
+        (Axis::V, [s.knots_v[dv], s.knots_v[nv]], [f(v, at + 2, "surface V start")?, f(v, at + 3, "surface V end")?]),
+    ];
+    for (axis, domain, [start, end]) in ranges {
+        if [start, end] != domain {
+            s = s.edit_axis(axis, |curve| curve.trim(start, end))?;
+        }
+    }
     Ok(s)
 }
 
