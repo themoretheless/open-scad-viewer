@@ -9039,3 +9039,60 @@ fn speed_limit_partition_keeps_both_one_sided_knot_values() {
     let coarse = check(1., 2).unwrap();
     assert_ne!(coarse.cells[0].status, Status::Exceeds);
 }
+
+#[test]
+fn motion_limit_partition_resolves_different_derivative_crossings() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        partition_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 3., acceleration: 3., jerk: 5. };
+    let measure = |budget| {
+        partition_directional_motion_limits(&curve, [2., 4.], &[1., 0.], limits, 0.01, budget)
+            .unwrap()
+    };
+    let coarse = measure(1);
+    assert_eq!(coarse.work_cells, 1);
+    assert_eq!(coarse.cells[0].statuses, [Status::Undetermined, Status::Undetermined, Status::Exceeds]);
+    let report = measure(128);
+    assert!(report.work_cells <= 128);
+    for (index, crossing) in [3., 2.5].into_iter().enumerate() {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.statuses[index] == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.statuses == [Status::Within, Status::Exceeds, Status::Exceeds]
+    }));
+    assert!(report.cells.iter().all(|cell| cell.statuses[2] == Status::Exceeds));
+}
+
+#[test]
+fn motion_limit_partition_measures_jerk_of_rational_linear_support() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        partition_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 10., acceleration: 10., jerk: 0.35 };
+    let report =
+        partition_directional_motion_limits(&curve, [3., 4.], &[-1., 0.], limits, 0.01, 256)
+            .unwrap();
+    assert_eq!(report.cells.first().unwrap().statuses, [Status::Within, Status::Within, Status::Exceeds]);
+    assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
+}

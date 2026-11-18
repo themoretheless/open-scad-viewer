@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 691,
-  "unallocatedCount": 309,
+  "specifiedCount": 692,
+  "unallocatedCount": 308,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16821,6 +16821,25 @@
       "remainingQualification": [
         "Partition the original curve window into within-limit, exceeding and unresolved axial speed intervals.",
         "Check two analytic crossings, contiguous coverage, signed-axis invariance, both one-sided values at a knot, and mandatory initial work coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0692",
+      "name": "Совместное разбиение NURBS-траектории по осевым лимитам движения",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-692-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-692-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify axial speed, acceleration and jerk on one shared certified subdivision.",
+        "Check independent analytic derivative crossings, coarse unresolved bounds, one shared subdivision, and jerk on rational linear support.",
         "WASM and application integration are separate."
       ]
     }

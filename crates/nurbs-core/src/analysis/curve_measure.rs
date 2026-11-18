@@ -1409,17 +1409,80 @@ pub fn partition_directional_speed_limit(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalSpeedLimitPartition> {
+    let (cells, work_cells) = partition_axial_derivatives(
+        curve, interval, direction, [limit], parameter_tolerance, max_cells,
+    )?;
+    let cells = cells
+        .into_iter()
+        .map(|cell| DirectionalSpeedLimitCell {
+            parameter_interval: cell.parameter_interval,
+            span: cell.span,
+            status: cell.statuses[0],
+        })
+        .collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalMotionLimitCell<const N: usize = 3> {
+    pub parameter_interval: [f64; 2],
+    /// Original knot span for one-sided evaluation.
+    pub span: usize,
+    /// Classifications in derivative order (speed, acceleration, jerk).
+    pub statuses: [DirectionalMotionStatus; N],
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionLimitPartition {
+    pub cells: Vec<DirectionalMotionLimitCell>,
+    /// Number of enclosed cells, including replaced cells.
+    pub work_cells: usize,
+}
+
+/// Classify speed, acceleration and jerk using one shared subdivision.
+/// Each classification pertains to the absolute derivative with respect
+/// to the original parameter. Unresolved cells retain their other results.
+pub fn partition_directional_motion_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalMotionLimitPartition> {
+    let (cells, work_cells) = partition_axial_derivatives(
+        curve,
+        interval,
+        direction,
+        [limits.speed, limits.acceleration, limits.jerk],
+        parameter_tolerance,
+        max_cells,
+    )?;
+    Ok(DirectionalMotionLimitPartition { cells, work_cells })
+}
+
+fn partition_axial_derivatives<const N: usize>(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: [f64; N],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<(Vec<DirectionalMotionLimitCell<N>>, usize)> {
     use std::collections::VecDeque;
 
     curve.validate()?;
     validate(parameter_tolerance, max_cells)?;
     validate_travel_interval(curve, interval)?;
-    check(limit.is_finite() && limit >= 0., "Speed limit must be finite and nonnegative")?;
+    check(
+        limits.iter().all(|limit| limit.is_finite() && *limit >= 0.),
+        "Motion limits must be finite and nonnegative",
+    )?;
     let unit = travel_direction(curve, direction)?;
     let mut pending = VecDeque::new();
     for span in active_spans(curve, interval) {
         if pending.len() == max_cells {
-            return Err(resource("Initial speed spans exceed the work budget"));
+            return Err(resource("Initial motion spans exceed the work budget"));
         }
         pending.push_back((span, [
             curve.knots[span].max(interval[0]),
@@ -1433,16 +1496,22 @@ pub fn partition_directional_speed_limit(
         work_cells += 1;
         let width = Interval::point(b).sub(Interval::point(a))?;
         let jets = curve_jets::enclose(curve, span, domain)?;
-        let speed = project_jet(&jets[1], &unit)?.div(width)?;
-        let status = if speed.lo.abs().max(speed.hi.abs()) <= limit {
-            DirectionalMotionStatus::Within
-        } else if speed.lo.max(-speed.hi) > limit {
-            DirectionalMotionStatus::Exceeds
-        } else {
-            DirectionalMotionStatus::Undetermined
-        };
+        let mut statuses = [DirectionalMotionStatus::Undetermined; N];
+        for (index, (status, limit)) in statuses.iter_mut().zip(limits).enumerate() {
+            let mut derivative = project_jet(&jets[index + 1], &unit)?;
+            for _ in 0..=index {
+                derivative = derivative.div(width)?;
+            }
+            *status = if derivative.lo.abs().max(derivative.hi.abs()) <= limit {
+                DirectionalMotionStatus::Within
+            } else if derivative.lo.max(-derivative.hi) > limit {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+        }
         let middle = crate::distance_bounds::midpoint(a, b);
-        if status == DirectionalMotionStatus::Undetermined
+        if statuses.contains(&DirectionalMotionStatus::Undetermined)
             && (b - a).next_up() > parameter_tolerance
             && a < middle
             && middle < b
@@ -1451,11 +1520,11 @@ pub fn partition_directional_speed_limit(
             pending.push_back((span, [a, middle]));
             pending.push_back((span, [middle, b]));
         } else {
-            cells.push(DirectionalSpeedLimitCell { parameter_interval: domain, span, status });
+            cells.push(DirectionalMotionLimitCell { parameter_interval: domain, span, statuses });
         }
     }
     cells.sort_by(|a, b| a.parameter_interval[0].total_cmp(&b.parameter_interval[0]));
-    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+    Ok((cells, work_cells))
 }
 
 fn measure_directional_derivative_peak(

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0692",
+  "testedBase": "e9fe0489f1ad40f09175b4f5f932e900f7acf946",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 306,
+  "scope": [
+    "Classify axial speed, acceleration and jerk on one shared certified subdivision.",
+    "Check independent analytic derivative crossings, coarse unresolved bounds, one shared subdivision, and jerk on rational linear support."
+  ],
+  "logSha256": "674ab7317d251b81e9bdf9b489004a4d4667811189f67949fac150666667248f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b9833750682be74272872136a037559cce6168fa2d50b13e8976af2078f19d45",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "bf3c2b2d21fe5c9a15e786514c60206f33609f744c78ba18e6e0a6b23662ed22"
+  }
+}
