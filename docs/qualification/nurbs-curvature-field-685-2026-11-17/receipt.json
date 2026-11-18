@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0685",
+  "testedBase": "4c91c6dc3691842976a08d250c7673c2b49bfe6c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 292,
+  "scope": [
+    "Enclose every possible source parameter that attains the peak absolute axial jerk.",
+    "Check the interior extremum of a quintic, the clipped endpoint of a rational span, coarse budget coverage, and invalid parameter tolerance."
+  ],
+  "logSha256": "f2e4aa3125c7b9dfb36c4f288d5149a8f0054dba89ec6813ceb820d1d51d5ebb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "220286513fd8998ce8f4224ea9c4821611347f23d29387fac6f736849543d769",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "13d3387f2aa0ef8d849342f5f92ef38e42c366c7c0b239de8a80168a8f07de7c"
+  }
+}

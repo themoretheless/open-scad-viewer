@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0700",
+  "testedBase": "ceb6246d4eb8564be29ed5f6daf146bec4fd2e9f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 320,
+  "scope": [
+    "Check one-sided tangent alignment and spatial gap between two curve windows.",
+    "Check clipped windows, spatial gap independent of angle, right-angle and reversed tangents, stationary uncertainty, and invalid thresholds."
+  ],
+  "logSha256": "2b19e2bbf704f297c66f6e1d888f0b95cfd1d8b728c79bc8cfdc6bb2fd463fcf",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7c761f40debff8cd225e96207c2193150506eb69c8404355bdc1882a3c4b1fd9",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "cc95048e1e9b54cfe81676803dd8039f328e3693da275d438f1058ee03e7c8e9"
+  }
+}

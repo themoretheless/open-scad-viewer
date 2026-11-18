@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0694",
+  "testedBase": "555b24fede0ad7943bd8b806a06d160a5a388a1a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 310,
+  "scope": [
+    "Enclose signed axial derivative jumps at interior knots and classify against absolute limits.",
+    "Check a negative speed jump across unequal source spans, exact C2 zero jumps, cubic jerk discontinuity, window boundaries and the knot work limit."
+  ],
+  "logSha256": "0b413ec8dcfe0af4ab5728f0888769a366beed7d7f860ea6675d2612c40da71f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "2029ca0b8ba8ffacc817aadc67ffef2f2c52fd822de21016239253c0a5c059cd",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d7ff5b6f22bef64d3c389ceb8dc8e2d7af000eb1432bba9b76058f25e37e76f2"
+  }
+}

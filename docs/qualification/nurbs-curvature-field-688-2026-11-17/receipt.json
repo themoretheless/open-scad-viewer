@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0688",
+  "testedBase": "0cb28bba041304874d33046cde8307cec3a485a8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 298,
+  "scope": [
+    "Enclose the common slowdown for all axes under one span coverage and refinement budget.",
+    "Check a jerk-limited axis dominating a speed-limited axis, input order, all-span budget reservation, and infeasible combined limits."
+  ],
+  "logSha256": "987a912eca79eb44a9986e70795f90c666e516c1a13e7e227e194b9644578ba3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d0ab60d46d542f388deaa893e03111868953420f59f80f4da6c2f3a9d0a55469",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "218f2708977e0caa1c7e74d965012245582c2f8eba3245dc47ecee3cc6304748"
+  }
+}

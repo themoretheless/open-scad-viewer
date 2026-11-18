@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0681",
+  "testedBase": "8b3f73b57109edca1f17f1428f92de3f740f32c5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 284,
+  "scope": [
+    "Return the union of original parameter intervals that can still contain a global axial speed maximum.",
+    "Check interior localization, a coarse enclosure with one cell, preservation of disconnected tied spans and sorted source intervals."
+  ],
+  "logSha256": "f5606db475fc8cc79cb48f8975647c8afd3a9073cbfe0af24ddd37a2ea5d79f6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "1636767dfc1ef174b90d4a4e3d7803a9696a818af6d62b8a9384a9313bcc2e4b",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b3071eb0fc009941ac63a7ca89553f07e39bcbd158ca4b4922ce6f270147f6ef"
+  }
+}

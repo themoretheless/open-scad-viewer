@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0698",
+  "testedBase": "d4d6e952f790ab001ba74b8ec8868c867030528e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 317,
+  "scope": [
+    "Classify interior derivative jumps in the traversal clock of a timed curve window.",
+    "Check clipped source windows, cubic duration scaling at two rates, exact C2 zero jumps, and invalid duration."
+  ],
+  "logSha256": "818e3518f9be17f0bc8cc1f8dcfd68b0220a7c797ad9df2a98075d206f25675d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "79dd69c4d82b90a92796cad145831d773a3c9cc6cc106869268a080734687a9c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b90a30eb005b94d06d4ed41668e73b3bfcdbc085d82e09e7cd7d639071c36b68"
+  }
+}

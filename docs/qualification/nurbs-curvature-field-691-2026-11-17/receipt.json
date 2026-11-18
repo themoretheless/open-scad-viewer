@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0691",
+  "testedBase": "7138c58120e9cce093279adf17afb323e8da834a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 304,
+  "scope": [
+    "Partition the original curve window into within-limit, exceeding and unresolved axial speed intervals.",
+    "Check two analytic crossings, contiguous coverage, signed-axis invariance, both one-sided values at a knot, and mandatory initial work coverage."
+  ],
+  "logSha256": "96f6d4493e196fedca4f1886805e50a0b208f24fb32c84854bf2dde877370977",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "3897ce94a33c8f22c7d603f4b21f668ed9698a398123dc45fea7bcd0752768c3",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b6d2d11bc99b09672052a7df28f50b82e063f79114609bc3eccd073b5ddda761"
+  }
+}

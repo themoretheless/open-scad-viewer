@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0701",
+  "testedBase": "9d24ab5f3b0ddc694a613e4fc051ba8aa0bb9616",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 322,
+  "scope": [
+    "Check spatial gaps and tangent turns across open or closed chains of curve windows.",
+    "Check open and closed joins, independent gap and turn failures, stationary seam uncertainty, and the join budget."
+  ],
+  "logSha256": "02057bf8ba536e143303576a11776b5ea23830551c564c8799d6b6d9ad4baf1c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "14ad99fc9eb753700658a2ad390296d948c07e5e93438284aa24621fa60c21b5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ab7bcff8905512d836415cef49a56473b1be935a5a1921150a1e26670dbeac83"
+  }
+}

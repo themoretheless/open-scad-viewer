@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0705",
+  "testedBase": "2c738954ea5cc13b3eef6fb77aa489e86ac1a0b2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 328,
+  "scope": [
+    "Classify a curve window against intersecting closed offset half-spaces on a shared subdivision.",
+    "Check two shifted oblique boundaries, residual ordering, analytic crossing windows, and invalid planes and budgets."
+  ],
+  "logSha256": "d3e9d533de2a59adafec52a55eec951ced868fd067e54ca16cd10c5a115f2831",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "3ffcdb6399a3337706c6da7ab971413ba077a33d3b272da146f89aeffc004c3e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2f13aa2623ddf6a520c57730c6d0109a28f0e9bd0bbc2055b4e1baa743659c03"
+  }
+}

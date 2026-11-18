@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0684",
+  "testedBase": "19be374174f7cae4eff2cdfcc969470fb74e100f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 290,
+  "scope": [
+    "Enclose every possible source parameter that attains the peak absolute axial acceleration.",
+    "Check localization of an analytic interior maximum and a one-sided knot maximum, shared cell limits, conservative coarse coverage, and invalid parameter tolerance."
+  ],
+  "logSha256": "2d95f5cd1082de913da463d5b39b0446bca97a610c69f5b5323af463f14746b3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "989f450da146411a36e667aae0f3f649fb848c3e1cd86d59b8e03fe1a927515b",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ee25e13cddc448876c05145f77852b0a682ff867bd3fb1005c422722fef1f9e1"
+  }
+}

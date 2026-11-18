@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0706",
+  "testedBase": "407d8bb7dc869086bfce12042eaffdbc2d2ee046",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 329,
+  "scope": [
+    "Locate occupied, clear and unresolved intervals against a union of closed convex obstacles.",
+    "Check two independent obstacles, all four analytic crossings, clear space between obstacles, and input budget refusal."
+  ],
+  "logSha256": "41c8edfb1ac6917a19ac8f232dfa140d6776ebe9df0d66f93c6ca3fd0db62f6e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "6a53267f643064dc757cf3e28094272b412d5d2194e08013f5a8b0755f554eff",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6e580709cc3f25eaef410d9df1f0e1ceadf1750279d445b7f5120331b84b1cfb"
+  }
+}

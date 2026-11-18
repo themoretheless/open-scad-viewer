@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0683",
+  "testedBase": "7746412c24de1bac384e069d7efe2d08c75e6489",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 288,
+  "scope": [
+    "Enclose the maximum absolute axial third derivative on the original parameter interval.",
+    "Check cubed source width, rational linear support jerk, coarse budget coverage and invalid directions."
+  ],
+  "logSha256": "c28ad481b3cf7fe67982601e7f6f7392280098a2bf38fee4f988b51894e1f865",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7799ee40721536595f719cf404ba01204de553edd7031d93002dc0dd019bd737",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2357e7eaab9d2b207f4c4de09ccf0426142e33d8a135aae6d4446d4ea7d8106c"
+  }
+}

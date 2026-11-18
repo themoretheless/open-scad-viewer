@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0696",
+  "testedBase": "cc7bea16782e93aca3f8fbddb3fd3208192d4b28",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 314,
+  "scope": [
+    "Check spatial continuity and axial derivative jumps along a timed chain, including optional loop closure.",
+    "Check ordered joins, independent segment timings, closing gap detection, a single-segment seam, and join budget refusal."
+  ],
+  "logSha256": "4f505eef25e76af64d83f5e2bfd675d803535096c4a7e45cd197ab7be7fe94f2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "74d06640ad3cd38283fa144013783223368ce5f9792ae18465cdbcffb30333a0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "246d83bb61d1a6a4003974b6c62f49b7e550811ae18498e3ec08783f9eafbb49"
+  }
+}

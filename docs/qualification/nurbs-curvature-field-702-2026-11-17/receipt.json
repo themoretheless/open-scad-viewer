@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0702",
+  "testedBase": "89f62783d91534cfda3c4fae153904162b1df23b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 324,
+  "scope": [
+    "Partition a curve window by an inclusive signed axial position range.",
+    "Check interior overtravel between safe endpoints, both crossings, signed oblique rational projection, coarse budgets, and invalid bounds."
+  ],
+  "logSha256": "b1f0da3d857a9a456a64b9a5ab5f8f3b8562cb3448985c5308eb363daac96e58",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "3bdf913f0241351cc4102640501244b9f2b34135e79c56435ba1548ed546f6ec",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4e5f687304656ac51f1bef92770d0c5c7d707542f7e4d80cd5fde138f2eb1c1e"
+  }
+}

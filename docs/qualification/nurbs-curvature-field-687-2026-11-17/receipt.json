@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0687",
+  "testedBase": "21a61cd16ae2a31dd2d4ed5a2c0ee648d7cbbdc6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 296,
+  "scope": [
+    "Enclose minimum uniform parameter dilation under speed, acceleration and jerk limits.",
+    "Check each derivative scaling power, existing feasibility, zero and subnormal limits, and enclosure under coarse work budgets."
+  ],
+  "logSha256": "c7e577024debb6194b09fb5aa5834b404a20d71f632807176a4921cee0329d21",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "203232efb0f59e4fa2713c53edf467c2c59d1d7e328993247efad1b33a980ce6",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "148fe3a27094e344fda5716a8f87545b6243d350e64ff1687866c25a71ffbf83"
+  }
+}

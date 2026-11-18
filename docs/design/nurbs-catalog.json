@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 679,
-  "unallocatedCount": 321,
+  "specifiedCount": 706,
+  "unallocatedCount": 294,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16593,6 +16593,519 @@
       "remainingQualification": [
         "Expose ordered window reports, a shared axial travel budget and optional reverse-limit checks per window.",
         "Check ordered windows, shared-budget exhaustion, and per-window reverse-limit classifications through the compiled ABI.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0680",
+      "name": "Гарантированная оценка пиковой осевой скорости NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_speed",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-680-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-680-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the supremum of absolute projected source-parameter velocity on a selected window.",
+        "Check an interior peak under a nonunit source clock, one-sided knot speeds, clipped windows, and coarse whole-span enclosures.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0681",
+      "name": "Локализация всех возможных пиков осевой скорости NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_speed",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-681-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-681-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return the union of original parameter intervals that can still contain a global axial speed maximum.",
+        "Check interior localization, a coarse enclosure with one cell, preservation of disconnected tied spans and sorted source intervals.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0682",
+      "name": "Гарантированная оценка пикового осевого ускорения NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_acceleration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-682-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-682-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the maximum absolute axial second derivative on the original curve clock.",
+        "Check an interior acceleration extremum with nonunit parameter scaling, a rational degree-one support and coarse work limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0683",
+      "name": "Гарантированная оценка пикового осевого рывка NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_jerk",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-683-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-683-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the maximum absolute axial third derivative on the original parameter interval.",
+        "Check cubed source width, rational linear support jerk, coarse budget coverage and invalid directions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0684",
+      "name": "Локализация пикового осевого ускорения NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-684-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-684-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose every possible source parameter that attains the peak absolute axial acceleration.",
+        "Check localization of an analytic interior maximum and a one-sided knot maximum, shared cell limits, conservative coarse coverage, and invalid parameter tolerance.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0685",
+      "name": "Локализация пикового осевого рывка NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_jerk",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-685-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-685-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose every possible source parameter that attains the peak absolute axial jerk.",
+        "Check the interior extremum of a quintic, the clipped endpoint of a rational span, coarse budget coverage, and invalid parameter tolerance.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0686",
+      "name": "Сертифицированная проверка осевых ограничений движения NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-686-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-686-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare peak absolute speed, acceleration and jerk with inclusive limits in the original parameter clock.",
+        "Check original-clock units, violations of each independent limit, a coarse unresolved speed bound, recovery with refinement, and invalid limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0687",
+      "name": "Сертифицированный коэффициент замедления NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_motion_slowdown_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-687-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-687-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose minimum uniform parameter dilation under speed, acceleration and jerk limits.",
+        "Check each derivative scaling power, existing feasibility, zero and subnormal limits, and enclosure under coarse work budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0688",
+      "name": "Сертифицированное замедление NURBS-траектории для нескольких осей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_slowdown_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-688-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-688-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the common slowdown for all axes under one span coverage and refinement budget.",
+        "Check a jerk-limited axis dominating a speed-limited axis, input order, all-span budget reservation, and infeasible combined limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0689",
+      "name": "Сертифицированная длительность прохода NURBS-траектории по нескольким осям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-689-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-689-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum uniform-clock traversal time under simultaneous axis limits.",
+        "Check the clipped source time window, common jerk-limited duration, unit slowdown, and duration overflow with finite dilation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0690",
+      "name": "Сертифицированная проверка срока прохода NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_multi_axis_motion_deadline",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-690-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-690-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify uniform-clock traversal at an inclusive deadline for all motion axes.",
+        "Check nonbinary clock ratios, an independently limiting axis, the original-duration floor, invalid deadlines, and coarse uncertainty resolved by refinement.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0691",
+      "name": "Сертифицированное разбиение NURBS-траектории по лимиту осевой скорости",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_speed_limit",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-691-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-691-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition the original curve window into within-limit, exceeding and unresolved axial speed intervals.",
+        "Check two analytic crossings, contiguous coverage, signed-axis invariance, both one-sided values at a knot, and mandatory initial work coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0692",
+      "name": "Совместное разбиение NURBS-траектории по осевым лимитам движения",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-692-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-692-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify axial speed, acceleration and jerk on one shared certified subdivision.",
+        "Check independent analytic derivative crossings, coarse unresolved bounds, one shared subdivision, and jerk on rational linear support.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0693",
+      "name": "Совместное разбиение NURBS-траектории по ограничениям нескольких осей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_multi_axis_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-693-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-693-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify speed, acceleration and jerk on one subdivision for every axis under a shared axis-cell budget.",
+        "Check two axes with distinct crossing times, a normalized negative direction, one-sided limit changes, and shared work reservation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0694",
+      "name": "Сертифицированная проверка скачков производных в узлах NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_knot_jumps",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-694-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-694-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed axial derivative jumps at interior knots and classify against absolute limits.",
+        "Check a negative speed jump across unequal source spans, exact C2 zero jumps, cubic jerk discontinuity, window boundaries and the knot work limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0695",
+      "name": "Сертифицированная проверка стыка NURBS-траекторий с независимыми часами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_join",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-695-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-695-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the spatial gap and axial derivative jumps of two independently timed curve windows.",
+        "Check independent clocks, clipping, off-axis spatial gaps, derivative time powers and invalid duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0696",
+      "name": "Проверка стыков открытой и замкнутой NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_chain",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-696-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-696-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check spatial continuity and axial derivative jumps along a timed chain, including optional loop closure.",
+        "Check ordered joins, independent segment timings, closing gap detection, a single-segment seam, and join budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0697",
+      "name": "Совместная проверка сегментов и стыков NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_timed_motion_chain",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-697-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-697-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check axial motion limits in each segment clock together with spatial and derivative join limits.",
+        "Check physical-clock limits, separate segment and join violations, a fully feasible chain, and shared span budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0698",
+      "name": "Скачки производных в узлах NURBS-сегмента с заданной длительностью",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_timed_motion_knot_jumps",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-698-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-698-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify interior derivative jumps in the traversal clock of a timed curve window.",
+        "Check clipped source windows, cubic duration scaling at two rates, exact C2 zero jumps, and invalid duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0699",
+      "name": "Сертифицированная проверка изломов во внутренних узлах NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_knot_turns",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-699-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-699-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the tangent turn cosine at interior knots and classify against an inclusive threshold.",
+        "Check a rational right angle across unequal spans, exact C1 alignment, stationary uncertainty, and knot budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0700",
+      "name": "Сертифицированная проверка угла поворота на стыке NURBS-сегментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_join_turn",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-700-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-700-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check one-sided tangent alignment and spatial gap between two curve windows.",
+        "Check clipped windows, spatial gap independent of angle, right-angle and reversed tangents, stationary uncertainty, and invalid thresholds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0701",
+      "name": "Сертифицированная проверка поворотов и зазоров на стыках NURBS-цепочки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_chain_turns",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-701-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-701-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Check spatial gaps and tangent turns across open or closed chains of curve windows.",
+        "Check open and closed joins, independent gap and turn failures, stationary seam uncertainty, and the join budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0702",
+      "name": "Сертифицированная проверка осевого диапазона положения NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_position_range",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-702-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-702-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition a curve window by an inclusive signed axial position range.",
+        "Check interior overtravel between safe endpoints, both crossings, signed oblique rational projection, coarse budgets, and invalid bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0703",
+      "name": "Сертифицированная проверка рабочей области NURBS-траектории по нескольким осям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_multi_axis_position_ranges",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-703-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-703-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify multiple signed position ranges on a shared subdivision with one work budget.",
+        "Check distinct crossings on a shared grid, signed direction, continuous window coverage, and initial budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0704",
+      "name": "Совместная проверка диапазонов положения и производных NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_trajectory_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-704-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-704-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify position, speed, acceleration and jerk on a common multi-axis subdivision.",
+        "Check independent position and motion violations, cross-axis results, budget exhaustion, and invalid derivative limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0705",
+      "name": "Сертифицированная проверка выпуклой рабочей области NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-705-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-705-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify a curve window against intersecting closed offset half-spaces on a shared subdivision.",
+        "Check two shifted oblique boundaries, residual ordering, analytic crossing windows, and invalid planes and budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0706",
+      "name": "Сертифицированная проверка NURBS-траектории относительно выпуклых препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-706-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-706-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Locate occupied, clear and unresolved intervals against a union of closed convex obstacles.",
+        "Check two independent obstacles, all four analytic crossings, clear space between obstacles, and input budget refusal.",
         "WASM and application integration are separate."
       ]
     }

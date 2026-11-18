@@ -8444,3 +8444,1327 @@ fn batched_directional_travel_reserves_coverage_from_early_refinement() {
     assert!(reports[1].forward_bounds[0] <= 2.5 && 2.5 <= reports[1].forward_bounds[1]);
     assert!(directional_travel_on_intervals(&curve, &[[0., 1.], [0., 2.]], &[1., 0.], 1e-7, 4).is_err());
 }
+
+#[test]
+fn directional_peak_speed_encloses_interior_maximum_in_original_parameter_units() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_speed};
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![1., 0.], vec![1., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = directional_peak_speed(&curve, [2., 6.], &[-2., 0.], 1e-5, 2048).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.bounds[0] <= 0.375 && 0.375 <= report.bounds[1]);
+    let coarse = directional_peak_speed(&curve, [2., 6.], &[1., 0.], 1e-5, 1).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.bounds[0] <= 0.375 && 0.375 <= coarse.bounds[1]);
+}
+
+#[test]
+fn directional_peak_speed_retains_both_one_sided_knot_derivatives() {
+    use nurbs_core::analysis::curve_measure::directional_peak_speed;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![4., 0.], vec![-12., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    for (window, expected) in [([3., 4.], 2.), ([3., 5.], 4.), ([4., 5.], 4.)] {
+        let [lo, hi] = directional_peak_speed(&curve, window, &[1., 0.], 1e-8, 32).unwrap().bounds;
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-8);
+    }
+    assert!(directional_peak_speed(&curve, [3., 5.], &[1., 0.], 1e-8, 1).is_err());
+}
+
+#[test]
+fn directional_peak_locations_narrow_around_an_interior_speed_maximum() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_speed;
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![1., 0.], vec![1., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let result = locate_directional_peak_speed(&curve, [2., 6.], &[1., 0.], 1e-5, 0.02, 2048).unwrap();
+    assert_eq!(result.parameter_intervals.len(), 1, "{result:?}");
+    let [lo, hi] = result.parameter_intervals[0];
+    assert!(lo <= 4. && 4. <= hi && hi - lo < 0.1, "{result:?}");
+    let coarse = locate_directional_peak_speed(&curve, [2., 6.], &[1., 0.], 1e-5, 0.02, 1).unwrap();
+    assert_eq!(coarse.parameter_intervals, vec![[2., 6.]]);
+}
+
+#[test]
+fn directional_peak_locations_preserve_disjoint_tied_spans() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_speed;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![3., 0.], vec![4., 0.], vec![1., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let result = locate_directional_peak_speed(&curve, [0., 3.], &[1., 0.], 1e-8, 0.02, 3).unwrap();
+    assert_eq!(result.parameter_intervals, vec![[0., 1.], [2., 3.]]);
+    assert!(result.peak.bounds[0] <= 3. && 3. <= result.peak.bounds[1]);
+}
+
+#[test]
+fn directional_peak_acceleration_encloses_interior_maximum_with_source_clock_scaling() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_acceleration};
+    let curve = Curve {
+        degree: 4,
+        knots: vec![2., 2., 2., 2., 2., 4., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 1., 2.]
+            .into_iter()
+            .map(|x| vec![x, 0.])
+            .collect(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let result = directional_peak_acceleration(&curve, [2., 4.], &[1., 0.], 1e-5, 2048).unwrap();
+    assert_eq!(result.stop_reason, StopReason::Tolerance);
+    assert!(result.bounds[0] <= 1.5 && 1.5 <= result.bounds[1], "{result:?}");
+    let coarse = directional_peak_acceleration(&curve, [2., 4.], &[1., 0.], 1e-5, 1).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.bounds[0] <= 1.5 && 1.5 <= coarse.bounds[1]);
+}
+
+#[test]
+fn directional_peak_acceleration_accounts_for_rational_parameter_speed() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_acceleration};
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let result = directional_peak_acceleration(&curve, [3., 4.], &[1., 0.], 1e-5, 2048).unwrap();
+    assert_eq!(result.stop_reason, StopReason::Tolerance);
+    assert!(result.bounds[0] <= 0.768 && 0.768 <= result.bounds[1], "{result:?}");
+}
+
+#[test]
+fn directional_peak_jerk_uses_cubed_source_parameter_width() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_jerk};
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let result = directional_peak_jerk(&curve, [2.5, 3.5], &[-4., 0.], 1e-8, 32).unwrap();
+    assert_eq!(result.stop_reason, StopReason::Tolerance);
+    assert!(result.bounds[0] <= 6. && 6. <= result.bounds[1]);
+    assert!(result.bounds[1] - result.bounds[0] < 1e-8);
+}
+
+#[test]
+fn directional_peak_jerk_encloses_rational_linear_support() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_jerk};
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let exact = 72. / (64. * 1.25_f64.powi(4));
+    for (cells, status) in [(1, StopReason::WorkLimit), (2048, StopReason::Tolerance)] {
+        let report = directional_peak_jerk(&curve, [3., 4.], &[1., 0.], 1e-5, cells).unwrap();
+        assert_eq!(report.stop_reason, status, "{report:?}");
+        assert!(report.bounds[0] <= exact && exact <= report.bounds[1]);
+    }
+    assert!(directional_peak_jerk(&curve, [3., 4.], &[0., 0.], 1e-5, 32).is_err());
+}
+
+#[test]
+fn locate_directional_peak_acceleration_brackets_interior_maximum_under_shared_budget() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration;
+    let curve = Curve {
+        degree: 4,
+        knots: vec![2., 2., 2., 2., 2., 4., 4., 4., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![0., 0.], vec![1., 0.], vec![2., 0.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let locate = |cells| {
+        locate_directional_peak_acceleration(&curve, [2., 4.], &[1., 0.], 1e-5, 0.02, cells)
+            .unwrap()
+    };
+    let fine = locate(2048);
+    assert_eq!(fine.parameter_intervals.len(), 1, "{fine:?}");
+    let [lo, hi] = fine.parameter_intervals[0];
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.1, "{fine:?}");
+    assert!(fine.peak.bounds[0] <= 1.5 && 1.5 <= fine.peak.bounds[1]);
+    let coarse = locate(1);
+    assert_eq!(coarse.parameter_intervals, vec![[2., 4.]]);
+    assert_eq!(coarse.peak.cells, 1);
+}
+
+#[test]
+fn locate_directional_peak_acceleration_keeps_a_one_sided_knot_maximum() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration;
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 2., 2., 2., 2.],
+        control_points: [0., 0., 0., 1., 2., 3., 4.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 7],
+        periodic: false,
+    };
+    let report =
+        locate_directional_peak_acceleration(&curve, [0., 2.], &[1., 0.], 1e-5, 0.01, 128)
+            .unwrap();
+    assert_eq!(report.parameter_intervals.len(), 1, "{report:?}");
+    let [lo, hi] = report.parameter_intervals[0];
+    assert!(0.98 < lo && lo <= 1. && hi == 1., "{report:?}");
+    assert!(report.peak.bounds[0] <= 6. && 6. <= report.peak.bounds[1]);
+    assert!(
+        locate_directional_peak_acceleration(&curve, [0., 2.], &[1., 0.], 1e-5, 0., 128)
+            .is_err()
+    );
+}
+
+#[test]
+fn locate_directional_peak_jerk_brackets_an_interior_maximum() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_jerk;
+    let curve = Curve {
+        degree: 5,
+        knots: vec![2., 2., 2., 2., 2., 2., 4., 4., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 0., 1., 3.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 6],
+        periodic: false,
+    };
+    let locate = |cells| {
+        locate_directional_peak_jerk(&curve, [2., 4.], &[-1., 0.], 1e-5, 0.02, cells).unwrap()
+    };
+    let fine = locate(2048);
+    assert_eq!(fine.parameter_intervals.len(), 1, "{fine:?}");
+    let [lo, hi] = fine.parameter_intervals[0];
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.1, "{fine:?}");
+    assert!(fine.peak.bounds[0] <= 3.75 && 3.75 <= fine.peak.bounds[1]);
+    let coarse = locate(1);
+    assert_eq!(coarse.parameter_intervals, vec![[2., 4.]]);
+    assert_eq!(coarse.peak.cells, 1);
+}
+
+#[test]
+fn locate_directional_peak_jerk_keeps_rational_window_boundary() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_jerk;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![1., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let report = locate_directional_peak_jerk(&curve, [3., 4.], &[1., 0.], 1e-5, 0.01, 256)
+        .unwrap();
+    assert_eq!(report.parameter_intervals.len(), 1, "{report:?}");
+    let [lo, hi] = report.parameter_intervals[0];
+    assert!(lo == 3. && hi < 3.03, "{report:?}");
+    assert!(
+        locate_directional_peak_jerk(&curve, [3., 4.], &[1., 0.], 1e-5, f64::NAN, 256).is_err()
+    );
+}
+
+#[test]
+fn axial_motion_limits_check_each_derivative_in_the_original_clock() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus, check_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let check = |speed, acceleration, jerk| {
+        check_directional_motion_limits(
+            &curve, [2., 4.], &[-2., 0.],
+            DirectionalMotionLimits { speed, acceleration, jerk }, [1e-6; 3], 32,
+        )
+    };
+    let report = check(13., 13., 7.).unwrap();
+    assert_eq!(report.status, DirectionalMotionStatus::Within);
+    for ([lo, hi], exact) in [report.speed.bounds, report.acceleration.bounds, report.jerk.bounds]
+        .into_iter()
+        .zip([12., 12., 6.])
+    {
+        assert!(lo <= exact && exact <= hi);
+    }
+    for (s, a, j) in [(11., 13., 7.), (13., 11., 7.), (13., 13., 5.)] {
+        assert_eq!(check(s, a, j).unwrap().status, DirectionalMotionStatus::Exceeds);
+    }
+    assert!(check(13., 13., f64::NAN).is_err());
+}
+
+#[test]
+fn axial_motion_limits_preserve_undetermined_status_at_coarse_budget() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus, check_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let check = |cells| {
+        check_directional_motion_limits(
+            &curve, [2., 6.], &[1., 0.],
+            DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. },
+            [1e-5; 3], cells,
+        )
+        .unwrap()
+    };
+    let coarse = check(1);
+    assert_eq!(coarse.status, DirectionalMotionStatus::Undetermined);
+    assert_eq!([coarse.speed.cells, coarse.acceleration.cells, coarse.jerk.cells], [1; 3]);
+    assert_eq!(check(128).status, DirectionalMotionStatus::Within);
+}
+
+#[test]
+fn motion_slowdown_bounds_apply_each_derivative_power() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, directional_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let bounds = |speed, acceleration, jerk| {
+        directional_motion_slowdown_bounds(
+            &curve, [2., 4.], &[1., 0.],
+            DirectionalMotionLimits { speed, acceleration, jerk }, [1e-6; 3], 32,
+        )
+        .unwrap()
+    };
+    for limits in [(6., 20., 20.), (20., 3., 20.), (20., 20., 0.75)] {
+        let [lo, hi] = bounds(limits.0, limits.1, limits.2);
+        assert!(lo <= 2. && 2. <= hi && hi - lo < 1e-6, "{lo}..{hi}");
+    }
+    assert_eq!(bounds(20., 20., 20.), [1.; 2]);
+    assert_eq!(bounds(20., 20., 0.), [f64::MAX, f64::INFINITY]);
+    assert_eq!(bounds(f64::from_bits(1), 20., 20.), [f64::MAX, f64::INFINITY]);
+}
+
+#[test]
+fn motion_slowdown_bounds_cover_coarse_peak_uncertainty() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, directional_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let measure = |cells| {
+        directional_motion_slowdown_bounds(
+            &curve, [2., 6.], &[1., 0.],
+            DirectionalMotionLimits { speed: 0.25, acceleration: 1., jerk: 1. },
+            [1e-5; 3], cells,
+        )
+        .unwrap()
+    };
+    let coarse = measure(1);
+    let fine = measure(128);
+    assert_eq!(coarse[0], 1.);
+    assert!(coarse[1] >= 3.);
+    assert!(fine[0] <= 1.5 && 1.5 <= fine[1] && fine[1] - fine[0] < 1e-4);
+}
+
+#[test]
+fn multi_axis_slowdown_reports_the_limiting_axis_in_input_order() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 8. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[2., 0.],
+            limits: DirectionalMotionLimits { speed: 6., acceleration: 12., jerk: 6. },
+        },
+        MotionAxis {
+            direction: &[0., -1.],
+            limits: DirectionalMotionLimits { speed: 96., acceleration: 96., jerk: 0.75 },
+        },
+    ];
+    let report = multi_axis_motion_slowdown_bounds(&curve, [2., 4.], &axes, [1e-5; 3], 32)
+        .unwrap();
+    for ([lo, hi], target) in report.axis_bounds.iter().copied().zip([2., 4.]) {
+        assert!(lo <= target && target <= hi && hi - lo < 1e-5, "{report:?}");
+    }
+    assert_eq!(report.axis_bounds.len(), 2);
+    assert_eq!(report.bounds, report.axis_bounds[1]);
+    assert!(report.cells <= 32);
+    let reversed = multi_axis_motion_slowdown_bounds(
+        &curve, [2., 4.], &[axes[1], axes[0]], [1e-5; 3], 32,
+    )
+    .unwrap();
+    assert_eq!(reversed.bounds, report.bounds);
+    assert_eq!(reversed.axis_bounds, [report.axis_bounds[1], report.axis_bounds[0]]);
+}
+
+#[test]
+fn multi_axis_slowdown_reserves_initial_coverage_for_every_derivative() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![3., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let axes = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 1., acceleration: 1., jerk: 1. },
+    }; 2];
+    let check = |axes: &[MotionAxis<'_>], cells| {
+        multi_axis_motion_slowdown_bounds(&curve, [0., 2.], axes, [1e-5; 3], cells)
+    };
+    assert!(check(&[], 12).is_err());
+    assert!(check(&axes, 11).is_err());
+    let report = check(&axes, 12).unwrap();
+    assert_eq!(report.cells, 12);
+    assert!(report.bounds[0] <= 2. && 2. <= report.bounds[1]);
+    let mut blocked = axes;
+    blocked[1].limits.speed = 0.;
+    assert_eq!(check(&blocked, 12).unwrap().bounds, [f64::MAX, f64::INFINITY]);
+}
+
+#[test]
+fn multi_axis_motion_duration_uses_window_width_and_common_dilation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_duration_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 8. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[1., 0.],
+            limits: DirectionalMotionLimits { speed: 6., acceleration: 12., jerk: 6. },
+        },
+        MotionAxis {
+            direction: &[0., -1.],
+            limits: DirectionalMotionLimits { speed: 96., acceleration: 96., jerk: 0.75 },
+        },
+    ];
+    let report =
+        multi_axis_motion_duration_bounds(&curve, [2.5, 4.], &axes, [1e-5; 3], 32).unwrap();
+    let [lo, hi] = report.duration_bounds;
+    assert!(lo <= 6. && 6. <= hi && hi - lo < 1e-5, "{report:?}");
+    assert_eq!(report.slowdown.axis_bounds.len(), 2);
+    assert!(report.slowdown.cells <= 32);
+    let unconstrained = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 20., acceleration: 20., jerk: 20. },
+    }];
+    let report =
+        multi_axis_motion_duration_bounds(&curve, [2.5, 4.], &unconstrained, [1e-5; 3], 32)
+            .unwrap();
+    assert_eq!(report.duration_bounds, [1.5; 2]);
+}
+
+#[test]
+fn multi_axis_motion_duration_encloses_overflow_with_finite_dilation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_duration_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 1e-307, acceleration: 20., jerk: 20. },
+    }];
+    let report =
+        multi_axis_motion_duration_bounds(&curve, [2., 4.], &axes, [1e-5; 3], 32).unwrap();
+    assert!(report.slowdown.bounds[1].is_finite());
+    assert_eq!(report.duration_bounds, [f64::MAX, f64::INFINITY]);
+}
+
+#[test]
+fn motion_deadline_distinguishes_limiting_axis_and_slowdown_floor() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        check_multi_axis_motion_deadline,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 8. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[1., 0.],
+            limits: DirectionalMotionLimits { speed: 100., acceleration: 100., jerk: 100. },
+        },
+        MotionAxis {
+            direction: &[0., 1.],
+            limits: DirectionalMotionLimits { speed: 96., acceleration: 96., jerk: 0.75 },
+        },
+    ];
+    let check = |axes: &[MotionAxis<'_>], deadline| {
+        check_multi_axis_motion_deadline(&curve, [2.5, 4.], axes, deadline, [1e-6; 3], 64)
+    };
+    let short = check(&axes, 5.).unwrap();
+    assert_eq!(short.axis_statuses, [Status::Within, Status::Exceeds]);
+    assert_eq!(short.status, Status::Exceeds);
+    assert_eq!(check(&axes, 7.).unwrap().status, Status::Within);
+    let floor = check(&axes[..1], 1.).unwrap();
+    assert_eq!(floor.axis_statuses, [Status::Within]);
+    assert_eq!(floor.status, Status::Exceeds);
+    assert!(check(&axes, f64::INFINITY).is_err());
+}
+
+#[test]
+fn motion_deadline_retains_unknown_status_until_the_peak_is_resolved() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        check_multi_axis_motion_deadline,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 0.3, acceleration: 1., jerk: 1. },
+    }];
+    let check = |cells| {
+        check_multi_axis_motion_deadline(&curve, [2., 6.], &axes, 5.5, [1e-5; 3], cells).unwrap()
+    };
+    assert_eq!(check(3).status, Status::Undetermined);
+    assert_eq!(check(3).cells, 3);
+    assert_eq!(check(96).status, Status::Within);
+}
+
+#[test]
+fn speed_limit_partition_encloses_two_crossings_and_classifies_the_interior() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_speed_limit,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let limit = 0.25;
+    let report = partition_directional_speed_limit(&curve, [2., 6.], &[-1., 0.], limit, 0.01, 256)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().parameter_interval[0], 2.);
+    assert_eq!(report.cells.last().unwrap().parameter_interval[1], 6.);
+    assert!(report.work_cells <= 256);
+    for pair in report.cells.windows(2) {
+        assert_eq!(pair[0].parameter_interval[1], pair[1].parameter_interval[0]);
+    }
+    let crossing_offset = 2. / 3_f64.sqrt();
+    for crossing in [4. - crossing_offset, 4. + crossing_offset] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            cell.status == Status::Undetermined && a <= crossing && crossing <= b && b - a <= 0.01
+        }));
+    }
+    for (sample, status) in [(2., Status::Within), (4., Status::Exceeds), (6., Status::Within)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            cell.status == status && a <= sample && sample <= b
+        }));
+    }
+}
+
+#[test]
+fn speed_limit_partition_keeps_both_one_sided_knot_values() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_speed_limit,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: [0., 1., 4.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let check = |limit, cells| {
+        partition_directional_speed_limit(&curve, [0.5, 1.5], &[1., 0.], limit, 0.01, cells)
+    };
+    assert!(check(2., 1).is_err());
+    assert!(check(-1., 2).is_err());
+    let report = check(2., 2).unwrap();
+    assert_eq!(report.work_cells, 2);
+    assert_eq!(report.cells.len(), 2);
+    assert_eq!(report.cells[0].parameter_interval, [0.5, 1.]);
+    assert_eq!(report.cells[0].status, Status::Within);
+    assert_eq!(report.cells[1].parameter_interval, [1., 1.5]);
+    assert_eq!(report.cells[1].status, Status::Exceeds);
+    assert_ne!(report.cells[0].span, report.cells[1].span);
+    let coarse = check(1., 2).unwrap();
+    assert_ne!(coarse.cells[0].status, Status::Exceeds);
+}
+
+#[test]
+fn motion_limit_partition_resolves_different_derivative_crossings() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        partition_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 3., acceleration: 3., jerk: 5. };
+    let measure = |budget| {
+        partition_directional_motion_limits(&curve, [2., 4.], &[1., 0.], limits, 0.01, budget)
+            .unwrap()
+    };
+    let coarse = measure(1);
+    assert_eq!(coarse.work_cells, 1);
+    assert_eq!(coarse.cells[0].statuses, [Status::Undetermined, Status::Undetermined, Status::Exceeds]);
+    let report = measure(128);
+    assert!(report.work_cells <= 128);
+    for (index, crossing) in [3., 2.5].into_iter().enumerate() {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.statuses[index] == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.statuses == [Status::Within, Status::Exceeds, Status::Exceeds]
+    }));
+    assert!(report.cells.iter().all(|cell| cell.statuses[2] == Status::Exceeds));
+}
+
+#[test]
+fn motion_limit_partition_measures_jerk_of_rational_linear_support() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        partition_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 10., acceleration: 10., jerk: 0.35 };
+    let report =
+        partition_directional_motion_limits(&curve, [3., 4.], &[-1., 0.], limits, 0.01, 256)
+            .unwrap();
+    assert_eq!(report.cells.first().unwrap().statuses, [Status::Within, Status::Within, Status::Exceeds]);
+    assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
+}
+
+#[test]
+fn multi_axis_motion_partition_aligns_distinct_crossings_on_one_grid() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        partition_multi_axis_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 2. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[1., 0.],
+            limits: DirectionalMotionLimits { speed: 3., acceleration: 20., jerk: 20. },
+        },
+        MotionAxis {
+            direction: &[0., -2.],
+            limits: DirectionalMotionLimits { speed: 30., acceleration: 6., jerk: 20. },
+        },
+    ];
+    let report = partition_multi_axis_motion_limits(&curve, [2., 4.], &axes, 0.01, 256)
+        .unwrap();
+    assert!(report.work_axis_cells <= 256);
+    for ([axis, order], crossing) in [([0, 0], 3.), ([1, 1], 2.5)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.axis_statuses[axis][order] == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.axis_statuses[0] == [Status::Within; 3]
+            && cell.axis_statuses[1] == [Status::Within, Status::Exceeds, Status::Within]
+    }));
+}
+
+#[test]
+fn multi_axis_motion_partition_budget_covers_all_axes_and_spans() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        partition_multi_axis_motion_limits,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![1., 3.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let axes = [
+        MotionAxis { direction: &[1., 0.], limits },
+        MotionAxis { direction: &[0., 1.], limits },
+    ];
+    let measure = |axes: &[MotionAxis<'_>], budget| {
+        partition_multi_axis_motion_limits(&curve, [0.5, 1.5], axes, 0.01, budget)
+    };
+    assert!(measure(&[], 4).is_err());
+    assert!(measure(&axes, 3).is_err());
+    let report = measure(&axes, 4).unwrap();
+    assert_eq!(report.work_axis_cells, 4);
+    assert_eq!(report.cells.len(), 2);
+    assert_eq!(report.cells[0].parameter_interval, [0.5, 1.]);
+    assert_eq!(report.cells[1].parameter_interval, [1., 1.5]);
+    assert_eq!(report.cells[0].axis_statuses[0][0], Status::Exceeds);
+    assert_eq!(report.cells[0].axis_statuses[1][0], Status::Within);
+    assert_eq!(report.cells[1].axis_statuses[0][0], Status::Within);
+    assert_eq!(report.cells[1].axis_statuses[1][0], Status::Exceeds);
+}
+
+#[test]
+fn motion_knot_jump_uses_original_span_widths_and_signed_axis() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        classify_directional_motion_knot_jumps,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 3., 3.],
+        control_points: [0., 1., 7.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 1.5, acceleration: 1., jerk: 1. };
+    let check = |domain, budget| {
+        classify_directional_motion_knot_jumps(&curve, domain, &[-2., 0.], limits, budget)
+    };
+    assert!(check([0.75, 2.], 0).is_err());
+    assert!(check([1., 2.], 0).unwrap().is_empty());
+    let jumps = check([0.75, 2.], 1).unwrap();
+    assert_eq!(jumps.len(), 1);
+    assert_eq!(jumps[0].parameter, 1.);
+    assert_eq!(jumps[0].statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    let [lo, hi] = jumps[0].jump_bounds[0];
+    assert!(lo <= -2. && -2. <= hi && hi - lo < 1e-8);
+}
+
+#[test]
+fn motion_knot_jump_proves_c2_continuity_and_detects_cubic_jerk_jump() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        classify_directional_motion_knot_jumps,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 2., 2., 2., 2.],
+        control_points: [0., 0., 0., 0., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0., acceleration: 0., jerk: 5. };
+    let report = classify_directional_motion_knot_jumps(
+        &curve, [0., 2.], &[1., 0.], limits, 1,
+    )
+    .unwrap();
+    assert_eq!(report[0].jump_bounds[..2], [[0.; 2]; 2]);
+    assert_eq!(report[0].statuses, [Status::Within, Status::Within, Status::Exceeds]);
+    let [lo, hi] = report[0].jump_bounds[2];
+    assert!(lo <= 6. && 6. <= hi && hi - lo < 1e-8);
+}
+
+#[test]
+fn motion_join_uses_independent_clocks_and_reports_off_axis_gap() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_join,
+    };
+    let curve = |knots, points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots,
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let left = curve(vec![0., 0., 4., 4.], [[0., 0.], [8., 0.]]);
+    let right = curve(vec![10., 10., 20., 20.], [[6., 3.], [16., 3.]]);
+    let segments = [
+        TimedMotionSegment { curve: &left, interval: [1., 3.], duration: 2. },
+        TimedMotionSegment { curve: &right, interval: [10., 14.], duration: 1. },
+    ];
+    let limits = DirectionalMotionLimits { speed: 1., acceleration: 1., jerk: 1. };
+    let report = classify_directional_motion_join(segments, &[1., 0.], limits).unwrap();
+    assert_eq!(report.statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    let [lo, hi] = report.jump_bounds[0];
+    assert!(lo <= 2. && 2. <= hi && hi - lo < 1e-8);
+    let [lo, hi] = report.position_gap_bounds;
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 1e-8);
+    let mut invalid = segments;
+    invalid[1].duration = 0.;
+    assert!(classify_directional_motion_join(invalid, &[1., 0.], limits).is_err());
+}
+
+#[test]
+fn motion_join_uses_duration_powers_for_higher_derivatives() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_join,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [2., 4.], duration: 4. },
+        TimedMotionSegment { curve: &curve, interval: [2., 4.], duration: 2. },
+    ];
+    let report = classify_directional_motion_join(
+        segments, &[1., 0.], DirectionalMotionLimits { speed: 7., acceleration: 2., jerk: 5. },
+    )
+    .unwrap();
+    assert_eq!(report.statuses, [Status::Within, Status::Exceeds, Status::Exceeds]);
+    for ([lo, hi], expected) in report.jump_bounds.into_iter().zip([-6., -3., 5.25]) {
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-8);
+    }
+}
+
+#[test]
+fn motion_chain_checks_closing_gap_and_preserves_join_order() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_chain,
+    };
+    let line = |a, b| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![a, 0.], vec![b, 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let curves = [line(0., 1.), line(1., 3.), line(3., 4.)];
+    let segments = std::array::from_fn::<_, 3, _>(|index| TimedMotionSegment {
+        curve: &curves[index],
+        interval: [0., 1.],
+        duration: [1., 2., 1.][index],
+    });
+    let check = |closed, budget| {
+        classify_directional_motion_chain(
+            &segments, closed, &[1., 0.], 0.01,
+            DirectionalMotionLimits { speed: 0.01, acceleration: 0.01, jerk: 0.01 }, budget,
+        )
+    };
+    let open = check(false, 2).unwrap();
+    assert_eq!(open.status, Status::Within);
+    assert!(check(true, 2).is_err());
+    let closed = check(true, 3).unwrap();
+    assert_eq!(closed.status, Status::Exceeds);
+    assert_eq!(closed.joins.iter().map(|join| join.segment_indices).collect::<Vec<_>>(),
+        [[0, 1], [1, 2], [2, 0]]);
+    assert_eq!(closed.joins[2].position_status, Status::Exceeds);
+    assert_eq!(closed.joins[2].join.statuses, [Status::Within; 3]);
+}
+
+#[test]
+fn motion_chain_checks_a_single_closed_segment_for_velocity_discontinuity() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_chain,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [0., 1., 0.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let segment = TimedMotionSegment { curve: &curve, interval: [0., 1.], duration: 1. };
+    let limits = DirectionalMotionLimits { speed: 3., acceleration: 1., jerk: 1. };
+    let report = classify_directional_motion_chain(&[segment], true, &[1., 0.], 0.01, limits, 1)
+        .unwrap();
+    assert_eq!(report.status, Status::Exceeds);
+    assert_eq!(report.joins[0].segment_indices, [0, 0]);
+    assert_eq!(report.joins[0].position_status, Status::Within);
+    assert_eq!(report.joins[0].join.statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    assert!(classify_directional_motion_chain(&[segment], false, &[1., 0.], 0.01, limits, 1).is_err());
+}
+
+#[test]
+fn timed_motion_chain_distinguishes_segment_violations_from_join_violations() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionChainLimits,
+        TimedMotionSegment, check_timed_motion_chain,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: [0., 4.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [2., 4.], duration: 1. },
+        TimedMotionSegment { curve: &curve, interval: [4., 6.], duration: 4. },
+    ];
+    let limits = TimedMotionChainLimits {
+        segment: DirectionalMotionLimits { speed: 1., acceleration: 1., jerk: 1. },
+        join: DirectionalMotionLimits { speed: 2., acceleration: 1., jerk: 1. },
+        position_gap: 0.01,
+    };
+    let check = |segments: &[TimedMotionSegment<'_>], limits, cells| {
+        check_timed_motion_chain(segments, false, &[1., 0.], limits, [1e-5; 3], cells, 1)
+    };
+    assert!(check(&segments, limits, 5).is_err());
+    let report = check(&segments, limits, 6).unwrap();
+    assert_eq!(report.cells, 6);
+    assert_eq!(report.segment_statuses, [Status::Exceeds, Status::Within]);
+    assert_eq!(report.joins.status, Status::Within);
+    assert_eq!(report.status, Status::Exceeds);
+    let mut limits = limits;
+    limits.segment.speed = 3.;
+    limits.join.speed = 1.;
+    let report = check(&segments, limits, 6).unwrap();
+    assert_eq!(report.segment_statuses, [Status::Within; 2]);
+    assert_eq!(report.joins.status, Status::Exceeds);
+    assert_eq!(report.status, Status::Exceeds);
+    limits.join.speed = 2.;
+    assert_eq!(check(&segments, limits, 6).unwrap().status, Status::Within);
+}
+
+#[test]
+fn timed_motion_knot_jumps_scale_jerk_without_losing_proved_continuity() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_timed_motion_knot_jumps,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 2., 2., 2., 2.],
+        control_points: [0., 0., 0., 0., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let segment = TimedMotionSegment { curve: &curve, interval: [0.5, 1.5], duration: 2. };
+    let limits = DirectionalMotionLimits { speed: 0., acceleration: 0., jerk: 1. };
+    let report = classify_timed_motion_knot_jumps(segment, &[1., 0.], limits, 1).unwrap();
+    assert_eq!(report[0].parameter, 1.);
+    assert_eq!(report[0].jump_bounds[..2], [[0.; 2]; 2]);
+    assert_eq!(report[0].statuses, [Status::Within; 3]);
+    let [lo, hi] = report[0].jump_bounds[2];
+    assert!(lo <= 0.75 && 0.75 <= hi && hi - lo < 1e-8);
+    let faster = TimedMotionSegment { duration: 0.5, ..segment };
+    let report = classify_timed_motion_knot_jumps(faster, &[1., 0.], limits, 1).unwrap();
+    assert_eq!(report[0].statuses[2], Status::Exceeds);
+    let [lo, hi] = report[0].jump_bounds[2];
+    assert!(lo <= 48. && 48. <= hi && hi - lo < 1e-8);
+    let invalid = TimedMotionSegment { duration: 0., ..segment };
+    assert!(classify_timed_motion_knot_jumps(invalid, &[1., 0.], limits, 1).is_err());
+}
+
+#[test]
+fn motion_knot_turn_measures_rational_right_angle_under_unequal_clocks() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_knot_turns,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![1., 3.]],
+        weights: vec![1., 4., 2.],
+        periodic: false,
+    };
+    assert!(classify_motion_knot_turns(&curve, [0.5, 2.], 0.5, 0).is_err());
+    let report = classify_motion_knot_turns(&curve, [0.5, 2.], 0.5, 1).unwrap();
+    assert_eq!(report[0].parameter, 1.);
+    assert_eq!(report[0].status, Status::Exceeds);
+    let [lo, hi] = report[0].cosine_bounds.unwrap();
+    assert!(lo <= 0. && hi >= 0. && hi - lo < 1e-8);
+    assert_eq!(classify_motion_knot_turns(&curve, [0., 3.], -0.5, 1).unwrap()[0].status, Status::Within);
+}
+
+#[test]
+fn motion_knot_turn_proves_c1_alignment_and_preserves_stationary_uncertainty() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_knot_turns,
+    };
+    let mut curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 2., 2., 2.],
+        control_points: [0., 1., 2., 3.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = classify_motion_knot_turns(&curve, [0., 2.], 1., 1).unwrap();
+    assert_eq!(report[0].cosine_bounds, Some([1.; 2]));
+    assert_eq!(report[0].status, Status::Within);
+    curve.control_points[2] = vec![1., 0.];
+    let report = classify_motion_knot_turns(&curve, [0., 2.], 0., 1).unwrap();
+    assert_eq!(report[0].cosine_bounds, None);
+    assert_eq!(report[0].status, Status::Undetermined);
+}
+
+#[test]
+fn motion_join_turn_distinguishes_direction_from_position_gap() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_join_turn,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 4., 4.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line([[0., 0.], [4., 0.]]);
+    let second = line([[2., 3.], [2., 7.]]);
+    let report = classify_motion_join_turn((&first, [1., 2.]), (&second, [0., 3.]), 0.5)
+        .unwrap();
+    assert_eq!(report.turn_status, Status::Exceeds);
+    let [lo, hi] = report.position_gap_bounds;
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 1e-8);
+    let [lo, hi] = report.cosine_bounds.unwrap();
+    assert!(lo <= 0. && 0. <= hi && hi - lo < 1e-8);
+    let reversed = line([[2., 0.], [0., 0.]]);
+    let report = classify_motion_join_turn((&first, [1., 2.]), (&reversed, [0., 4.]), -0.5)
+        .unwrap();
+    assert_eq!(report.turn_status, Status::Exceeds);
+    assert_eq!(report.cosine_bounds.unwrap()[0], -1.);
+}
+
+#[test]
+fn motion_join_turn_preserves_stationary_endpoint_uncertainty() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_join_turn,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [0., 0., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let window = (&curve, [0., 1.]);
+    let report = classify_motion_join_turn(window, window, 0.).unwrap();
+    assert_eq!(report.cosine_bounds, None);
+    assert_eq!(report.turn_status, Status::Undetermined);
+    assert!(classify_motion_join_turn(window, window, 1.1).is_err());
+}
+
+#[test]
+fn motion_chain_turns_check_closure_with_independent_gap_and_turn_limits() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_chain_turns,
+    };
+    let line = |a, b| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a, b],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line(vec![0., 0.], vec![1., 0.]);
+    let second = line(vec![1., 0.], vec![1., 1.]);
+    let windows = [(&first, [0., 1.]), (&second, [0., 1.])];
+    let open = classify_motion_chain_turns(&windows, false, -0.5, 1e-6, 1).unwrap();
+    assert_eq!(open.status, Status::Within);
+    let closed = classify_motion_chain_turns(&windows, true, -0.5, 1e-6, 2).unwrap();
+    assert_eq!(closed.status, Status::Exceeds);
+    assert_eq!(closed.joins[1].segment_indices, [1, 0]);
+    assert_eq!(closed.joins[1].gap_status, Status::Exceeds);
+    assert_eq!(closed.joins[1].join.turn_status, Status::Within);
+    assert!(classify_motion_chain_turns(&windows, true, -0.5, 1e-6, 1).is_err());
+    let sharp = classify_motion_chain_turns(&windows, false, 0.5, 1e-6, 1).unwrap();
+    assert_eq!(sharp.joins[0].gap_status, Status::Within);
+    assert_eq!(sharp.joins[0].join.turn_status, Status::Exceeds);
+    assert_eq!(sharp.status, Status::Exceeds);
+}
+
+#[test]
+fn motion_chain_turns_keep_a_stationary_closing_tangent_unresolved() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_chain_turns,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: [0., 0., 1., 0.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = classify_motion_chain_turns(&[(&curve, [0., 1.])], true, 0., 1e-6, 1)
+        .unwrap();
+    assert_eq!(report.joins[0].segment_indices, [0, 0]);
+    assert_eq!(report.joins[0].gap_status, Status::Within);
+    assert_eq!(report.status, Status::Undetermined);
+}
+
+#[test]
+fn directional_position_partition_locates_interior_overtravel_with_safe_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_position_range,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [0., 2., 0.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let check = |cells| {
+        partition_directional_position_range(&curve, [0., 1.], &[1., 0.], [-1., 0.75], 0.01, cells)
+            .unwrap()
+    };
+    assert_eq!(check(1).cells[0].status, Status::Undetermined);
+    let report = check(128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] <= 0.5 && 0.5 <= cell.parameter_interval[1]
+            && cell.status == Status::Exceeds
+    }));
+    for crossing in [0.25, 0.75] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
+
+#[test]
+fn directional_position_partition_handles_signed_oblique_projection() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_position_range,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![3., 4.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let report = partition_directional_position_range(
+        &curve, [0., 1.], &[-3., -4.], [-3., 0.5], 0.01, 128,
+    )
+    .unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    let last = report.cells.last().unwrap();
+    assert_eq!(last.status, Status::Exceeds);
+    assert!(last.position_bounds[0] <= -5. && last.position_bounds[1] >= -5.);
+    assert!(partition_directional_position_range(
+        &curve, [0., 1.], &[-3., -4.], [0.5, -3.], 0.01, 128,
+    ).is_err());
+}
+
+#[test]
+fn multi_axis_position_partition_aligns_distinct_limit_crossings() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, PositionAxis, partition_multi_axis_position_ranges,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.5], vec![0., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let axes = [
+        PositionAxis { direction: &[1., 0.], allowed: [-1., 0.75] },
+        PositionAxis { direction: &[0., -1.], allowed: [-0.6, 1.] },
+    ];
+    assert!(partition_multi_axis_position_ranges(&curve, [0., 1.], &axes, 0.01, 1).is_err());
+    let report =
+        partition_multi_axis_position_ranges(&curve, [0., 1.], &axes, 0.01, 256).unwrap();
+    assert!(report.work_axis_cells <= 256);
+    for (axis, crossing) in [(0, 0.25), (1, 0.6), (0, 0.75)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.axes[axis].status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.axes[0].status == Status::Exceeds && cell.axes[1].status == Status::Within
+    }));
+    assert_eq!(report.cells.last().unwrap().axes[1].status, Status::Exceeds);
+    for adjacent in report.cells.windows(2) {
+        assert_eq!(adjacent[0].parameter_interval[1], adjacent[1].parameter_interval[0]);
+    }
+}
+
+#[test]
+fn trajectory_limit_partition_preserves_independent_position_and_motion_results() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, PositionAxis,
+        TrajectoryAxis, partition_trajectory_limits,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.5], vec![0., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut axes = [
+        TrajectoryAxis {
+            position: PositionAxis { direction: &[1., 0.], allowed: [-1., 0.75] },
+            motion: DirectionalMotionLimits { speed: 3., acceleration: 9., jerk: 1. },
+        },
+        TrajectoryAxis {
+            position: PositionAxis { direction: &[0., 1.], allowed: [-1., 2.] },
+            motion: DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. },
+        },
+    ];
+    let check = |axes: &[TrajectoryAxis<'_>], cells| {
+        partition_trajectory_limits(&curve, [0., 1.], axes, 0.01, cells)
+    };
+    let coarse = check(&axes, 2).unwrap();
+    assert_eq!(coarse.work_axis_cells, 2);
+    assert_eq!(coarse.cells[0].axes[0].position.status, Status::Undetermined);
+    assert_eq!(coarse.cells[0].axes[1].motion[0], Status::Exceeds);
+    let report = check(&axes, 256).unwrap();
+    assert!(report.work_axis_cells <= 256);
+    let first = report.cells.first().unwrap();
+    assert_eq!(first.axes[0].position.status, Status::Within);
+    assert_eq!(first.axes[0].motion[0], Status::Exceeds);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.axes[0].position.status == Status::Exceeds
+            && cell.axes[0].motion == [Status::Within; 3]
+    }));
+    axes[1].motion.jerk = -1.;
+    assert!(check(&axes, 256).is_err());
+}
+
+#[test]
+fn convex_workspace_partition_checks_shifted_oblique_planes_in_original_order() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![2., 1.], vec![4., 3.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut planes = [
+        WorkspaceHalfSpace { normal: &[-2., -2.], offset: -8. },
+        WorkspaceHalfSpace { normal: &[1., 1.], offset: 6. },
+    ];
+    let check = |planes: &[WorkspaceHalfSpace<'_>], budget| {
+        partition_curve_convex_workspace(&curve, [0., 1.], planes, 0.01, budget)
+    };
+    assert!(check(&planes, 1).is_err());
+    let report = check(&planes, 128).unwrap();
+    assert!(report.work_plane_cells <= 128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert!(report.cells.first().unwrap().plane_residuals[0][0] > 0.);
+    assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+    assert!(report.cells.last().unwrap().plane_residuals[1][0] > 0.);
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Within));
+    for crossing in [0.25, 0.75] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+    planes[1].normal = &[0., 0.];
+    assert!(check(&planes, 128).is_err());
+}
+
+#[test]
+fn obstacle_clearance_partition_distinguishes_two_separated_obstacles() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_obstacle_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = [
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1. },
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 3. },
+    ];
+    let second = [
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -5. },
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 7. },
+    ];
+    let obstacles = [&first[..], &second[..]];
+    let check = |obstacles: &[&[WorkspaceHalfSpace<'_>]], budget| {
+        partition_curve_obstacle_clearance(&curve, [0., 1.], obstacles, 0.01, budget)
+    };
+    assert!(check(&obstacles, 3).is_err());
+    assert!(check(&[&[]], 256).is_err());
+    let report = check(&obstacles, 512).unwrap();
+    assert!(report.work_plane_cells <= 512);
+    for (t, expected) in [
+        (0.25, [Status::Exceeds, Status::Within]),
+        (0.5, [Status::Within; 2]),
+        (0.75, [Status::Within, Status::Exceeds]),
+    ] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= t && t <= b && cell.obstacles == expected
+                && cell.status == if t == 0.5 { Status::Within } else { Status::Exceeds }
+        }));
+    }
+    for t in [0.125, 0.375, 0.625, 0.875] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= t && t <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}

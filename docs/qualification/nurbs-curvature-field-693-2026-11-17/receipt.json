@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0693",
+  "testedBase": "248df447773b990c3a7fae87bd273a85f3974e23",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 308,
+  "scope": [
+    "Classify speed, acceleration and jerk on one subdivision for every axis under a shared axis-cell budget.",
+    "Check two axes with distinct crossing times, a normalized negative direction, one-sided limit changes, and shared work reservation."
+  ],
+  "logSha256": "6ab81c04f9e128c33083db19b199114175e239ea65212badcd31f0ff0fc9f016",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "acbc113a9a8fad513f5ddf042f9ca52fa8b0da470f15d8a09f483754acc1e651",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d72d0d430fa8de7563db27a560dfe9e96856599518727b96ccc6617ba1f0a5b5"
+  }
+}

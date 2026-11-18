@@ -911,3 +911,1690 @@ pub fn check_directional_backtracking(
     let status = travel.reverse_status(reverse_limit)?;
     Ok((travel, status))
 }
+
+/// Bounds on the supremum of absolute axial speed in model units per
+/// original parameter unit, including one-sided speeds at knots.
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakSpeedReport {
+    pub bounds: [f64; 2],
+    pub cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Bounds on the supremum of absolute axial acceleration in model units
+/// per squared original parameter unit.
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakAccelerationReport {
+    pub bounds: [f64; 2],
+    pub cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Certify the peak axial second derivative over an original-parameter window.
+/// The result covers span derivatives, including their one-sided limits.
+pub fn directional_peak_acceleration(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakAccelerationReport> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, None, 2,
+    )?.peak;
+    Ok(DirectionalPeakAccelerationReport {
+        bounds: report.bounds,
+        cells: report.cells,
+        stop_reason: report.stop_reason,
+    })
+}
+
+/// Bounds on the supremum of absolute axial jerk in model units
+/// per cubed original parameter unit.
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakJerkReport {
+    pub bounds: [f64; 2],
+    pub cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Certify the peak axial third derivative over an original-parameter window.
+/// Only the span derivatives and their one-sided limits are included.
+pub fn directional_peak_jerk(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakJerkReport> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, None, 3,
+    )?
+    .peak;
+    Ok(DirectionalPeakJerkReport {
+        bounds: report.bounds,
+        cells: report.cells,
+        stop_reason: report.stop_reason,
+    })
+}
+
+/// Certify peak axial speed over an original-parameter window. The tolerance
+/// limits the width of the reported enclosure.
+pub fn directional_peak_speed(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakSpeedReport> {
+    Ok(measure_directional_derivative_peak(curve, interval, direction, tolerance, max_cells, None, 1)?.peak)
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakLocations<Peak = DirectionalPeakSpeedReport> {
+    pub peak: Peak,
+    /// Sorted, merged source intervals covering every possible maximizer.
+    /// Width depends on peak separation, measurement tolerance and cell budget.
+    pub parameter_intervals: Vec<[f64; 2]>,
+}
+
+/// Enclose all locations that can attain the peak absolute axial speed.
+/// A knot is included when either one-sided derivative can attain the peak.
+pub fn locate_directional_peak_speed(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakLocations> {
+    measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 1,
+    )
+}
+
+/// Enclose all locations that can attain the peak absolute axial acceleration.
+/// A knot is included when either one-sided derivative can attain the peak.
+pub fn locate_directional_peak_acceleration(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakLocations<DirectionalPeakAccelerationReport>> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 2,
+    )?;
+    Ok(DirectionalPeakLocations {
+        peak: DirectionalPeakAccelerationReport {
+            bounds: report.peak.bounds,
+            cells: report.peak.cells,
+            stop_reason: report.peak.stop_reason,
+        },
+        parameter_intervals: report.parameter_intervals,
+    })
+}
+
+/// Enclose all locations that can attain the peak absolute axial jerk.
+/// A knot is included when either one-sided derivative can attain the peak.
+pub fn locate_directional_peak_jerk(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakLocations<DirectionalPeakJerkReport>> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 3,
+    )?;
+    Ok(DirectionalPeakLocations {
+        peak: DirectionalPeakJerkReport {
+            bounds: report.peak.bounds,
+            cells: report.peak.cells,
+            stop_reason: report.peak.stop_reason,
+        },
+        parameter_intervals: report.parameter_intervals,
+    })
+}
+
+/// Inclusive bounds on absolute derivatives in the original parameter clock.
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalMotionLimits {
+    pub speed: f64,
+    pub acceleration: f64,
+    pub jerk: f64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectionalMotionStatus {
+    Within,
+    Exceeds,
+    Undetermined,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionReport {
+    pub speed: DirectionalPeakSpeedReport,
+    pub acceleration: DirectionalPeakAccelerationReport,
+    pub jerk: DirectionalPeakJerkReport,
+    pub status: DirectionalMotionStatus,
+}
+
+/// Check all three inclusive limits, using a separate tolerance and cell
+/// budget per derivative. Tolerances use the units of the corresponding limit.
+pub fn check_directional_motion_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    tolerances: [f64; 3],
+    max_cells_per_derivative: usize,
+) -> Result<DirectionalMotionReport> {
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    check(
+        limits.iter().all(|limit| limit.is_finite() && *limit >= 0.),
+        "Motion limits must be finite and nonnegative",
+    )?;
+    for tolerance in tolerances {
+        validate(tolerance, max_cells_per_derivative)?;
+    }
+    let [speed_tol, acceleration_tol, jerk_tol] = tolerances;
+    let speed =
+        directional_peak_speed(curve, interval, direction, speed_tol, max_cells_per_derivative)?;
+    let acceleration = directional_peak_acceleration(
+        curve, interval, direction, acceleration_tol, max_cells_per_derivative,
+    )?;
+    let jerk =
+        directional_peak_jerk(curve, interval, direction, jerk_tol, max_cells_per_derivative)?;
+    let bounds = [speed.bounds, acceleration.bounds, jerk.bounds];
+    let status = if bounds.iter().zip(limits).any(|([lo, _], limit)| *lo > limit) {
+        DirectionalMotionStatus::Exceeds
+    } else if bounds.iter().zip(limits).all(|([_, hi], limit)| *hi <= limit) {
+        DirectionalMotionStatus::Within
+    } else {
+        DirectionalMotionStatus::Undetermined
+    };
+    Ok(DirectionalMotionReport { speed, acceleration, jerk, status })
+}
+
+/// Enclose the minimum uniform parameter dilation, constrained to at least 1,
+/// that satisfies the inclusive axis limits. A factor of 2 halves speed,
+/// quarters acceleration and divides jerk by 8. A finite upper endpoint is
+/// a certified feasible factor. Infinity means no finite factor was certified.
+/// The original parameter must represent elapsed time for physical units.
+pub fn directional_motion_slowdown_bounds(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    tolerances: [f64; 3],
+    max_cells_per_derivative: usize,
+) -> Result<[f64; 2]> {
+    let report = check_directional_motion_limits(
+        curve, interval, direction, limits, tolerances, max_cells_per_derivative,
+    )?;
+    slowdown_from_motion_report(&report, limits)
+}
+
+fn slowdown_from_motion_report(
+    report: &DirectionalMotionReport,
+    limits: DirectionalMotionLimits,
+) -> Result<[f64; 2]> {
+    use num_rational::BigRational;
+
+    let exact = |value| {
+        BigRational::from_float(value)
+            .ok_or_else(|| crate::numeric_err("Nonfinite motion bound"))
+    };
+    let constraints = [
+        (report.speed.bounds, limits.speed),
+        (report.acceleration.bounds, limits.acceleration),
+        (report.jerk.bounds, limits.jerk),
+    ]
+    .into_iter()
+    .map(|([lo, hi], limit)| Ok(([exact(lo)?, exact(hi)?], exact(limit)?)))
+    .collect::<Result<Vec<_>>>()?;
+
+    let bracket = |endpoint| -> Result<[f64; 2]> {
+        let feasible = |factor: f64| -> Result<bool> {
+            let factor = exact(factor)?;
+            let mut power = factor.clone();
+            for (index, (peak, limit)) in constraints.iter().enumerate() {
+                if &peak[endpoint] > &(&power * limit) {
+                    return Ok(false);
+                }
+                if index < 2 {
+                    power *= &factor;
+                }
+            }
+            Ok(true)
+        };
+        if feasible(1.)? {
+            return Ok([1.; 2]);
+        }
+        if !feasible(f64::MAX)? {
+            return Ok([f64::MAX, f64::INFINITY]);
+        }
+
+        // Positive finite binary64 values have the same order as their bits.
+        let mut lo = 1_f64.to_bits();
+        let mut hi = f64::MAX.to_bits();
+        while hi - lo > 1 {
+            let mid = lo + (hi - lo) / 2;
+            if feasible(f64::from_bits(mid))? {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        Ok([f64::from_bits(lo), f64::from_bits(hi)])
+    };
+    Ok([bracket(0)?[0], bracket(1)?[1]])
+}
+
+/// Limits for one direction, which is normalized before projecting the curve.
+#[derive(Clone, Copy, Debug)]
+pub struct MotionAxis<'a> {
+    pub direction: &'a [f64],
+    pub limits: DirectionalMotionLimits,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisSlowdownReport {
+    /// Enclosure of the minimum common slowdown. A finite upper endpoint
+    /// satisfies all axes simultaneously.
+    pub bounds: [f64; 2],
+    /// Individual slowdown enclosures in input order.
+    pub axis_bounds: Vec<[f64; 2]>,
+    pub cells: usize,
+}
+
+/// Compute one uniform parameter dilation under a shared cell budget.
+/// Reserve span coverage for each axis and derivative before refinement.
+pub fn multi_axis_motion_slowdown_bounds(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<MultiAxisSlowdownReport> {
+    let mut axis_bounds = Vec::new();
+    let mut bounds = [1_f64; 2];
+    let cells = measure_motion_axes(curve, interval, axes, tolerances, max_cells, |axis, report| {
+        let axis_bound = slowdown_from_motion_report(report, axis.limits)?;
+        bounds[0] = bounds[0].max(axis_bound[0]);
+        bounds[1] = bounds[1].max(axis_bound[1]);
+        axis_bounds.push(axis_bound);
+        Ok(())
+    })?;
+    Ok(MultiAxisSlowdownReport { bounds, axis_bounds, cells })
+}
+
+fn measure_motion_axes(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    tolerances: [f64; 3],
+    max_cells: usize,
+    mut visit: impl FnMut(&MotionAxis<'_>, &DirectionalMotionReport) -> Result<()>,
+) -> Result<usize> {
+    curve.validate()?;
+    for tolerance in tolerances {
+        validate(tolerance, max_cells)?;
+    }
+    validate_travel_interval(curve, interval)?;
+    check(!axes.is_empty(), "Motion analysis requires at least one axis")?;
+    let minimum = 3 * active_spans(curve, interval).count();
+    if axes.len() > max_cells / minimum {
+        return Err(resource("Initial motion spans exceed the shared budget"));
+    }
+
+    let mut remaining = max_cells;
+    for (index, axis) in axes.iter().enumerate() {
+        let budget = remaining / (axes.len() - index) / 3;
+        let report = check_directional_motion_limits(
+            curve, interval, axis.direction, axis.limits, tolerances, budget,
+        )?;
+        remaining -= report.speed.cells + report.acceleration.cells + report.jerk.cells;
+        visit(axis, &report)?;
+    }
+    Ok(max_cells - remaining)
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionDurationReport {
+    pub slowdown: MultiAxisSlowdownReport,
+    /// Enclosure of the minimum duration. A finite upper endpoint is
+    /// sufficient when traversing the window with a uniform clock.
+    pub duration_bounds: [f64; 2],
+}
+
+/// Compute the feasible uniform traversal duration for a source time window.
+/// Duration uses the same time units as the original curve parameter.
+pub fn multi_axis_motion_duration_bounds(
+    curve: &Curve,
+    time_window: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<MultiAxisMotionDurationReport> {
+    use num_rational::BigRational;
+    use num_traits::ToPrimitive;
+
+    let slowdown =
+        multi_axis_motion_slowdown_bounds(curve, time_window, axes, tolerances, max_cells)?;
+    let exact = |value| {
+        BigRational::from_float(value)
+            .ok_or_else(|| crate::numeric_err("Nonfinite duration operand"))
+    };
+    let width = exact(time_window[1])? - exact(time_window[0])?;
+    let duration_endpoint = |factor: f64, upper: bool| -> Result<f64> {
+        if factor == f64::INFINITY {
+            return Ok(f64::INFINITY);
+        }
+        let duration = &width * exact(factor)?;
+        let rounded = duration
+            .to_f64()
+            .ok_or_else(|| crate::numeric_err("Cannot represent duration endpoint"))?;
+        if rounded == f64::INFINITY {
+            return Ok(if upper { f64::INFINITY } else { f64::MAX });
+        }
+        let represented = exact(rounded)?;
+        Ok(if upper && represented < duration {
+            rounded.next_up()
+        } else if !upper && represented > duration {
+            rounded.next_down()
+        } else {
+            rounded
+        })
+    };
+    let duration_bounds = [
+        duration_endpoint(slowdown.bounds[0], false)?,
+        duration_endpoint(slowdown.bounds[1], true)?,
+    ];
+    Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionDeadlineReport {
+    pub status: DirectionalMotionStatus,
+    /// Results for the axis limits in input order. The original-duration floor
+    /// applies to the overall status.
+    pub axis_statuses: Vec<DirectionalMotionStatus>,
+    pub cells: usize,
+}
+
+/// Check an inclusive deadline for uniform traversal with slowdown only.
+/// Compare derivative bounds in the proposed clock using exact rational
+/// arithmetic, even when the duration ratio is not representable as binary64.
+pub fn check_multi_axis_motion_deadline(
+    curve: &Curve,
+    time_window: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    deadline: f64,
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<MultiAxisMotionDeadlineReport> {
+    use num_rational::BigRational;
+
+    check(deadline.is_finite() && deadline > 0., "Deadline must be positive and finite")?;
+    curve.validate()?;
+    validate_travel_interval(curve, time_window)?;
+    let factor = motion_clock_factor(time_window, deadline)?;
+    let powers = [factor.clone(), &factor * &factor, factor.pow(3)];
+    let mut axis_statuses = Vec::new();
+    let cells = measure_motion_axes(curve, time_window, axes, tolerances, max_cells, |axis, report| {
+        axis_statuses.push(motion_status_in_clock(report, axis.limits, &powers)?);
+        Ok(())
+    })?;
+    let status = if factor < BigRational::from_integer(1.into())
+        || axis_statuses.contains(&DirectionalMotionStatus::Exceeds)
+    {
+        DirectionalMotionStatus::Exceeds
+    } else if axis_statuses.contains(&DirectionalMotionStatus::Undetermined) {
+        DirectionalMotionStatus::Undetermined
+    } else {
+        DirectionalMotionStatus::Within
+    };
+    Ok(MultiAxisMotionDeadlineReport { status, axis_statuses, cells })
+}
+
+fn motion_clock_factor(
+    interval: [f64; 2],
+    duration: f64,
+) -> Result<num_rational::BigRational> {
+    Ok(exact_motion_operand(duration)?
+        / (exact_motion_operand(interval[1])? - exact_motion_operand(interval[0])?))
+}
+
+fn exact_motion_operand(value: f64) -> Result<num_rational::BigRational> {
+    num_rational::BigRational::from_float(value)
+        .ok_or_else(|| crate::numeric_err("Nonfinite motion operand"))
+}
+
+fn motion_status_in_clock(
+    report: &DirectionalMotionReport,
+    limits: DirectionalMotionLimits,
+    powers: &[num_rational::BigRational; 3],
+) -> Result<DirectionalMotionStatus> {
+    let mut status = DirectionalMotionStatus::Within;
+    for (([lo, hi], limit), power) in [
+        (report.speed.bounds, limits.speed),
+        (report.acceleration.bounds, limits.acceleration),
+        (report.jerk.bounds, limits.jerk),
+    ]
+    .into_iter()
+    .zip(powers)
+    {
+        let allowed = exact_motion_operand(limit)? * power;
+        if exact_motion_operand(lo)? > allowed {
+            return Ok(DirectionalMotionStatus::Exceeds);
+        }
+        if exact_motion_operand(hi)? > allowed {
+            status = DirectionalMotionStatus::Undetermined;
+        }
+    }
+    Ok(status)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalSpeedLimitCell {
+    pub parameter_interval: [f64; 2],
+    /// Original knot span. Values at either endpoint use this span's limit.
+    pub span: usize,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalSpeedLimitPartition {
+    /// Ordered closed cells covering the full requested window.
+    pub cells: Vec<DirectionalSpeedLimitCell>,
+    /// Number of derivative enclosures, including replaced cells.
+    pub work_cells: usize,
+}
+
+/// Classify where the absolute axial speed is within or above an inclusive
+/// limit. Unresolved cells are retained when the requested parameter width,
+/// floating-point resolution or the shared work budget prevents subdivision.
+pub fn partition_directional_speed_limit(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    let (cells, work_cells) = partition_axial_derivatives(
+        curve, interval, direction, [limit], parameter_tolerance, max_cells,
+    )?;
+    let cells = cells
+        .into_iter()
+        .map(|cell| DirectionalSpeedLimitCell {
+            parameter_interval: cell.parameter_interval,
+            span: cell.span,
+            status: cell.statuses[0],
+        })
+        .collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalMotionLimitCell<const N: usize = 3> {
+    pub parameter_interval: [f64; 2],
+    /// Original knot span for one-sided evaluation.
+    pub span: usize,
+    /// Classifications in derivative order (speed, acceleration, jerk).
+    pub statuses: [DirectionalMotionStatus; N],
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionLimitPartition {
+    pub cells: Vec<DirectionalMotionLimitCell>,
+    /// Number of enclosed cells, including replaced cells.
+    pub work_cells: usize,
+}
+
+/// Classify speed, acceleration and jerk using one shared subdivision.
+/// Each classification pertains to the absolute derivative with respect
+/// to the original parameter. Unresolved cells retain their other results.
+pub fn partition_directional_motion_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalMotionLimitPartition> {
+    let (cells, work_cells) = partition_axial_derivatives(
+        curve,
+        interval,
+        direction,
+        [limits.speed, limits.acceleration, limits.jerk],
+        parameter_tolerance,
+        max_cells,
+    )?;
+    Ok(DirectionalMotionLimitPartition { cells, work_cells })
+}
+
+fn partition_axial_derivatives<const N: usize>(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: [f64; N],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<(Vec<DirectionalMotionLimitCell<N>>, usize)> {
+    validate_motion_partition_limits(limits)?;
+    curve.validate()?;
+    let unit = travel_direction(curve, direction)?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            let statuses = classify_motion_cell(jets, width, &unit, limits)?;
+            Ok((statuses, statuses.contains(&DirectionalMotionStatus::Undetermined)))
+        },
+    )?;
+    let cells = cells
+        .into_iter()
+        .map(|(span, parameter_interval, statuses)| DirectionalMotionLimitCell {
+            span,
+            parameter_interval,
+            statuses,
+        })
+        .collect();
+    Ok((cells, work_cells))
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionLimitCell {
+    pub parameter_interval: [f64; 2],
+    /// Original knot span for one-sided evaluation.
+    pub span: usize,
+    /// Speed, acceleration and jerk classifications for each axis in input order.
+    pub axis_statuses: Vec<[DirectionalMotionStatus; 3]>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionLimitPartition {
+    /// Ordered closed cells covering the full requested window.
+    pub cells: Vec<MultiAxisMotionLimitCell>,
+    /// Axis evaluations, including cells replaced during subdivision.
+    pub work_axis_cells: usize,
+}
+
+/// Evaluate all axes on a shared subdivision. The budget counts each axis
+/// checked in each cell. Each cell shares one enclosure of the curve derivatives.
+pub fn partition_multi_axis_motion_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    parameter_tolerance: f64,
+    max_axis_cells: usize,
+) -> Result<MultiAxisMotionLimitPartition> {
+    validate(parameter_tolerance, max_axis_cells)?;
+    check(!axes.is_empty(), "Motion partition requires at least one axis")?;
+    let max_cells = max_axis_cells / axes.len();
+    if max_cells == 0 {
+        return Err(resource("Motion partition budget must cover every axis"));
+    }
+    curve.validate()?;
+    let axes = axes.iter().map(|axis| {
+        let limits = [axis.limits.speed, axis.limits.acceleration, axis.limits.jerk];
+        validate_motion_partition_limits(limits)?;
+        Ok((travel_direction(curve, axis.direction)?, limits))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            let statuses = axes.iter()
+                .map(|(unit, limits)| classify_motion_cell(jets, width, unit, *limits))
+                .collect::<Result<Vec<_>>>()?;
+            let refine = statuses.iter().flatten().any(|status| {
+                *status == DirectionalMotionStatus::Undetermined
+            });
+            Ok((statuses, refine))
+        },
+    )?;
+    let cells = cells.into_iter()
+        .map(|(span, parameter_interval, axis_statuses)| MultiAxisMotionLimitCell {
+            span,
+            parameter_interval,
+            axis_statuses,
+        })
+        .collect();
+    Ok(MultiAxisMotionLimitPartition { cells, work_axis_cells: work_cells * axes.len() })
+}
+
+fn validate_motion_partition_limits<const N: usize>(limits: [f64; N]) -> Result<()> {
+    check(
+        limits.iter().all(|limit| limit.is_finite() && *limit >= 0.),
+        "Motion limits must be finite and nonnegative",
+    )
+}
+
+fn classify_motion_cell<const N: usize>(
+    jets: &[Vec<Interval>],
+    width: Interval,
+    unit: &[Interval],
+    limits: [f64; N],
+) -> Result<[DirectionalMotionStatus; N]> {
+    let mut statuses = [DirectionalMotionStatus::Undetermined; N];
+    for (index, (status, limit)) in statuses.iter_mut().zip(limits).enumerate() {
+        let mut derivative = project_jet(&jets[index + 1], unit)?;
+        for _ in 0..=index {
+            derivative = derivative.div(width)?;
+        }
+        *status = classify_absolute_limit(derivative, limit);
+    }
+    Ok(statuses)
+}
+
+fn classify_absolute_limit(value: Interval, limit: f64) -> DirectionalMotionStatus {
+    if value.lo.abs().max(value.hi.abs()) <= limit {
+        DirectionalMotionStatus::Within
+    } else if value.lo.max(-value.hi) > limit {
+        DirectionalMotionStatus::Exceeds
+    } else {
+        DirectionalMotionStatus::Undetermined
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalPositionCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    pub position_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalPositionPartition {
+    /// Ordered closed cells covering the requested parameter window.
+    pub cells: Vec<DirectionalPositionCell>,
+    pub work_cells: usize,
+}
+
+/// Classify the signed projection onto a normalized axis through the origin.
+/// Cells outside the inclusive position range are marked Exceeds. Cells
+/// overlapping a range boundary retain an unresolved status if refinement stops.
+pub fn partition_directional_position_range(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    allowed: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPositionPartition> {
+    validate_position_range(allowed)?;
+    curve.validate()?;
+    let unit = travel_direction(curve, direction)?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let (position, status) = classify_position(&jets[0], &unit, allowed)?;
+            Ok(((position, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (position, status))| {
+        DirectionalPositionCell {
+            span,
+            parameter_interval,
+            position_bounds: [position.lo, position.hi],
+            status,
+        }
+    }).collect();
+    Ok(DirectionalPositionPartition { cells, work_cells })
+}
+
+/// An inclusive range along a normalized direction through the origin.
+#[derive(Clone, Copy, Debug)]
+pub struct PositionAxis<'a> {
+    pub direction: &'a [f64],
+    pub allowed: [f64; 2],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AxisPositionBounds {
+    pub bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisPositionCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Axis results in input order.
+    pub axes: Vec<AxisPositionBounds>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisPositionPartition {
+    pub cells: Vec<MultiAxisPositionCell>,
+    pub work_axis_cells: usize,
+}
+
+/// Check all signed position ranges on one shared subdivision. Each axis
+/// evaluation contributes one unit to the work budget.
+pub fn partition_multi_axis_position_ranges(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[PositionAxis<'_>],
+    parameter_tolerance: f64,
+    max_axis_cells: usize,
+) -> Result<MultiAxisPositionPartition> {
+    validate(parameter_tolerance, max_axis_cells)?;
+    check(!axes.is_empty(), "Position partition requires at least one axis")?;
+    let max_cells = max_axis_cells / axes.len();
+    if max_cells == 0 {
+        return Err(resource("Position partition budget must cover every axis"));
+    }
+    curve.validate()?;
+    let axes = axes.iter().map(|axis| {
+        validate_position_range(axis.allowed)?;
+        Ok((travel_direction(curve, axis.direction)?, axis.allowed))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let results = axes.iter().map(|(unit, allowed)| {
+                let (position, status) = classify_position(&jets[0], unit, *allowed)?;
+                Ok(AxisPositionBounds { bounds: [position.lo, position.hi], status })
+            }).collect::<Result<Vec<_>>>()?;
+            let refine = results.iter().any(|axis| axis.status == DirectionalMotionStatus::Undetermined);
+            Ok((results, refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, axes)| {
+        MultiAxisPositionCell { parameter_interval, span, axes }
+    }).collect();
+    Ok(MultiAxisPositionPartition { cells, work_axis_cells: work_cells * axes.len() })
+}
+
+/// Signed position range and absolute derivative limits for one axis.
+#[derive(Clone, Copy, Debug)]
+pub struct TrajectoryAxis<'a> {
+    pub position: PositionAxis<'a>,
+    pub motion: DirectionalMotionLimits,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TrajectoryAxisResult {
+    pub position: AxisPositionBounds,
+    /// Speed, acceleration and jerk, measured in the original parameter clock.
+    pub motion: [DirectionalMotionStatus; 3],
+}
+
+#[derive(Clone, Debug)]
+pub struct TrajectoryLimitCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    pub axes: Vec<TrajectoryAxisResult>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TrajectoryLimitPartition {
+    pub cells: Vec<TrajectoryLimitCell>,
+    pub work_axis_cells: usize,
+}
+
+/// Classify position and derivative limits together. All axes share one
+/// subdivision and one enclosure of the curve per cell.
+pub fn partition_trajectory_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[TrajectoryAxis<'_>],
+    parameter_tolerance: f64,
+    max_axis_cells: usize,
+) -> Result<TrajectoryLimitPartition> {
+    validate(parameter_tolerance, max_axis_cells)?;
+    check(!axes.is_empty(), "Trajectory partition requires at least one axis")?;
+    let max_cells = max_axis_cells / axes.len();
+    if max_cells == 0 {
+        return Err(resource("Trajectory partition budget must cover every axis"));
+    }
+    curve.validate()?;
+    let axes = axes.iter().map(|axis| {
+        let allowed = axis.position.allowed;
+        let limits = [axis.motion.speed, axis.motion.acceleration, axis.motion.jerk];
+        validate_position_range(allowed)?;
+        validate_motion_partition_limits(limits)?;
+        Ok((travel_direction(curve, axis.position.direction)?, allowed, limits))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            let results = axes.iter().map(|(unit, allowed, limits)| {
+                let (position, status) = classify_position(&jets[0], unit, *allowed)?;
+                let motion = classify_motion_cell(jets, width, unit, *limits)?;
+                Ok(TrajectoryAxisResult {
+                    position: AxisPositionBounds { bounds: [position.lo, position.hi], status },
+                    motion,
+                })
+            }).collect::<Result<Vec<_>>>()?;
+            let refine = results.iter().any(|axis| {
+                axis.position.status == DirectionalMotionStatus::Undetermined
+                    || axis.motion.contains(&DirectionalMotionStatus::Undetermined)
+            });
+            Ok((results, refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, axes)| {
+        TrajectoryLimitCell { parameter_interval, span, axes }
+    }).collect();
+    Ok(TrajectoryLimitPartition { cells, work_axis_cells: work_cells * axes.len() })
+}
+
+fn validate_position_range(allowed: [f64; 2]) -> Result<()> {
+    check(
+        allowed.iter().all(|value| value.is_finite()) && allowed[0] <= allowed[1],
+        "Position range must have finite ordered endpoints",
+    )
+}
+
+fn classify_position(
+    point: &[Interval],
+    unit: &[Interval],
+    allowed: [f64; 2],
+) -> Result<(Interval, DirectionalMotionStatus)> {
+    let position = project_jet(point, unit)?;
+    let status = if position.lo >= allowed[0] && position.hi <= allowed[1] {
+        DirectionalMotionStatus::Within
+    } else if position.hi < allowed[0] || position.lo > allowed[1] {
+        DirectionalMotionStatus::Exceeds
+    } else {
+        DirectionalMotionStatus::Undetermined
+    };
+    Ok((position, status))
+}
+
+/// A closed half-space defined by `normal · point <= offset`.
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceHalfSpace<'a> {
+    pub normal: &'a [f64],
+    pub offset: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct WorkspaceCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Enclosures of `normal · point - offset`, in input order.
+    pub plane_residuals: Vec<[f64; 2]>,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct WorkspacePartition {
+    pub cells: Vec<WorkspaceCell>,
+    pub work_plane_cells: usize,
+}
+
+/// Check a convex workspace defined by intersecting closed half-spaces.
+/// A cell exceeds the workspace if a plane excludes the whole cell.
+/// Each plane evaluation contributes one unit to the shared work budget.
+pub fn partition_curve_convex_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let max_cells = max_plane_cells / planes.len();
+    if max_cells == 0 {
+        return Err(resource("Workspace budget must cover every plane"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let planes = prepare_workspace_planes(planes, dimension)?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let residuals = planes.iter().map(|(normal, offset)| {
+                let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if residuals.iter().any(|[lo, _]| *lo > 0.) {
+                DirectionalMotionStatus::Exceeds
+            } else if residuals.iter().all(|[_, hi]| *hi <= 0.) {
+                DirectionalMotionStatus::Within
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((residuals, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (plane_residuals, status))| {
+        WorkspaceCell { parameter_interval, span, plane_residuals, status }
+    }).collect();
+    Ok(WorkspacePartition { cells, work_plane_cells: work_cells * planes.len() })
+}
+
+type PreparedWorkspacePlane = (Vec<Interval>, Interval);
+
+fn prepare_workspace_planes(
+    planes: &[WorkspaceHalfSpace<'_>],
+    dimension: usize,
+) -> Result<Vec<PreparedWorkspacePlane>> {
+    planes.iter().map(|plane| {
+        check(
+            plane.normal.len() == dimension
+                && plane.normal.iter().all(|x| x.is_finite())
+                && plane.normal.iter().any(|x| *x != 0.)
+                && plane.offset.is_finite(),
+            "Workspace plane requires a finite nonzero normal and finite offset",
+        )?;
+        let normal = plane.normal.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        Ok((normal, Interval::point(plane.offset)))
+    }).collect()
+}
+
+#[derive(Clone, Debug)]
+pub struct ObstacleClearanceCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Clearance classifications in obstacle order. Exceeds means that the
+    /// whole cell is in the closed obstacle, including its boundary.
+    pub obstacles: Vec<DirectionalMotionStatus>,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct ObstacleClearancePartition {
+    pub cells: Vec<ObstacleClearanceCell>,
+    /// Reserved plane evaluations, including planes skipped after separation.
+    pub work_plane_cells: usize,
+}
+
+/// Check a curve against the union of closed convex obstacles. A cell is
+/// clear when at least one plane strictly separates it from each obstacle.
+/// Cells whose clearance cannot be decided are retained in the partition.
+pub fn partition_curve_obstacle_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!obstacles.is_empty(), "Obstacle clearance requires at least one obstacle")?;
+    let mut plane_count = 0;
+    for obstacle in obstacles {
+        check(!obstacle.is_empty(), "Each obstacle requires at least one plane")?;
+        if obstacle.len() > max_plane_cells - plane_count {
+            return Err(resource("Clearance budget must cover every obstacle plane"));
+        }
+        plane_count += obstacle.len();
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let obstacles = obstacles.iter()
+        .map(|planes| prepare_workspace_planes(planes, dimension))
+        .collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_plane_cells / plane_count,
+        |jets, _| {
+            let mut clearance = Vec::with_capacity(obstacles.len());
+            for obstacle in &obstacles {
+                let mut status = DirectionalMotionStatus::Exceeds;
+                for (normal, offset) in obstacle {
+                    let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                    if residual.lo > 0. {
+                        status = DirectionalMotionStatus::Within;
+                        break;
+                    }
+                    if residual.hi > 0. {
+                        status = DirectionalMotionStatus::Undetermined;
+                    }
+                }
+                clearance.push(status);
+            }
+            let status = if clearance.contains(&DirectionalMotionStatus::Exceeds) {
+                DirectionalMotionStatus::Exceeds
+            } else if clearance.contains(&DirectionalMotionStatus::Undetermined) {
+                DirectionalMotionStatus::Undetermined
+            } else {
+                DirectionalMotionStatus::Within
+            };
+            // Refine unresolved obstacles even when another already excludes the cell.
+            let refine = clearance.contains(&DirectionalMotionStatus::Undetermined);
+            Ok(((clearance, status), refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (obstacles, status))| {
+        ObstacleClearanceCell { parameter_interval, span, obstacles, status }
+    }).collect();
+    Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * plane_count })
+}
+
+fn partition_motion_cells<T>(
+    curve: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+    mut classify: impl FnMut(&[Vec<Interval>], Interval) -> Result<(T, bool)>,
+) -> Result<(Vec<(usize, [f64; 2], T)>, usize)> {
+    use std::collections::VecDeque;
+
+    validate(parameter_tolerance, max_cells)?;
+    validate_travel_interval(curve, interval)?;
+    let mut pending = VecDeque::new();
+    for span in active_spans(curve, interval) {
+        if pending.len() == max_cells {
+            return Err(resource("Initial motion spans exceed the work budget"));
+        }
+        pending.push_back((span, [
+            curve.knots[span].max(interval[0]),
+            curve.knots[span + 1].min(interval[1]),
+        ]));
+    }
+
+    let mut cells = Vec::new();
+    let mut work_cells = 0;
+    while let Some((span, domain @ [a, b])) = pending.pop_front() {
+        work_cells += 1;
+        let width = Interval::point(b).sub(Interval::point(a))?;
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        let (statuses, refine) = classify(&jets, width)?;
+        let middle = crate::distance_bounds::midpoint(a, b);
+        if refine
+            && (b - a).next_up() > parameter_tolerance
+            && a < middle
+            && middle < b
+            && work_cells + pending.len() + 2 <= max_cells
+        {
+            pending.push_back((span, [a, middle]));
+            pending.push_back((span, [middle, b]));
+        } else {
+            cells.push((span, domain, statuses));
+        }
+    }
+    cells.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
+    Ok((cells, work_cells))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalMotionKnotJump {
+    pub parameter: f64,
+    /// Signed right-minus-left jumps in speed, acceleration and jerk.
+    pub jump_bounds: [[f64; 2]; 3],
+    /// Classifications against the inclusive absolute jump limits.
+    pub statuses: [DirectionalMotionStatus; 3],
+}
+
+/// Classify jumps of the signed axial derivatives at every interior knot
+/// of the requested window. Derivatives guaranteed continuous by the knot
+/// multiplicity have exact zero jump. Other jumps use one-sided enclosures.
+pub fn classify_directional_motion_knot_jumps(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    max_knots: usize,
+) -> Result<Vec<DirectionalMotionKnotJump>> {
+    classify_motion_knot_jumps(curve, interval, direction, limits, max_knots, None)
+}
+
+/// Classify interior-knot jumps in the uniform clock of a timed segment.
+/// Reported knot coordinates remain in the original parameter domain.
+pub fn classify_timed_motion_knot_jumps(
+    segment: TimedMotionSegment<'_>,
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    max_knots: usize,
+) -> Result<Vec<DirectionalMotionKnotJump>> {
+    check(
+        segment.duration.is_finite() && segment.duration > 0.,
+        "Motion segment duration must be finite and positive",
+    )?;
+    classify_motion_knot_jumps(
+        segment.curve, segment.interval, direction, limits, max_knots, Some(segment.duration),
+    )
+}
+
+fn classify_motion_knot_jumps(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    max_knots: usize,
+    duration: Option<f64>,
+) -> Result<Vec<DirectionalMotionKnotJump>> {
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    check(max_knots <= 100_000, "Motion jump budget must be at most 100000 knots")?;
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    let unit = travel_direction(curve, direction)?;
+    let source_rate = duration.map(|duration| {
+        Interval::point(interval[1])
+            .sub(Interval::point(interval[0]))?
+            .div(Interval::point(duration))
+    }).transpose()?;
+    let mut jumps = Vec::new();
+    let mut spans = active_spans(curve, interval);
+    let mut left = spans.next().ok_or_else(|| crate::numeric_err("Missing motion span coverage"))?;
+    for right in spans {
+        if jumps.len() == max_knots {
+            return Err(resource("Interior motion knots exceed the work budget"));
+        }
+        let continuity = curve.degree.saturating_sub(right - left);
+        let parameter = curve.knots[right];
+        let mut jump_bounds = [[0.; 2]; 3];
+        let mut statuses = [DirectionalMotionStatus::Within; 3];
+        if continuity < 3 {
+            let left_domain = [curve.knots[left], parameter];
+            let right_domain = [parameter, curve.knots[right + 1]];
+            let left_jets = curve_jets::endpoint(curve, left, left_domain, true)?;
+            let right_jets = curve_jets::endpoint(curve, right, right_domain, false)?;
+            let left_width = Interval::point(parameter).sub(Interval::point(left_domain[0]))?;
+            let right_width = Interval::point(right_domain[1]).sub(Interval::point(parameter))?;
+            for (index, limit) in limits.into_iter().enumerate().skip(continuity) {
+                let order = index + 1;
+                let mut before = project_jet(&left_jets[order], &unit)?;
+                let mut after = project_jet(&right_jets[order], &unit)?;
+                for _ in 0..order {
+                    before = before.div(left_width)?;
+                    after = after.div(right_width)?;
+                }
+                let mut jump = after.sub(before)?;
+                if let Some(rate) = source_rate {
+                    for _ in 0..order {
+                        jump = jump.mul(rate)?;
+                    }
+                }
+                jump_bounds[index] = [jump.lo, jump.hi];
+                statuses[index] = classify_absolute_limit(jump, limit);
+            }
+        }
+        jumps.push(DirectionalMotionKnotJump { parameter, jump_bounds, statuses });
+        left = right;
+    }
+    Ok(jumps)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MotionKnotTurn {
+    pub parameter: f64,
+    /// Cosine between incoming and outgoing tangents, absent when either
+    /// tangent cannot be proved nonzero.
+    pub cosine_bounds: Option<[f64; 2]>,
+    pub status: DirectionalMotionStatus,
+}
+
+/// Classify interior turns against a minimum tangent cosine in [-1, 1].
+/// A larger cosine means a smaller turn. Each tangent uses its own span.
+pub fn classify_motion_knot_turns(
+    curve: &Curve,
+    interval: [f64; 2],
+    minimum_cosine: f64,
+    max_knots: usize,
+) -> Result<Vec<MotionKnotTurn>> {
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    check((-1.0..=1.0).contains(&minimum_cosine), "Minimum turn cosine must be in [-1, 1]")?;
+    check(max_knots <= 100_000, "Motion turn budget must be at most 100000 knots")?;
+    let mut turns = Vec::new();
+    let mut spans = active_spans(curve, interval);
+    let mut left = spans.next().ok_or_else(|| crate::numeric_err("Missing motion span coverage"))?;
+    for right in spans {
+        if turns.len() == max_knots {
+            return Err(resource("Interior motion knots exceed the work budget"));
+        }
+        let parameter = curve.knots[right];
+        let before = curve_jets::endpoint(curve, left, [curve.knots[left], parameter], true)?;
+        let after = curve_jets::endpoint(curve, right, [parameter, curve.knots[right + 1]], false)?;
+        let (cosine_bounds, status) =
+            classify_tangent_turn(&before[1], &after[1], right - left < curve.degree, minimum_cosine)?;
+        turns.push(MotionKnotTurn { parameter, cosine_bounds, status });
+        left = right;
+    }
+    Ok(turns)
+}
+
+fn classify_tangent_turn(
+    before: &[Interval],
+    after: &[Interval],
+    same_source_derivative: bool,
+    minimum_cosine: f64,
+) -> Result<(Option<[f64; 2]>, DirectionalMotionStatus)> {
+    let left_norm = norm(before)?;
+    let right_norm = norm(after)?;
+    let cosine_bounds = if left_norm.lo <= 0. || right_norm.lo <= 0. {
+        None
+    } else if same_source_derivative {
+        Some([1.; 2])
+    } else {
+        let cosine = before.iter().zip(after).try_fold(
+            Interval::point(0.),
+            |sum, (&a, &b)| sum.add(a.div(left_norm)?.mul(b.div(right_norm)?)?),
+        )?;
+        Some([cosine.lo.max(-1.), cosine.hi.min(1.)])
+    };
+    let status = match cosine_bounds {
+        Some([lo, _]) if lo >= minimum_cosine => DirectionalMotionStatus::Within,
+        Some([_, hi]) if hi < minimum_cosine => DirectionalMotionStatus::Exceeds,
+        _ => DirectionalMotionStatus::Undetermined,
+    };
+    Ok((cosine_bounds, status))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MotionJoinTurn {
+    pub position_gap_bounds: [f64; 2],
+    /// Cosine between the tangents in traversal order.
+    pub cosine_bounds: Option<[f64; 2]>,
+    pub turn_status: DirectionalMotionStatus,
+}
+
+/// Compare the last tangent of the first window with the first tangent of the
+/// second, using increasing source parameters. The turn and gap are independent.
+pub fn classify_motion_join_turn(
+    first: (&Curve, [f64; 2]),
+    second: (&Curve, [f64; 2]),
+    minimum_cosine: f64,
+) -> Result<MotionJoinTurn> {
+    check((-1.0..=1.0).contains(&minimum_cosine), "Minimum turn cosine must be in [-1, 1]")?;
+    let endpoint = |(curve, interval): (&Curve, [f64; 2]), end| -> Result<_> {
+        curve.validate()?;
+        validate_travel_interval(curve, interval)?;
+        let (span, domain) = motion_window_endpoint(curve, interval, end)?;
+        curve_jets::endpoint(curve, span, domain, end)
+    };
+    let before = endpoint(first, true)?;
+    let after = endpoint(second, false)?;
+    check(before[0].len() == after[0].len(), "Motion join requires matching curve dimensions")?;
+    let (lo, hi) = box_distance(&before[0], &after[0])?;
+    let (cosine_bounds, turn_status) =
+        classify_tangent_turn(&before[1], &after[1], false, minimum_cosine)?;
+    Ok(MotionJoinTurn { position_gap_bounds: [lo, hi], cosine_bounds, turn_status })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MotionChainTurn {
+    pub segment_indices: [usize; 2],
+    pub join: MotionJoinTurn,
+    pub gap_status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct MotionChainTurnReport {
+    pub joins: Vec<MotionChainTurn>,
+    pub status: DirectionalMotionStatus,
+}
+
+/// Check tangent turns and spatial gaps in traversal order, including the
+/// last-to-first join for a closed chain. Both thresholds are inclusive.
+pub fn classify_motion_chain_turns(
+    windows: &[(&Curve, [f64; 2])],
+    closed: bool,
+    minimum_cosine: f64,
+    maximum_gap: f64,
+    max_joins: usize,
+) -> Result<MotionChainTurnReport> {
+    check(maximum_gap.is_finite() && maximum_gap >= 0., "Gap limit must be finite and nonnegative")?;
+    let count = motion_chain_join_count(windows.len(), closed, max_joins)?;
+    let mut joins = Vec::with_capacity(count);
+    let mut status = DirectionalMotionStatus::Within;
+    for first in 0..count {
+        let second = (first + 1) % windows.len();
+        let join = classify_motion_join_turn(windows[first], windows[second], minimum_cosine)?;
+        let [lo, hi] = join.position_gap_bounds;
+        let gap_status = classify_absolute_limit(Interval::new(lo, hi)?, maximum_gap);
+        for result in [gap_status, join.turn_status] {
+            if result == DirectionalMotionStatus::Exceeds || status == DirectionalMotionStatus::Within {
+                status = result;
+            }
+        }
+        joins.push(MotionChainTurn { segment_indices: [first, second], join, gap_status });
+    }
+    Ok(MotionChainTurnReport { joins, status })
+}
+
+fn motion_chain_join_count(segment_count: usize, closed: bool, max_joins: usize) -> Result<usize> {
+    check(
+        segment_count >= 2 || (closed && segment_count == 1),
+        "An open motion chain needs two segments, and a closed chain needs one",
+    )?;
+    let count = if closed { segment_count } else { segment_count - 1 };
+    if count > max_joins {
+        return Err(resource("Motion chain joins exceed the work budget"));
+    }
+    Ok(count)
+}
+
+fn motion_window_endpoint(
+    curve: &Curve,
+    interval: [f64; 2],
+    end: bool,
+) -> Result<(usize, [f64; 2])> {
+    let mut spans = active_spans(curve, interval);
+    let span = if end { spans.last() } else { spans.next() }
+        .ok_or_else(|| crate::numeric_err("Missing motion endpoint span"))?;
+    Ok((span, [
+        interval[0].max(curve.knots[span]),
+        interval[1].min(curve.knots[span + 1]),
+    ]))
+}
+
+/// A curve window traversed in increasing parameter order with a uniform clock.
+#[derive(Clone, Copy, Debug)]
+pub struct TimedMotionSegment<'a> {
+    pub curve: &'a Curve,
+    pub interval: [f64; 2],
+    pub duration: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionJoinReport {
+    /// Euclidean gap between the segment endpoints.
+    pub position_gap_bounds: [f64; 2],
+    /// Signed jumps in axial speed, acceleration and jerk (second minus first).
+    pub jump_bounds: [[f64; 2]; 3],
+    pub statuses: [DirectionalMotionStatus; 3],
+}
+
+/// Compare the final state of the first segment with the initial state of the
+/// second. Derivatives use each segment's supplied duration in common time units.
+/// The position gap is reported independently of the derivative limits.
+pub fn classify_directional_motion_join(
+    segments: [TimedMotionSegment<'_>; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+) -> Result<DirectionalMotionJoinReport> {
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    for segment in segments {
+        segment.curve.validate()?;
+        validate_travel_interval(segment.curve, segment.interval)?;
+        check(
+            segment.duration.is_finite() && segment.duration > 0.,
+            "Motion segment duration must be finite and positive",
+        )?;
+        check(
+            segment.curve.control_points[0].len() == direction.len(),
+            "Motion join requires matching curve and axis dimensions",
+        )?;
+    }
+    let [first, second] = segments;
+    let unit = travel_direction(first.curve, direction)?;
+    let endpoint = |segment: TimedMotionSegment<'_>, end| -> Result<_> {
+        let (span, domain) = motion_window_endpoint(segment.curve, segment.interval, end)?;
+        let [a, b] = segment.interval;
+        let source_width = Interval::point(b).sub(Interval::point(a))?;
+        let cell_width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+        let scale = source_width.div(cell_width)?.div(Interval::point(segment.duration))?;
+        let jets = curve_jets::endpoint(segment.curve, span, domain, end)?;
+        Ok((jets, scale))
+    };
+    let (left, left_scale) = endpoint(first, true)?;
+    let (right, right_scale) = endpoint(second, false)?;
+    let (gap_lo, gap_hi) = box_distance(&left[0], &right[0])?;
+    let mut jump_bounds = [[0.; 2]; 3];
+    let mut statuses = [DirectionalMotionStatus::Within; 3];
+    for (index, limit) in limits.into_iter().enumerate() {
+        let order = index + 1;
+        let mut before = project_jet(&left[order], &unit)?;
+        let mut after = project_jet(&right[order], &unit)?;
+        for _ in 0..order {
+            before = before.mul(left_scale)?;
+            after = after.mul(right_scale)?;
+        }
+        let jump = after.sub(before)?;
+        jump_bounds[index] = [jump.lo, jump.hi];
+        statuses[index] = classify_absolute_limit(jump, limit);
+    }
+    Ok(DirectionalMotionJoinReport {
+        position_gap_bounds: [gap_lo, gap_hi],
+        jump_bounds,
+        statuses,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionChainJoin {
+    pub segment_indices: [usize; 2],
+    pub join: DirectionalMotionJoinReport,
+    pub position_status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionChainReport {
+    pub joins: Vec<DirectionalMotionChainJoin>,
+    /// Exceeds if any join violates a limit, Within if all limits are proved,
+    /// or Undetermined if some limits remain unresolved.
+    pub status: DirectionalMotionStatus,
+}
+
+/// Check adjacent joins in traversal order, optionally including the closing
+/// join. Each join is evaluated in the independent clocks of its two segments.
+pub fn classify_directional_motion_chain(
+    segments: &[TimedMotionSegment<'_>],
+    closed: bool,
+    direction: &[f64],
+    position_limit: f64,
+    derivative_limits: DirectionalMotionLimits,
+    max_joins: usize,
+) -> Result<DirectionalMotionChainReport> {
+    let join_count = motion_chain_join_count(segments.len(), closed, max_joins)?;
+    check(
+        position_limit.is_finite() && position_limit >= 0.,
+        "Position gap limit must be finite and nonnegative",
+    )?;
+    let mut joins = Vec::with_capacity(join_count);
+    let mut status = DirectionalMotionStatus::Within;
+    for first in 0..join_count {
+        let second = (first + 1) % segments.len();
+        let join =
+            classify_directional_motion_join([segments[first], segments[second]], direction, derivative_limits)?;
+        let [lo, hi] = join.position_gap_bounds;
+        let position_status = classify_absolute_limit(Interval::new(lo, hi)?, position_limit);
+        for next in join.statuses.into_iter().chain([position_status]) {
+            if next == DirectionalMotionStatus::Exceeds || status == DirectionalMotionStatus::Within {
+                status = next;
+            }
+        }
+        joins.push(DirectionalMotionChainJoin {
+            segment_indices: [first, second],
+            join,
+            position_status,
+        });
+    }
+    Ok(DirectionalMotionChainReport { joins, status })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TimedMotionChainLimits {
+    pub segment: DirectionalMotionLimits,
+    pub join: DirectionalMotionLimits,
+    pub position_gap: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct TimedMotionChainReport {
+    pub segment_statuses: Vec<DirectionalMotionStatus>,
+    pub joins: DirectionalMotionChainReport,
+    pub status: DirectionalMotionStatus,
+    /// Enclosure cells for segment derivatives. Joins have a separate budget.
+    pub cells: usize,
+}
+
+/// Certify axial limits inside each segment in its supplied physical clock,
+/// and check spatial gaps and derivative jumps at the joins.
+/// Tolerances control peak refinement in each original parameter clock.
+pub fn check_timed_motion_chain(
+    segments: &[TimedMotionSegment<'_>],
+    closed: bool,
+    direction: &[f64],
+    limits: TimedMotionChainLimits,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_joins: usize,
+) -> Result<TimedMotionChainReport> {
+    for tolerance in tolerances {
+        validate(tolerance, max_cells)?;
+    }
+    if segments.len() > max_cells / 3 {
+        return Err(resource("Motion chain segments exceed the cell budget"));
+    }
+    let joins = classify_directional_motion_chain(
+        segments, closed, direction, limits.position_gap, limits.join, max_joins,
+    )?;
+    let mut minima = Vec::with_capacity(segments.len());
+    let mut reserve = 0;
+    for segment in segments {
+        let minimum = 3 * active_spans(segment.curve, segment.interval).count();
+        reserve += minimum;
+        if reserve > max_cells {
+            return Err(resource("Initial motion chain spans exceed the cell budget"));
+        }
+        minima.push(minimum);
+    }
+    let mut remaining = max_cells;
+    let mut status = joins.status;
+    let mut segment_statuses = Vec::with_capacity(segments.len());
+    for (index, (segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = (minimum + (remaining - reserve) / (segments.len() - index)) / 3;
+        let report = check_directional_motion_limits(
+            segment.curve, segment.interval, direction, limits.segment, tolerances, budget,
+        )?;
+        let factor = motion_clock_factor(segment.interval, segment.duration)?;
+        let powers = [factor.clone(), &factor * &factor, factor.pow(3)];
+        let next = motion_status_in_clock(&report, limits.segment, &powers)?;
+        if next == DirectionalMotionStatus::Exceeds || status == DirectionalMotionStatus::Within {
+            status = next;
+        }
+        segment_statuses.push(next);
+        remaining -= report.speed.cells + report.acceleration.cells + report.jerk.cells;
+        reserve -= minimum;
+    }
+    Ok(TimedMotionChainReport { segment_statuses, joins, status, cells: max_cells - remaining })
+}
+
+fn measure_directional_derivative_peak(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+    parameter_tolerance: Option<f64>,
+    derivative_order: usize,
+) -> Result<DirectionalPeakLocations> {
+    if let Some(parameter_tolerance) = parameter_tolerance {
+        check(
+            parameter_tolerance.is_finite() && parameter_tolerance > 0.,
+            "Peak parameter tolerance must be positive and finite",
+        )?;
+    }
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    validate_travel_interval(curve, interval)?;
+    let unit = travel_direction(curve, direction)?;
+    let mut pending = BTreeMap::new();
+    let mut cells = 0;
+    let mut lower = 0.0_f64;
+    let measure = |span, domain: [f64; 2]| -> Result<(f64, f64)> {
+        let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+        let derivative = |jets: Vec<Vec<Interval>>| -> Result<Interval> {
+            let mut value = project_jet(&jets[derivative_order], &unit)?;
+            for _ in 0..derivative_order {
+                value = value.div(width)?;
+            }
+            Ok(value)
+        };
+        let bound = derivative(curve_jets::enclose(curve, span, domain)?)?;
+        let upper = bound.lo.abs().max(bound.hi.abs());
+        let sample_lower = |end| -> Result<f64> {
+            let sample = derivative(curve_jets::endpoint(curve, span, domain, end)?)?;
+            Ok(sample.lo.max(-sample.hi).max(0.))
+        };
+        Ok((sample_lower(false)?.max(sample_lower(true)?), upper))
+    };
+    for span in active_spans(curve, interval) {
+        if cells == max_cells {
+            return Err(resource("Initial derivative spans exceed the work budget"));
+        }
+        let domain = [
+            curve.knots[span].max(interval[0]),
+            curve.knots[span + 1].min(interval[1]),
+        ];
+        let (witness, upper) = measure(span, domain)?;
+        lower = lower.max(witness);
+        // Nonnegative finite binary64 values have the same order as their bits.
+        pending.insert((upper.to_bits(), cells), (span, domain));
+        cells += 1;
+    }
+
+    let (upper, stop_reason) = loop {
+        let (&key, &(span, [a, b])) = pending
+            .last_key_value()
+            .ok_or_else(|| crate::numeric_err("Missing derivative span coverage"))?;
+        let upper = f64::from_bits(key.0).max(lower);
+        if (upper - lower).next_up() <= tolerance {
+            break (upper, StopReason::Tolerance);
+        }
+        if cells + 2 > max_cells {
+            break (upper, StopReason::WorkLimit);
+        }
+        let middle = crate::distance_bounds::midpoint(a, b);
+        if !(a < middle && middle < b) {
+            break (upper, StopReason::PrecisionLimit);
+        }
+        pending.remove(&key);
+        for domain in [[a, middle], [middle, b]] {
+            let (witness, child_upper) = measure(span, domain)?;
+            lower = lower.max(witness);
+            pending.insert((child_upper.min(upper).to_bits(), cells), (span, domain));
+            cells += 1;
+        }
+    };
+    let mut parameter_intervals: Vec<[f64; 2]> = Vec::new();
+    if let Some(parameter_tolerance) = parameter_tolerance {
+        let mut search = pending
+            .into_iter()
+            .map(|((upper_bits, _), (span, domain))| (f64::from_bits(upper_bits), span, domain))
+            .collect::<Vec<_>>();
+        let mut candidates = Vec::new();
+        while let Some((bound, span, domain @ [a, b])) = search.pop() {
+            if bound < lower {
+                continue;
+            }
+            let middle = crate::distance_bounds::midpoint(a, b);
+            if (b - a).next_up() <= parameter_tolerance
+                || cells + 2 > max_cells
+                || !(a < middle && middle < b)
+            {
+                candidates.push((bound, domain));
+                continue;
+            }
+            for part in [[a, middle], [middle, b]] {
+                let (witness, child_upper) = measure(span, part)?;
+                lower = lower.max(witness);
+                search.push((child_upper.min(bound), span, part));
+                cells += 1;
+            }
+        }
+        let mut candidates = candidates
+            .into_iter()
+            .filter_map(|(bound, domain)| (bound >= lower).then_some(domain))
+            .collect::<Vec<_>>();
+        candidates.sort_by(|a, b| a[0].total_cmp(&b[0]));
+        for [start, end] in candidates {
+            match parameter_intervals.last_mut() {
+                Some([_, last_end]) if start <= *last_end => *last_end = last_end.max(end),
+                _ => parameter_intervals.push([start, end]),
+            }
+        }
+    }
+    Ok(DirectionalPeakLocations {
+        peak: DirectionalPeakSpeedReport {
+            bounds: [lower, upper.max(lower)],
+            cells,
+            stop_reason,
+        },
+        parameter_intervals,
+    })
+}
