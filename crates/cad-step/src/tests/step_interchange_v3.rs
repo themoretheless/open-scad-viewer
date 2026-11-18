@@ -4113,3 +4113,16 @@ fn combined_interference_counts_triple_overlap_only_once() {
     let separate = scene.extract_occurrences(&[0, 3]).unwrap();
     assert!(separate.interference_material(0).unwrap().bodies.is_empty());
 }
+
+#[test]
+fn interference_groups_connect_chains_but_exclude_touch_and_isolated_parts() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        [0., 10., 3., 11., 1.5, 5., 20.].into_iter().map(placed).collect()).unwrap();
+    assert_eq!(scene.interference_groups(4).unwrap(), [vec![0, 2, 4], vec![1, 3]]);
+    assert!(scene.interference_groups(3).is_err());
+    assert!(scene.extract_occurrences(&[0, 6]).unwrap().interference_groups(0).unwrap().is_empty());
+}

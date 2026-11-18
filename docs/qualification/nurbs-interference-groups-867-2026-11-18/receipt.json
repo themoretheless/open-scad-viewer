@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0867",
+  "testedBase": "adbea8cef2f0b2556f3bb0bb30a92c23ec47f1b0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 214,
+  "scope": [
+    "Identify deterministic connected components of the positive-volume assembly interference graph, propagating unresolved geometry.",
+    "Seven placed boxes yield a transitive three-part chain and a separate two-part group. A touching occurrence and an isolated occurrence are excluded. Candidate budget checked."
+  ],
+  "logSha256": "0f3b17127a001cc9516539e4acb73218434ff03de70cb92bc58ed628391d71d9",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "f047a8dffde2d17ed66d17fc7a9ab3c8b9ffcf9c9529f61d1d4b69612515ffc1",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "246264a3fb264d532130d2cf53ab010bc0c653b03205efe34f645c23d2f1c269"
+  }
+}

@@ -1258,6 +1258,39 @@ impl StepSharedAssembly {
         Ok(regions)
     }
 
+    /// Connected groups of occurrences with positive-volume interference.
+    /// Return deterministic groups ordered by first index, omitting isolated occurrences.
+    /// An unresolved pair prevents claiming a complete partition.
+    pub fn interference_groups(&self, max_pairs: usize) -> Result<Vec<Vec<usize>>> {
+        let mut neighbors = vec![Vec::new(); self.occurrences.len()];
+        for ([first, second], intersects) in self.check_interferences(max_pairs)? {
+            if intersects? {
+                neighbors[first].push(second);
+                neighbors[second].push(first);
+            }
+        }
+        let mut seen = vec![false; neighbors.len()];
+        let mut groups = Vec::new();
+        for start in 0..neighbors.len() {
+            if seen[start] || neighbors[start].is_empty() { continue; }
+            seen[start] = true;
+            let mut pending = vec![start];
+            let mut group = Vec::new();
+            while let Some(current) = pending.pop() {
+                group.push(current);
+                for &next in &neighbors[current] {
+                    if !seen[next] {
+                        seen[next] = true;
+                        pending.push(next);
+                    }
+                }
+            }
+            group.sort_unstable();
+            groups.push(group);
+        }
+        Ok(groups)
+    }
+
     /// Material occupied by at least two occurrences, with multiple overlaps counted once.
     /// Propagate an unresolved pair or union instead of returning a partial solid.
     pub fn interference_material(&self, max_pairs: usize) -> Result<Model> {

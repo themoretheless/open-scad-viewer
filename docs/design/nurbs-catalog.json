@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 866,
-  "unallocatedCount": 134,
+  "specifiedCount": 867,
+  "unallocatedCount": 133,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20163,6 +20163,23 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-combined-interference-866-2026-11-18/receipt.json",
         "docs/qualification/nurbs-combined-interference-866-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0867",
+      "name": "Группы деталей, связанных цепочками объёмных пересечений",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::interference_groups",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-interference-groups-867-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-interference-groups-867-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
