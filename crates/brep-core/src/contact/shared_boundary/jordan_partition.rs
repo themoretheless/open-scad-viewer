@@ -166,7 +166,7 @@ fn interior_curve(
         return Some(());
     }
     let remaining = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
-    if depth == 0 || remaining == 0 || curve.periodic {
+    if depth == 0 || remaining == 0 {
         return None;
     }
     let (proved, used) =
@@ -434,6 +434,36 @@ fn edge_certificate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exact_period_proves_strict_hole_containment_through_the_wrap() {
+        let mut curve = Curve {
+            degree: 2,
+            knots: (-2..=6).map(f64::from).collect(),
+            control_points: vec![
+                vec![-0.046875, 0.25],
+                vec![0.375, 0.5],
+                vec![0.75, 0.75],
+                vec![0.375, 0.75],
+                vec![-0.046875, 0.25],
+                vec![0.375, 0.5],
+            ],
+            weights: vec![2., 1., 1., 1., 2., 1.],
+            periodic: true,
+        };
+        let bounds = [[0., 0.], [1., 1.]];
+        let mut used = 0;
+        assert!(interior_curve(&curve, bounds, 12, &mut used, 1000).is_some());
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, used - 1).is_none());
+        let mut shifted = curve.clone();
+        shifted.knots[0] = shifted.knots[0].next_up();
+        shifted.validate().unwrap();
+        assert!(interior_curve(&shifted, bounds, 12, &mut 0, 1000).is_none());
+        // On the final span the minimum distance becomes exactly zero.
+        curve.control_points[0][0] = -0.0625;
+        curve.control_points[4][0] = -0.0625;
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, 1000).is_none());
+    }
 
     #[test]
     fn exact_active_interval_proves_strict_hole_containment_for_unclamped_trims() {

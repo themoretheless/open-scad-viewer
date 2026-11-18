@@ -2,7 +2,8 @@
 use super::*;
 use num_traits::Signed;
 
-/// Prove strict box containment for an original nonperiodic curve.
+/// Prove strict box containment on an original curve's active interval.
+/// A periodic curve must have an exact stored wrap and is checked over one turn.
 /// Spans and subdivisions stay homogeneous and share the caller's work limit.
 pub fn strict_box_containment(
     curve: &Curve,
@@ -23,8 +24,16 @@ fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PR
     let p = curve.degree;
     let n = curve.control_points.len();
     let [start, end] = curve.domain();
-    if curve.periodic || p == 0 || curve.control_points[0].len() != 2 {
+    if p == 0 || curve.control_points[0].len() != 2 {
         return Err(Refusal::InvalidOutput);
+    }
+    if curve.periodic {
+        work.charge((curve.knots.len() + p) as u64)?;
+        if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(curve)
+            .map_err(|_| Refusal::InvalidOutput)?
+        {
+            return Err(Refusal::InvalidOutput);
+        }
     }
 
     let clamped =

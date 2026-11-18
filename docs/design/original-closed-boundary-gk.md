@@ -245,3 +245,6 @@ subdivision work in exact homogeneous coordinates on the active interval.
 The four boundary inequalities must be strictly positive throughout every
 original span, including endpoints whose Cartesian coordinates fall
 outside binary64.
+For a periodic trim, exact closure of the stored knot shifts and repeated
+controls permits the same proof on one full turn, including both sides of
+the wrap.
