@@ -10635,3 +10635,40 @@ fn minimum_toolpath_chain_clearance_reports_elapsed_witness_time() {
     assert_eq!(fine.witness_time_bounds, [7.75; 2]);
     assert!(fine.work_obstacle_cells <= 4096);
 }
+
+#[test]
+fn last_toolpath_chain_violation_retains_later_unresolved_tangency() {
+    use nurbs_core::analysis::curve_measure::{
+        LastToolpathChainViolation, SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        last_toolpath_chain_violation,
+    };
+    let line = |y| Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., y], vec![4., y]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let crossing = line(0.);
+    let tangent = line(1.);
+    let mut segments = [
+        TimedMotionSegment { curve: &crossing, interval: [2., 6.], duration: 4. },
+        TimedMotionSegment { curve: &tangent, interval: [2., 6.], duration: 8. },
+    ];
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle { center: &[2., 0.], radius: 1. })];
+    let search = |segments: &[TimedMotionSegment<'_>], budget| {
+        last_toolpath_chain_violation(segments, &obstacles, 0., 0., 0.01, budget)
+    };
+    assert!(search(&segments, 1).is_err());
+    let LastToolpathChainViolation::Confirmed {
+        time_bounds: [lo, hi], latest_segment: 1, witness_segment: 0, obstacle_index: 0,
+    } = search(&segments, 512).unwrap()
+    else { panic!("expected a confirmed earlier contact"); };
+    assert!(2.98 < lo && lo <= 3. && 8. <= hi && hi < 8.03);
+    segments[1].interval = [5., 6.];
+    let LastToolpathChainViolation::Confirmed {
+        time_bounds: [lo, hi], latest_segment: 0, witness_segment: 0, ..
+    } = search(&segments, 512).unwrap()
+    else { panic!("expected last possible contact on the first segment"); };
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.03);
+}

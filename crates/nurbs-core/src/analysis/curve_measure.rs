@@ -3264,6 +3264,91 @@ pub fn first_toolpath_chain_violation(
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LastToolpathChainViolation {
+    Clear,
+    Possible {
+        latest_time: f64,
+        latest_segment: usize,
+    },
+    Confirmed {
+        time_bounds: [f64; 2],
+        latest_segment: usize,
+        witness_segment: usize,
+        obstacle_index: usize,
+    },
+}
+
+/// Bracket the last clearance violation in elapsed chain time. An unresolved
+/// later cell sets the upper endpoint even if the witness is earlier.
+pub fn last_toolpath_chain_violation(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<LastToolpathChainViolation> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let dimension = segments[0].curve.control_points[0].len();
+    check(
+        segments.iter().all(|segment| segment.curve.control_points[0].len() == dimension),
+        "Toolpath segments must match obstacle dimensions",
+    )?;
+    let durations = segments.iter().map(|segment| exact_motion_operand(segment.duration))
+        .collect::<Result<Vec<_>>>()?;
+    let mut elapsed: num_rational::BigRational = durations.iter().cloned().sum();
+    let mut latest = None;
+    let mut remaining = max_obstacle_cells;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate().rev() {
+        let budget = minimum + (remaining - reserve) / (index + 1);
+        let partition = partition_toolpath_clearance_with_margin(
+            segment.curve, segment.interval, obstacles, tool_radius, margin,
+            parameter_tolerance, budget,
+        )?;
+        elapsed -= &durations[index];
+        let rate = motion_clock_factor(segment.interval, segment.duration)?;
+        let start = exact_motion_operand(segment.interval[0])?;
+        let time = |parameter, upper| {
+            let exact = &elapsed + (exact_motion_operand(parameter)? - &start) * &rate;
+            round_motion_duration(&exact, upper)
+        };
+        for cell in partition.cells.iter().rev() {
+            if cell.status == DirectionalMotionStatus::Within {
+                continue;
+            }
+            let end = cell.parameter_interval[1];
+            let (upper, latest_segment) = match latest {
+                Some(bound) => bound,
+                None => {
+                    let bound = (time(end, true)?, index);
+                    latest = Some(bound);
+                    bound
+                }
+            };
+            if let Some(obstacle_index) = cell.gap_bounds.iter().position(|[_, hi]| *hi <= 0.) {
+                return Ok(LastToolpathChainViolation::Confirmed {
+                    time_bounds: [time(end, false)?, upper],
+                    latest_segment,
+                    witness_segment: index,
+                    obstacle_index,
+                });
+            }
+        }
+        reserve -= minimum;
+        remaining -= partition.work_obstacle_cells;
+    }
+    Ok(match latest {
+        None => LastToolpathChainViolation::Clear,
+        Some((latest_time, latest_segment)) => LastToolpathChainViolation::Possible {
+            latest_time,
+            latest_segment,
+        },
+    })
+}
+
 fn prepare_toolpath_obstacles<'a>(
     curve: &Curve,
     obstacles: &[ToolpathObstacle<'a>],
