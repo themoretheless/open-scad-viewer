@@ -4513,6 +4513,80 @@ fn solid_box_gap(
     if tool_radius == 0. { Ok(distance) } else { distance.sub(Interval::point(tool_radius)) }
 }
 
+/// Classify clearance against spherical obstacles with a tool radius that
+/// varies linearly over the source parameter window. Radii are in model units.
+pub fn partition_variable_radius_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(tool_radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every sphere"));
+    }
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, 0.)?;
+    let start = exact_motion_operand(interval[0])?;
+    let width = exact_motion_operand(interval[1])? - &start;
+    let radius_start = exact_motion_operand(tool_radii[0])?;
+    let slope = (exact_motion_operand(tool_radii[1])? - &radius_start) / width;
+    let initial = active_spans(curve, interval).map(|span| (span, [
+        curve.knots[span].max(interval[0]),
+        curve.knots[span + 1].min(interval[1]),
+    ]));
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |span, domain| {
+            let radius_at = |parameter| -> Result<_> {
+                Ok(&radius_start + &slope * (exact_motion_operand(parameter)? - &start))
+            };
+            let a = radius_at(domain[0])?;
+            let b = radius_at(domain[1])?;
+            let tool = Interval::new(
+                round_motion_duration(std::cmp::min(&a, &b), false)?,
+                round_motion_duration(std::cmp::max(&a, &b), true)?,
+            )?;
+            let jets = curve_jets::enclose(curve, span, domain)?;
+            let gaps = obstacles.iter().map(|(center, radius)| {
+                let (lo, hi) = box_distance(&jets[0], center)?;
+                let gap = Interval::new(lo, hi)?.sub(*radius)?.sub(tool)?;
+                Ok([gap.lo, gap.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let (status, refine) = classify_radial_gaps(&gaps);
+            Ok((SphericalClearanceCell {
+                parameter_interval: domain,
+                span,
+                gap_bounds: gaps,
+                status,
+            }, refine))
+        },
+    )?;
+    Ok(SphericalClearancePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_obstacle_cells: work_cells * obstacles.len(),
+    })
+}
+
+fn classify_radial_gaps(gaps: &[[f64; 2]]) -> (DirectionalMotionStatus, bool) {
+    let status = if gaps.iter().any(|[_, hi]| *hi <= 0.) {
+        DirectionalMotionStatus::Exceeds
+    } else if gaps.iter().all(|[lo, _]| *lo > 0.) {
+        DirectionalMotionStatus::Within
+    } else {
+        DirectionalMotionStatus::Undetermined
+    };
+    let refine = gaps.iter().any(|[lo, hi]| *lo <= 0. && *hi > 0.);
+    (status, refine)
+}
+
 fn partition_radial_clearance(
     curve: &Curve,
     interval: [f64; 2],
@@ -4528,14 +4602,7 @@ fn partition_radial_clearance(
                 let gap = gap(&jets[0], index)?;
                 Ok([gap.lo, gap.hi])
             }).collect::<Result<Vec<_>>>()?;
-            let status = if gaps.iter().any(|[_, hi]| *hi <= 0.) {
-                DirectionalMotionStatus::Exceeds
-            } else if gaps.iter().all(|[lo, _]| *lo > 0.) {
-                DirectionalMotionStatus::Within
-            } else {
-                DirectionalMotionStatus::Undetermined
-            };
-            let refine = gaps.iter().any(|[lo, hi]| *lo <= 0. && *hi > 0.);
+            let (status, refine) = classify_radial_gaps(&gaps);
             Ok(((gaps, status), refine))
         },
     )?;

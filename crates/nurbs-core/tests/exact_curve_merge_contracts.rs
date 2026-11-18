@@ -11366,3 +11366,35 @@ fn scheduled_contact_query_accounts_for_rounding_and_shared_endpoints() {
     });
     assert!(report.contact_pairs_at_time(f64::NAN).is_err());
 }
+
+#[test]
+fn variable_radius_clearance_brackets_growth_and_shrinkage_contacts() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, partition_variable_radius_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![2., 0.], vec![3., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [SphericalObstacle { center: &[0., 0.], radius: 0.5 }];
+    let check = |radii| {
+        partition_variable_radius_spherical_clearance(&curve, [2., 6.], &obstacles, radii, 0.01, 128)
+    };
+    for (radii, first, last) in [
+        ([0., 4.], Status::Within, Status::Exceeds),
+        ([4., 0.], Status::Exceeds, Status::Within),
+    ] {
+        let report = check(radii).unwrap();
+        assert_eq!(report.cells.first().unwrap().status, first);
+        assert_eq!(report.cells.last().unwrap().status, last);
+        assert!(report.cells.iter().any(|cell| {
+            let [lo, hi] = cell.parameter_interval;
+            lo <= 4. && 4. <= hi && hi - lo <= 0.01 && cell.status == Status::Undetermined
+        }));
+        assert!(report.work_obstacle_cells <= 128);
+    }
+    assert!(check([-1., 0.]).is_err());
+}

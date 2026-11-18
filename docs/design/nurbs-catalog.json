@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 752,
-  "unallocatedCount": 248,
+  "specifiedCount": 753,
+  "unallocatedCount": 247,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17980,6 +17980,25 @@
       "remainingQualification": [
         "Query concrete confirmed and possible tool pairs at a given absolute time.",
         "Check inward and outward rounding, shared endpoints, distinct sorted pairs, and invalid time.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0753",
+      "name": "Проверка зазора инструмента с линейно меняющимся радиусом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_variable_radius_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-753-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-753-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify clearance against balls while the moving tool radius varies affinely.",
+        "Check growing and shrinking radii, analytic contact boundaries, original parameter scaling, and invalid radii.",
         "WASM and application integration are separate."
       ]
     }

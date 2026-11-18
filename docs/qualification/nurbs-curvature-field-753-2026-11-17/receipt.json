@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0753",
+  "testedBase": "540e952856e2a8c23d1952435742bfee377be39b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 378,
+  "scope": [
+    "Classify clearance against balls while the moving tool radius varies affinely.",
+    "Check growing and shrinking radii, analytic contact boundaries, original parameter scaling, and invalid radii."
+  ],
+  "logSha256": "fc43554b2c74fc7c81d546fe9466a9082103fa97e60035c7b48098cfe31a56d0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c34d6f16de781692840b20bb426639c11abc99abd0189471228c5a13c7f7d23e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "7a6359de23cf622acba820f3e676144f4200419c020fb676a39b2487e418de92"
+  }
+}
