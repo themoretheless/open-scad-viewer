@@ -13460,3 +13460,16 @@ fn spatial_wire_preserves_height_and_requires_a_simple_projection() {
     assert!(assemble(&edges,0,false,0,1_000_000,1e-8,6,10000).is_err());
     assert!(assemble(&edges,0,false,3,1_000_000,1e-8,6,10000).is_err());
 }
+
+#[test]
+fn cube_edge_hexagon_admits_oblique_simple_projection() {
+    use nurbs_core::editing::exact_curve_merge::{assemble_oblique_simple_loop as oblique,assemble_simple_spatial_loop as axis};
+    let points=[[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[1.,1.,1.],[0.,1.,1.],[0.,0.,1.]];
+    let edges:Vec<_>=(0..6).map(|i| Curve {degree:1,knots:vec![0.,0.,1.,1.],weights:vec![1.;2],periodic:false,
+        control_points:vec![points[i].to_vec(),points[(i+1)%6].to_vec()]}).collect();
+    for k in 0..3 {assert!(axis(&edges,0,false,k,1_000_000,1e-8,15,10000).is_err());}
+    let forms=[[1.,0.,-1.],[0.,1.,1.]];
+    let curve=oblique(&edges,0,false,forms,1_000_000,1e-8,15,10000).unwrap().curve.unwrap();
+    for (i,p) in points.iter().enumerate() {assert_eq!(curve.evaluate(i as f64).unwrap().point,p);}
+    assert!(oblique(&edges,0,false,[[1.;3];2],1_000_000,1e-8,15,10000).is_err());
+}

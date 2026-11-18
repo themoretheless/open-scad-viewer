@@ -18,7 +18,7 @@ pub fn assemble_open_endpoint_chain(
     start: &[f64],
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
-    assemble(sources, Anchor::Open(start), max_work, |_| Ok(()))
+    assemble(sources, Anchor::Open(start), max_work, |_, _| Ok(()))
 }
 
 /// Assemble one closed clamped curve, preserving each local span duration.
@@ -34,7 +34,7 @@ pub fn assemble_closed_endpoint_chain(
         sources,
         Anchor::Closed(first_segment, reversed),
         max_work,
-        |_| Ok(()),
+        |_, _| Ok(()),
     )
 }
 
@@ -55,7 +55,7 @@ pub fn assemble_simple_planar_loop(
         sources,
         Anchor::Closed(first_segment, reversed),
         max_work,
-        |ordered| prove_simple(ordered, tolerance_uv, max_pairs, max_cells),
+        |ordered, _| prove_simple(ordered, tolerance_uv, max_pairs, max_cells),
     )
 }
 
@@ -94,7 +94,7 @@ pub fn assemble_simple_spatial_loop(
         sources,
         Anchor::Closed(first_segment, reversed),
         max_work,
-        |ordered| {
+        |ordered, _| {
             let mut projected = ordered.to_vec();
             for curve in &mut projected {
                 crate::check(
@@ -119,7 +119,7 @@ fn assemble(
     sources: &[Curve],
     anchor: Anchor<'_>,
     max_work: u64,
-    verify: impl FnOnce(&[Curve]) -> Result<()>,
+    verify: impl FnOnce(&[Curve], &mut Work) -> Result<()>,
 ) -> Result<GaugeMergeReport> {
     crate::check(
         (2..=256).contains(&sources.len()),
@@ -223,7 +223,14 @@ fn assemble(
             refusal: Some(GaugeMergeRefusal::Exact(Exact::ResourceLimit)),
         });
     }
-    verify(&ordered)?;
+    verify(&ordered, &mut work)?;
+    if work.used == max_work {
+        return Ok(GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(Exact::ResourceLimit)),
+        });
+    }
     let mut report = compress_mixed_degree_chain(&ordered, max_work - work.used)?;
     report.work_used += work.used;
     Ok(report)
@@ -272,4 +279,55 @@ pub fn assemble_wound_planar_loop(
         result.work_used = work.used;
     }
     Ok(result)
+}
+
+/// Prove spatial simplicity using two supplied linear coordinate forms.
+/// Each projected pole is computed as an exact rational dot product and must
+/// fit binary64 before being passed to the planar proof. The output keeps
+/// the original 3D poles' geometry; projection shares the edit work budget.
+pub fn assemble_oblique_simple_loop(
+    sources: &[Curve],
+    first_segment: usize,
+    reversed: bool,
+    forms: [[f64; 3]; 2],
+    max_work: u64,
+    projection_tolerance: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<GaugeMergeReport> {
+    crate::check(
+        forms.iter().flatten().all(|v| v.is_finite()),
+        "Expected finite projection coefficients",
+    )?;
+    assemble(
+        sources,
+        Anchor::Closed(first_segment, reversed),
+        max_work,
+        |ordered, work| {
+            let mut projected = ordered.to_vec();
+            for curve in &mut projected {
+                crate::check(curve.control_points[0].len() == 3, "Expected spatial curve")?;
+                for point in &mut curve.control_points {
+                    let mut xy = Vec::with_capacity(2);
+                    for row in &forms {
+                        let mut dot = || -> std::result::Result<f64, Exact> {
+                            let mut sum = work.lift(0.)?;
+                            for (&coefficient, &coordinate) in row.iter().zip(point.iter()) {
+                                let a = work.lift(coefficient)?;
+                                let b = work.lift(coordinate)?;
+                                let product = work.op(&a, &b, |x, y| x * y)?;
+                                sum = work.op(&sum, &product, |x, y| x + y)?;
+                            }
+                            Ok(work.float(&sum)?)
+                        };
+                        xy.push(dot().map_err(|reason| {
+                            crate::input(format!("Exact projection failed: {reason:?}"))
+                        })?);
+                    }
+                    *point = xy;
+                }
+            }
+            prove_simple(&projected, projection_tolerance, max_pairs, max_cells)
+        },
+    )
 }
