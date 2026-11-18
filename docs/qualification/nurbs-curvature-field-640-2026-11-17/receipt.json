@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0640",
+  "testedBase": "215edbdeae6d00190b287eb71e4ebefea7c73318",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 279,
+  "scope": [
+    "Expose opt-in density-weighted moment about a fixed spatial axis through the existing request.",
+    "Check analytic offset-axis inertia of a density-weighted nested island through the compiled ABI, coexistence with plane distance, and refusal of incomplete or invalid input."
+  ],
+  "logSha256": "ec1f97ce56f1107c37fa0131306037cd638374d667bf859c2656169180162493",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "e3d495efee3ce3e50221383fcdcaf72d2ebb1feb44f29e513875986df0987055",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "9da56de06f66b2668dd8d0fa2ecd651babf19d80c219071b3dbb99cb10c31edb",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "aa21bb695bdbdf951f8aa75f1d69748b61b4b4a2efd01937c2db25266b502950"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

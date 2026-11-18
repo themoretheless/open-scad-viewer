@@ -36,6 +36,7 @@ interface Report {
   centerOfMassPlaneDistanceBoundsMm?: [number, number] | null
   centerOfMassBoundsMm?: [number, number][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
@@ -393,3 +394,15 @@ assert.ok(centerPlane[1] < 0)
 const incompletePlane = call(request.maxWork, densityOp, { ...planeOptions, maxSurfaceCells: 2 })
 assert.equal(incompletePlane.centerOfMassPlaneDistanceBoundsMm, null)
 console.log('WASM ABI enclosed the signed distance from the density-weighted center to a plane.')
+
+assert.equal(densityMass.axisMomentBoundsKgMm2, undefined)
+const weightedAxisOptions = { ...planeOptions, inertiaAxis: axisOptions.inertiaAxis }
+const weightedAxis = call(request.maxWork, densityOp, weightedAxisOptions)
+const expectedWeightedAxisMoment = 2 * 83 / 768 + 6 * 49 / 12288 - 2 * 0.34375 + 2.875
+const weightedAxisBounds = weightedAxis.axisMomentBoundsKgMm2
+assert.ok(weightedAxisBounds && weightedAxisBounds[0] <= expectedWeightedAxisMoment
+  && expectedWeightedAxisMoment <= weightedAxisBounds[1])
+assert.deepEqual(weightedAxis.centerOfMassPlaneDistanceBoundsMm, centerPlane)
+const incompleteWeightedAxis = call(request.maxWork, densityOp, { ...weightedAxisOptions, maxSurfaceCells: 2 })
+assert.equal(incompleteWeightedAxis.axisMomentBoundsKgMm2, null)
+console.log('WASM ABI enclosed the density-weighted moment about a fixed axis.')

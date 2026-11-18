@@ -887,3 +887,24 @@ fn patch_set_density_returns_signed_center_distance_to_requested_plane() {
     request["centerOfMassPlane"]["normal"] = json!([0., 0., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_returns_requested_moment_about_a_fixed_axis() {
+    let mut request = patch_set_density_request(20_000);
+    let prior = run(&request);
+    assert_eq!(prior["ok"], true, "{prior}");
+    assert!(prior["value"].get("axisMomentBoundsKgMm2").is_none());
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., -2.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let expected = 2. * 83. / 768. + 6. * 49. / 12288. - 2. * 0.34375 + 2.875;
+    let interval = &response["value"]["axisMomentBoundsKgMm2"];
+    assert!(interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap());
+    assert_eq!(response["value"]["massBoundsKg"], prior["value"]["massBoundsKg"]);
+    request["maxSurfaceCells"] = json!(2);
+    let incomplete = run(&request);
+    assert_eq!(incomplete["ok"], true, "{incomplete}");
+    assert_eq!(incomplete["value"].get("axisMomentBoundsKgMm2"), Some(&Value::Null));
+    request["inertiaAxis"]["direction"] = json!([0., 0., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}
