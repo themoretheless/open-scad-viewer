@@ -694,6 +694,27 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Remove one placement and discard its definition when it becomes unused.
+    /// Indices after the removed occurrence or definition are compacted.
+    pub fn remove_occurrence(&mut self, index: usize) -> Result<()> {
+        let definition = self.occurrences.get(index)
+            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?
+            .definition;
+        if self.occurrences.len() == 1 {
+            return Err(refuse("STEP assembly requires at least one occurrence"));
+        }
+        self.occurrences.remove(index);
+        if !self.occurrences.iter().any(|occurrence| occurrence.definition == definition) {
+            self.definitions.remove(definition);
+            for occurrence in &mut self.occurrences {
+                if occurrence.definition > definition {
+                    occurrence.definition -= 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

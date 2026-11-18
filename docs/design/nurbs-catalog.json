@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 821,
-  "unallocatedCount": 179,
+  "specifiedCount": 822,
+  "unallocatedCount": 178,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19300,6 +19300,26 @@
       "remainingQualification": [
         "Edit one proper rigid local-to-assembly placement and export it without duplicating the B-rep definition.",
         "Check shared geometry and independent placements after STEP round-trip, transformed coordinates and atomic refusal of reflection, scale and nonfinite input.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0822",
+      "name": "Удаление экземпляра STEP-сборки с очисткой неиспользуемой геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::remove_occurrence",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-822-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-822-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Remove a placement, preserve definitions still referenced by peers and retire an unused definition while remapping surviving indices.",
+        "Check invalid index, retention of shared geometry, pruning of an orphan definition, index remapping and STEP round-trip of the remaining edited closed solid.",
         "WASM and application integration are separate."
       ]
     }

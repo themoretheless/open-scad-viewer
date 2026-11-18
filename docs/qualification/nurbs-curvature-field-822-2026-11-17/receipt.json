@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0822",
+  "testedBase": "027e8c7c24c7129870bb5aad2579d2b4d33d0438",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 171,
+  "scope": [
+    "Remove a placement, preserve definitions still referenced by peers and retire an unused definition while remapping surviving indices.",
+    "Check invalid index, retention of shared geometry, pruning of an orphan definition, index remapping and STEP round-trip of the remaining edited closed solid."
+  ],
+  "logSha256": "cd48b16e8aae6187c85ee39005bd0fd5164439314946ba83e5311193be256ebe",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "9b04e27919ff193e6b6dca2de817b59557ac857b89df6b5592e55b48f391db5d",
+    "crates/cad-step/src/step_v3_export.rs": "0a2f23d34fb0cdf83de7d1b410acd9d27c6a0a4a259ebfe7ff5004d8cf0a4385",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "17f099ab08cde61460b273675114f8b3a49daffc2b60fe81252e6a7784c6e9cc"
+  }
+}
