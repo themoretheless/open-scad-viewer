@@ -1742,4 +1742,4 @@ pub fn assemble_parameter_partition(sources: &[Curve], max_work: u64) -> Result<
 }
 
 mod endpoint_chain;
-pub use endpoint_chain::{assemble_closed_endpoint_chain, assemble_open_endpoint_chain, assemble_simple_planar_loop};
+pub use endpoint_chain::{assemble_closed_endpoint_chain, assemble_open_endpoint_chain, assemble_simple_planar_loop, assemble_wound_planar_loop};

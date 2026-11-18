@@ -13429,3 +13429,19 @@ fn planar_loop_assembly_requires_interior_separation_proof() {
     let crossing = [edge(a,c),edge(c,b),edge(b,d),edge(d,a)];
     assert!(assemble(&crossing,0,false,1_000_000,1e-8,6,10000).is_err());
 }
+
+#[test]
+fn planar_wire_enforces_material_winding_without_moving_the_seam() {
+    use nurbs_core::editing::exact_curve_merge::assemble_wound_planar_loop as assemble;
+    let edge = |a:[f64;2], b:[f64;2]| Curve {degree:1, knots:vec![0.,0.,1.,1.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[2.,3.]; let b=[4.,3.]; let c=[2.,4.];
+    let edges=[edge(b,c),edge(a,c),edge(b,a)];
+    for (clockwise,points) in [(true,[b,a,c,b]),(false,[b,c,a,b])] {
+        let curve=assemble(&edges,0,clockwise,1_000_000,1e-8,1e-8,3,10000).unwrap().curve.unwrap();
+        for (i,p) in points.iter().enumerate() {
+            assert_eq!(curve.evaluate(i as f64).unwrap().point,p);
+        }
+    }
+    assert!(assemble(&edges,0,true,1_000_000,1e-8,1e-8,3,2).is_err());
+}

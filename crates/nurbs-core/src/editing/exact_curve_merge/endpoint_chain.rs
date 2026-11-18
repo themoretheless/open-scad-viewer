@@ -187,3 +187,48 @@ fn assemble(
     report.work_used += work.used;
     Ok(report)
 }
+
+/// Assemble a proved simple planar boundary at the selected source endpoint
+/// and enforce the requested winding without moving the seam. Area sign alone
+/// suffices even if the caller's requested area interval width was not reached.
+pub fn assemble_wound_planar_loop(
+    sources: &[Curve],
+    first_segment: usize,
+    clockwise: bool,
+    max_work: u64,
+    tolerance_uv: f64,
+    tolerance_area: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<GaugeMergeReport> {
+    let mut result = assemble_simple_planar_loop(
+        sources,
+        first_segment,
+        false,
+        max_work,
+        tolerance_uv,
+        max_pairs,
+        max_cells,
+    )?;
+    let Some(curve) = result.curve.as_mut() else {
+        return Ok(result);
+    };
+    let area = crate::planar_area::measure(std::slice::from_ref(curve), tolerance_area, max_cells)?;
+    let [lo, hi] = area.area_interval_mm2;
+    crate::check(
+        lo > 0. || hi < 0.,
+        "Boundary orientation unproven within area budget",
+    )?;
+    if (hi < 0.) != clockwise {
+        let mut work = Work {
+            used: result.work_used,
+            limit: max_work,
+        };
+        if let Err(reason) = reflect_segment(curve, &mut work) {
+            result.curve = None;
+            result.refusal = Some(GaugeMergeRefusal::Exact(reason));
+        }
+        result.work_used = work.used;
+    }
+    Ok(result)
+}
