@@ -169,3 +169,25 @@ fn guarded_tooth_edit_preserves_internal_joins_and_cyclic_seam() {
         }
     }
 }
+
+#[test]
+fn certified_sector_edit_rejects_crossings_even_with_closed_joins() {
+    use brep_core::profile_certificate::replace_certified_profile_sector as edit;
+    use nurbs_core::{curve::Curve, involute::LosslessSectorPattern};
+    let polygon = |points: &[[f64;2]]| (0..points.len()).map(|i|
+        Curve::from_polyline(vec![points[i].to_vec(),points[(i+1)%points.len()].to_vec()]).unwrap()
+    ).collect::<Vec<_>>();
+    let outer = polygon(&[[0.,0.],[4.,0.],[4.,4.],[0.,4.]]);
+    let holes = [polygon(&[[1.,1.],[1.,2.],[2.,2.],[2.,1.]])];
+    let mut wire = LosslessSectorPattern::encode(&outer,1).unwrap();
+    let report = edit(&mut wire,1,&outer[1..2],&holes,1e-7).unwrap();
+    assert_eq!(report.nesting_depth(), &[0,1]);
+    let mut whole = LosslessSectorPattern::encode(&outer,4).unwrap();
+    let enlarged = polygon(&[[0.,0.],[5.,0.],[5.,4.],[0.,4.]]);
+    edit(&mut whole,0,&enlarged,&holes,1e-7).unwrap();
+    let crossing = polygon(&[[0.,0.],[5.,4.],[0.,4.],[5.,0.]]);
+    assert!(edit(&mut whole,0,&crossing,&holes,1e-7).is_err());
+    let cuts_hole = polygon(&[[0.,0.],[1.5,0.],[1.5,4.],[0.,4.]]);
+    assert!(edit(&mut whole,0,&cuts_hole,&holes,1e-7).is_err());
+    for (a,b) in enlarged.iter().zip(whole.sector(0).unwrap()) { assert_eq!(a.control_points,b.control_points); }
+}

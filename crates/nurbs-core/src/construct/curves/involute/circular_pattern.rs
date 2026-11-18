@@ -281,6 +281,8 @@ impl LosslessSectorPattern {
         Ok(SectorResidual { predictor_index, bytes })
     }
 
+    pub fn sector_count(&self) -> usize { self.pattern.sector_count }
+
     pub fn residual_bytes(&self) -> usize { self.residuals.iter().chain(&self.seed_edit).map(|s| s.bytes.len()).sum() }
 
     pub fn sector(&self, index: usize) -> Result<Vec<Curve>> {

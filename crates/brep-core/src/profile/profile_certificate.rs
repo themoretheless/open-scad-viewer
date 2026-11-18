@@ -12,6 +12,9 @@ use num_traits::{One, Zero};
 pub mod material_relation;
 pub mod original_restriction;
 
+mod compressed_edit;
+pub use compressed_edit::replace_certified_profile_sector;
+
 mod agreement;
 pub use agreement::{
     certify_projective_curve_agreement, verify_projective_curve_agreement,
