@@ -153,6 +153,13 @@ const profiles=Object.freeze({
       index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
     }),
   }),
+  // v25 measured 19,096,303 raw geometry bytes, 6,809,720 packed bytes and 12,900,792 asset bytes.
+  '7702e12173f81b2db74472762ce0f5e9824be6d65311b4d2142416c7f1cb0ae4':Object.freeze({
+    version:25,geometryChunkBytes:6_817_000,totalAssetBytes:12_905_000,rawGeometryBytes:19_098_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
+    }),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
