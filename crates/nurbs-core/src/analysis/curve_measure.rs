@@ -2226,6 +2226,44 @@ pub struct SphericalClearancePartition {
     pub work_obstacle_cells: usize,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FirstToolpathContact {
+    Clear,
+    Possible {
+        earliest_parameter: f64,
+    },
+    Confirmed {
+        parameter_bounds: [f64; 2],
+        /// An obstacle proved to be in contact at the upper endpoint.
+        obstacle_index: usize,
+    },
+}
+
+impl SphericalClearancePartition {
+    /// Summarize the first contact in the original window. The lower bound
+    /// comes from the first cell whose clearance was not proved. The upper
+    /// bound is the start of the first cell proved in contact throughout.
+    pub fn first_contact(&self) -> FirstToolpathContact {
+        let mut earliest = None;
+        for cell in &self.cells {
+            let start = cell.parameter_interval[0];
+            if cell.status != DirectionalMotionStatus::Within {
+                let lower = *earliest.get_or_insert(start);
+                if let Some(obstacle_index) = cell.gap_bounds.iter().position(|[_, hi]| *hi <= 0.) {
+                    return FirstToolpathContact::Confirmed {
+                        parameter_bounds: [lower, start],
+                        obstacle_index,
+                    };
+                }
+            }
+        }
+        match earliest {
+            None => FirstToolpathContact::Clear,
+            Some(earliest_parameter) => FirstToolpathContact::Possible { earliest_parameter },
+        }
+    }
+}
+
 /// Bound clearance for a ball swept along the curve against closed balls.
 /// A cell is clear if all gap lower bounds are positive, and colliding if
 /// one obstacle has a nonpositive gap upper bound throughout the cell.

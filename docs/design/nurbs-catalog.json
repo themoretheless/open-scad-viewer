@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 715,
-  "unallocatedCount": 285,
+  "specifiedCount": 716,
+  "unallocatedCount": 284,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17277,6 +17277,25 @@
       "remainingQualification": [
         "Check Euclidean swept-ball clearance against oriented solid boxes.",
         "Check translated oblique axes of unequal length, analytic contact, and exact rejection of a skew frame.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0716",
+      "name": "Сертифицированная оценка параметра первого контакта на NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::SphericalClearancePartition::first_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-716-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-716-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the first possible and confirmed toolpath contact, with a witnessing obstacle.",
+        "Check clear and unresolved windows, earliest collision versus obstacle order, initial overlap, and unresolved tangency before a later collision.",
         "WASM and application integration are separate."
       ]
     }

@@ -10066,3 +10066,66 @@ fn oriented_box_clearance_uses_local_axis_extents() {
     let skew = OrientedBoxObstacle { axes: &[&[3., 4.], &[-8., 7.]], ..box_shape };
     assert!(measure(skew, 0.5).is_err());
 }
+
+#[test]
+fn first_toolpath_contact_bounds_earliest_contact_across_multiple_obstacles() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathContact, SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 10., 10.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[6., 0.], radius: 0.5 },
+        SphericalObstacle { center: &[3., 0.], radius: 0.5 },
+    ];
+    let check = |window, budget| {
+        partition_curve_spherical_clearance(&curve, window, &obstacles, 0., 0.01, budget)
+            .unwrap()
+            .first_contact()
+    };
+    assert_eq!(check([2., 4.], 2), FirstToolpathContact::Clear);
+    assert_eq!(check([2., 10.], 2), FirstToolpathContact::Possible { earliest_parameter: 2. });
+    let FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } =
+        check([2., 10.], 512)
+    else {
+        panic!("expected confirmed contact");
+    };
+    assert_eq!(obstacle_index, 1);
+    assert!(lo <= 4.5 && hi >= 4.5 && hi - lo < 0.025, "{lo}..{hi}");
+    assert_eq!(check([4.75, 5.25], 2), FirstToolpathContact::Confirmed {
+        parameter_bounds: [4.75; 2],
+        obstacle_index: 1,
+    });
+}
+
+#[test]
+fn first_toolpath_contact_preserves_unresolved_tangency_before_later_collision() {
+    use nurbs_core::analysis::curve_measure::{
+        FirstToolpathContact, SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[2., 1.], radius: 1. },
+        SphericalObstacle { center: &[6., 0.], radius: 0.5 },
+    ];
+    let report = partition_curve_spherical_clearance(&curve, [0., 1.], &obstacles, 0., 0.002, 512)
+        .unwrap();
+    let FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } =
+        report.first_contact()
+    else {
+        panic!("expected a later confirmed contact");
+    };
+    assert_eq!(obstacle_index, 1);
+    assert!(0.24 < lo && lo <= 0.25 && hi >= 5.5 / 8.);
+}
