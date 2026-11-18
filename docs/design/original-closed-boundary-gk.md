@@ -138,3 +138,48 @@ proof. Both uses must agree with the same world traversal, including its
 orientation. The audit also requires exact positional agreement and valid
 vertex links. The report lists these edges separately from its standalone
 strip proofs.
+
+The classified BRep audit also accepts paired full uses of opposite sides
+of a periodic chart. It opens the original tensor chart exactly and checks
+each wrap at the order assigned to that edge. The same coefficient budget
+covers exact opening, clock alignment and seam jets. The existing material
+and topology proofs remain independent of this edge audit.
+
+The regular original material body also accepts exact geometric continuity
+inside its source faces. The face proof compares raw one-sided jets first.
+If that comparison gives no certificate, a bounded exact partition can
+prove geometric joins across the original knot lines and periodic wraps.
+The proof retains the original face and shares the same cell and exact-work
+allowances with the raw comparison. Source embedding, differential rank,
+edge classifications and physical vertex neighborhoods remain independently
+qualified.
+
+Source edge ownership can bind a multispan chart when the canonical world
+edge and original pcurve agree for the entire normalized traversal. This
+route checks chart inclusion and exact equality. It covers both directions
+of the full affine traversal. General projective and partial traversals
+continue to require their own exact composition evidence.
+
+An embedded regular face can use exact planarity when its active source
+controls span one plane and its internal knot multiplicities ensure position
+continuity. A constant coordinate proves the axis-aligned case. For an
+oblique plane, the exact rational affine hull supplies the certificate.
+Its physical interior neighborhoods lie in that plane even when raw second
+derivatives jump. The control census, knot census and affine hull share one
+work allowance. Edge classifications remain separate.
+
+Adjacent Bézier tiles and full owned BRep edge uses can use geometric graph jets
+when the constant-scale strip proof is insufficient. The strip must first
+prove exact positional equality along the common boundary parameter.
+A strictly signed projected Jacobian on each side gives two local inverse
+charts. Their inward directions must point to opposite sides of the complete
+seam after accounting for each face axis, boundary end and traversal. Exact gradient and Hessian
+identities then compare the physical graph in that projection. Normal
+enclosures and graph identities consume the remaining seam work.
+
+When complete natural edges have different clamped knot partitions on
+the same active parameter interval, a geometric audit can refine both to
+the exact union of their along-edge knots. The original charts first
+prove continuity across their internal knots. Each pair of closed edge
+pieces then proves position and geometric jets. Missing pieces, failed
+exact insertion and insufficient work withhold the whole-edge certificate.

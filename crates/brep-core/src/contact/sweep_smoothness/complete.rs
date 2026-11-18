@@ -26,7 +26,8 @@ pub struct Report {
     pub exact_work: u64,
     pub parameter_work: u64,
 }
-mod interiors;
+mod graph_jets;
+pub(crate) mod interiors;
 mod periodic_uses;
 pub use interiors::InteriorReport;
 mod reversal;
@@ -84,12 +85,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let side = c
-                    .trim()
-                    .is_none_or(|trim| {
-                        trim.curve_parameter == model.edges[c.edge].curve.domain()
-                            && trim.pcurve_parameter == c.pcurve.domain()
-                    })
+                let side = periodic_uses::full_use(model, c)
                     .then(|| coedge_side(&f.surface, &c.pcurve, c.reversed))
                     .flatten();
                 uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1), c.reversed));
@@ -154,11 +150,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         && correspondence
             .as_ref()
             .is_some_and(|p| p.all_equal && p.all_joins_exact);
-    let proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
-        &patches,
-        &seams,
-        limits.exact_work - parameter_work,
-    )?;
+    let proof = graph_jets::qualify(&patches, &seams, limits.exact_work - parameter_work)?;
     let seam_work = parameter_work + proof.exact_work;
     let face_interiors = interiors::inspect(
         model,

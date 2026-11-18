@@ -1,0 +1,35 @@
+{
+  "sourceBase": "d2c516f1a24549b80877446b331e9b847ccb19f2",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Original material shell with full exact edge correspondence on a multispan planar face, certified volume and rank, and geometric G2 despite unequal second parametric jets. Includes one-short shared-work refusal, source immutability and existing source-shell/sweep regressions.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 49 passed; 0 failed; 4 ignored; 0 measured; 1996 filtered out; finished in 13.29s",
+      "file": "source.log.gz",
+      "sha256": "f49daa8cb2c78e1fab740ce5bf6a6715d2a4a87a17691caf7cdac8d3b465640c"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2034 filtered out; finished in 0.20s",
+      "file": "sweep.log.gz",
+      "sha256": "551eaca29da40d23f36aeddd56972c16d47c3f660744bfde3e4ecc1add63b8be"
+    },
+    {
+      "command": "cargo check --locked --manifest-path crates/Cargo.toml -p geometry-bridge",
+      "result": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 29.05s",
+      "file": "bridge.log.gz",
+      "sha256": "44d32890b8749b83466f018b022682d947cb899645147b42d9528725eeb057a7"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "74570ce02c080500cbf61fe18b30c1f78d4b571d8601dbc2a316d2bf5c4f1940",
+    "count": 4916
+  }
+}

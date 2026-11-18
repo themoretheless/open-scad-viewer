@@ -38,6 +38,20 @@ fn basis_order(surface: &Surface, order: usize) -> bool {
         )
 }
 
+pub(crate) fn geometric_joins(
+    surface: &Surface,
+    order: usize,
+    cells: usize,
+    exact_work: u64,
+) -> Result<(Option<usize>, usize, u64)> {
+    let report = geometric::inspect(surface, order, cells, exact_work)?;
+    Ok((
+        report.certified.then_some(report.seams),
+        report.cells,
+        report.work,
+    ))
+}
+
 pub(super) fn inspect(
     model: &Model,
     order: usize,
