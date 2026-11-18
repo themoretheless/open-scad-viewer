@@ -106,6 +106,32 @@ impl CircularSectorPattern {
         let sector_count = segments.len() / pieces_per_sector;
         check(sector_count <= 65536, "Expected at most 65536 profile sectors")?;
         for segment in segments { segment.validate()?; }
+        Self::compress_validated(segments, pieces_per_sector, tolerance)
+    }
+
+    /// Find the shortest reconstructible sector in an ordered outline. A match
+    /// requires at least two copies; a single copy of the whole outline is excluded.
+    pub fn discover(segments: &[Curve], tolerance: f64) -> Result<Option<(Self, f64)>> {
+        check(!segments.is_empty(), "Expected a nonempty profile")?;
+        check(tolerance.is_finite() && tolerance >= 0., "Expected finite nonnegative tolerance")?;
+        for segment in segments {
+            segment.validate()?;
+            check(matches!(segment.control_points[0].len(), 2 | 3), "Expected XY or XYZ profile")?;
+        }
+        for count in (2..=segments.len().min(65536)).rev() {
+            if segments.len() % count != 0 { continue; }
+            if let Some(found) = Self::compress_validated(segments, segments.len()/count, tolerance)? {
+                return Ok(Some(found));
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn sector_count(&self) -> usize { self.sector_count }
+
+    fn compress_validated(segments: &[Curve], pieces_per_sector: usize, tolerance: f64)
+        -> Result<Option<(Self, f64)>> {
+        let sector_count = segments.len() / pieces_per_sector;
         let mut pieces = Vec::with_capacity(pieces_per_sector);
         let mut maximum: f64 = 0.;
         for offset in 0..pieces_per_sector {

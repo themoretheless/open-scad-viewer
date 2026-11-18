@@ -524,3 +524,21 @@ fn compound_sector_compression_preserves_piece_order_and_distinct_bases() {
     assert!((0.25..=0.26).contains(&error));
     assert!(CircularSectorPattern::compress(&outline,3,0.).is_err());
 }
+
+#[test]
+fn discovers_shortest_rotational_sector_and_rejects_nonrepeating_outline() {
+    use involute::{CircularProfilePattern, CircularSectorPattern};
+    use nurbs_core::curve::Curve;
+    let seeds = [vec![vec![2.,0.],vec![3.,1.]],vec![vec![3.,1.],vec![1.,2.]]];
+    let patterns = seeds.map(|p| CircularProfilePattern::new(Curve::from_polyline(p).unwrap(),8).unwrap());
+    let mut outline: Vec<_> = (0..8).flat_map(|i| patterns.iter().map(move |p| p.instance(i).unwrap().0)).collect();
+    let (found, error) = CircularSectorPattern::discover(&outline,0.).unwrap().unwrap();
+    assert_eq!(found.sector_count(),8);
+    assert_eq!(found.sector(3).unwrap()[1].control_points, outline[7].control_points);
+    assert_eq!(error,0.);
+    outline[13].control_points[0][0] += 0.1;
+    assert!(CircularSectorPattern::discover(&outline,0.).unwrap().is_none());
+    assert_eq!(CircularSectorPattern::discover(&outline,0.11).unwrap().unwrap().0.sector_count(),8);
+    assert!(CircularSectorPattern::discover(&outline[..1],0.).unwrap().is_none());
+    assert!(CircularSectorPattern::discover(&outline,f64::NAN).is_err());
+}

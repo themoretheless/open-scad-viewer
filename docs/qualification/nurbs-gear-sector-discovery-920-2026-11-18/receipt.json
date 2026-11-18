@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0920",
+  "testedBase": "5027f36f04fb28192bd7919485a9513bdf2eede3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 481,
+  "scope": [
+    "Find eight sectors in an ordered sixteen-segment outline, verify reconstruction, damaged sector rejection and tolerance-based recovery, singleton exclusion and invalid tolerance."
+  ],
+  "logSha256": "0966317097e5e26d975d59ab26cbcef5c5b5502bc6e5a72d3efe7e2535e01372",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "cc6b5a439ee6f4e31293dfdabea382525ec09bb3ccf87ec8b4cf7a9926e962ba",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "e47a47b43e44c509f93ff1ea5c6c80604d9c4263bae9afa6f2fb7d131fec2b7d",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "361c183554294fec9368ba12fc759e3e776623531d2d80ae45edd6f3e3e3ab44"
+  }
+}
