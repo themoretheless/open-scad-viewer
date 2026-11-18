@@ -7706,3 +7706,34 @@ fn weighted_trim_first_mass_moment_measures_oblique_balance() {
     .unwrap();
     assert_eq!(limited.first_mass_moment_about_plane(point, normal).unwrap(), None);
 }
+
+#[test]
+fn physical_principal_moments_prune_impossible_largest_moment() {
+    use nurbs_core::analysis::surface_measure::{
+        bound_physical_principal_moments, bound_principal_moments_from_tensor,
+    };
+    let tensor = [
+        [[3.; 2], [0.; 2], [0.; 2]],
+        [[0.; 2], [4.; 2], [0.; 2]],
+        [[0.; 2], [0.; 2], [4., 12.]],
+    ];
+    let generic = bound_principal_moments_from_tensor(tensor, 100.).unwrap();
+    let physical = bound_physical_principal_moments(tensor, 100.).unwrap();
+    assert!(generic[2][1] >= 12.);
+    assert!(physical[2][1] < 7. + 1e-12);
+    for z in [4., 5., 7.] {
+        for ([lo, hi], expected) in physical.into_iter().zip([3., 4., z]) {
+            assert!(lo <= expected && expected <= hi);
+        }
+    }
+}
+
+#[test]
+fn physical_principal_moments_preserve_zero_and_reject_impossible_tensors() {
+    use nurbs_core::analysis::surface_measure::bound_physical_principal_moments;
+    let moments = bound_physical_principal_moments([[[0.; 2]; 3]; 3], 1e-6).unwrap();
+    assert!(moments.into_iter().all(|[lo, hi]| lo == 0. && hi < 1e-12));
+    let impossible = [[1., 0., 0.], [0., 1., 0.], [0., 0., 5.]]
+        .map(|row| row.map(|entry| [entry; 2]));
+    assert!(bound_physical_principal_moments(impossible, 1e-6).is_err());
+}

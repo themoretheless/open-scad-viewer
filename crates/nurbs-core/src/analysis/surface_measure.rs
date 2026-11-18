@@ -1339,12 +1339,48 @@ fn bound_optional_principal_moments(
             None
         }
     };
-    let within_moment_tolerance = principal_bounds.is_some_and(|bounds| {
-        bounds
-            .into_iter()
-            .all(|[lo, hi]| (hi - lo).next_up() <= moment_tolerance)
+    Ok((
+        principal_bounds,
+        principal_moments_within_tolerance(principal_bounds, moment_tolerance),
+    ))
+}
+
+fn principal_moments_within_tolerance(
+    bounds: Option<PrincipalMomentBounds>,
+    tolerance: f64,
+) -> bool {
+    bounds.is_some_and(|bounds| {
+        bounds.into_iter().all(|[lo, hi]| (hi - lo).next_up() <= tolerance)
+    })
+}
+
+/// Enclose ordered principal moments of a physical central inertia tensor.
+/// The bounds must describe a nonnegative mass distribution.
+pub fn bound_physical_principal_moments(
+    tensor: [[[f64; 2]; 3]; 3],
+    tolerance: f64,
+) -> Result<[[f64; 2]; 3]> {
+    let mut moments = bound_principal_moments_from_tensor(tensor, tolerance)?;
+    for moment in &mut moments {
+        moment[0] = moment[0].max(0.);
+    }
+
+    // Inertia is trace(C) I - C for the positive semidefinite second
+    // moment matrix C. Thus the largest moment is at most half the trace.
+    let trace_half_hi = (0..3).fold(0., |sum: f64, axis| {
+        (sum + (tensor[axis][axis][1] * 0.5).next_up()).next_up()
     });
-    Ok((principal_bounds, within_moment_tolerance))
+    let [[a_lo, a_hi], [b_lo, b_hi], [c_lo, c_hi]] = moments;
+    moments[0][0] = a_lo.max((c_lo - b_hi).next_down());
+    moments[1][0] = b_lo.max((c_lo - a_hi).next_down()).max(moments[0][0]);
+    moments[2][0] = c_lo.max(moments[1][0]);
+    moments[2][1] = c_hi.min(trace_half_hi).min((a_hi + b_hi).next_up());
+    moments[1][1] = b_hi.min(moments[2][1]);
+    moments[0][1] = a_hi.min(moments[1][1]);
+    for [lo, hi] in moments {
+        Interval::new(lo, hi)?;
+    }
+    Ok(moments)
 }
 
 fn validate_moment_tolerance(tolerance: f64) -> Result<()> {
@@ -1675,10 +1711,12 @@ impl TrimmedPatchSetDensityReport {
         &self,
         tolerance: f64,
     ) -> Result<(Option<PrincipalMomentBounds>, bool)> {
-        bound_optional_principal_moments(
-            self.mass_properties.map(|mass| mass.central_inertia_bounds),
-            tolerance,
-        )
+        validate_moment_tolerance(tolerance)?;
+        let moments = self
+            .mass_properties
+            .map(|mass| bound_physical_principal_moments(mass.central_inertia_bounds, tolerance))
+            .transpose()?;
+        Ok((moments, principal_moments_within_tolerance(moments, tolerance)))
     }
 
     /// Enclose the density-weighted first moment about an oriented plane.

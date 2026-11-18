@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0647",
+  "testedBase": "d053daee2aadea95f8238431053ccbf7e0da481a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 288,
+  "scope": [
+    "Tighten principal moments using positive semidefiniteness, ordering and inertia triangle inequalities.",
+    "Check a tighter upper bound, zero and impossible physical tensors, plus the native weighted request regressions."
+  ],
+  "logSha256": "af2fdec9737294ed609e834339c7bed6c9f7c01726145e1fb97ad8c2acfee6e0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "148d49982b16be0753b5671b719ee0354967cf45dd7741c7e5d79988c626b50d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c08fc6e72770cceae0757d5d889e34680a6055de3484111f79e789cc779d7b80",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "ad0dd8aec8997c549d0f498ddbff5e9473d576e1a814794307067258f3f37efb"
+  }
+}
