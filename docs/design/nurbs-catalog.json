@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 980,
-  "unallocatedCount": 20,
+  "specifiedCount": 981,
+  "unallocatedCount": 19,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22285,6 +22285,26 @@
       ],
       "remainingQualification": [
         "Flat named shared assemblies. Each baked variant inherits its source product label. Quantities remain scoped to definition identity even when labels match."
+      ]
+    },
+    {
+      "id": "NURBS-0981",
+      "name": "Совместная передача имён изделий, групп и цветов экземпляров NURBS-сборки STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_named_styled_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/verify.py",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/occt.log",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One group level and direct occurrences. OCCT verifies shared product identity, names, positions and individual colours of two reflected scaled cylinders."
       ]
     }
   ],

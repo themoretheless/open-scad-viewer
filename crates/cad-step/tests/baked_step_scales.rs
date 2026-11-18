@@ -183,3 +183,48 @@ fn named_variants_retain_source_labels_and_quantities_after_export() {
     named.definition_names.pop();
     assert!(named.export_step_with_baked_scales().is_err());
 }
+
+#[test]
+fn named_coloured_parts_share_a_scaled_definition_across_group_and_root() {
+    let placements = [0., 20.].map(|x| StepAssemblyOccurrence {
+        definition: 0,
+        transform: [
+            [2., 0., 0., x],
+            [0., 3., 0., 0.],
+            [0., 0., -4., 0.],
+            [0., 0., 0., 1.],
+        ],
+    });
+    let scene = cad_step::NamedStepAssembly {
+        name: "Drive".into(),
+        definition_names: vec!["Roller".into()],
+        assembly: StepSharedAssembly::from_placed_solids(
+            vec![brep_core::cylinder(2., 3.).unwrap()],
+            placements.to_vec(),
+        )
+        .unwrap(),
+    };
+    let rgb = [[1., 0., 0.], [0., 0., 1.]];
+    let styles = rgb.map(|rgb| {
+        Some(cad_step::StepOccurrenceColour {
+            name: "Finish",
+            rgb,
+        })
+    });
+    let text =
+        cad_step::export_named_styled_step_assembly(&scene, &["Feed"], &[Some(0), None], &styles)
+            .unwrap();
+    if let Some(path) = std::env::var_os("CAD_NAMED_STYLED_FIXTURE") {
+        std::fs::write(path, &text).unwrap();
+    }
+    let reopened = cad_step::import_step_shared_assembly(&text).unwrap();
+    assert_eq!(reopened.definitions().len(), 1);
+    assert_eq!(reopened.occurrences().len(), 2);
+    for (part, colour) in reopened
+        .occurrences()
+        .iter()
+        .zip(cad_step::import_step_occurrence_colours(&text).unwrap())
+    {
+        assert_eq!(colour, Some(rgb[usize::from(part.transform[0][3] == 20.)]));
+    }
+}

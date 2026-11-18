@@ -956,11 +956,16 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
 
 /// Name the assembly and each reusable part definition in definition-index order.
 pub fn export_named_step_assembly(assembly: &crate::StepSharedAssembly, name: &str, parts: &[&str]) -> Result<String> {
+    validate_part_names(assembly, name, parts)?;
+    export_shared_products(assembly, Some((name, parts)), None, None)
+}
+
+fn validate_part_names(assembly: &crate::StepSharedAssembly, name: &str, parts: &[&str]) -> Result<()> {
     if parts.len() != assembly.definitions().len() || std::iter::once(name).chain(parts.iter().copied())
         .any(|s| s.is_empty() || s.chars().any(char::is_control)) {
         return Err(refuse("Expected an assembly name and one nonempty printable name per definition"));
     }
-    export_shared_products(assembly, Some((name, parts)), None, None)
+    Ok(())
 }
 
 /// Export a flat group hierarchy while retaining reusable local solid definitions.
@@ -969,7 +974,7 @@ pub fn export_grouped_step_assembly(
     groups: &[&str],
     parents: &[Option<usize>],
 ) -> Result<String> {
-    export_grouped_with_styles(assembly, groups, parents, None)
+    export_grouped_with_styles(assembly, None, groups, parents, None)
 }
 
 /// Write occurrence-specific surface colours while sharing the underlying solid.
@@ -977,17 +982,30 @@ pub fn export_styled_step_assembly(
     assembly: &crate::StepSharedAssembly, groups: &[&str], parents: &[Option<usize>],
     colours: &[Option<StepOccurrenceColour<'_>>],
 ) -> Result<String> {
-    if colours.len() != parents.len() || colours.iter().flatten().any(|style|
-        style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x))) {
-        return Err(refuse("Expected one optional named RGB style per occurrence"));
-    }
-    export_grouped_with_styles(assembly, groups, parents, Some(colours))
+    export_grouped_with_styles(assembly, None, groups, parents, Some(colours))
+}
+
+/// Export product labels, one level of groups, and occurrence-specific colours
+/// together. Scaled geometry variants retain the label of their source product.
+pub fn export_named_styled_step_assembly(
+    assembly: &crate::NamedStepAssembly, groups: &[&str], parents: &[Option<usize>],
+    colours: &[Option<StepOccurrenceColour<'_>>],
+) -> Result<String> {
+    let parts: Vec<_> = assembly.definition_names.iter().map(String::as_str).collect();
+    validate_part_names(&assembly.assembly, &assembly.name, &parts)?;
+    export_grouped_with_styles(&assembly.assembly, Some((&assembly.name, &parts)), groups, parents, Some(colours))
 }
 
 fn export_grouped_with_styles(
-    assembly: &crate::StepSharedAssembly, groups: &[&str], parents: &[Option<usize>],
+    assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: &[&str], parents: &[Option<usize>],
     colours: Option<&[Option<StepOccurrenceColour<'_>>]>,
 ) -> Result<String> {
+    if let Some(colours) = colours {
+        if colours.len() != parents.len() || colours.iter().flatten().any(|style|
+            style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x))) {
+            return Err(refuse("Expected one optional named RGB style per occurrence"));
+        }
+    }
     if parents.len() != assembly.occurrences().len()
         || groups.len() > 256
         || groups.iter().any(|name| name.is_empty() || name.chars().any(char::is_control))
@@ -995,15 +1013,14 @@ fn export_grouped_with_styles(
     {
         return Err(refuse("Expected printable group names and a valid optional parent for every occurrence"));
     }
-    let baked;
-    let assembly = if colours.is_some() && assembly.occurrences().iter().any(|item|
+    if colours.is_some() && assembly.occurrences().iter().any(|item|
         !crate::step_interchange_v3::is_proper_rigid_placement(item.transform)) {
-        baked = assembly.with_baked_scales()?.0;
-        &baked
-    } else {
-        assembly
-    };
-    export_shared_products(assembly, None, Some((groups, parents)), colours)
+        let (baked, sources) = assembly.with_baked_scales()?;
+        let labels = names.map(|(_, parts)| sources.iter().map(|&i| parts[i]).collect::<Vec<_>>());
+        let baked_names = names.zip(labels.as_deref()).map(|((name, _), parts)| (name, parts));
+        return export_shared_products(&baked, baked_names, Some((groups, parents)), colours);
+    }
+    export_shared_products(assembly, names, Some((groups, parents)), colours)
 }
 
 fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: Option<(&[&str], &[Option<usize>])>, colours: Option<&[Option<StepOccurrenceColour<'_>>]>) -> Result<String> {

@@ -69,4 +69,4 @@ mod kernel_exchange;
 #[path = "tests/kernel_fixtures.rs"]
 mod kernel_fixtures;
 
-pub use step_v3_export::{StepOccurrenceColour, export_styled_step_assembly, export_grouped_step_assembly, export_planet_gear_occurrences_step, export_planetary_gear_set_step, export_named_step_assembly, export_step_shared_assembly};
+pub use step_v3_export::{StepOccurrenceColour, export_named_styled_step_assembly, export_styled_step_assembly, export_grouped_step_assembly, export_planet_gear_occurrences_step, export_planetary_gear_set_step, export_named_step_assembly, export_step_shared_assembly};
