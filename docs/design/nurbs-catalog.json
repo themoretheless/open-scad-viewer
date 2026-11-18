@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 766,
-  "unallocatedCount": 234,
+  "specifiedCount": 767,
+  "unallocatedCount": 233,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18246,6 +18246,25 @@
       "remainingQualification": [
         "Certify separating planes for a rotating planar hull expanded by a fixed disk and retain unresolved rounding contacts.",
         "Check radius-dependent uncertainty, nonunit plane scaling, zero-radius clearance and invalid radius rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0767",
+      "name": "Проверка вращающегося плоского инструмента с переменным радиусом скругления",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-767-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-767-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify obstacle separation under a piecewise linear rounding radius and synchronized planar rational motion.",
+        "Check an interior radius peak, independent orientation knots, shared work budget and duplicate profile parameter rejection.",
         "WASM and application integration are separate."
       ]
     }

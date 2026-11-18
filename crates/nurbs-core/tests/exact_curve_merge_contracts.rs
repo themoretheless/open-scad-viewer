@@ -11871,3 +11871,41 @@ fn rotating_rounded_hull_reserves_the_radius_against_nonunit_obstacle_planes() {
     assert!(partition(-0.1).is_err());
     assert!(partition(f64::NAN).is_err());
 }
+
+#[test]
+fn rotating_profiled_hull_obstacle_clearance_splits_at_radius_peaks() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        knots: vec![0., 0., 0.75, 1., 1.],
+        control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+        weights: vec![1.; 3],
+        ..position.clone()
+    };
+    let obstacle = [WorkspaceHalfSpace { normal: &[-2., 0.], offset: -4.5 }];
+    let partition = |profile, budget| partition_planar_rotating_profiled_hull_obstacle_clearance(
+        &position, &direction, profile, &[&obstacle], &[&[2., 0.]], 0.005, budget,
+    );
+    let profile = [(0., 0.), (0.5, 1.), (1., 0.)];
+    assert!(partition(&profile, 2).is_err());
+    let report = partition(&profile, 255).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Undetermined
+    }));
+    assert!(report.cells.iter().all(|cell| {
+        let [a, b] = cell.parameter_interval;
+        [0.5, 0.75].into_iter().all(|knot| !(a < knot && knot < b))
+    }));
+    assert!(partition(&[(0., 0.), (0., 1.)], 255).is_err());
+}

@@ -2471,9 +2471,26 @@ pub fn partition_planar_rotating_rounded_hull_obstacle_clearance(
     parameter_tolerance: f64,
     max_vertex_plane_cells: usize,
 ) -> Result<ObstacleClearancePartition> {
+    partition_planar_rotating_profiled_hull_obstacle_clearance(
+        position, direction, &[(interval[0], radius), (interval[1], radius)],
+        obstacles, vertex_offsets, parameter_tolerance, max_vertex_plane_cells,
+    )
+}
+
+/// Check a rotating planar hull with a piecewise-linear rounding radius.
+/// Profile parameters define the checked window and must increase strictly.
+/// A shared grid splits at both curves' knots and the radius breakpoints.
+pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
-    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_vertex_plane_cells)?;
     check(!obstacles.is_empty() && !vertex_offsets.is_empty(), "Clearance requires obstacles and hull vertices")?;
     let plane_budget = max_vertex_plane_cells / vertex_offsets.len();
@@ -2485,38 +2502,57 @@ pub fn partition_planar_rotating_rounded_hull_obstacle_clearance(
         }
         plane_count += obstacle.len();
     }
-    let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    let pairs = plane_count * vertex_offsets.len();
+    let max_cells = max_vertex_plane_cells / pairs;
+    let (_, profiles) = prepare_radius_profile(position, radius_profile, max_cells)?;
+    let interval = [radius_profile[0].0, radius_profile[radius_profile.len() - 1].0];
+    let (_, synchronized) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
     check(position.control_points[0].len() == 2, "Rotating hull clearance requires planar curves")?;
     let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
+    let has_rounding = radius_profile.iter().any(|&(_, radius)| radius > 0.);
     let obstacles = obstacles.iter().map(|planes| {
         prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
-            let margin = if radius == 0. {
-                0.
-            } else {
-                norm(&normal)?.mul(Interval::point(radius))?.hi
-            };
-            Ok((normal, offset, margin))
+            let length = if has_rounding { norm(&normal)? } else { Interval::point(0.) };
+            Ok((normal, offset, length))
         }).collect::<Result<Vec<_>>>()
     }).collect::<Result<Vec<_>>>()?;
-    let pairs = plane_count * vertices.len();
+
+    let mut initial = Vec::new();
+    let mut profile = 0;
+    for ([span, direction_span], [mut start, end]) in synchronized {
+        while start < end {
+            if initial.len() == max_cells {
+                return Err(resource("Clearance budget must cover the combined motion and radius spans"));
+            }
+            let profile_end = radius_profile[profile + 1].0;
+            let cell_end = end.min(profile_end);
+            initial.push(([span, direction_span, profile], [start, cell_end]));
+            start = cell_end;
+            if start == profile_end {
+                profile += 1;
+            }
+        }
+    }
     let (cells, work_cells) = partition_enclosed_cells(
-        initial, parameter_tolerance, max_vertex_plane_cells / pairs,
-        |[span, direction_span], domain| {
+        initial, parameter_tolerance, max_cells,
+        |[span, direction_span, profile], domain| {
             let axis = curve_jets::enclose(direction, direction_span, domain)?;
             let (rotation, regular) = planar_rotation(&axis[0])?;
             let mut clearance = vec![Undetermined; obstacles.len()];
             if regular {
+                let radius = profiles[profile](domain)?;
                 let point = curve_jets::enclose(position, span, domain)?;
                 let mut candidates = vec![true; vertices.len()];
                 for (obstacle, status) in obstacles.iter().zip(&mut clearance) {
                     candidates.fill(true);
-                    for (normal, offset, margin) in obstacle {
+                    for (normal, offset, length) in obstacle {
+                        let margin = length.mul(radius)?.hi;
                         let inverse = inverse_rotated_normal(normal, rotation)?;
                         let center = project_jet(&point[0], normal)?.sub(*offset)?;
                         let mut separated = true;
                         for (vertex, candidate) in vertices.iter().zip(&mut candidates) {
                             let residual = center.add(project_jet(vertex, &inverse)?)?;
-                            separated &= residual.lo > *margin;
+                            separated &= residual.lo > margin;
                             *candidate &= residual.hi <= 0.;
                         }
                         if separated {
