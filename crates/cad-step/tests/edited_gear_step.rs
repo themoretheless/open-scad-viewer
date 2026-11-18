@@ -268,3 +268,28 @@ fn parts_delta_aggregates_duplicate_geometry_and_ignores_definition_order() {
     broken.definition_names.clear();
     assert!(before.parts_list_changes(&broken).is_err());
 }
+
+#[test]
+fn grouped_placements_share_a_solid_across_two_groups_and_root() {
+    use cad_step::{export_grouped_step_assembly, StepAssemblyOccurrence, StepSharedAssembly};
+    let placements = (0..3).map(|i| StepAssemblyOccurrence {
+        definition: 0,
+        transform: [[1.,0.,0.,i as f64],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]],
+    }).collect();
+    let scene = StepSharedAssembly::from_placed_solids(vec![brep_core::cuboid([0.;3],[1.;3]).unwrap()], placements).unwrap();
+    let parents = [Some(1),None,Some(0)];
+    let step = export_grouped_step_assembly(&scene, &["Rotor's", "Drive"], &parents).unwrap();
+    assert_eq!(step.matches("=MANIFOLD_SOLID_BREP(").count(), 1);
+    let usages: Vec<_> = step.lines().filter(|line| line.contains("=NEXT_ASSEMBLY_USAGE_OCCURRENCE(")).collect();
+    assert_eq!(usages.len(), 5);
+    let endpoints = |s: &str| -> (usize, usize) {
+        let mut ids = s.split("',#").last().unwrap().split(",#");
+        (ids.next().unwrap().parse().unwrap(), ids.next().unwrap().split(',').next().unwrap().parse().unwrap())
+    };
+    assert!(usages[0].contains("Rotor''s"));
+    assert_eq!(endpoints(usages[2]).0, endpoints(usages[1]).1);
+    assert_eq!(endpoints(usages[3]).0, endpoints(usages[0]).0);
+    assert_eq!(endpoints(usages[4]).0, endpoints(usages[0]).1);
+    assert_eq!(endpoints(usages[2]).1, endpoints(usages[4]).1);
+    assert!(export_grouped_step_assembly(&scene, &["Drive"], &parents).is_err());
+}

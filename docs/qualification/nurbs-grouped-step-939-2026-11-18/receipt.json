@@ -1,0 +1,17 @@
+{
+  "id": "NURBS-0939",
+  "testedBase": "8ba6f0138ee32064c736a2c5bf512d1e24de2fd7",
+  "testTargets": [
+    "cad-step/edited_gear_step",
+    "geometry-bridge/shared_step_export"
+  ],
+  "passed": 13,
+  "logSha256": "c9c2340945d5f38d95a75675536646e4b8b0e0066406cc527e050b712ea3cffc",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "d93da52fa0f6d41661c47d439554f65c59e806d15751ba7d95e521b507e7cc09",
+    "crates/cad-step/src/step_v3_export.rs": "5a0bd9361d3b976faf41ee9ce015242c6e0b6f366996c10a14eb6c84d62a36c8",
+    "crates/cad-step/tests/edited_gear_step.rs": "86eea8a4f03003268dae816ec136028758dd5b2e668ef569d4a48f6407c59310",
+    "crates/geometry-bridge/src/dispatch/interchange.rs": "a2de2c6d0eb31228d93348df47e087e877c808ef408ebd79f94775e6547721cb",
+    "crates/geometry-bridge/tests/shared_step_export.rs": "e59ba7610a294b764c7573a4ed5aac6962ff71ec05cd4a1aeffb20e787984ae8"
+  }
+}

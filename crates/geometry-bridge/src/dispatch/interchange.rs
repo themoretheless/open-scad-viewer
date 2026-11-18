@@ -289,7 +289,15 @@ fn handle(v: Value) -> Result<Value> {
                 transform: field(row, "transform")?,
             })).collect::<Result<Vec<_>>>()?;
             let assembly = cad_step::StepSharedAssembly::from_placed_solids(field(&v, "definitions")?, occurrences)?;
-            Ok(json!({"text":cad_step::export_step_shared_assembly(&assembly)?}))
+            let text = if v.get("groups").is_some() || v.get("parents").is_some() {
+                let groups: Vec<String> = field(&v, "groups")?;
+                let parents: Vec<Option<usize>> = field(&v, "parents")?;
+                let names: Vec<_> = groups.iter().map(String::as_str).collect();
+                cad_step::export_grouped_step_assembly(&assembly, &names, &parents)?
+            } else {
+                cad_step::export_step_shared_assembly(&assembly)?
+            };
+            Ok(json!({"text":text}))
         }
         "brep_nurbs_export_step_v9" => {
             let (text, cert, report) = cad_step::export_step_v9(&field(&v, "model")?)?;

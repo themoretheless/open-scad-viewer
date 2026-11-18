@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 938,
-  "unallocatedCount": 62,
+  "specifiedCount": 939,
+  "unallocatedCount": 61,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21455,6 +21455,26 @@
       ],
       "remainingQualification": [
         "Flat definition quantities grouped by name and equal indexed B-rep including tolerance. Does not compare instance transforms or recognize reordered control nets."
+      ]
+    },
+    {
+      "id": "NURBS-0939",
+      "name": "Общие определения деталей STEP в группах сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_grouped_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "crates/geometry-bridge/src/dispatch/interchange.rs",
+        "crates/geometry-bridge/tests/shared_step_export.rs",
+        "docs/qualification/nurbs-grouped-step-939-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-grouped-step-939-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single-level groups with optional root placements. Occurrence colors and grouped Solid editor integration remain open."
       ]
     }
   ],

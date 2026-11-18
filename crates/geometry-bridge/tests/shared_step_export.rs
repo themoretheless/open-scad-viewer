@@ -14,6 +14,14 @@ fn editor_payload_exports_one_local_definition_at_two_distinct_placements() {
     assert_eq!(scene.definitions().len(), 1);
     assert_eq!(scene.occurrences().len(), 2);
     assert_eq!(scene.occurrences()[1].transform, place(17.));
+    let mut grouped = payload.clone();
+    grouped["groups"] = json!(["Drive"]);
+    grouped["parents"] = json!([None::<usize>, Some(0usize)]);
+    let result = dispatch(grouped).unwrap();
+    let reopened = cad_step::import_step_shared_assembly(result["text"].as_str().unwrap()).unwrap();
+    assert_eq!(reopened.definitions().len(), 1);
+    assert_eq!(reopened.occurrences().len(), 2);
+    assert!(reopened.occurrences().iter().any(|occ| occ.transform == place(17.)));
     payload["occurrences"] = json!([{"definition":1,"transform":place(0.)}]);
     assert!(dispatch(payload).is_err());
 }

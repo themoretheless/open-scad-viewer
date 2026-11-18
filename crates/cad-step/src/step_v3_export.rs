@@ -275,6 +275,7 @@ fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
 }
 
 struct AssemblyExport<'a> {
+    groups: Option<(&'a [&'a str], &'a [Option<usize>])>,
     placements: &'a [(usize, [[f64; 4]; 4])],
     definition_tolerances: &'a [f64],
     names: Option<(&'a str, &'a [&'a str])>,
@@ -658,8 +659,28 @@ fn export_step_direct_impl(
                 w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"));
                 definitions.push((representation, definition));
             }
+            let mut group_nodes = Vec::new();
+            if let Some((groups, _)) = assembly.groups {
+                for (index, name) in groups.iter().enumerate() {
+                    let product = w.emit(format!("PRODUCT('group-{index}',{},'',(#{product_context}))", quote(name)));
+                    let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
+                    let definition = w.emit(format!("PRODUCT_DEFINITION('design','',#{formation},#{definition_context})"));
+                    let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{definition})"));
+                    let rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{frame}),#{context})"));
+                    w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{rep})"));
+                    let identity = w.emit(format!("ITEM_DEFINED_TRANSFORMATION('','',#{frame},#{frame})"));
+                    let relation = w.emit(format!("(REPRESENTATION_RELATIONSHIP('','',#{rep},#{assembly_rep})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#{identity})SHAPE_REPRESENTATION_RELATIONSHIP())"));
+                    let usage = w.emit(format!("NEXT_ASSEMBLY_USAGE_OCCURRENCE('group-{index}',{},'',#{assembly_definition},#{definition},$)", quote(name)));
+                    let usage_shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{usage})"));
+                    w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relation},#{usage_shape})"));
+                    group_nodes.push((definition, rep));
+                }
+            }
             for (index, (body, matrix)) in assembly.placements.iter().enumerate() {
                 let (representation, definition) = definitions[*body];
+                let (assembly_definition, assembly_rep) = assembly.groups
+                    .and_then(|(_, parents)| parents[index])
+                    .map_or((assembly_definition, assembly_rep), |group| group_nodes[group]);
                 let rigid = crate::step_interchange_v3::is_proper_rigid_placement(*matrix);
                 let scales = if rigid {
                     [1.; 3]
@@ -868,7 +889,7 @@ pub fn export_planet_gear_occurrences_step(
     let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(AssemblyExport { placements: &placements, names: None, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
+        None, Some(AssemblyExport { placements: &placements, groups: None, names: None, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
     )?;
     Ok(text)
 }
@@ -897,7 +918,7 @@ pub fn export_planetary_gear_set_step(
 
 /// Serialize current shared definitions with their nonsingular orthogonal placements.
 pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
-    export_shared_products(assembly, None)
+    export_shared_products(assembly, None, None)
 }
 
 /// Name the assembly and each reusable part definition in definition-index order.
@@ -906,10 +927,26 @@ pub fn export_named_step_assembly(assembly: &crate::StepSharedAssembly, name: &s
         .any(|s| s.is_empty() || s.chars().any(char::is_control)) {
         return Err(refuse("Expected an assembly name and one nonempty printable name per definition"));
     }
-    export_shared_products(assembly, Some((name, parts)))
+    export_shared_products(assembly, Some((name, parts)), None)
 }
 
-fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>) -> Result<String> {
+/// Export a flat group hierarchy while retaining reusable local solid definitions.
+pub fn export_grouped_step_assembly(
+    assembly: &crate::StepSharedAssembly,
+    groups: &[&str],
+    parents: &[Option<usize>],
+) -> Result<String> {
+    if parents.len() != assembly.occurrences().len()
+        || groups.len() > 256
+        || groups.iter().any(|name| name.is_empty() || name.chars().any(char::is_control))
+        || parents.iter().flatten().any(|&i| i >= groups.len())
+    {
+        return Err(refuse("Expected printable group names and a valid optional parent for every occurrence"));
+    }
+    export_shared_products(assembly, None, Some((groups, parents)))
+}
+
+fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: Option<(&[&str], &[Option<usize>])>) -> Result<String> {
     let definitions = assembly.definitions();
     let occurrences = assembly.occurrences();
     if definitions.is_empty() || occurrences.is_empty() || occurrences.len() > 256 {
@@ -926,7 +963,7 @@ fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&
     let model = crate::compose_step_v7_occurrences(definitions)?;
     let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, names, definition_tolerances: &tolerances }), false,
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, groups, names, definition_tolerances: &tolerances }), false,
     )?;
     Ok(text)
 }
