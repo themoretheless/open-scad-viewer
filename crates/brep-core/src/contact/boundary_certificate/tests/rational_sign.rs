@@ -519,6 +519,25 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         let (contact, used) = certify(&spatial, [0, 4], 1000);
         assert_eq!(contact.unwrap().edges.len(), 1);
         assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
+
+        // Put the original XZ image in XY, then move the interiors along
+        // a common diagonal. The authored edge curves stay unchanged.
+        let mut diagonal = crate::transform::affine(&reference, [
+            [1., 0., 0., 0.], [0., 0., 1., 0.],
+            [0., -1., 0., 0.], [0., 0., 0., 1.],
+        ]).unwrap();
+        for (face, knot_control) in [(0, 2), (4, 4)] {
+            let surface = &mut diagonal.0.faces[face].surface;
+            for coordinate in &mut surface.control_points[1][knot_control] {
+                *coordinate += 8192.;
+            }
+            let report = nurbs_core::surface_injectivity::certify_chart(surface, 10_000).unwrap();
+            assert_eq!(report.reason, "global-exact-oblique-jordan-jacobian", "{report:?}");
+        }
+        diagonal.validate().unwrap();
+        let (contact, used) = certify(&diagonal, [0, 4], 10_000);
+        assert_eq!(contact.unwrap().edges.len(), 1);
+        assert!(certify(&diagonal, [0, 4], used - 1).0.is_none());
     }
 
     let mut retained = reference.clone();

@@ -16,6 +16,7 @@ pub(crate) mod rational_rails;
 pub(crate) mod rational_rectangle;
 pub(crate) mod rational_quadrilateral;
 pub(crate) mod rational_jordan;
+pub use rational_jordan::certify_jordan_projection;
 /// Whole-chart injectivity, allowing exact strictly monotone coordinates with
 /// isolated zero derivatives. Unlike `certify_contraction`, this does NOT prove
 /// immersion/rank. Consumers requiring regularity must prove it independently.

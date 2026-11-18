@@ -4,6 +4,28 @@ use super::*;
 use crate::curve::Curve;
 use num_rational::BigRational as Q;
 
+/// Prove injectivity and a strict projected Jacobian sign in one fixed
+/// integer projection. Returns the result and consumed work.
+pub fn certify_jordan_projection(
+    s: &Surface,
+    projection: [[i8; 3]; 2],
+    max_work: usize,
+) -> Result<(bool, usize)> {
+    s.validate()?;
+    let poles = s.control_points.len() * s.control_points[0].len();
+    if poles > max_work {
+        return Ok((false, 0));
+    }
+    let mut work = poles;
+    let Some(projected) =
+        crate::surface_linear_monotonicity::exact_projected_surface(s, projection)
+    else {
+        return Ok((false, work));
+    };
+    let certified = certify(&projected, &mut work, max_work).is_some();
+    Ok((certified, work))
+}
+
 fn supported(s: &Surface) -> bool {
     !s.periodic_u && !s.periodic_v && [s.degree_u, s.degree_v].iter().all(|d| (2..=5).contains(d))
 }

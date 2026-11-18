@@ -5,7 +5,10 @@ use crate::{Model, boundary_hull_contact::Certificate};
 use cad_predicates::Sign;
 use num_rational::BigRational;
 use num_traits::ToPrimitive;
-use nurbs_core::{curve::Curve, surface_injectivity::certify_chart};
+use nurbs_core::{
+    curve::Curve,
+    surface_injectivity::{certify_chart, certify_jordan_projection},
+};
 
 #[derive(Clone, Copy, PartialEq)]
 enum Projection {
@@ -14,6 +17,18 @@ enum Projection {
 }
 
 impl Projection {
+    fn rows(self) -> [[i8; 3]; 2] {
+        match self {
+            Self::Coordinate(axes) => axes.map(|axis| {
+                let mut row = [0; 3];
+                row[axis] = 1;
+                row
+            }),
+            // The chart proof proposes integer rows in -64..=64.
+            Self::Linear(rows) => rows.map(|row| row.map(|value| value as i8)),
+        }
+    }
+
     fn point(self, point: &[f64]) -> Option<[f64; 2]> {
         match self {
             Self::Coordinate(axes) => Some(axes.map(|axis| point[axis])),
@@ -118,19 +133,29 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         }
         let proof = certify_chart(s, remaining).ok()?;
         charge(cells, limit, proof.spans)?;
-        if !proof.proven {
-            return None;
-        }
-        let chart_projection = match proof.reason {
+        let own_projection = match proof.reason {
             "global-rational-jordan-jacobian" | "global-rational-multispan-jordan-jacobian" => {
-                Projection::Coordinate(proof.projection?)
+                proof.projection.map(Projection::Coordinate)
             }
-            "global-exact-oblique-jordan-jacobian" => Projection::Linear(proof.linear_projection?),
-            _ => return None,
+            "global-exact-oblique-jordan-jacobian" => {
+                proof.linear_projection.map(Projection::Linear)
+            }
+            _ => None,
         };
-        if projection.is_some_and(|p| p != chart_projection) {
-            return None;
-        }
+        let chart_projection = if let Some(shared) = projection {
+            let shared: Projection = shared;
+            if own_projection != Some(shared) {
+                let (certified, used) =
+                    certify_jordan_projection(s, shared.rows(), limit - *cells).ok()?;
+                charge(cells, limit, used)?;
+                if !certified {
+                    return None;
+                }
+            }
+            shared
+        } else {
+            own_projection?
+        };
         projection = Some(chart_projection);
         charge(cells, limit, 1)?;
         // The Jordan route proves a nonzero Jacobian. Clamping and positive
