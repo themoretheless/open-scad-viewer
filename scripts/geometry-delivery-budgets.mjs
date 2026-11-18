@@ -109,6 +109,15 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // v20 measured 18,881,767 raw WASM bytes, 6,732,083 packed geometry bytes,
+  // and 12,833,309 total asset bytes on the Solid and Rust integration build.
+  '5c5f9b414d6c8db79af8d901314e97a747689ecdaab05ef08d3fb7c31dacc94a':Object.freeze({
+    version:20,geometryChunkBytes:6_741_000,totalAssetBytes:12_842_000,rawGeometryBytes:18_891_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:545_500,geometryBuildEngine:338_800,wasmStreaming:220_600,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
