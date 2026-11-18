@@ -168,10 +168,11 @@ Its physical interior neighborhoods lie in that plane even when raw second
 derivatives jump. The control census, knot census and affine hull share one
 work allowance. Edge classifications remain separate.
 
-An exact pair of adjacent Bézier tiles can also use geometric graph jets
+Adjacent Bézier tiles and full owned BRep edge uses can use geometric graph jets
 when the constant-scale strip proof is insufficient. The strip must first
 prove exact positional equality along the common boundary parameter.
-Strict matching signs for a projected Jacobian component give inverse
-charts on opposite sides of the complete seam. Exact gradient and Hessian
+A strictly signed projected Jacobian on each side gives two local inverse
+charts. Their inward directions must point to opposite sides of the complete
+seam after accounting for each face axis, boundary end and traversal. Exact gradient and Hessian
 identities then compare the physical graph in that projection. Normal
 enclosures and graph identities consume the remaining seam work.

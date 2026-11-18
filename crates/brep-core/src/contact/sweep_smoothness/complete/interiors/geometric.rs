@@ -1,15 +1,9 @@
 //! Exact knot-line transport through a partition of the original tensor chart.
-use super::super::periodic_uses;
+use super::super::{graph_jets, periodic_uses};
 use crate::{Result, Surface};
 use nurbs_core::{
-    continuity::{
-        MAX_PROJECTIVE_SEAM_COLLECTION_WORK, ProjectiveSeam,
-        inspect_projective_seam_collection_with_rational_scale_proposals,
-    },
-    editing::exact_surface_knot_insertion::tile_tensor_surface,
+    continuity::ProjectiveSeam, editing::exact_surface_knot_insertion::tile_tensor_surface,
 };
-
-mod graph;
 
 fn cuts(knots: &[f64], degree: usize, count: usize, order: usize) -> Option<Vec<f64>> {
     let [lo, hi] = [knots[degree], knots[count]];
@@ -117,32 +111,12 @@ pub(super) fn inspect(surface: &Surface, order: usize, cells: usize, work: u64) 
             }
         }
     }
-    let proof = inspect_projective_seam_collection_with_rational_scale_proposals(
-        &patches,
-        &seams,
-        (work - report.work).min(MAX_PROJECTIVE_SEAM_COLLECTION_WORK),
-    )?;
+    let proof = graph_jets::qualify(&patches, &seams, work - report.work)?;
     report.work += proof.exact_work;
-    for (seam, result) in seams.iter().zip(proof.seams) {
-        if result.certified {
-            continue;
-        }
-        if !result.affine_parameter_identity {
-            return Ok(report);
-        }
-        let (certified, used) = graph::inspect(
-            seam.patches.map(|patch| &patches[patch]),
-            seam.boundaries.each_ref().map(String::as_str),
-            order,
-            work - report.work,
-        )?;
-        report.work += used;
-        if !certified {
-            return Ok(report);
-        }
+    report.certified = proof.certified;
+    if proof.certified {
+        report.seams = seams.len();
     }
-    report.certified = true;
-    report.seams = seams.len();
     Ok(report)
 }
 

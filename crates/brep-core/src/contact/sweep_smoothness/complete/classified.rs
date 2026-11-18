@@ -198,7 +198,7 @@ impl Inspection<'_> {
         if smooth.seams.is_empty() {
             return Ok(true);
         }
-        let proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
+        let proof = graph_jets::qualify(
             &smooth.patches,
             &smooth.seams,
             self.limits.exact_work - self.out.exact_work,

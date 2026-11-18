@@ -26,6 +26,7 @@ pub struct Report {
     pub exact_work: u64,
     pub parameter_work: u64,
 }
+mod graph_jets;
 pub(crate) mod interiors;
 mod periodic_uses;
 pub use interiors::InteriorReport;
@@ -149,11 +150,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         && correspondence
             .as_ref()
             .is_some_and(|p| p.all_equal && p.all_joins_exact);
-    let proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
-        &patches,
-        &seams,
-        limits.exact_work - parameter_work,
-    )?;
+    let proof = graph_jets::qualify(&patches, &seams, limits.exact_work - parameter_work)?;
     let seam_work = parameter_work + proof.exact_work;
     let face_interiors = interiors::inspect(
         model,
