@@ -127,6 +127,7 @@ pub(super) fn dispatch_other(v: Value, op: String) -> Result<Value> {
     if periodic_chart_measurements::OPS.contains(&op_str) {
         return periodic_chart_measurements::dispatch(&v, op_str);
     }
+    if trim_contour_measurements::OPS.contains(&op_str) {return trim_contour_measurements::dispatch(&v,op_str);}
     if periodic_surface_assembly::OPS.contains(&op_str) {
         return periodic_surface_assembly::dispatch(&v, op_str);
     }

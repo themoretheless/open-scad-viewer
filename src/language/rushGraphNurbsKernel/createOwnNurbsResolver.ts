@@ -484,6 +484,25 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'measure_input_contour_length':
+          case 'measure_input_segment_length':
+          case 'measure_input_segment_range_length':
+          case 'locate_input_segment_at_length':
+          case 'measure_input_contour_prefix_lengths':
+          case 'locate_input_contour_at_lengths':
+          case 'divide_input_contour_by_length':
+          case 'exact_input_contour_projected_area':
+          case 'exact_input_contour_polynomial_projected_area':
+          case 'bound_input_contour_projected_area':
+          case 'bound_input_patch_max_projected_area':
+          case 'bound_input_patch_max_projection_direction': {
+            const {id:_id,op,input,...parameters}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_trim_area':
           case 'surface_trim_mass_properties':
           case 'surface_trim_window_properties':

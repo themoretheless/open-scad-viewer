@@ -14869,7 +14869,7 @@
     {
       "id": "NURBS-0580",
       "name": "Гарантированные границы пространственной длины контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_contour_length",
@@ -14877,7 +14877,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-580-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-580-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-580-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose complete 3D contour length under one cell limit while keeping outer and hole lengths separate.",
@@ -14888,7 +14890,7 @@
     {
       "id": "NURBS-0581",
       "name": "Гарантированные границы 3D-длины исходного сегмента периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_segment_length",
@@ -14896,7 +14898,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-581-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-581-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-581-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose an original segment length across all seam pieces and verify full source interval coverage.",
@@ -14907,7 +14911,7 @@
     {
       "id": "NURBS-0582",
       "name": "Гарантированные границы длины выбранного диапазона периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_segment_range_length",
@@ -14916,7 +14920,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "docs/qualification/nurbs-curvature-field-582-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-582-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-582-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose clipped 3D lengths across the seam using exact clock mapping and one cell budget.",
@@ -14971,7 +14977,7 @@
     {
       "id": "NURBS-0585",
       "name": "Гарантированный обратный поиск параметра исходного сегмента по 3D-длине",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_segment_at_length",
@@ -14979,7 +14985,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-585-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-585-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-585-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Find a certified original parameter bracket for a target prefix length through seam splits.",
@@ -14990,7 +14998,7 @@
     {
       "id": "NURBS-0586",
       "name": "Таблица гарантированных накопленных длин в исходных вершинах периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_contour_prefix_lengths",
@@ -14998,7 +15006,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-586-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-586-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-586-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose all original vertex stations in contour order under one shared cell budget.",
@@ -15097,7 +15107,7 @@
     {
       "id": "NURBS-0591",
       "name": "Пакетный поиск точек по длине замкнутого периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_contour_at_lengths",
@@ -15105,7 +15115,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-591-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-591-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-591-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Reuse one certified contour length table and one cell budget across multiple station queries.",
@@ -15116,7 +15128,7 @@
     {
       "id": "NURBS-0592",
       "name": "Гарантированное деление замкнутого периодического контура на равные доли 3D-длины",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::divide_input_contour_by_length",
@@ -15124,7 +15136,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-592-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-592-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-592-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose stations of normalized arc length using exact rational fractions and bounded total length.",
@@ -15179,7 +15193,7 @@
     {
       "id": "NURBS-0595",
       "name": "Точная ориентированная площадь проекций замкнутого периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::exact_input_contour_projected_area",
@@ -15187,7 +15201,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-595-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-595-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-595-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Calculate signed projected areas of closed contours with straight spatial edges in original input direction.",
@@ -15198,7 +15214,7 @@
     {
       "id": "NURBS-0596",
       "name": "Точные площади проекций периодического контура с полиномиальными рёбрами Безье",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::exact_input_contour_polynomial_projected_area",
@@ -15206,7 +15222,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-596-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-596-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-596-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Integrate the Bernstein cross product exactly for polynomial Bézier trim edges.",
@@ -15217,7 +15235,7 @@
     {
       "id": "NURBS-0597",
       "name": "Гарантированные площади проекций замкнутых периодических контуров с рациональными весами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_contour_projected_area",
@@ -15225,7 +15243,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-597-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-597-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-597-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose signed projected areas of positive-weight rational trim curves with interval quadrature.",
@@ -15324,7 +15344,7 @@
     {
       "id": "NURBS-0602",
       "name": "Гарантированные границы максимальной ориентированной проекции периодической грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_max_projected_area",
@@ -15332,7 +15352,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-602-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-602-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-602-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose maximum signed projected area over all unit normals via the oriented area vector.",
@@ -15343,7 +15365,7 @@
     {
       "id": "NURBS-0603",
       "name": "Гарантированные границы оптимального направления проекции периодической грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_max_projection_direction",
@@ -15351,7 +15373,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-603-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-603-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-603-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose the maximizing unit normal when the projected area vector is separated from zero.",

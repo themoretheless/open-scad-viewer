@@ -1,6 +1,10 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
   if (operation.includes('periodic_surface_region') || operation.includes('periodic_surface_contour_forest') || operation.includes('periodic_surface_paths')) return russian ? 'Область на периодической поверхности' : 'Periodic chart region'
   if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) return russian ? 'Измерение в периодических координатах' : 'Periodic chart measurement'
+  if (operation.includes('input_contour') || operation.includes('input_segment') || operation.includes('input_patch_max')) {
+    if (operation.includes('project')) return russian ? 'Проекция контура' : 'Contour projection'
+    return russian ? 'Длина и положение вдоль контура' : 'Distance and position along contour'
+  }
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
   if (operation === 'surface_trim_patch_area_vector') return russian ? 'Вектор площади' : 'Area vector'
@@ -52,6 +56,17 @@ export function directionalTravelSummary(operation: string, report: string, russ
     if (Array.isArray(parsed?.point)) return ['XYZ · ' + parsed.point.map(format).join(', ') + ' ' + unit]
     const entries = parsed?.samples ?? parsed?.parameters
     return Array.isArray(entries) ? [(russian ? 'Число точек · ' : 'Points · ') + entries.length] : []
+  }
+  if (operation.includes('input_contour') || operation.includes('input_segment') || operation.includes('input_patch_max')) {
+    if (parsed?.buildRefused || parsed?.refusal) return [russian ? 'Построение или измерение не подтверждено' : 'Construction or measurement unresolved']
+    if (pair(parsed?.length?.boundsMm)) return [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]
+    if (pair(parsed?.parameterBounds)) return ['u ∈ [' + parsed.parameterBounds.map(format).join(' … ') + ']']
+    if (Array.isArray(parsed?.stations)) return [(russian ? 'Число точек · ' : 'Stations · ') + parsed.stations.length]
+    if (Array.isArray(parsed?.vertexPrefixBoundsMm)) return [(russian ? 'Число вершин · ' : 'Vertices · ') + parsed.vertexPrefixBoundsMm.length]
+    if (pair(parsed?.maximumBoundsMm2)) return [(russian ? 'Максимальная проекция · ' : 'Maximum projection · ') + bounds(parsed.maximumBoundsMm2) + ' ' + unit + '²']
+    if (Array.isArray(parsed?.exactAreaVector)) return parsed.exactAreaVector.map((q:{numerator:string;denominator:string},i:number)=>['X','Y','Z'][i]+' · '+q.numerator+'/'+q.denominator+' '+unit+'²')
+    if (Array.isArray(parsed?.areaVectorBoundsMm2)) return parsed.areaVectorBoundsMm2.filter(pair).map((v:number[],i:number)=>['X','Y','Z'][i]+' · '+bounds(v)+' '+unit+'²')
+    return [russian ? 'Результат неопределён' : 'Result unresolved']
   }
   if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
     ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]
