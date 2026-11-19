@@ -57,6 +57,12 @@
           "imageVersion": "20261104.0514.1",
           "release": "https://github.com/actions/runner-images/releases/tag/macos-15-arm64%2F20261104.0514",
           "observedInJob": "https://github.com/themoretheless/open-scad-viewer/actions/runs/44327543362/job/134883420568"
+        },
+        {
+          "imageOS": "macos15",
+          "imageVersion": "20261118.0550.1",
+          "release": "https://github.com/actions/runner-images/releases/tag/macos-15-arm64%2F20261118.0550",
+          "observedInJob": "https://github.com/themoretheless/open-scad-viewer/actions/runs/44541500792/job/135621879018"
         }
       ]
     },

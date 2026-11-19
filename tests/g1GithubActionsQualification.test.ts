@@ -248,8 +248,9 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('accepts the exact runner identities recorded during qualification and discovery', () => {
     const { artifacts } = fixture()
     for (const [environmentId, image, version] of [
+      ['ubuntu-node20', 'ubuntu24', '20261116.133.1'],
       ['ubuntu-node22', 'ubuntu24', '20261116.376.1'],
-      ['macos-node20', 'macos15', '20261104.0514.1'],
+      ['macos-node20', 'macos15', '20261118.0550.1'],
       ['windows-node20', 'win25-vs2026', '20261103.298.1'],
     ]) {
       const row = plan.matrix.find(item => item.executionEnvironmentIds.includes(environmentId))!
