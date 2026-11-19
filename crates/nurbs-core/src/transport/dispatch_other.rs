@@ -103,5 +103,26 @@ pub(super) fn dispatch_other(v: Value, op: String) -> Result<Value> {
     if let Some(res) = editing_and_continuity::try_dispatch(&v, op_str) {
         return res;
     }
+    if matches!(op_str,
+        "rotate_periodic_surface_at_exact_knot" |
+        "insert_and_rotate_periodic_surface_seam" |
+        "open_exact_periodic_surface_axis" |
+        "restrict_exact_periodic_surface_axis" |
+        "restrict_exact_periodic_surface_over_turns" |
+        "restrict_exact_doubly_periodic_surface" |
+        "restrict_exact_doubly_periodic_surface_over_turns" |
+        "partition_exact_periodic_surface_axis" |
+        "partition_exact_periodic_surface_over_turns" |
+        "partition_exact_doubly_periodic_surface" |
+        "partition_exact_doubly_periodic_surface_over_turns" |
+        "remove_exact_periodic_surface_knot" |
+        "simplify_exact_periodic_surface_axis" |
+        "remove_exact_periodic_surface_seam_knot" |
+        "simplify_exact_doubly_periodic_surface" |
+        "reduce_exact_periodic_surface_period" |
+        "repeat_exact_periodic_surface_period"
+    ) {
+        return periodic_surface_edits::dispatch(&v, op_str);
+    }
     core_queries::dispatch(v, op_str)
 }

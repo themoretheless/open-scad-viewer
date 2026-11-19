@@ -337,6 +337,30 @@ export function createOwnNurbsResolver(
           case 'curve_exact_elevate':
             result = { kind: 'curve', data: curveExactElevate(needCurve(n.input), n.degree, n.max_work) }
             break
+          case 'rotate_periodic_surface_at_exact_knot':
+          case 'insert_and_rotate_periodic_surface_seam':
+          case 'open_exact_periodic_surface_axis':
+          case 'restrict_exact_periodic_surface_axis':
+          case 'restrict_exact_periodic_surface_over_turns':
+          case 'restrict_exact_doubly_periodic_surface':
+          case 'restrict_exact_doubly_periodic_surface_over_turns':
+          case 'partition_exact_periodic_surface_axis':
+          case 'partition_exact_periodic_surface_over_turns':
+          case 'partition_exact_doubly_periodic_surface':
+          case 'partition_exact_doubly_periodic_surface_over_turns':
+          case 'remove_exact_periodic_surface_knot':
+          case 'simplify_exact_periodic_surface_axis':
+          case 'remove_exact_periodic_surface_seam_knot':
+          case 'simplify_exact_doubly_periodic_surface':
+          case 'reduce_exact_periodic_surface_period':
+          case 'repeat_exact_periodic_surface_period':
+            {
+              const { id: _id, op, input, ...parameters } = n
+              const { direction, ...rest } = 'direction' in parameters ? parameters : { ...parameters, direction: undefined }
+              const data = callGeometryRust<NurbsSurface>(op, { surface: needSurface(input), ...rest, axis: direction })
+              result = { kind: 'surface', data }
+              break
+            }
           case 'curve_reparameterize':
             result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }
             break

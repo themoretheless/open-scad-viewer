@@ -13409,7 +13409,7 @@
     {
       "id": "NURBS-0513",
       "name": "Точный перенос шва периодической NURBS-поверхности по U или V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::rotate_periodic_surface_at_exact_knot",
@@ -13419,7 +13419,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-513-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-513-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-513-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Rotate an existing periodic surface knot and the complete rational control net without rounding.",
@@ -13430,7 +13432,7 @@
     {
       "id": "NURBS-0514",
       "name": "Точный перенос шва NURBS-поверхности внутрь участка по U или V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::insert_and_rotate_periodic_surface_seam",
@@ -13440,7 +13442,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-514-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-514-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-514-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Insert a periodic seam in exact homogeneous arithmetic with one common tensor weight gauge.",
@@ -13451,7 +13455,7 @@
     {
       "id": "NURBS-0515",
       "name": "Точное раскрытие периода NURBS-поверхности по U или V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::open_exact_periodic_surface_axis",
@@ -13461,7 +13465,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-515-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-515-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-515-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Clamp one periodic surface axis in exact homogeneous arithmetic with a single tensor-wide weight gauge.",
@@ -13472,7 +13478,7 @@
     {
       "id": "NURBS-0516",
       "name": "Точное извлечение полосы NURBS-поверхности через периодический шов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_periodic_surface_axis",
@@ -13482,7 +13488,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-516-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-516-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-516-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped strip through the periodic seam in either axis on the lifted tensor clock.",
@@ -13493,7 +13501,7 @@
     {
       "id": "NURBS-0517",
       "name": "Точное извлечение прямоугольника NURBS-поверхности через оба периодических шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_doubly_periodic_surface",
@@ -13503,7 +13511,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-517-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-517-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-517-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped tensor rectangle in the lifted U and V clocks with atomic refusal.",
@@ -13514,7 +13524,7 @@
     {
       "id": "NURBS-0518",
       "name": "Точное разбиение периода NURBS-поверхности на полосы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_periodic_surface_axis",
@@ -13524,7 +13534,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-518-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-518-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-518-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Partition one shifted period into exact tensor strips with atomic refusal.",
@@ -13535,7 +13547,7 @@
     {
       "id": "NURBS-0519",
       "name": "Точное разбиение дважды периодической NURBS-поверхности на сетку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface",
@@ -13545,7 +13557,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-519-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-519-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-519-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Tile one complete turn on each axis with exact clamped tensor patches.",
@@ -13703,7 +13717,7 @@
     {
       "id": "NURBS-0527",
       "name": "Точное удаление лишнего узла периодической NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::remove_exact_periodic_surface_knot",
@@ -13713,7 +13727,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-527-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-527-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-527-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Remove an interior knot under an exact tensor proof and restore cyclic storage with fewer controls.",
@@ -13724,7 +13740,7 @@
     {
       "id": "NURBS-0528",
       "name": "Точное пакетное упрощение периодической оси NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::simplify_exact_periodic_surface_axis",
@@ -13734,7 +13750,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-528-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-528-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-528-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Prove and remove redundant interior knots in one cyclic-axis pass with exact reclosure.",
@@ -13745,7 +13763,7 @@
     {
       "id": "NURBS-0529",
       "name": "Точное удаление узла на периодическом шве NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::remove_exact_periodic_surface_seam_knot",
@@ -13755,7 +13773,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-529-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-529-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-529-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Move a periodic seam to an existing interior anchor and remove an exact redundant copy of the old seam.",
@@ -13766,7 +13786,7 @@
     {
       "id": "NURBS-0530",
       "name": "Точное упрощение NURBS-поверхности по двум периодическим осям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::simplify_exact_doubly_periodic_surface",
@@ -13776,7 +13796,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-530-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-530-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-530-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Reduce redundant knots on both periodic axes and retain both parameter domains atomically.",
@@ -13787,7 +13809,7 @@
     {
       "id": "NURBS-0531",
       "name": "Точное сокращение повторяющихся оборотов периодической NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::reduce_exact_periodic_surface_period",
@@ -13797,7 +13819,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-531-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-531-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-531-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Prove literal cyclic repeat periods in the full weighted tensor and retain the shortest supported cycle.",
@@ -13808,7 +13832,7 @@
     {
       "id": "NURBS-0532",
       "name": "Точное повторение периода NURBS-поверхности по выбранной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::repeat_exact_periodic_surface_period",
@@ -13818,7 +13842,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-532-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-532-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-532-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extend one surface axis to an exact integer number of turns with unchanged parameter units.",
@@ -13829,7 +13855,7 @@
     {
       "id": "NURBS-0533",
       "name": "Точное извлечение полосы NURBS-поверхности через несколько периодов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_periodic_surface_over_turns",
@@ -13839,7 +13865,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-533-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-533-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-533-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped surface strip over full and partial turns while preserving absolute UV.",
@@ -13850,7 +13878,7 @@
     {
       "id": "NURBS-0534",
       "name": "Точное извлечение прямоугольника NURBS-поверхности через несколько периодов по U и V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_doubly_periodic_surface_over_turns",
@@ -13860,7 +13888,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-534-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-534-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-534-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped rectangular tensor patch over multiple complete or partial turns on both axes.",
@@ -13871,7 +13901,7 @@
     {
       "id": "NURBS-0535",
       "name": "Точное разбиение многовитковой полосы NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_periodic_surface_over_turns",
@@ -13881,7 +13911,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-535-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-535-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-535-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Partition full and partial surface turns at ordered absolute cuts under one work budget.",
@@ -13892,7 +13924,7 @@
     {
       "id": "NURBS-0536",
       "name": "Точное разбиение многовитковой NURBS-поверхности на сетку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface_over_turns",
@@ -13902,7 +13934,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-536-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-536-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-536-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Partition a lifted multi-turn rectangle into exact patches at absolute U and V cuts.",
