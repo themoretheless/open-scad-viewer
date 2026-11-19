@@ -1701,6 +1701,14 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'finite_external_thread':
+          case 'finite_internal_thread': {
+            const {id:_id,op,...spec}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;patchErrorUpperMm:number;axialErrorBandUpperMm:number;boundaryAgreement:boolean;originalWallCount:number}>(op,spec)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'verified_bevel_gear': {
             const {id:_id,op,...spec}=n
             const {model,...report}=callGeometryRust<{model:NurbsBrep;worldErrorUpperMm:number;solidGeometryCertified:boolean}>(op,spec)

@@ -208,6 +208,8 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "radial_cam_walls",
             "rack_profile",
             "brep_rack",
+            "finite_external_thread",
+            "finite_internal_thread",
             "verified_bevel_gear",
             "brep_gear",
             "brep_extrude",
@@ -253,7 +255,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let catenoid=["catenoid_surface","catenoid_patches"].contains(&s(&node,"op"));
         let clothoid=s(&node,"op")=="clothoid_curve";
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
-        let mechanical_profile=["brep_rack","rack_profile","verified_bevel_gear","radial_cam_profile","radial_cam_walls"].contains(&s(&node,"op"));
+        let mechanical_profile=["brep_rack","rack_profile","verified_bevel_gear","radial_cam_profile","radial_cam_walls","finite_external_thread","finite_internal_thread"].contains(&s(&node,"op"));
         let loft_refs=["loft_match_surface","brep_rational_loft","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
             if exact_primitive && key == "axes" && exact_frustum {
@@ -284,7 +286,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 continue;
             }
             if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
-            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "laws", "verified_profile", "herringbone", "internal", "use_pcurve", "edge_id", "exact_parameter", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
+            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "laws", "left_handed", "verified_profile", "herringbone", "internal", "use_pcurve", "edge_id", "exact_parameter", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
                 continue;
             }
             if key=="section_mappings" {

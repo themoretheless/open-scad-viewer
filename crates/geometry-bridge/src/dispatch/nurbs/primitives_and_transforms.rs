@@ -3,6 +3,8 @@ use crate::*;
 
 #[path="radial_cam.rs"]
 mod radial_cam;
+#[path="finite_thread.rs"]
+mod finite_thread;
 #[path="rack_bevel.rs"]
 mod rack_bevel;
 
@@ -25,6 +27,8 @@ pub(super) const OPS: &[&str] = &[
     "radial_cam_profile",
     "rack_profile",
     "brep_rack",
+    "finite_external_thread",
+    "finite_internal_thread",
     "verified_bevel_gear",
     "brep_nurbs_gear",
     "brep_nurbs_verified_gear",
@@ -97,6 +101,8 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "radial_cam_profile" => radial_cam::profile(&v),
         "rack_profile" => rack_bevel::rack(&v,false),
         "brep_rack" => rack_bevel::rack(&v,true),
+        "finite_external_thread" => finite_thread::build(&v, false),
+        "finite_internal_thread" => finite_thread::build(&v, true),
         "verified_bevel_gear" => rack_bevel::bevel(&v),
         "brep_nurbs_gear" | "brep_nurbs_verified_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
