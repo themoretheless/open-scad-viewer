@@ -4,7 +4,7 @@ use nurbs_core::{
     trim_region_audit::nesting::{self, Limits},
 };
 fn square(lo: f64, hi: f64, reverse: bool) -> Vec<Curve> {
-    let mut p = vec![[lo, lo], [hi, lo], [hi, hi], [lo, hi]];
+    let mut p = [[lo, lo], [hi, lo], [hi, hi], [lo, hi]];
     if reverse {
         p.reverse();
     }
