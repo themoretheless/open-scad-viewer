@@ -157,6 +157,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "plane_patch", "bilinear_patch", "bezier_surface",
             "bezier_curve", "curve_compose", "round_polyline_curve", "transition_polyline_curve", "brep_miter_sweep","brep_progressive_miter_sweep",
             "rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile",
+            "exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region",
             "line_curve", "polyline_curve", "circle_curve", "circle_arc",
             "hyperboloid_one_sheet", "hyperboloid_two_sheet", "polynomial_graph",
             "polynomial_curve", "polynomial_surface", "rational_polynomial_curve", "rational_polynomial_surface",
@@ -235,6 +236,9 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let progressive_sweep=["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
         let iso_curve = s(&node, "op") == "iso_curve";
         let engineering_profile = ["rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile"].contains(&s(&node, "op"));
+        let exact_primitive = ["exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region"].contains(&s(&node,"op"));
+        let exact_ellipsoid = s(&node,"op") == "exact_ellipsoid";
+        let exact_frustum = s(&node,"op") == "exact_frustum_side";
         let line_coordinates=s(&node,"op")=="line_curve";
         let scaled_sweep=["scaled_sweep","profile_sweep","progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
         let catenary=s(&node,"op")=="catenary_curve";
@@ -246,6 +250,12 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
         let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
+            if exact_primitive && key == "axes" && exact_frustum {
+                for (i, axis) in value.as_array_mut().ok_or_else(|| text_error(key,"Expected three axes"))?.iter_mut().enumerate() {
+                    *axis = field(axis, if i == 2 { LENGTH } else { SCALAR }, &params, key)?;
+                }
+                continue;
+            }
             if iso_curve && key == "direction" {
                 let axis = value.as_str().or_else(|| value.get("text").and_then(J::as_str));
                 if !matches!(axis, Some("u" | "v")) {
@@ -367,7 +377,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     *entry=field(entry,SCALAR,&params,&format!("scale/{component}"))?;
                 }
             } else {
-                let dimension = if engineering_profile { match key.as_str() { "normal" | "teeth" | "ribs" => SCALAR, "gap_degrees" | "start_degrees" | "sweep_degrees" => ANGLE, _ => LENGTH } } else if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
+                let dimension = if exact_primitive { match key.as_str() { "max_work" => SCALAR, "axes" if !exact_ellipsoid => SCALAR, _ => LENGTH } } else if engineering_profile { match key.as_str() { "normal" | "teeth" | "ribs" => SCALAR, "gap_degrees" | "start_degrees" | "sweep_degrees" => ANGLE, _ => LENGTH } } else if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
                     "height",
                     "width",
                     "z_min",

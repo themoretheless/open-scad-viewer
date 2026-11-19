@@ -39,6 +39,11 @@ import {
 import { compileRushGraphNurbs } from '../rushGraphNurbsCompiler'
 
 type NativeNode = ReturnType<typeof compileRushGraphNurbs>['resolved_document']['nodes'][number]
+function exactGeometry<T>(op: string, parameters: object): T {
+  const report = callNurbsRust<{ status: string; geometry: T | null; refusal: string | null }>(op, parameters)
+  if (report.status !== 'constructed' || !report.geometry) throw new Error(`${op}: ${report.refusal ?? 'missing geometry'}`)
+  return report.geometry
+}
 export function buildNativePrimitive(n: NativeNode): Value | undefined {
   switch (n.op) {
     case 'rounded_rectangle_profile':
@@ -60,6 +65,16 @@ export function buildNativePrimitive(n: NativeNode): Value | undefined {
       const { op, id: _id, ...parameters } = n
       return { kind: 'surface', data: callNurbsRust<NurbsSurface>(op, parameters) }
     }
+    case 'exact_ellipse':
+      return { kind: 'curve', data: exactGeometry<NurbsCurve>('curve_exact_ellipse', { center: n.center, axisU: n.axis_u, axisV: n.axis_v, maxWork: n.max_work }) }
+    case 'exact_ellipsoid':
+      return { kind: 'surface', data: exactGeometry<NurbsSurface>('surface_exact_ellipsoid', { center: n.center, axes: n.axes, maxWork: n.max_work }) }
+    case 'exact_ring_torus':
+      return { kind: 'surface', data: exactGeometry<NurbsSurface>('surface_exact_ring_torus', { center: n.center, axes: n.axes, majorRadius: n.major_radius, minorRadius: n.minor_radius, maxWork: n.max_work }) }
+    case 'exact_frustum_side':
+      return { kind: 'surface', data: exactGeometry<NurbsSurface>('surface_exact_frustum_side', { center: n.center, axes: n.axes, radii: n.radii, maxWork: n.max_work }) }
+    case 'exact_planar_region':
+      return { kind: 'surface', data: exactGeometry<NurbsSurface>('surface_exact_planar_region', { center: n.center, axes: n.axes, radii: n.radii, maxWork: n.max_work }) }
     case 'parabola_curve':
       return { kind: 'curve', data: parabolaNurbsCurve(n.center, n.axis_u, n.axis_v, n.start, n.end) }
     case 'hyperbola_curve':

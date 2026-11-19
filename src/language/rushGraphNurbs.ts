@@ -570,6 +570,11 @@ export const rushGraphNurbsSchema = z
           z.object({ id, op: z.literal('retaining_ring_profile'), center: vector, inner_radius: scalar, outer_radius: scalar, gap_degrees: scalar }).strict(),
           z.object({ id, op: z.literal('hex_fastener_profile'), center: vector, across_flats: scalar }).strict(),
           z.object({ id, op: z.literal('square_fastener_profile'), center: vector, across_flats: scalar }).strict(),
+          z.object({ id, op: z.literal('exact_ellipse'), center: vector, axis_u: vector, axis_v: vector, max_work: z.number().int().min(1).max(1000000) }).strict(),
+          z.object({ id, op: z.literal('exact_ellipsoid'), center: vector, axes: z.tuple([vector, vector, vector]), max_work: z.number().int().min(1).max(1000000) }).strict(),
+          z.object({ id, op: z.literal('exact_ring_torus'), center: vector, axes: z.tuple([vector, vector, vector]), major_radius: scalar, minor_radius: scalar, max_work: z.number().int().min(1).max(1000000) }).strict(),
+          z.object({ id, op: z.literal('exact_frustum_side'), center: vector, axes: z.tuple([vector, vector, vector]), radii: interval, max_work: z.number().int().min(1).max(1000000) }).strict(),
+          z.object({ id, op: z.literal('exact_planar_region'), center: vector, axes: z.tuple([vector, vector]), radii: interval, max_work: z.number().int().min(1).max(1000000) }).strict(),
           z.object({ id, op: z.literal('line_curve'), start: vector, end: vector }).strict(),
           z
             .object({

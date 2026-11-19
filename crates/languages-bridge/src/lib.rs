@@ -93,6 +93,8 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 "retaining_ring_profile",
                 "hex_fastener_profile",
                 "square_fastener_profile",
+                "exact_ellipse", "exact_ellipsoid", "exact_ring_torus",
+                "exact_frustum_side", "exact_planar_region",
                 "polygon_profile",
                 "polygon_loft",
                 "triangle_mesh",

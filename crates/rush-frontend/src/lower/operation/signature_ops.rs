@@ -5,6 +5,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
     "curve_split",
     "curve_bezier_span",
     "rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile",
+    "exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region",
     "helix_curve",
     "ribbon_surface",
     "variable_pipe_surface",
