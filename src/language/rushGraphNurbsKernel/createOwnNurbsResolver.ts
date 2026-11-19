@@ -337,6 +337,20 @@ export function createOwnNurbsResolver(
           case 'curve_exact_elevate':
             result = { kind: 'curve', data: curveExactElevate(needCurve(n.input), n.degree, n.max_work) }
             break
+          case 'assemble_exact_periodic_surface_axis':
+          case 'assemble_periodic_surface_axis_with_exact_weight_scaling':
+          case 'assemble_periodic_surface_axis_with_exact_knot_union':
+          case 'assemble_periodic_surface_axis_with_exact_basis_matching':
+          case 'assemble_periodic_surface_axis_with_exact_degree_matching':
+          case 'assemble_exact_doubly_periodic_surface':
+          case 'assemble_doubly_periodic_surface_with_exact_weight_scaling':
+            {
+              const layout = 'direction' in n ? { axis: n.direction } : { columns: n.columns }
+              result = { kind: 'surface', data: callGeometryRust<NurbsSurface>(n.op, {
+                inputs: n.inputs.map(needSurface), max_work: n.max_work, ...layout,
+              }) }
+              break
+            }
           case 'rotate_periodic_surface_at_exact_knot':
           case 'insert_and_rotate_periodic_surface_seam':
           case 'open_exact_periodic_surface_axis':

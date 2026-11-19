@@ -9,6 +9,7 @@ mod surface_offset_requests;
 mod editing_and_continuity;
 mod core_queries;
 mod periodic_surface_edits;
+mod periodic_surface_assembly;
 use super::*;
 use crate::surface::Surface;
 #[path="../retained_body_coverage.rs"]

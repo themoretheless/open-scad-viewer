@@ -124,5 +124,8 @@ pub(super) fn dispatch_other(v: Value, op: String) -> Result<Value> {
     ) {
         return periodic_surface_edits::dispatch(&v, op_str);
     }
+    if periodic_surface_assembly::OPS.contains(&op_str) {
+        return periodic_surface_assembly::dispatch(&v, op_str);
+    }
     core_queries::dispatch(v, op_str)
 }

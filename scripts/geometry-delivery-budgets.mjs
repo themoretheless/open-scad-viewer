@@ -190,6 +190,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CzWQW3wi.js':101_100}),
   }),
+  // Periodic strip and grid assembly: 18,861,337 raw bytes, 6,738,481 packed bytes and 12,846,749 asset bytes.
+  '83867cf774759f75cb5ab73a12ba2edef0af998989d45fc7c0cb16d06e2a682d':Object.freeze({
+    version:30,geometryChunkBytes:6_760_000,totalAssetBytes:12_850_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BAW3GWul.js':101_600}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

@@ -35102,6 +35102,296 @@
               },
               "op": {
                 "type": "string",
+                "const": "assemble_exact_periodic_surface_axis"
+              },
+              "inputs": {
+                "minItems": 2,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "u",
+                  "v"
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "direction",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assemble_periodic_surface_axis_with_exact_weight_scaling"
+              },
+              "inputs": {
+                "minItems": 2,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "u",
+                  "v"
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "direction",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assemble_periodic_surface_axis_with_exact_knot_union"
+              },
+              "inputs": {
+                "minItems": 2,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "u",
+                  "v"
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "direction",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assemble_periodic_surface_axis_with_exact_basis_matching"
+              },
+              "inputs": {
+                "minItems": 2,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "u",
+                  "v"
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "direction",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assemble_periodic_surface_axis_with_exact_degree_matching"
+              },
+              "inputs": {
+                "minItems": 2,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "u",
+                  "v"
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "direction",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assemble_exact_doubly_periodic_surface"
+              },
+              "inputs": {
+                "minItems": 1,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "columns": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 256
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "columns",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assemble_doubly_periodic_surface_with_exact_weight_scaling"
+              },
+              "inputs": {
+                "minItems": 1,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "columns": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 256
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs",
+              "columns",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "rotate_periodic_surface_at_exact_knot"
               },
               "input": {
