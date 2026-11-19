@@ -57,6 +57,8 @@ const MODIFIER_OPS: &[&str] = &[
     "pipe_surface",
     "screw_surface",
     "surface_extrude_patches",
+    "curve_edit",
+    "surface_edit",
     "surface_extrude",
     "surface_revolve",
     "tessellate",
@@ -128,6 +130,9 @@ impl Compiler {
             "lower",
             "closed",
             "periodic",
+            "reverse",
+            "reverse_u",
+            "reverse_v",
         ]
         .contains(&key)
         {

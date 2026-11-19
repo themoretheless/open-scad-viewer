@@ -4253,7 +4253,7 @@
     {
       "id": "NURBS-0126",
       "name": "вставка узлов кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4264,13 +4264,18 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0127",
       "name": "поднятие степени кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4281,7 +4286,12 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4304,7 +4314,7 @@
     {
       "id": "NURBS-0129",
       "name": "обрезка кривой по интервалу",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4315,13 +4325,18 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0130",
       "name": "смена направления кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4332,7 +4347,12 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4461,7 +4481,7 @@
     {
       "id": "NURBS-0138",
       "name": "вставка узлов поверхности по U/V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4473,13 +4493,18 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0139",
       "name": "поднятие степени поверхности по U/V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4491,7 +4516,12 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4515,7 +4545,7 @@
     {
       "id": "NURBS-0141",
       "name": "обрезка прямоугольного параметрического домена",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4526,7 +4556,12 @@
       "evidence": [
         "crates/nurbs-geometry/src/surface.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4551,7 +4586,7 @@
     {
       "id": "NURBS-0143",
       "name": "смена направления параметров поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4563,7 +4598,12 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
