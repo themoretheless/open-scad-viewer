@@ -109,6 +109,7 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 "brep_frustum",
                 "brep_tube",
                 "brep_gear",
+                "brep_rational_loft",
                 "brep_extrude_curves",
                 "parabola_curve",
                 "hyperbola_curve",

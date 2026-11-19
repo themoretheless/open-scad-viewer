@@ -176,7 +176,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "surface_loft",
             "ruled_surface",
             "coons_patch",
-            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "formula_surface",
+            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_rational_loft","brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "formula_surface",
             "extrude",
             "revolve",
             "triangle_mesh",
@@ -248,7 +248,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let catenoid=["catenoid_surface","catenoid_patches"].contains(&s(&node,"op"));
         let clothoid=s(&node,"op")=="clothoid_curve";
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
-        let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
+        let loft_refs=["loft_match_surface","brep_rational_loft","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
             if exact_primitive && key == "axes" && exact_frustum {
                 for (i, axis) in value.as_array_mut().ok_or_else(|| text_error(key,"Expected three axes"))?.iter_mut().enumerate() {

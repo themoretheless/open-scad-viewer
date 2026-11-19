@@ -9,6 +9,7 @@ const LOFT_OPS: &[&str] = &[
     "boundary_fill",
     "gordon_surface",
     "loft_match_surface",
+    "brep_rational_loft",
     "brep_natural_loft",
     "brep_capped_loft",
     "loft_embedding_limits",

@@ -300,7 +300,7 @@ pub fn compile(mut document: J) -> Result<J> {
             }
             if let Some(xs)=node["guides"].as_array(){refs.extend(xs.iter().filter_map(J::as_str));}
         }
-        if ["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(node,"op")) {
+        if ["loft_match_surface","brep_rational_loft","brep_natural_loft","brep_capped_loft"].contains(&s(node,"op")) {
             fn collect<'a>(value:&'a J,refs:&mut Vec<&'a str>){
                 if let Some(id)=value.as_str(){refs.push(id);}
                 else if let Some(items)=value.as_array(){for item in items{collect(item,refs);}}

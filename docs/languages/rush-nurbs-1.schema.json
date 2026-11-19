@@ -25699,6 +25699,44 @@
               },
               "op": {
                 "type": "string",
+                "const": "brep_rational_loft"
+              },
+              "sections": {
+                "minItems": 2,
+                "maxItems": 1025,
+                "type": "array",
+                "items": {
+                  "minItems": 1,
+                  "maxItems": 16,
+                  "type": "array",
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 64,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "sections"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "brep_natural_loft"
               },
               "sections": {

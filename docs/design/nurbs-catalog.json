@@ -3382,13 +3382,15 @@
     {
       "id": "NURBS-0094",
       "name": "корпус по сечениям",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::rational_section_loft",
       "evidence": [
         "crates/brep-core/src/parts/analytic/rational_loft.rs",
         "crates/cad-step/tests/rational_section_loft.rs",
         "docs/design/nurbs-body-by-sections.md",
-        "docs/qualification/nurbs-body-sections-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-body-sections-2026-10-15/native-tests.json",
+        "examples/rush/rational-loft-tube.r",
+        "tests/rushRationalSectionLoft.test.ts"
       ],
       "remainingQualification": [
         "Global embedding, self-intersection, outwardness and solid geometry remain separate audits",

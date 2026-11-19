@@ -1171,6 +1171,10 @@ export const rushGraphNurbsSchema = z
               end_reverse: z.boolean().default(false),
             })
             .strict(),
+          z.object({
+            id, op: z.literal('brep_rational_loft'),
+            sections: z.array(z.array(z.array(id).min(1).max(64)).min(1).max(16)).min(2).max(1025),
+          }).strict(),
           z
             .object({
               id,
