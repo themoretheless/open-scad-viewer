@@ -159,7 +159,7 @@ impl Compiler {
         }
         if [
             "herringbone",
-            "left_handed", "verified_profile",
+            "verified_profile",
             "use_pcurve",
             "internal",
             "principal_axes",
