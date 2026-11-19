@@ -214,7 +214,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
             "curve",
-            "curve_edit", "surface_edit",
+            "curve_edit", "surface_edit", "iso_curve", "curve_split", "curve_bezier_span",
             "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",
@@ -232,6 +232,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             ));
         }
         let progressive_sweep=["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
+        let iso_curve = s(&node, "op") == "iso_curve";
         let line_coordinates=s(&node,"op")=="line_curve";
         let scaled_sweep=["scaled_sweep","profile_sweep","progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
         let catenary=s(&node,"op")=="catenary_curve";
@@ -243,6 +244,14 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
         let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
+            if iso_curve && key == "direction" {
+                let axis = value.as_str().or_else(|| value.get("text").and_then(J::as_str));
+                if !matches!(axis, Some("u" | "v")) {
+                    return Err(text_error(key, "Expected iso_curve direction u or v"));
+                }
+                *value = json!(axis);
+                continue;
+            }
             if ["reverse", "reverse_u", "reverse_v"].contains(&key.as_str()) {
                 continue;
             }

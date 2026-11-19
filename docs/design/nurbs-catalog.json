@@ -4297,7 +4297,7 @@
     {
       "id": "NURBS-0128",
       "name": "разбиение кривой по параметру",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4308,7 +4308,11 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "examples/rush/split-nurbs-span.r",
+        "tests/rushTextSplitCurve.test.ts"
       ]
     },
     {
@@ -4358,7 +4362,7 @@
     {
       "id": "NURBS-0131",
       "name": "разложение кривой на рациональные сегменты Безье",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4369,7 +4373,11 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/decompose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "examples/rush/split-nurbs-span.r",
+        "tests/rushTextSplitCurve.test.ts"
       ]
     },
     {
@@ -4900,7 +4908,7 @@
     {
       "id": "NURBS-0161",
       "name": "параметрические изолинии поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4911,7 +4919,11 @@
       "evidence": [
         "crates/nurbs-geometry/src/surface.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "examples/rush/iso-curve-strip.r",
+        "tests/rushTextIsoCurve.test.ts"
       ]
     },
     {
@@ -5625,7 +5637,7 @@
     {
       "id": "NURBS-0194",
       "name": "аффинное преобразование рациональной геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5635,7 +5647,11 @@
       "evidence": [
         "crates/nurbs-geometry/src/affine.rs",
         "crates/nurbs-core/tests/affine_bounds.rs",
-        "docs/design/nurbs-affine-bounds.md"
+        "docs/design/nurbs-affine-bounds.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "examples/rush/iso-curve-strip.r",
+        "tests/rushTextIsoCurve.test.ts"
       ]
     },
     {

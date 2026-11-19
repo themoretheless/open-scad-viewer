@@ -1,6 +1,9 @@
 use super::*;
 
 const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
+    "iso_curve",
+    "curve_split",
+    "curve_bezier_span",
     "helix_curve",
     "ribbon_surface",
     "variable_pipe_surface",
@@ -57,6 +60,9 @@ const MODIFIER_OPS: &[&str] = &[
     "pipe_surface",
     "screw_surface",
     "surface_extrude_patches",
+    "iso_curve",
+    "curve_split",
+    "curve_bezier_span",
     "curve_edit",
     "surface_edit",
     "surface_extrude",
