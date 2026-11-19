@@ -484,6 +484,17 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'trimmed_surface_area_in_window':
+          case 'trimmed_surface_centroid':
+          case 'trimmed_surface_area_inertia': {
+            const {id:_id, input, op, loops, ...args}=n
+            const surface=needSurface(input)
+            if (loops && (args.outer_contour !== undefined || args.max_work !== undefined)) throw new Error('Outer contour and construction budget apply only to periodic contour construction.')
+            const report=callGeometryRust<object>(op,{surface,...args,...(loops ? {loops:loops.map(loop=>loop.map(needCurve))} : {})})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'extract_input_range_curves':
           case 'extract_input_range_curve_pairs': {
             const {id: _id, op, input, piece, ...args} = n
@@ -509,6 +520,10 @@ export function createOwnNurbsResolver(
           case 'evaluate_input_tangents':
           case 'classify_input_tangent_join':
           case 'classify_input_vertex_join':
+          case 'lift_exact_periodic_surface_region_components':
+          case 'build_exact_periodic_surface_trim_components':
+          case 'build_exact_periodic_surface_trim_patches':
+          case 'build_exact_periodic_surface_trim_edges':
           case 'measure_input_contour_length':
           case 'measure_input_segment_length':
           case 'measure_input_segment_range_length':

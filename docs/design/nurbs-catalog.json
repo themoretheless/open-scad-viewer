@@ -14352,7 +14352,7 @@
     {
       "id": "NURBS-0554",
       "name": "Точная UV-развёртка компонент периодической области вместе с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::lift_exact_periodic_surface_region_components",
@@ -14362,7 +14362,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-554-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-554-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-554-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-components.r",
+        "tests/rushTrimComponents.test.ts"
       ],
       "remainingQualification": [
         "Export rational lifted components with holes translated into the same UV chart.",
@@ -14373,7 +14375,7 @@
     {
       "id": "NURBS-0555",
       "name": "Линейные NURBS-контуры обрезки из точной периодической UV-развёртки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_components",
@@ -14383,7 +14385,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-555-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-555-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-555-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-components.r",
+        "tests/rushTrimComponents.test.ts"
       ],
       "remainingQualification": [
         "Store aligned component lifts as exact oriented degree-one trim loops for the UV classifier.",
@@ -14394,7 +14398,7 @@
     {
       "id": "NURBS-0556",
       "name": "Точные опорные NURBS-патчи с контурами обрезки через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches",
@@ -14404,7 +14408,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-556-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-556-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-556-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-components.r",
+        "tests/rushTrimComponents.test.ts"
       ],
       "remainingQualification": [
         "Build exact clamped support surfaces and aligned UV trim loops in a shared lifted chart.",
@@ -14415,7 +14421,7 @@
     {
       "id": "NURBS-0557",
       "name": "Точные пары пространственных рёбер и UV-кривых периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_edges",
@@ -14425,7 +14431,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-557-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-557-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-557-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-components.r",
+        "tests/rushTrimComponents.test.ts"
       ],
       "remainingQualification": [
         "Materialize exact world edges and matching pcurve restrictions on periodic trim patches.",
@@ -15495,7 +15503,7 @@
     {
       "id": "NURBS-0607",
       "name": "Гарантированная площадь обрезанной поверхности внутри UV-окна",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_area_in_window",
@@ -15504,7 +15512,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-607-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-607-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-607-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-integrals.r",
+        "tests/rushTrimmedSurfaceIntegrals.test.ts"
       ],
       "remainingQualification": [
         "Integrate retained surface area inside a selected UV rectangle clipped against the active knot domain.",
@@ -15515,7 +15525,7 @@
     {
       "id": "NURBS-0608",
       "name": "Гарантированные границы центра площади обрезанной NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_centroid",
@@ -15524,7 +15534,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-608-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-608-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-608-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-integrals.r",
+        "tests/rushTrimmedSurfaceIntegrals.test.ts"
       ],
       "remainingQualification": [
         "Enclose a world-space area centroid using first moments on the certified trim partition.",
@@ -15535,7 +15547,7 @@
     {
       "id": "NURBS-0609",
       "name": "Гарантированный тензор инерции обрезанной NURBS-поверхности относительно точки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_area_inertia",
@@ -15544,7 +15556,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-609-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-609-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-609-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-integrals.r",
+        "tests/rushTrimmedSurfaceIntegrals.test.ts"
       ],
       "remainingQualification": [
         "Enclose the symmetric unit-density inertia tensor from certified trimmed surface cells.",

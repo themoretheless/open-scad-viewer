@@ -325,7 +325,7 @@ pub fn compile(mut document: J) -> Result<J> {
                 refs.extend(holes.iter().filter_map(J::as_str))
             }
         }
-        if ["brep_extrude_curves","brep_progressive_sweep","brep_miter_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {
+        if ["brep_extrude_curves","brep_progressive_sweep","brep_miter_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) || (node.get("loops").is_some() && matches!(s(node,"op"),"trimmed_surface_area_in_window" | "trimmed_surface_centroid" | "trimmed_surface_area_inertia")) {
             let curves = node["loops"]
                 .as_array()
                 .unwrap()

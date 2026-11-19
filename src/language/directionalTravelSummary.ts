@@ -1,4 +1,5 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
+  if (['lift_exact_periodic_surface_region_components', 'build_exact_periodic_surface_trim_components', 'build_exact_periodic_surface_trim_patches', 'build_exact_periodic_surface_trim_edges'].includes(operation)) return russian ? 'Компоненты обрезки' : 'Trim components'
   if (operation.includes('periodic_surface_region') || operation.includes('periodic_surface_contour_forest') || operation.includes('periodic_surface_paths')) return russian ? 'Область на периодической поверхности' : 'Periodic chart region'
   if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) return russian ? 'Измерение в периодических координатах' : 'Periodic chart measurement'
   if (operation.includes('input_contour') || operation.includes('input_segment') || operation.includes('input_patch_max')) {
@@ -7,6 +8,9 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'trimmed_surface_area_in_window') return russian ? 'Площадь внутри окна UV' : 'Area inside the UV window'
+  if (operation === 'trimmed_surface_centroid') return russian ? 'Центр площади' : 'Area centroid'
+  if (operation === 'trimmed_surface_area_inertia') return russian ? 'Тензор инерции площади' : 'Area inertia tensor'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_sheet')) return russian ? 'Обрезанная оболочка' : 'Trimmed sheet'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
@@ -89,6 +93,16 @@ export function directionalTravelSummary(operation: string, report: string, russ
       return sides.flatMap(([key,label]) => Array.isArray(parsed.tangents[key]) ? [label + ' · ' + exact(parsed.tangents[key])] : [])
     }
     return [russian ? 'Параметр вне ребра' : 'Parameter outside edge']
+  }
+  if (['lift_exact_periodic_surface_region_components', 'build_exact_periodic_surface_trim_components', 'build_exact_periodic_surface_trim_patches', 'build_exact_periodic_surface_trim_edges'].includes(operation)) {
+    if (parsed?.refusal) return [String(parsed.refusal)]
+    return [(russian ? 'Компоненты · ' : 'Components · ') + parsed?.components?.length]
+  }
+  if (['trimmed_surface_area_in_window', 'trimmed_surface_centroid', 'trimmed_surface_area_inertia'].includes(operation)) {
+    if (parsed?.refusal) return [String(parsed.refusal)]
+    if (parsed?.centroidBoundsMm) return parsed.centroidBoundsMm.map((b:number[],i:number) => 'XYZ'[i] + ' · ' + b.join(' … ') + ' ' + unit)
+    if (parsed?.inertiaBoundsMm4) return parsed.inertiaBoundsMm4.map((row:number[][],i:number) => 'XYZ'[i] + ' · ' + row.map(b=>b.join(' … ')).join(' / '))
+    return parsed?.measure?.area ? [parsed.measure.area.boundsMm2.join(' … ') + ' ' + unit + '²'] : [russian ? 'Граница не получена' : 'Bound unavailable']
   }
   if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
     ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]

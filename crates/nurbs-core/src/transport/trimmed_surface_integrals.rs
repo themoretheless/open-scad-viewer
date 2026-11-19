@@ -1,0 +1,114 @@
+use super::*;
+use crate::analysis::surface_measure::{
+    TrimmedAreaReport, trimmed_surface_area_in_window, trimmed_surface_area_inertia,
+    trimmed_surface_centroid,
+};
+use crate::editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches;
+use crate::trim_domain::TrimDomain;
+
+pub(super) const OPS: &[&str] = &[
+    "trimmed_surface_area_in_window",
+    "trimmed_surface_centroid",
+    "trimmed_surface_area_inertia",
+];
+
+fn area(report: TrimmedAreaReport) -> Value {
+    json!({"minimumSurfaceCells":report.minimum_surface_cells,"trimCells":report.trim_cells,
+        "area":report.area.map(|a|json!({"boundsMm2":a.bounds,"valueMm2":a.value,"errorUpperMm2":a.error_upper,
+            "withinTolerance":a.within_tolerance,"cells":a.cells,"stopReason":format!("{:?}",a.stop_reason)}))})
+}
+pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
+    let source: Surface = field(v, "surface")?;
+    let uv_tolerance = field(v, "tolerance_uv")?;
+    let mut used = 0;
+    check(
+        v.get("loops").is_some() != v.get("contours").is_some(),
+        "Specify one of trim loops or periodic contours",
+    )?;
+    let (surface, trim) = if v.get("loops").is_some() {
+        let loops: Vec<Vec<crate::curve::Curve>> = field(v, "loops")?;
+        (source, TrimDomain::new(&loops, uv_tolerance)?)
+    } else {
+        let contours: Vec<Vec<[f64; 2]>> = field(v, "contours")?;
+        let paths: Vec<_> = contours.iter().map(Vec::as_slice).collect();
+        let result =
+            build_exact_periodic_surface_trim_patches(&source, &paths, field(v, "max_work")?)?;
+        used = result.work_used;
+        let Some(patches) = result.patches else {
+            return Ok(
+                json!({"workUsed":used,"refusal":result.refusal.map(|r|format!("{r:?}")),"measure":null}),
+            );
+        };
+        let index: usize = field(v, "outer_contour")?;
+        let patch = patches
+            .into_iter()
+            .find(|p| p.trim.contours.first() == Some(&index))
+            .ok_or_else(|| crate::input("Expected an outer contour index"))?;
+        (
+            patch.surface,
+            TrimDomain::new(&patch.trim.loops, uv_tolerance)?,
+        )
+    };
+    let tol = field(v, "tolerance_mm2")?;
+    let cells = field(v, "max_surface_cells")?;
+    let trim_cells = field(v, "max_trim_cells")?;
+    let mut result = match op {
+        "trimmed_surface_area_in_window" => {
+            json!({"measure":area(trimmed_surface_area_in_window(&surface,&trim,field(v,"window")?,tol,cells,trim_cells)?)})
+        }
+        "trimmed_surface_centroid" => {
+            let r = trimmed_surface_centroid(&surface, &trim, tol, cells, trim_cells)?;
+            json!({"measure":area(r.measure),"centroidBoundsMm":r.centroid_bounds})
+        }
+        "trimmed_surface_area_inertia" => {
+            let r = trimmed_surface_area_inertia(
+                &surface,
+                &trim,
+                field(v, "origin")?,
+                tol,
+                cells,
+                trim_cells,
+            )?;
+            json!({"measure":area(r.measure),"inertiaBoundsMm4":r.inertia_bounds})
+        }
+        _ => return Err(crate::input("Unknown trimmed surface integral")),
+    };
+    result["workUsed"] = json!(used);
+    result["refusal"] = Value::Null;
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn authored_uv_loop_bounds_area_on_open_support() {
+        let line = crate::curve::Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![0., 0., 0.], vec![1., 0., 0.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let surface = crate::surface::extrude(&line, [0., 1., 0.]).unwrap();
+        let border = crate::curve::Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 3., 4., 4.],
+            control_points: vec![
+                vec![0., 0.],
+                vec![1., 0.],
+                vec![1., 1.],
+                vec![0., 1.],
+                vec![0., 0.],
+            ],
+            weights: vec![1.; 5],
+            periodic: false,
+        };
+        let request = json!({"surface":surface,"loops":[[border]],"window":[[0.25,0.75],[0.25,0.75]],"tolerance_uv":1e-6,"tolerance_mm2":1e-4,"max_surface_cells":1000,"max_trim_cells":10000});
+        let report = dispatch(&request, "trimmed_surface_area_in_window").unwrap();
+        let area = &report["measure"]["area"];
+        assert_eq!(area["withinTolerance"], true);
+        let bounds = &area["boundsMm2"];
+        assert!(bounds[0].as_f64().unwrap() <= 0.25 && bounds[1].as_f64().unwrap() >= 0.25);
+    }
+}
