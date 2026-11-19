@@ -15300,7 +15300,7 @@
     {
       "id": "NURBS-0604",
       "name": "Гарантированные границы площади самой периодически обрезанной NURBS-грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_area",
@@ -15309,7 +15309,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-604-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-604-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-604-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Integrate the surface area density over a certified trim chart, retaining conservative boundary-cell bounds.",
@@ -15320,7 +15322,7 @@
     {
       "id": "NURBS-0605",
       "name": "Измерение площади самой обрезанной периодической NURBS-грани через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_area_request",
@@ -15330,7 +15332,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-605-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-605-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-605-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose retained surface area bounds and independent integration and trim classification budgets.",
@@ -15341,7 +15345,7 @@
     {
       "id": "NURBS-0606",
       "name": "Интегрирование площади с переиспользованием доказанной классификации обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_area",
@@ -15350,7 +15354,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-606-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-606-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-606-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Reuse prepared trim domains and transfer exact inside or outside classifications to descendants.",
@@ -15421,7 +15427,7 @@
     {
       "id": "NURBS-0610",
       "name": "Гарантированный центральный тензор инерции обрезанной NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_central_inertia",
@@ -15430,7 +15436,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-610-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-610-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-610-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the centroid and centroid-relative inertia of a uniformly dense trimmed surface on one partition.",
@@ -15441,7 +15449,7 @@
     {
       "id": "NURBS-0611",
       "name": "Гарантированные границы главных моментов инерции обрезанной NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::TrimmedCentralInertiaReport::bound_principal_moments",
@@ -15450,7 +15458,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-611-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-611-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-611-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Bound sorted principal inertia moments using interval LDL congruence and conservative bracketing.",
@@ -15461,7 +15471,7 @@
     {
       "id": "NURBS-0612",
       "name": "Гарантированные центр площади, центральный тензор и главные моменты обрезанной грани через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_mass_properties_request",
@@ -15471,7 +15481,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-612-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-612-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-612-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose certified retained area, centroid, central inertia and ordered principal moments through one bridge operation.",
@@ -15482,7 +15494,7 @@
     {
       "id": "NURBS-0613",
       "name": "Гарантированные центр площади и центральный тензор инерции внутри UV-окна",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_central_inertia_in_window",
@@ -15491,7 +15503,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-613-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-613-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-613-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose area centroid and central inertia for a clipped UV subregion of a trimmed surface.",
@@ -15502,7 +15516,7 @@
     {
       "id": "NURBS-0614",
       "name": "Гарантированные массовые характеристики обрезанной грани внутри UV-окна через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_window_mass_request",
@@ -15512,7 +15526,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-614-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-614-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-614-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose area, centroid and central inertia within a selected unwrapped UV window through WASM.",
@@ -15563,7 +15579,7 @@
     {
       "id": "NURBS-0617",
       "name": "Гарантированный общий центральный тензор инерции компонент периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia",
@@ -15572,7 +15588,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-617-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-617-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-617-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the inertia of all retained components about their shared centroid on one set of integration cells.",
@@ -15583,7 +15601,7 @@
     {
       "id": "NURBS-0618",
       "name": "Суммарные массовые характеристики всех компонент периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15593,7 +15611,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-618-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-618-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-618-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose total and component area, common centroid and central inertia through one WASM operation.",
@@ -15604,7 +15624,7 @@
     {
       "id": "NURBS-0619",
       "name": "Гарантированные главные моменты инерции всех компонент периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::TrimmedPatchSetCentralInertiaReport::bound_principal_moments",
@@ -15612,7 +15632,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-619-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-619-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-619-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the ordered eigenvalues of the complete patch-set central inertia tensor.",
@@ -15623,7 +15645,7 @@
     {
       "id": "NURBS-0620",
       "name": "Главные моменты инерции всех компонент периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15633,7 +15655,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-620-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-620-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-620-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose sorted principal moment bounds and tolerance status for the common inertia tensor via an opt-in request field.",
@@ -15682,7 +15706,7 @@
     {
       "id": "NURBS-0623",
       "name": "Гарантированный перенос центрального тензора инерции в заданную точку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_inertia_about_point",
@@ -15690,7 +15714,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-623-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-623-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-623-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Translate a common central inertia tensor with bounded mass and centroid using the interval parallel-axis theorem.",
@@ -15701,7 +15727,7 @@
     {
       "id": "NURBS-0624",
       "name": "Гарантированный момент инерции вокруг произвольной пространственной прямой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_inertia_about_line",
@@ -15709,7 +15735,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-624-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-624-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-624-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the moment about an offset line using perpendicular distance bounds from the common centroid.",
@@ -15720,7 +15748,7 @@
     {
       "id": "NURBS-0625",
       "name": "Момент инерции периодической обрезки вокруг заданной оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15730,7 +15758,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-625-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-625-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-625-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose an optional fixed spatial axis in the complete patch-set mass request.",
@@ -15741,7 +15771,7 @@
     {
       "id": "NURBS-0626",
       "name": "Тензор инерции периодической обрезки относительно заданной точки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15751,7 +15781,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-626-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-626-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-626-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose the complete inertia tensor at an optional fixed reference point alongside the centroidal tensor and offset-axis moment.",
@@ -15762,7 +15794,7 @@
     {
       "id": "NURBS-0627",
       "name": "Гарантированный радиус инерции NURBS-поверхности вокруг заданной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_radius_of_gyration",
@@ -15770,7 +15802,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-627-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-627-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-627-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the square root of the polar moment divided by positive mass, including the whole periodic trim set at unit areal density.",
@@ -15781,7 +15815,7 @@
     {
       "id": "NURBS-0628",
       "name": "Радиус инерции периодической обрезки вокруг заданной оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15791,7 +15825,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-628-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-628-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-628-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in bounds on the radius of gyration from the existing patch-set moment and positive area.",

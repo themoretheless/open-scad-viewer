@@ -1,4 +1,5 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
+  if (operation.startsWith('surface_trim_')) return russian ? 'Свойства обрезанной поверхности' : 'Trimmed surface properties'
   if (operation === 'surface_measure_trimmed_mass') return russian ? 'Масса обрезанных участков' : 'Trimmed surface mass'
   const motionLabels: Record<string, [string, string]> = {
     curve_axis_motion_partition_speed: ['Участки по лимиту скорости', 'Speed limit intervals'],
@@ -27,6 +28,10 @@ export function directionalTravelSummary(operation: string, report: string, russ
   const format = (value: number) => value.toLocaleString(russian ? 'ru' : 'en', { maximumSignificantDigits: 17 })
   const bounds = (pair: number[]) => pair[0] === pair[1] ? format(pair[0]!) : pair.map(format).join(' … ')
   const pair = (value: unknown): value is number[] => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
+  if (operation.startsWith('surface_trim_')) {
+    return pair(parsed?.boundsMm2) ? [(russian ? 'Площадь · ' : 'Area · ') + bounds(parsed.boundsMm2) + ' ' + unit + '²']
+      : [russian ? 'Площадь неопределённа' : 'Area unresolved']
+  }
   if (operation === 'surface_measure_trimmed_mass') {
     if (!pair(parsed?.massBoundsKg)) return [russian ? 'Масса не определена при заданных допусках и бюджете' : 'Mass unresolved under the requested tolerances and budget']
     const status = parsed.twoPlaneBalance?.status ?? parsed.axisBalance?.status

@@ -1539,6 +1539,30 @@ export const rushGraphNurbsSchema = z
           z.object({ id, op: z.literal('curve_directional_travel_signed'), input: id, axis_vector:z.array(scalar).min(2).max(3), tolerance_mm:scalar, max_cells:z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('curve_check_backtracking'), input: id, axis_vector:z.array(scalar).min(2).max(3), tolerance_mm:scalar, max_cells:z.number().int().min(1).max(100000), interval, reverse_limit:scalar }).strict(),
           z.object({
+            id, op: z.literal('surface_trim_area'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
+            tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),
+            max_surface_cells:z.number().int().min(1).max(100000), max_trim_cells:z.number().int().min(1).max(1000000),
+            outer_contour:z.number().int().nonnegative(),
+          }).strict(),
+          z.object({
+            id, op: z.literal('surface_trim_mass_properties'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
+            tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),
+            max_surface_cells:z.number().int().min(1).max(100000), max_trim_cells:z.number().int().min(1).max(1000000),
+            outer_contour:z.number().int().nonnegative(), moment_tolerance:scalar,
+          }).strict(),
+          z.object({
+            id, op: z.literal('surface_trim_window_properties'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
+            tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),
+            max_surface_cells:z.number().int().min(1).max(100000), max_trim_cells:z.number().int().min(1).max(1000000),
+            outer_contour:z.number().int().nonnegative(), moment_tolerance:scalar, uv_window:z.tuple([interval,interval]),
+          }).strict(),
+          z.object({
+            id, op: z.literal('surface_trim_set_properties'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
+            tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),
+            max_surface_cells:z.number().int().min(1).max(100000), max_trim_cells:z.number().int().min(1).max(1000000),
+            moment_tolerance:scalar.optional(), axis_point:z.tuple([scalar,scalar,scalar]).optional(), axis_vector:z.tuple([scalar,scalar,scalar]).optional(), reference_point:z.tuple([scalar,scalar,scalar]).optional(), radius_of_gyration:z.boolean().optional(),
+          }).strict(),
+          z.object({
             id, op: z.literal('surface_measure_trimmed_mass'), input: id,
             contours: z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
             component_densities:z.array(z.tuple([z.number().int().nonnegative(), scalar, scalar])).min(1),

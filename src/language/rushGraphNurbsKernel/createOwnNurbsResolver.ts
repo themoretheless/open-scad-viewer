@@ -407,6 +407,34 @@ export function createOwnNurbsResolver(
             result = { kind:'curve',data:curve }
             break
           }
+          case 'surface_trim_area':
+          case 'surface_trim_mass_properties':
+          case 'surface_trim_window_properties':
+          case 'surface_trim_set_properties': {
+            const surface = needSurface(n.input)
+            if (n.op === 'surface_trim_set_properties' && !!n.axis_point !== !!n.axis_vector) {
+              throw new Error('The inertia axis needs both its point and direction.')
+            }
+            const operation = {
+              surface_trim_area:'brep_measure_exact_periodic_trim_surface_area',
+              surface_trim_mass_properties:'brep_measure_exact_periodic_trim_surface_mass_properties',
+              surface_trim_window_properties:'brep_measure_exact_periodic_trim_window_mass_properties',
+              surface_trim_set_properties:'brep_measure_exact_periodic_trim_patch_set_mass_properties',
+            }[n.op]
+            const report = callGeometryRust<object>(operation,{
+              surface,contours:n.contours,toleranceMm2:n.tolerance_mm2,toleranceUv:n.tolerance_uv,maxWork:n.max_work,
+              maxSurfaceCells:n.max_surface_cells,maxTrimCells:n.max_trim_cells,
+              ...('outer_contour' in n ? {outerContour:n.outer_contour} : {}),
+              ...('uv_window' in n ? {uvWindow:n.uv_window} : {}),
+              ...('moment_tolerance' in n ? {momentToleranceMm4:n.moment_tolerance} : {}),
+              ...('axis_point' in n && n.axis_point ? {inertiaAxis:{pointMm:n.axis_point,direction:n.axis_vector}} : {}),
+              ...('reference_point' in n ? {inertiaReferencePointMm:n.reference_point} : {}),
+              ...('radius_of_gyration' in n ? {includeAxisRadiusOfGyration:n.radius_of_gyration} : {}),
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_measure_trimmed_mass': {
             const surface = needSurface(n.input)
             if (!!n.plane_point !== !!n.plane_normal || !!n.axis_point !== !!n.axis_vector) {
