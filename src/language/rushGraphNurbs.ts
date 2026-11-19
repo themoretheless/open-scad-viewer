@@ -1582,6 +1582,10 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('surface_trim_sheet'),input:id,contours:z.array(z.array(uv).min(3)).min(1),tolerance_mm:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('surface_trim_sheet_edge_bindings'),input:id,contours:z.array(z.array(uv).min(3)).min(1),tolerance_mm:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('surface_trim_sheet_input_bindings'),input:id,contours:z.array(z.array(uv).min(3)).min(1),tolerance_mm:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('evaluate_input_point'),input:id,contours:z.array(z.array(uv).min(3)).min(1),contour:z.number().int().nonnegative(), segment:z.number().int().nonnegative(), exact_parameter:exactUnsignedRatio,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('evaluate_input_tangents'),input:id,contours:z.array(z.array(uv).min(3)).min(1),contour:z.number().int().nonnegative(), segment:z.number().int().nonnegative(), exact_parameter:exactUnsignedRatio,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('classify_input_tangent_join'),input:id,contours:z.array(z.array(uv).min(3)).min(1),contour:z.number().int().nonnegative(), segment:z.number().int().nonnegative(), exact_parameter:exactUnsignedRatio,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('classify_input_vertex_join'),input:id,contours:z.array(z.array(uv).min(3)).min(1),contour:z.number().int().nonnegative(), vertex:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({
             id, op: z.literal('surface_trim_area'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
             tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),

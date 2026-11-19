@@ -1,0 +1,33 @@
+{
+  "embeddedOnly": true,
+  "geometryRequests": 1,
+  "productionFilesUnchanged": true,
+  "candidate": "/private/tmp/osv-periodic-sheet-main-sync/public/wasm/geometry-kernel.wasm",
+  "schema": "candidate-direct-browser-api/1",
+  "identity": {
+    "sha256": "990c5e6e4506e1f44ebef044ea2fec379b9575bbddb7c3cc78b413617ca3ad5c",
+    "byteLength": 19178023
+  },
+  "browserVersion": "151.0.7922.34",
+  "scope": "Finite Chromium embedded-default API probes on main and independent worker. Only the explicit identity probe fetches raw bytes; no optional compiler is installed and the worker ignores the supplied module. Extra raw HTTP requests are blocked. No provider admission, production build or whole-UI qualification.",
+  "qualificationClaim": "none",
+  "result": {
+    "main": {
+      "passed": true,
+      "checks": 40
+    },
+    "thread": {
+      "ok": true,
+      "identity": {
+        "sha256": "990c5e6e4506e1f44ebef044ea2fec379b9575bbddb7c3cc78b413617ca3ad5c",
+        "byteLength": 19178023
+      },
+      "result": {
+        "passed": true,
+        "checks": 40
+      }
+    }
+  },
+  "pageErrors": [],
+  "passed": true
+}

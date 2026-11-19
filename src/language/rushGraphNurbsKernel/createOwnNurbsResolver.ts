@@ -484,6 +484,10 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'evaluate_input_point':
+          case 'evaluate_input_tangents':
+          case 'classify_input_tangent_join':
+          case 'classify_input_vertex_join':
           case 'measure_input_contour_length':
           case 'measure_input_segment_length':
           case 'measure_input_segment_range_length':

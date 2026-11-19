@@ -2,6 +2,10 @@ use super::*;
 use crate::editing::exact_periodic_surface::*;
 
 pub(super) const OPS: &[&str] = &[
+    "evaluate_input_point",
+    "evaluate_input_tangents",
+    "classify_input_tangent_join",
+    "classify_input_vertex_join",
     "measure_input_contour_length",
     "measure_input_segment_length",
     "measure_input_segment_range_length",
@@ -16,6 +20,19 @@ pub(super) const OPS: &[&str] = &[
     "bound_input_patch_max_projection_direction",
 ];
 
+fn rational_parameter(text: &str) -> Result<num_rational::BigRational> {
+    let parts = text.split_once('/');
+    let digits = |s: &str| (1..=1234).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit());
+    check(
+        parts.is_some_and(|(n, d)| digits(n) && digits(d) && d.bytes().any(|b| b != b'0')),
+        "Expected an exact rational parameter",
+    )?;
+    text.parse()
+        .map_err(|_| crate::numeric_err("Invalid exact rational parameter"))
+}
+fn exact_vector(v: [num_rational::BigRational; 3]) -> [Value; 3] {
+    v.map(|x| json!({"numerator":x.numer().to_string(),"denominator":x.denom().to_string()}))
+}
 fn length(p: PeriodicTrimContourLength) -> Value {
     json!({"minimumCells":p.minimum_cells,"length":p.length.map(|r|json!({"boundsMm":r.bounds,"valueMm":r.value,"errorUpperMm":r.error_upper,
         "withinTolerance":r.within_tolerance,"cells":r.cells,"stopReason":format!("{:?}",r.stop_reason)}))})
@@ -42,6 +59,41 @@ pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
         return Ok(
             json!({"buildRefused":true,"workUsed":used,"refusal":edges.geometry.refusal.map(|r|format!("{r:?}"))}),
         );
+    }
+    if matches!(
+        op,
+        "evaluate_input_point"
+            | "evaluate_input_tangents"
+            | "classify_input_tangent_join"
+            | "classify_input_vertex_join"
+    ) {
+        let remaining = max_work.saturating_sub(used);
+        if remaining == 0 {
+            return Ok(json!({"workUsed":used,"refusal":"WorkLimit"}));
+        }
+        if op == "classify_input_vertex_join" {
+            let r = edges.classify_input_vertex_join(index, field(v, "vertex")?, remaining)?;
+            return Ok(
+                json!({"join":r.join.map(|j|format!("{j:?}")),"workUsed":used+r.work_used,"refusal":r.refusal.map(|e|format!("{e:?}"))}),
+            );
+        }
+        let text: String = field(v, "exact_parameter")?;
+        let t = rational_parameter(&text)?;
+        let segment = field(v, "segment")?;
+        return Ok(match op {
+            "evaluate_input_point" => {
+                let r = edges.evaluate_input_point(index, segment, &t, remaining)?;
+                json!({"point":r.point.map(exact_vector),"workUsed":used+r.work_used,"refusal":r.refusal.map(|e|format!("{e:?}"))})
+            }
+            "evaluate_input_tangents" => {
+                let r = edges.evaluate_input_tangents(index, segment, &t, remaining)?;
+                json!({"tangents":r.tangents.map(|v|json!({"before":v.before.map(exact_vector),"after":v.after.map(exact_vector)})),"workUsed":used+r.work_used,"refusal":r.refusal.map(|e|format!("{e:?}"))})
+            }
+            _ => {
+                let r = edges.classify_input_tangent_join(index, segment, &t, remaining)?;
+                json!({"join":r.join.map(|j|format!("{j:?}")),"workUsed":used+r.work_used,"refusal":r.refusal.map(|e|format!("{e:?}"))})
+            }
+        });
     }
     let cells = || field(v, "max_cells");
     let tol = || field(v, "tolerance_mm");

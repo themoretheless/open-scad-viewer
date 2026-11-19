@@ -5,6 +5,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
     if (operation.includes('project')) return russian ? 'Проекция контура' : 'Contour projection'
     return russian ? 'Длина и положение вдоль контура' : 'Distance and position along contour'
   }
+  if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_sheet')) return russian ? 'Обрезанная оболочка' : 'Trimmed sheet'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
@@ -68,6 +69,20 @@ export function directionalTravelSummary(operation: string, report: string, russ
     if (Array.isArray(parsed?.exactAreaVector)) return parsed.exactAreaVector.map((q:{numerator:string;denominator:string},i:number)=>['X','Y','Z'][i]+' · '+q.numerator+'/'+q.denominator+' '+unit+'²')
     if (Array.isArray(parsed?.areaVectorBoundsMm2)) return parsed.areaVectorBoundsMm2.filter(pair).map((v:number[],i:number)=>['X','Y','Z'][i]+' · '+bounds(v)+' '+unit+'²')
     return [russian ? 'Результат неопределён' : 'Result unresolved']
+  }
+  if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) {
+    if (parsed?.refusal) return [String(parsed.refusal)]
+    const exact = (p:{numerator:string;denominator:string}[]) => p.map(v=>v.numerator+'/'+v.denominator).join(', ')
+    if (Array.isArray(parsed?.point)) return ['XYZ · ' + exact(parsed.point) + ' ' + unit]
+    if (parsed?.join) {
+      const labels: Record<string,string> = {Corner:'Угол',Reversal:'Разворот',OneSided:'Односторонняя касательная',Stationary:'Стационарная точка'}
+      return [russian ? labels[parsed.join] ?? String(parsed.join) : String(parsed.join)]
+    }
+    if (parsed?.tangents) {
+      const sides = [['before',russian ? 'До стыка' : 'Before'],['after',russian ? 'После стыка' : 'After']] as const
+      return sides.flatMap(([key,label]) => Array.isArray(parsed.tangents[key]) ? [label + ' · ' + exact(parsed.tangents[key])] : [])
+    }
+    return [russian ? 'Параметр вне ребра' : 'Parameter outside edge']
   }
   if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
     ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]

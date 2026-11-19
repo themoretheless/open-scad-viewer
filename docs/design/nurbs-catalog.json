@@ -14767,7 +14767,7 @@
     {
       "id": "NURBS-0574",
       "name": "Точное вычисление 3D-точки по параметру исходного контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::evaluate_input_point",
@@ -14775,7 +14775,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-574-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-574-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-574-2026-11-17/native.log.gz",
+        "examples/rush/trim-exact-tangents.r",
+        "tests/rushTrimExactTangents.test.ts"
       ],
       "remainingQualification": [
         "Evaluate lifted rational Bezier edges in world coordinates and verify incident pieces agree at their split.",
@@ -14786,7 +14788,7 @@
     {
       "id": "NURBS-0575",
       "name": "Точные односторонние касательные вдоль исходного контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::evaluate_input_tangents",
@@ -14794,7 +14796,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-575-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-575-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-575-2026-11-17/native.log.gz",
+        "examples/rush/trim-exact-tangents.r",
+        "tests/rushTrimExactTangents.test.ts"
       ],
       "remainingQualification": [
         "Evaluate exact one-sided rational derivatives in original contour direction and retain geometric creases.",
@@ -14805,7 +14809,7 @@
     {
       "id": "NURBS-0576",
       "name": "Точная классификация касательных стыков периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::classify_input_tangent_join",
@@ -14813,7 +14817,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-576-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-576-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-576-2026-11-17/native.log.gz",
+        "examples/rush/trim-exact-tangents.r",
+        "tests/rushTrimExactTangents.test.ts"
       ],
       "remainingQualification": [
         "Distinguish exact C1, oriented G1, reversal, corner, stationary and one-sided joins.",
@@ -14824,7 +14830,7 @@
     {
       "id": "NURBS-0577",
       "name": "Точная классификация стыка в исходной вершине замкнутого периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::classify_input_vertex_join",
@@ -14832,7 +14838,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-577-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-577-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-577-2026-11-17/native.log.gz",
+        "examples/rush/trim-exact-tangents.r",
+        "tests/rushTrimExactTangents.test.ts"
       ],
       "remainingQualification": [
         "Classify joins between original contour segments, including the closing vertex, after exact point agreement.",
