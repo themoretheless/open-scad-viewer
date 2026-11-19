@@ -3,6 +3,9 @@ use crate::*;
 
 const OPS: &[&str] = &[
     "nurbs_curve_axis_motion",
+    "nurbs_curve_directional_travel_full",
+    "nurbs_curve_directional_travel_signed",
+    "nurbs_curve_check_backtracking",
     "nurbs_measure_curve_axial_derivative_peak",
     "nurbs_measure_curve_directional_travel",
     "nurbs_measure_curve_directional_travel_batch",
@@ -36,6 +39,9 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "nurbs_curve_axis_motion" => curve_axis_motion(&v),
+        "nurbs_curve_directional_travel_full"
+        | "nurbs_curve_directional_travel_signed"
+        | "nurbs_curve_check_backtracking" => full_travel_or_backtracking(&v),
         "nurbs_measure_curve_axial_derivative_peak" => axial_derivative_peak(&v),
         "nurbs_measure_curve_directional_travel" => curve_directional_travel_request(&v),
         "nurbs_measure_curve_directional_travel_batch" => {
@@ -339,7 +345,7 @@ fn curve_axis_motion(request: &Value) -> Result<Value> {
     use nurbs_core::analysis::curve_measure::*;
     let curve = field(request, "curve")?;
     let window = field(request, "parameterInterval")?;
-    let tolerances = field(request, "tolerances")?;
+    let tolerances = || field(request, "tolerances");
     let cells = field(request, "maxCells")?;
     let directions: Vec<Vec<f64>> = field(request, "directions")?;
     let limits: Vec<[f64; 3]> = field(request, "limits")?;
@@ -374,13 +380,49 @@ fn curve_axis_motion(request: &Value) -> Result<Value> {
         }
     };
     match request.get("mode").and_then(Value::as_str) {
+        Some("partition_speed") if axes.len() == 1 => {
+            let p = partition_directional_speed_limit(
+                &curve,
+                window,
+                axes[0].direction,
+                axes[0].limits.speed,
+                field(request, "parameterTolerance")?,
+                cells,
+            )?;
+            let classified: Vec<_> = p.cells.into_iter().map(|c| json!({"parameterInterval":c.parameter_interval,"span":c.span,"status":status(c.status)})).collect();
+            Ok(json!({"cells":classified,"workCells":p.work_cells}))
+        }
+        Some("partition_motion") if axes.len() == 1 => {
+            let p = partition_directional_motion_limits(
+                &curve,
+                window,
+                axes[0].direction,
+                axes[0].limits,
+                field(request, "parameterTolerance")?,
+                cells,
+            )?;
+            let classified: Vec<_> = p.cells.into_iter().map(|c| json!({"parameterInterval":c.parameter_interval,"span":c.span,"statuses":c.statuses.map(status)})).collect();
+            Ok(json!({"cells":classified,"workCells":p.work_cells}))
+        }
+        Some("partition_axes") => {
+            let p = partition_multi_axis_motion_limits(
+                &curve,
+                window,
+                &axes,
+                field(request, "parameterTolerance")?,
+                cells,
+            )?;
+            let classified: Vec<_> = p.cells.into_iter().map(|c| json!({"parameterInterval":c.parameter_interval,"span":c.span,
+                "axisStatuses":c.axis_statuses.into_iter().map(|a| a.map(status)).collect::<Vec<_>>()})).collect();
+            Ok(json!({"cells":classified,"workAxisCells":p.work_axis_cells}))
+        }
         Some("limits") if axes.len() == 1 => {
             let p = check_directional_motion_limits(
                 &curve,
                 window,
                 axes[0].direction,
                 axes[0].limits,
-                tolerances,
+                tolerances()?,
                 cells,
             )?;
             Ok(
@@ -395,19 +437,19 @@ fn curve_axis_motion(request: &Value) -> Result<Value> {
                 window,
                 axes[0].direction,
                 axes[0].limits,
-                tolerances,
+                tolerances()?,
                 cells,
             )?;
             Ok(json!({"slowdownBounds":bounds.map(bound)}))
         }
         Some("multiSlowdown") => {
-            let p = multi_axis_motion_slowdown_bounds(&curve, window, &axes, tolerances, cells)?;
+            let p = multi_axis_motion_slowdown_bounds(&curve, window, &axes, tolerances()?, cells)?;
             Ok(
                 json!({"slowdownBounds":p.bounds.map(bound),"axisBounds":p.axis_bounds.into_iter().map(|b| b.map(bound)).collect::<Vec<_>>(),"cells":p.cells}),
             )
         }
         Some("duration") => {
-            let p = multi_axis_motion_duration_bounds(&curve, window, &axes, tolerances, cells)?;
+            let p = multi_axis_motion_duration_bounds(&curve, window, &axes, tolerances()?, cells)?;
             Ok(
                 json!({"durationBounds":p.duration_bounds.map(bound),"slowdownBounds":p.slowdown.bounds.map(bound),
                       "axisBounds":p.slowdown.axis_bounds.into_iter().map(|b| b.map(bound)).collect::<Vec<_>>(),"cells":p.slowdown.cells}),
@@ -419,7 +461,7 @@ fn curve_axis_motion(request: &Value) -> Result<Value> {
                 window,
                 &axes,
                 field(request, "deadline")?,
-                tolerances,
+                tolerances()?,
                 cells,
             )?;
             Ok(
@@ -427,5 +469,41 @@ fn curve_axis_motion(request: &Value) -> Result<Value> {
             )
         }
         _ => Err(input("Invalid motion measurement mode or axis count")),
+    }
+}
+
+fn full_travel_or_backtracking(request: &Value) -> Result<Value> {
+    use nurbs_core::analysis::curve_measure::*;
+    let curve: nurbs_core::curve::Curve = field(request, "curve")?;
+    curve.validate()?;
+    let direction: Vec<f64> = field(request, "direction")?;
+    let tolerance = field(request, "toleranceMm")?;
+    let cells = field(request, "maxCells")?;
+    match request["op"].as_str() {
+        Some("nurbs_curve_directional_travel_full") => {
+            let p = directional_travel(&curve, &direction, tolerance, cells)?;
+            Ok(
+                json!({"parameterInterval":curve.domain(),"totalBoundsMm":p.bounds,"cells":p.cells,
+                "withinTolerance":p.within_tolerance,"stopReason":stop_reason_label(p.stop_reason)}),
+            )
+        }
+        Some("nurbs_curve_directional_travel_signed") => {
+            let p = directional_travel_by_sign(&curve, &direction, tolerance, cells)?;
+            directional_travel_response(curve.domain(), &p, None)
+        }
+        _ => {
+            let interval = field(request, "parameterInterval")?;
+            let limit = field(request, "reverseLimitMm")?;
+            let (p, verdict) = check_directional_backtracking(
+                &curve, interval, &direction, limit, tolerance, cells,
+            )?;
+            let mut response = directional_travel_response(interval, &p, None)?;
+            response["reverseStatus"] = json!(match verdict {
+                ReverseTravelStatus::Within => "within",
+                ReverseTravelStatus::Exceeds => "exceeds",
+                ReverseTravelStatus::Undetermined => "undetermined",
+            });
+            Ok(response)
+        }
     }
 }

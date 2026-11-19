@@ -16685,7 +16685,7 @@
     {
       "id": "NURBS-0673",
       "name": "Гарантированный суммарный ход NURBS-кривой вдоль заданной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel",
@@ -16693,7 +16693,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-673-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-673-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-673-2026-11-17/native.log.gz",
+        "examples/rush/full-directional-travel.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Integrate the absolute projected velocity of a rational curve, including reversals, under a shared work limit.",
@@ -16704,7 +16706,7 @@
     {
       "id": "NURBS-0674",
       "name": "Гарантированные прямой и обратный ходы NURBS-кривой вдоль оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_by_sign",
@@ -16712,7 +16714,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-674-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-674-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-674-2026-11-17/native.log.gz",
+        "examples/rush/full-directional-travel.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Decompose certified projected travel into positive and negative axial motion using signed span displacements.",
@@ -16744,7 +16748,7 @@
     {
       "id": "NURBS-0676",
       "name": "Гарантированная проверка допуска обратного хода NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_backtracking",
@@ -16752,7 +16756,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-676-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-676-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-676-2026-11-17/native.log.gz",
+        "examples/rush/full-directional-travel.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Classify reverse axial travel against a limit independently of measurement convergence.",
@@ -17061,7 +17067,7 @@
     {
       "id": "NURBS-0691",
       "name": "Сертифицированное разбиение NURBS-траектории по лимиту осевой скорости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_speed_limit",
@@ -17069,7 +17075,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-691-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-691-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-691-2026-11-17/native.log.gz",
+        "examples/rush/motion-partition.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Partition the original curve window into within-limit, exceeding and unresolved axial speed intervals.",
@@ -17080,7 +17088,7 @@
     {
       "id": "NURBS-0692",
       "name": "Совместное разбиение NURBS-траектории по осевым лимитам движения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_motion_limits",
@@ -17088,7 +17096,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-692-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-692-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-692-2026-11-17/native.log.gz",
+        "examples/rush/motion-partition.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Classify axial speed, acceleration and jerk on one shared certified subdivision.",
@@ -17099,7 +17109,7 @@
     {
       "id": "NURBS-0693",
       "name": "Совместное разбиение NURBS-траектории по ограничениям нескольких осей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_multi_axis_motion_limits",
@@ -17107,7 +17117,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-693-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-693-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-693-2026-11-17/native.log.gz",
+        "examples/rush/motion-partition.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Classify speed, acceleration and jerk on one subdivision for every axis under a shared axis-cell budget.",

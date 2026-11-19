@@ -375,6 +375,9 @@ export function createOwnNurbsResolver(
               result = { kind: 'surface', data }
               break
             }
+          case 'curve_axis_motion_partition_speed':
+          case 'curve_axis_motion_partition_motion':
+          case 'curve_axis_motion_partition_axes':
           case 'curve_axis_motion_limits':
           case 'curve_axis_motion_slowdown':
           case 'curve_axis_motion_multi_slowdown':
@@ -384,11 +387,24 @@ export function createOwnNurbsResolver(
             const mode = n.op.slice('curve_axis_motion_'.length)
             const report = callGeometryRust<object>('nurbs_curve_axis_motion', {
               curve, mode: mode === 'multi_slowdown' ? 'multiSlowdown' : mode,
-              parameterInterval: n.interval, directions: n.directions, limits: n.limits, tolerances: n.tolerances,
+              parameterInterval: n.interval, directions: 'axis_vector' in n ? [n.axis_vector] : n.directions, limits: 'speed_limit' in n ? [[n.speed_limit, 0, 0]] : n.limits,
+              ...('parameter_tolerance' in n ? { parameterTolerance:n.parameter_tolerance } : { tolerances:n.tolerances }),
               maxCells: n.max_cells, ...('deadline' in n ? { deadline:n.deadline } : {}),
             })
             constructionReports[key] = { measurement: { operation: n.op, report } }
             result = { kind:'curve', data:curve }
+            break
+          }
+          case 'curve_directional_travel_full':
+          case 'curve_directional_travel_signed':
+          case 'curve_check_backtracking': {
+            const curve = needCurve(n.input)
+            const report = callGeometryRust<object>('nurbs_' + n.op, {
+              curve, direction: n.axis_vector, toleranceMm:n.tolerance_mm,maxCells:n.max_cells,
+              ...(n.op === 'curve_check_backtracking' ? { parameterInterval:n.interval, reverseLimitMm:n.reverse_limit } : {}),
+            })
+            constructionReports[key] = { measurement:{operation:n.op,report} }
+            result = { kind:'curve',data:curve }
             break
           }
           case 'curve_axial_derivative_peak': {

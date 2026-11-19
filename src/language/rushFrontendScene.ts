@@ -1,3 +1,4 @@
+import { MAX_NATIVE_GEOMETRY_CHARACTERS } from '../core/nativeGeometry'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler'
 import { transformNurbsSurfacePatches } from '../kernel/nurbsSurface'
@@ -56,10 +57,16 @@ export async function buildTextNurbsScene(
   const nativeGeometry = 'nativeGeometry' in result ? result.nativeGeometry : undefined
   const entityId = `entity:native/${nativeGeometry?.nodeId ?? result.report.root}` as const
   const { mesh: output, surfaceArea } = ownNurbsDisplayMesh(mesh, entityId, nativeGeometry)
+  let reportCharacters = 0
   const measurements = Object.entries(result.report.construction ?? {}).flatMap(([node, entry]) => {
     if (!('measurement' in entry)) return []
     const { operation, report } = entry.measurement as { operation: string; report: object }
-    return [{ node, operation, report: JSON.stringify(report) }]
+    const serialized = JSON.stringify(report)
+    reportCharacters += serialized.length
+    if (reportCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) {
+      throw new Error('Measurement reports exceed the editor output limit. Reduce the work budget or parameter range.')
+    }
+    return [{ node, operation, report: serialized }]
   })
   return {
     meshes: mesh.indices.length ? [output] : [],

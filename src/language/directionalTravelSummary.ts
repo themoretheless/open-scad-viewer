@@ -1,5 +1,8 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
   const motionLabels: Record<string, [string, string]> = {
+    curve_axis_motion_partition_speed: ['Участки по лимиту скорости', 'Speed limit intervals'],
+    curve_axis_motion_partition_motion: ['Участки по ограничениям движения', 'Motion limit intervals'],
+    curve_axis_motion_partition_axes: ['Участки по нескольким осям', 'Multi-axis limit intervals'],
     curve_axis_motion_limits: ['Ограничения движения', 'Motion limits'],
     curve_axis_motion_slowdown: ['Замедление по оси', 'Axis slowdown'],
     curve_axis_motion_multi_slowdown: ['Замедление по нескольким осям', 'Multi-axis slowdown'],
@@ -28,6 +31,19 @@ export function directionalTravelSummary(operation: string, report: string, russ
       : key === 'exceeds' ? (russian ? 'Лимит превышен' : 'Limit exceeded')
       : (russian ? 'Результат неопределён' : 'Undetermined')
     const lines: string[] = []
+    if (Array.isArray(parsed.cells)) {
+      const counts = { within: 0, exceeds: 0, undetermined: 0 }
+      for (const cell of parsed.cells) {
+        const states = Array.isArray(cell?.axisStatuses) ? cell.axisStatuses.flat()
+          : Array.isArray(cell?.statuses) ? cell.statuses : [cell?.status]
+        if (states.includes('exceeds')) counts.exceeds++
+        else if (states.length && states.every((state: string) => state === 'within')) counts.within++
+        else counts.undetermined++
+      }
+      lines.push(russian
+        ? `Участки в пределах лимита: ${counts.within}, с превышением: ${counts.exceeds}, неопределённые: ${counts.undetermined}`
+        : `Intervals within limit: ${counts.within}, exceeding: ${counts.exceeds}, unresolved: ${counts.undetermined}`)
+    }
     if (parsed.status) lines.push(status(parsed.status))
     for (const [key, label] of [
       ['speedBounds', russian ? 'Скорость' : 'Speed'], ['accelerationBounds', russian ? 'Ускорение' : 'Acceleration'],
@@ -35,7 +51,7 @@ export function directionalTravelSummary(operation: string, report: string, russ
       ['durationBounds', russian ? 'Длительность в единицах параметра' : 'Duration in parameter units'],
     ] as const) {
       const endpoints = parsed[key]
-      if (Array.isArray(endpoints) && endpoints.length === 2) {
+      if (Array.isArray(endpoints) && endpoints.length === 2 && endpoints.every(x => Number.isFinite(x) || x === 'unbounded')) {
         lines.push(label + ' · ' + endpoints.map(x => x === 'unbounded' ? '∞' : format(x)).join(' … '))
       }
     }
@@ -52,7 +68,8 @@ export function directionalTravelSummary(operation: string, report: string, russ
     }
     return lines
   }
-  if (!['curve_measure_directional_travel', 'curve_measure_directional_travel_batch'].includes(operation)) return []
+  if (operation === 'curve_directional_travel_full' && pair(parsed?.totalBoundsMm)) return [(russian ? 'Суммарный ход' : 'Total travel') + ' · ' + bounds(parsed.totalBoundsMm) + ' ' + unit]
+  if (!['curve_check_backtracking','curve_directional_travel_signed','curve_measure_directional_travel', 'curve_measure_directional_travel_batch'].includes(operation)) return []
   const rows = operation.endsWith('_batch') ? parsed?.intervals : [parsed]
   if (!Array.isArray(rows)) return []
   return rows.flatMap(row => {
