@@ -305,6 +305,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/COMyN-JL.js':111_100}),
   }),
+  // Trim-edge bindings, mesh and STEP delivery: 19,199,922 raw bytes, 6,855,332 packed bytes and 13,014,188 asset bytes.
+  '030e4a378b6b4cec1f36732d0bf8dabc3b440aa4cac134b04c505b4d23bf2484':Object.freeze({
+    version:38,geometryChunkBytes:6_860_000,totalAssetBytes:13_020_000,rawGeometryBytes:19_200_000,
+    namedJsChunkBytes:Object.freeze({
+      index:266_100,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CXEZE1xc.js':112_300,'assets/mainSolid.worker-CKQd3Niq.js':177_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

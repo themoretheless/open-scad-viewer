@@ -1332,3 +1332,28 @@ fn patch_set_density_checks_counterweight_mass_capacity_by_plane() {
     request["counterweightMassLimitsKg"] = json!([5., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn exact_split_parameter_round_trips_through_both_persistent_edges() {
+    let mut query = request();
+    query["tolerance_mm"] = json!(1e-8);
+    query["max_work"] = json!(1_000_000);
+    query["contour"] = json!(0);
+    query["segment"] = json!(0);
+    query["exact_parameter"] = json!("1/2");
+    query["op"] = json!("locate_input_parameter");
+    let split = run(&query);
+    assert_eq!(split["ok"], true, "{split}");
+    let hits = split["value"]["result"].as_array().unwrap();
+    assert_eq!(hits.len(), 2);
+    assert_ne!(hits[0]["edgeId"], hits[1]["edgeId"]);
+    query["op"] = json!("locate_edge_parameter");
+    for hit in hits {
+        query["edge_id"] = hit["edgeId"].clone();
+        let ratio = &hit["parameter"];
+        query["exact_parameter"] = json!(format!("{}/{}",ratio["numerator"].as_str().unwrap(),ratio["denominator"].as_str().unwrap()));
+        let original = run(&query);
+        assert_eq!(original["ok"], true, "{original}");
+        assert_eq!(original["value"]["result"],json!({"contour":0,"segment":0,"parameter":{"numerator":"1","denominator":"2"}}));
+    }
+}

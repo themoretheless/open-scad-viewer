@@ -15,3 +15,9 @@ pub use certified_general::*;
 pub use tessellation::*;
 pub use nurbs::*;
 pub use polygons::*;
+
+mod trim_binding_query;
+pub use trim_binding_query::periodic_trim_binding_query;
+
+mod periodic_sheet_delivery;
+pub use periodic_sheet_delivery::periodic_sheet_delivery;

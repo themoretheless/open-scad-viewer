@@ -138,7 +138,7 @@ function exportOwnNurbsArtifact<Base extends Record<string, unknown>>(
     if (root.kind !== 'brep')
       throw new Error('STEP export requires an exact B-rep root; mesh/curve/surface STEP conversion is not supported.')
     inspectNurbsBrep(root.data)
-    const text = exportDirectStepV9(root.data).text
+    const text = root.stepText ?? exportDirectStepV9(root.data).text
     if (new TextEncoder().encode(text).byteLength > 4 * 1024 * 1024) throw new Error('STEP export exceeds 4 MiB.')
     return { ...base, artifact: { format: 'step', mime_type: 'model/step', extension: 'step', text } }
   }
@@ -222,7 +222,7 @@ function buildOwnNurbsDisplayResult<Base extends Record<string, unknown>>(
     throw new Error('Invalid display tessellation policy')
   let mesh: Mesh | undefined = root.kind === 'mesh' ? root.data : undefined
   if (root.kind === 'surface') mesh = tessellateNurbsSurface(root.data, { segmentsU: segments, segmentsV: segments })
-  if (root.kind === 'brep') mesh = tessellateNurbsBrep(root.data, segments)
+  if (root.kind === 'brep') mesh = root.displayMesh?.segments === segments ? root.displayMesh.mesh : tessellateNurbsBrep(root.data, segments)
   if (root.kind === 'subdivision') mesh = tessellateSubdivision(root.data, subdivisionLevels)
   if (root.kind === 'patches') mesh = tessellateNurbsPatches(root.data, segments)
   let sourceNode = compiled.document.root

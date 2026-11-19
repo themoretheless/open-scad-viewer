@@ -5,6 +5,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
     if (operation.includes('project')) return russian ? 'Проекция контура' : 'Contour projection'
     return russian ? 'Длина и положение вдоль контура' : 'Distance and position along contour'
   }
+  if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_sheet')) return russian ? 'Обрезанная оболочка' : 'Trimmed sheet'
@@ -69,6 +70,11 @@ export function directionalTravelSummary(operation: string, report: string, russ
     if (Array.isArray(parsed?.exactAreaVector)) return parsed.exactAreaVector.map((q:{numerator:string;denominator:string},i:number)=>['X','Y','Z'][i]+' · '+q.numerator+'/'+q.denominator+' '+unit+'²')
     if (Array.isArray(parsed?.areaVectorBoundsMm2)) return parsed.areaVectorBoundsMm2.filter(pair).map((v:number[],i:number)=>['X','Y','Z'][i]+' · '+bounds(v)+' '+unit+'²')
     return [russian ? 'Результат неопределён' : 'Result unresolved']
+  }
+  if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) {
+    if (parsed?.refusal) return [String(parsed.refusal)]
+    if (Array.isArray(parsed?.result)) return [String(parsed.result.length) + (russian ? ' участков' : ' pieces')]
+    return parsed?.result ? [String(parsed.result.contour) + ' / ' + String(parsed.result.segment)] : [russian ? 'Ребро не найдено' : 'Edge not found']
   }
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) {
     if (parsed?.refusal) return [String(parsed.refusal)]

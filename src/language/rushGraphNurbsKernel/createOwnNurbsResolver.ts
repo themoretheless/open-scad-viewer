@@ -484,6 +484,27 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'extract_input_range_curves':
+          case 'extract_input_range_curve_pairs': {
+            const {id: _id, op, input, piece, ...args} = n
+            const surface = needSurface(input)
+            const usePcurve = 'use_pcurve' in args && args.use_pcurve
+            if (usePcurve && piece === undefined) throw new Error('Selecting a face-local curve requires a piece index.')
+            const report = callGeometryRust<{result: {curve: NurbsCurve; pcurve?: NurbsCurve}[] | null; refusal: string | null}>(op, {surface, ...args})
+            constructionReports[key] = {measurement: {operation: op, report}}
+            if (piece === undefined) {
+              result = {kind: 'surface', data: surface}
+            } else {
+              const selected = report.result?.[piece]
+              const curve = usePcurve ? selected?.pcurve : selected?.curve
+              if (!curve) throw new Error(report.refusal ?? 'Trim curve piece index is outside the extracted range.')
+              result = {kind: 'curve', data: curve}
+            }
+            break
+          }
+          case 'locate_input_parameter':
+          case 'locate_edge_parameter':
+          case 'locate_input_range':
           case 'evaluate_input_point':
           case 'evaluate_input_tangents':
           case 'classify_input_tangent_join':
@@ -505,6 +526,21 @@ export function createOwnNurbsResolver(
             const report=callGeometryRust<object>(op,{surface,...parameters})
             constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'surface',data:surface}
+            break
+          }
+          case 'surface_trim_sheet_display':
+          case 'surface_trim_sheet_step': {
+            const {id: _id, input, op, ...args} = n
+            const delivery = callGeometryRust<{model: NurbsBrep | null; step: string | null; mesh: ReturnType<typeof tessellateNurbsBrep> | null; refusal: string | null; workUsed: number}>(op, {surface:needSurface(input), ...args})
+            if (!delivery.model) throw new Error('Periodic sheet delivery refused: ' + delivery.refusal)
+            constructionReports[key] = {measurement: {operation:op, report:{workUsed:delivery.workUsed, refusal:delivery.refusal}}}
+            if (n.op === 'surface_trim_sheet_step') {
+              if (!delivery.step) throw new Error('Missing periodic sheet STEP output')
+              result = {kind:'brep', data:delivery.model, stepText:delivery.step}
+            } else {
+              if (!delivery.mesh) throw new Error('Missing periodic sheet display mesh')
+              result = {kind:'brep', data:delivery.model, displayMesh:{segments:n.segments,mesh:normalizePolygonMesh(delivery.mesh)}}
+            }
             break
           }
           case 'surface_trim_sheet':
@@ -1803,7 +1839,7 @@ export function createOwnNurbsResolver(
           case 'brep_tessellate': {
             const input = get(n.input)
             if (input.kind !== 'brep') throw new Error('Expected a B-rep model')
-            result = { kind: 'mesh', data: tessellateNurbsBrep(input.data, n.segments) }
+            result = { kind: 'mesh', data: input.displayMesh?.segments === n.segments ? input.displayMesh.mesh : tessellateNurbsBrep(input.data, n.segments) }
             break
           }
           case 'surface_extrude':

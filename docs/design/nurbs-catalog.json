@@ -14458,7 +14458,7 @@
     {
       "id": "NURBS-0559",
       "name": "Тесселяция открытых NURBS-граней с обрезкой через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::tessellate_exact_periodic_trim_sheet",
@@ -14467,7 +14467,10 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_display_contracts.rs",
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "docs/qualification/nurbs-curvature-field-559-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-559-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-559-2026-11-17/native.log.gz",
+        "examples/rush/periodic-sheet-display.r",
+        "examples/rush/periodic-sheet-step.r",
+        "tests/rushPeriodicSheetDelivery.test.ts"
       ],
       "remainingQualification": [
         "Connect exact periodic trim sheet authoring to the native B-rep display tessellator.",
@@ -14478,7 +14481,7 @@
     {
       "id": "NURBS-0560",
       "name": "Экспорт в STEP открытых NURBS-граней с обрезкой через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "cad_step::periodic_trim_step::export_exact_periodic_trim_sheet_step",
@@ -14487,7 +14490,10 @@
         "crates/cad-step/tests/exact_periodic_trim_step_contracts.rs",
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "docs/qualification/nurbs-curvature-field-560-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-560-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-560-2026-11-17/native.log.gz",
+        "examples/rush/periodic-sheet-display.r",
+        "examples/rush/periodic-sheet-step.r",
+        "tests/rushPeriodicSheetDelivery.test.ts"
       ],
       "remainingQualification": [
         "Deliver exact periodic trim sheets through the AP242 open-shell export and round-trip topology and curves.",
@@ -14672,7 +14678,7 @@
     {
       "id": "NURBS-0569",
       "name": "Точный обратный поиск параметра исходного контура на рёбрах B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::InputBoundPeriodicTrimSheet::locate_input_parameter",
@@ -14680,7 +14686,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-569-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-569-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-569-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-edge-queries.r",
+        "tests/rushTrimBindingQueries.test.ts"
       ],
       "remainingQualification": [
         "Map an exact source coordinate to every incident persistent edge and its exact parameter.",
@@ -14691,7 +14699,7 @@
     {
       "id": "NURBS-0570",
       "name": "Восстановление параметра исходного контура по идентификатору и параметру ребра B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::InputBoundPeriodicTrimSheet::locate_edge_parameter",
@@ -14699,7 +14707,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-570-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-570-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-570-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-edge-queries.r",
+        "tests/rushTrimBindingQueries.test.ts"
       ],
       "remainingQualification": [
         "Recover exact original contour parameters from persistent B-rep edge picks.",
@@ -14710,7 +14720,7 @@
     {
       "id": "NURBS-0571",
       "name": "Точное разбиение диапазона исходного сегмента по рёбрам периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::InputBoundPeriodicTrimSheet::locate_input_range",
@@ -14718,7 +14728,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-571-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-571-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-571-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-edge-queries.r",
+        "tests/rushTrimBindingQueries.test.ts"
       ],
       "remainingQualification": [
         "Clip a directed original interval into exact persistent edge parameter ranges.",
@@ -14729,7 +14741,7 @@
     {
       "id": "NURBS-0572",
       "name": "Точное извлечение NURBS-кривых по диапазону сегмента периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::InputBoundPeriodicTrimSheet::extract_input_range_curves",
@@ -14737,7 +14749,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-572-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-572-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-572-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-edge-queries.r",
+        "tests/rushTrimBindingQueries.test.ts"
       ],
       "remainingQualification": [
         "Extract restricted world curves across a periodic seam with original traversal metadata.",
@@ -14748,7 +14762,7 @@
     {
       "id": "NURBS-0573",
       "name": "Извлечение точных пар пространственных и UV-кривых периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::InputBoundPeriodicTrimSheet::extract_input_range_curve_pairs",
@@ -14756,7 +14770,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-573-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-573-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-573-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-edge-queries.r",
+        "tests/rushTrimBindingQueries.test.ts"
       ],
       "remainingQualification": [
         "Extract a matched 3D and face-local curve per source segment range piece under a shared budget.",

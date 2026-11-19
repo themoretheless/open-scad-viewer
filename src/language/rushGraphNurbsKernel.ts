@@ -21,7 +21,7 @@ export type Value =
   | { kind: 'patches'; data: NurbsSurfaceSet }
   | { kind: 'subdivision'; data: SubdivisionCage }
   | { kind: 'sdf'; data: SdfField }
-  | { kind: 'brep'; data: NurbsBrep }
+  | { kind: 'brep'; data: NurbsBrep; stepText?: string; displayMesh?: {segments: number; mesh: Mesh} }
   | {
       kind: 'curve'
       data: NurbsCurve
