@@ -1,3 +1,4 @@
+import { approximateCurveEdit, approximateSurfaceEdit } from './approximateEdits'
 import { callGeometryRust } from '../../kernel/geometry/kernel'
 import { prepareExactFullRoundDisplay } from '../../kernel/geometry/brepExactDisplay'
 import { buildProgressiveSweepNode } from './buildProgressiveSweepNode'
@@ -63,6 +64,9 @@ import {
   insertNurbsSurfaceKnot,
   isoNurbsCurve,
   reverseNurbsSurface,
+  splitNurbsSurface,
+  transposeNurbsSurface,
+  decomposeNurbsSurface,
   transformNurbsSurface,
   transformNurbsSurfacePatches,
   trimNurbsSurface,
@@ -240,6 +244,28 @@ export function createOwnNurbsResolver(
             }
             validateNurbsSurface(s)
             result = { kind: 'surface', data: s }
+            break
+          }
+          case 'curve_remove_knot':
+          case 'curve_reduce_degree':
+          case 'curve_rebuild':
+            result = { kind: 'curve', data: approximateCurveEdit(needCurve(n.input), n) }
+            break
+          case 'surface_remove_knot':
+          case 'surface_reduce_degree':
+          case 'surface_rebuild':
+            result = { kind: 'surface', data: approximateSurfaceEdit(needSurface(n.input), n) }
+            break
+          case 'surface_split':
+            result = { kind: 'surface', data: splitNurbsSurface(needSurface(n.input), n.direction, n.parameter)[n.part] }
+            break
+          case 'surface_transpose':
+            result = { kind: 'surface', data: transposeNurbsSurface(needSurface(n.input)) }
+            break
+          case 'surface_bezier_patch': {
+            const patch = decomposeNurbsSurface(needSurface(n.input))[n.index]
+            if (!patch) throw new Error('Bezier patch index outside surface')
+            result = { kind: 'surface', data: patch }
             break
           }
           case 'curve_split':

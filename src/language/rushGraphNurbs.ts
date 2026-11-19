@@ -1477,6 +1477,15 @@ export const rushGraphNurbsSchema = z
               periodic_v: z.boolean().default(false),
             })
             .strict(),
+          z.object({ id, op: z.literal('curve_remove_knot'), input: id, parameter: scalar, max_deviation: scalar }).strict(),
+          z.object({ id, op: z.literal('curve_reduce_degree'), input: id, degree, max_deviation: scalar }).strict(),
+          z.object({ id, op: z.literal('curve_rebuild'), input: id, degree, control_count: z.number().int().positive(), max_deviation: scalar }).strict(),
+          z.object({ id, op: z.literal('surface_remove_knot'), input: id, direction: z.enum(['u', 'v']), parameter: scalar, max_deviation: scalar }).strict(),
+          z.object({ id, op: z.literal('surface_reduce_degree'), input: id, direction: z.enum(['u', 'v']), degree, max_deviation: scalar }).strict(),
+          z.object({ id, op: z.literal('surface_rebuild'), input: id, direction: z.enum(['u', 'v']), degree, control_count: z.number().int().positive(), max_deviation: scalar }).strict(),
+          z.object({ id, op: z.literal('surface_split'), input: id, direction: z.enum(['u', 'v']), parameter: scalar, part: z.literal([0, 1]) }).strict(),
+          z.object({ id, op: z.literal('surface_bezier_patch'), input: id, index: z.number().int().nonnegative() }).strict(),
+          z.object({ id, op: z.literal('surface_transpose'), input: id }).strict(),
           z.object({ id, op: z.literal('curve_split'), input: id, parameter: scalar, part: z.literal([0, 1]) }).strict(),
           z.object({ id, op: z.literal('curve_bezier_span'), input: id, index: z.number().int().nonnegative() }).strict(),
           z

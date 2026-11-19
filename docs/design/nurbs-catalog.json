@@ -4433,7 +4433,7 @@
     {
       "id": "NURBS-0132",
       "name": "удаление узла кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4444,13 +4444,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/knot_removal.rs",
-        "docs/design/nurbs-knot-removal.md"
+        "docs/design/nurbs-knot-removal.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0133",
       "name": "понижение степени кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4463,13 +4465,15 @@
         "crates/nurbs-core/tests/degree_reduction.rs",
         "docs/design/nurbs-degree-reduction.md",
         "crates/nurbs-geometry/src/curve_identity.rs",
-        "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json"
+        "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0134",
       "name": "rebuild кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4479,7 +4483,9 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/curve_rebuild.rs",
-        "docs/design/nurbs-curve-rebuild.md"
+        "docs/design/nurbs-curve-rebuild.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
@@ -4585,7 +4591,7 @@
     {
       "id": "NURBS-0140",
       "name": "разбиение поверхности по изолинии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4597,7 +4603,9 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "tests/rushSurfacePatchEdits.test.ts",
+        "examples/rush/split-bezier-panel.r"
       ]
     },
     {
@@ -4625,7 +4633,7 @@
     {
       "id": "NURBS-0142",
       "name": "перестановка U и V поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4638,7 +4646,9 @@
         "crates/nurbs-geometry/src/surface_transpose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "tests/rushSurfacePatchEdits.test.ts",
+        "examples/rush/split-bezier-panel.r"
       ]
     },
     {
@@ -4667,7 +4677,7 @@
     {
       "id": "NURBS-0144",
       "name": "разложение поверхности на рациональные патчи Безье",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4680,13 +4690,15 @@
         "crates/nurbs-geometry/src/surface_decompose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "tests/rushSurfacePatchEdits.test.ts",
+        "examples/rush/split-bezier-panel.r"
       ]
     },
     {
       "id": "NURBS-0145",
       "name": "удаление узлов поверхности с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4697,13 +4709,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/surface_simplification.rs",
-        "docs/design/nurbs-surface-simplification.md"
+        "docs/design/nurbs-surface-simplification.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0146",
       "name": "понижение степени поверхности с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4714,13 +4728,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/surface_simplification.rs",
-        "docs/design/nurbs-surface-simplification.md"
+        "docs/design/nurbs-surface-simplification.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0147",
       "name": "rebuild поверхности с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4730,7 +4746,9 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/surface_rebuild.rs",
-        "docs/design/nurbs-surface-rebuild.md"
+        "docs/design/nurbs-surface-rebuild.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {

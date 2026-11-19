@@ -69,6 +69,15 @@ export function insertNurbsSurfaceKnot(
 export function elevateNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis, targetDegree: number): NurbsSurface {
   return callNurbsRust('surface_elevate', { surface, axis, degree: targetDegree })
 }
+export function splitNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis, u: number): [NurbsSurface, NurbsSurface] {
+  return callNurbsRust('surface_split', { surface, axis, u })
+}
+export function transposeNurbsSurface(surface: NurbsSurface): NurbsSurface {
+  return callNurbsRust('surface_transpose', { surface })
+}
+export function decomposeNurbsSurface(surface: NurbsSurface): NurbsSurface[] {
+  return callNurbsRust('surface_decompose', { surface })
+}
 export function reverseNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis): NurbsSurface {
   return callNurbsRust('surface_reverse', { surface, axis })
 }

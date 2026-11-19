@@ -64,6 +64,13 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
             encode(s.edit_axis(field(&v, "axis")?, |c| c.elevate(field(&v, "degree")?))?)
         }
         "surface_reverse" => encode(s.edit_axis(field(&v, "axis")?, |c| c.reverse())?),
+        "surface_split" => encode(crate::surface_edit::split(
+            &s,
+            field(&v, "axis")?,
+            field(&v, "u")?,
+        )?),
+        "surface_transpose" => encode(crate::surface_edit::transpose(&s)?),
+        "surface_decompose" => encode(crate::surface_edit::decompose(&s)?),
         "surface_trim" => encode(s.trim(field(&v, "bounds")?)?),
         "surface_iso" => encode(s.iso(field(&v, "axis")?, field(&v, "u")?)?),
         "surface_bounds" => encode(s.bounds()?),
