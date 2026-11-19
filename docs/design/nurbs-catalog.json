@@ -2605,7 +2605,7 @@
     {
       "id": "NURBS-0067",
       "name": "closed sweep",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::analytic::progressive_profile_body_with_rmf_policy",
       "evidence": [
         "crates/brep-core/src/parts/analytic/rational_loft.rs",
@@ -2613,7 +2613,12 @@
         "crates/cad-step/tests/rational_section_loft.rs",
         "docs/design/nurbs-closed-sweep-native.md",
         "crates/nurbs-core/src/sweeps/framed_sweep.rs",
-        "docs/qualification/nurbs-closed-sweep-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-closed-sweep-2026-10-15/native-tests.json",
+        "crates/geometry-bridge/src/dispatch/nurbs/lofts_and_sweeps.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/profileSolidRush.test.ts",
+        "examples/rush/closed-profile-planar-10.r",
+        "examples/rush/closed-profile-spatial-6.r"
       ],
       "remainingQualification": [
         "G1/G2 seam, global embedding and solid certification",
