@@ -375,6 +375,22 @@ export function createOwnNurbsResolver(
               result = { kind: 'surface', data }
               break
             }
+          case 'curve_axis_motion_limits':
+          case 'curve_axis_motion_slowdown':
+          case 'curve_axis_motion_multi_slowdown':
+          case 'curve_axis_motion_duration':
+          case 'curve_axis_motion_deadline': {
+            const curve = needCurve(n.input)
+            const mode = n.op.slice('curve_axis_motion_'.length)
+            const report = callGeometryRust<object>('nurbs_curve_axis_motion', {
+              curve, mode: mode === 'multi_slowdown' ? 'multiSlowdown' : mode,
+              parameterInterval: n.interval, directions: n.directions, limits: n.limits, tolerances: n.tolerances,
+              maxCells: n.max_cells, ...('deadline' in n ? { deadline:n.deadline } : {}),
+            })
+            constructionReports[key] = { measurement: { operation: n.op, report } }
+            result = { kind:'curve', data:curve }
+            break
+          }
           case 'curve_axial_derivative_peak': {
             const curve = needCurve(n.input)
             const report = callGeometryRust<object>('nurbs_measure_curve_axial_derivative_peak', {

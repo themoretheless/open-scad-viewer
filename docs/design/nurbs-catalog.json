@@ -16956,7 +16956,7 @@
     {
       "id": "NURBS-0686",
       "name": "Сертифицированная проверка осевых ограничений движения NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_motion_limits",
@@ -16964,7 +16964,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-686-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-686-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-686-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Compare peak absolute speed, acceleration and jerk with inclusive limits in the original parameter clock.",
@@ -16975,7 +16977,7 @@
     {
       "id": "NURBS-0687",
       "name": "Сертифицированный коэффициент замедления NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_motion_slowdown_bounds",
@@ -16983,7 +16985,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-687-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-687-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-687-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Enclose minimum uniform parameter dilation under speed, acceleration and jerk limits.",
@@ -16994,7 +16998,7 @@
     {
       "id": "NURBS-0688",
       "name": "Сертифицированное замедление NURBS-траектории для нескольких осей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_slowdown_bounds",
@@ -17002,7 +17006,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-688-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-688-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-688-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Enclose the common slowdown for all axes under one span coverage and refinement budget.",
@@ -17013,7 +17019,7 @@
     {
       "id": "NURBS-0689",
       "name": "Сертифицированная длительность прохода NURBS-траектории по нескольким осям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_duration_bounds",
@@ -17021,7 +17027,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-689-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-689-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-689-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Enclose the minimum uniform-clock traversal time under simultaneous axis limits.",
@@ -17032,7 +17040,7 @@
     {
       "id": "NURBS-0690",
       "name": "Сертифицированная проверка срока прохода NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_multi_axis_motion_deadline",
@@ -17040,7 +17048,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-690-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-690-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-690-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Classify uniform-clock traversal at an inclusive deadline for all motion axes.",

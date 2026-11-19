@@ -42,7 +42,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
 ];
 
 const MODIFIER_OPS: &[&str] = &[
-    "curve_axial_derivative_peak", "curve_measure_directional_travel", "curve_measure_directional_travel_batch",
+    "curve_axis_motion_limits", "curve_axis_motion_slowdown", "curve_axis_motion_multi_slowdown", "curve_axis_motion_duration", "curve_axis_motion_deadline", "curve_axial_derivative_peak", "curve_measure_directional_travel", "curve_measure_directional_travel_batch",
     "polygon_extrude",
     "polygon_sweep",
     "mesh_to_nurbs_brep",

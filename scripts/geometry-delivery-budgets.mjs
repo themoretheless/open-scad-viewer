@@ -206,6 +206,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/glh_OBZk.js':102_500}),
   }),
+  // Axial motion limits, duration and slowdown: 18,894,516 raw bytes, 6,747,112 packed bytes and 12,867,338 asset bytes.
+  '6e5130767022c223c9e5612d878b51315f6a0d899c72cb718d13e50c483e053c':Object.freeze({
+    version:32,geometryChunkBytes:6_760_000,totalAssetBytes:12_870_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/Xy2E_Dxs.js':103_000}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

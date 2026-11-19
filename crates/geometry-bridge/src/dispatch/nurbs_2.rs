@@ -2,6 +2,7 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "nurbs_curve_axis_motion",
     "nurbs_measure_curve_axial_derivative_peak",
     "nurbs_measure_curve_directional_travel",
     "nurbs_measure_curve_directional_travel_batch",
@@ -34,6 +35,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "nurbs_curve_axis_motion" => curve_axis_motion(&v),
         "nurbs_measure_curve_axial_derivative_peak" => axial_derivative_peak(&v),
         "nurbs_measure_curve_directional_travel" => curve_directional_travel_request(&v),
         "nurbs_measure_curve_directional_travel_batch" => {
@@ -331,4 +333,99 @@ fn axial_derivative_peak(request: &Value) -> Result<Value> {
         json!({"order":order,"parameterInterval":interval,"peakBounds":bounds,"cells":cells,
         "stopReason":stop_reason_label(stop),"parameterIntervals":locations}),
     )
+}
+
+fn curve_axis_motion(request: &Value) -> Result<Value> {
+    use nurbs_core::analysis::curve_measure::*;
+    let curve = field(request, "curve")?;
+    let window = field(request, "parameterInterval")?;
+    let tolerances = field(request, "tolerances")?;
+    let cells = field(request, "maxCells")?;
+    let directions: Vec<Vec<f64>> = field(request, "directions")?;
+    let limits: Vec<[f64; 3]> = field(request, "limits")?;
+    if directions.is_empty() || directions.len() != limits.len() || directions.len() > 64 {
+        return Err(input(
+            "Each direction needs a matching limit triple (1 to 64 axes)",
+        ));
+    }
+    let axes: Vec<_> = directions
+        .iter()
+        .zip(limits)
+        .map(|(direction, [speed, acceleration, jerk])| MotionAxis {
+            direction,
+            limits: DirectionalMotionLimits {
+                speed,
+                acceleration,
+                jerk,
+            },
+        })
+        .collect();
+    let status = |value| match value {
+        DirectionalMotionStatus::Within => "within",
+        DirectionalMotionStatus::Exceeds => "exceeds",
+        DirectionalMotionStatus::Undetermined => "undetermined",
+    };
+    // JSON numbers cannot represent the absence of a certified finite dilation.
+    let bound = |value: f64| {
+        if value == f64::INFINITY {
+            json!("unbounded")
+        } else {
+            json!(value)
+        }
+    };
+    match request.get("mode").and_then(Value::as_str) {
+        Some("limits") if axes.len() == 1 => {
+            let p = check_directional_motion_limits(
+                &curve,
+                window,
+                axes[0].direction,
+                axes[0].limits,
+                tolerances,
+                cells,
+            )?;
+            Ok(
+                json!({"status": status(p.status), "speedBounds":p.speed.bounds, "accelerationBounds":p.acceleration.bounds,
+                      "jerkBounds":p.jerk.bounds,"cells":[p.speed.cells,p.acceleration.cells,p.jerk.cells],
+                      "stopReasons":[stop_reason_label(p.speed.stop_reason),stop_reason_label(p.acceleration.stop_reason),stop_reason_label(p.jerk.stop_reason)]}),
+            )
+        }
+        Some("slowdown") if axes.len() == 1 => {
+            let bounds = directional_motion_slowdown_bounds(
+                &curve,
+                window,
+                axes[0].direction,
+                axes[0].limits,
+                tolerances,
+                cells,
+            )?;
+            Ok(json!({"slowdownBounds":bounds.map(bound)}))
+        }
+        Some("multiSlowdown") => {
+            let p = multi_axis_motion_slowdown_bounds(&curve, window, &axes, tolerances, cells)?;
+            Ok(
+                json!({"slowdownBounds":p.bounds.map(bound),"axisBounds":p.axis_bounds.into_iter().map(|b| b.map(bound)).collect::<Vec<_>>(),"cells":p.cells}),
+            )
+        }
+        Some("duration") => {
+            let p = multi_axis_motion_duration_bounds(&curve, window, &axes, tolerances, cells)?;
+            Ok(
+                json!({"durationBounds":p.duration_bounds.map(bound),"slowdownBounds":p.slowdown.bounds.map(bound),
+                      "axisBounds":p.slowdown.axis_bounds.into_iter().map(|b| b.map(bound)).collect::<Vec<_>>(),"cells":p.slowdown.cells}),
+            )
+        }
+        Some("deadline") => {
+            let p = check_multi_axis_motion_deadline(
+                &curve,
+                window,
+                &axes,
+                field(request, "deadline")?,
+                tolerances,
+                cells,
+            )?;
+            Ok(
+                json!({"status":status(p.status),"axisStatuses":p.axis_statuses.into_iter().map(status).collect::<Vec<_>>(),"cells":p.cells}),
+            )
+        }
+        _ => Err(input("Invalid motion measurement mode or axis count")),
+    }
 }
