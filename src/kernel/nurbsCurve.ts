@@ -469,3 +469,11 @@ export function subdivideNurbsCurvePolylineAdaptive(
   recurse(uMin, pStart, uMax, pEnd, 0)
   return out
 }
+
+export function editNurbsCurveWeights(curve: NurbsCurve, edits: [number, number][]): NurbsCurve {
+  return callNurbsRust('curve_edit_weights', { curve, edits: edits.map(([index, weight]) => ({ index, weight })) })
+}
+
+export function relocateNurbsCurveSeam(curve: NurbsCurve, parameter: number, tolerance: number, maxCells: number): NurbsCurve {
+  return callNurbsRust('curve_relocate_seam', { curve, parameter, tolerance, maxCells })
+}

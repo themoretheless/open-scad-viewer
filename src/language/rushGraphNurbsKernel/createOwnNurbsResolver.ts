@@ -54,6 +54,8 @@ import {
   elevateNurbsCurve,
   evaluateNurbsCurvePoints,
   insertNurbsKnot,
+  editNurbsCurveWeights,
+  relocateNurbsCurveSeam,
   reverseNurbsCurve,
   transformNurbsCurve,
   trimNurbsCurve,
@@ -64,6 +66,8 @@ import {
   elevateNurbsSurface,
   insertNurbsSurfaceKnot,
   isoNurbsCurve,
+  editNurbsSurfaceWeights,
+  relocateNurbsSurfaceSeam,
   reverseNurbsSurface,
   splitNurbsSurface,
   transposeNurbsSurface,
@@ -269,6 +273,18 @@ export function createOwnNurbsResolver(
             result = { kind: 'surface', data: patch }
             break
           }
+          case 'curve_edit_weights':
+            result = { kind: 'curve', data: editNurbsCurveWeights(needCurve(n.input), n.edits) }
+            break
+          case 'curve_relocate_seam':
+            result = { kind: 'curve', data: relocateNurbsCurveSeam(needCurve(n.input), n.parameter, n.max_deviation, n.max_cells) }
+            break
+          case 'surface_edit_weights':
+            result = { kind: 'surface', data: editNurbsSurfaceWeights(needSurface(n.input), n.edits) }
+            break
+          case 'surface_relocate_seam':
+            result = { kind: 'surface', data: relocateNurbsSurfaceSeam(needSurface(n.input), n.direction, n.parameter, n.max_deviation, n.max_cells) }
+            break
           case 'curve_reparameterize':
             result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }
             break

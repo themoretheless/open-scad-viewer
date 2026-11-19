@@ -5,6 +5,18 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
     if op.starts_with("curve_") || op == "extrude" || op == "revolve" {
         let c: curve::Curve = field(&v, "curve")?;
         return match op {
+            "curve_edit_weights" => {
+                let entries = v["edits"].as_array().ok_or_else(|| input("Expected weight edits"))?;
+                check((1..=256).contains(&entries.len()), "Invalid number of weight edits")?;
+                let edits = entries.iter().map(|entry| Ok((field(entry, "index")?, field(entry, "weight")?))).collect::<Result<Vec<_>>>()?;
+                encode(crate::weight_edit::curve(&c, &edits)?)
+            }
+            "curve_relocate_seam" => {
+                let report = crate::periodic_seam::curve_report(
+                    &c, field(&v, "parameter")?, field(&v, "tolerance")?, field(&v, "maxCells")?,
+                )?;
+                encode(report.curve.ok_or_else(|| input(format!("Periodic seam verification refused: {:?}", report.verification.reason)))?)
+            }
             "curve_validate" => {
                 c.validate()?;
                 Ok(Value::Null)
@@ -52,6 +64,18 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
 
     let s: surface::Surface = field(&v, "surface")?;
     match op {
+        "surface_edit_weights" => {
+            let entries = v["edits"].as_array().ok_or_else(|| input("Expected weight edits"))?;
+            check((1..=1024).contains(&entries.len()), "Invalid number of weight edits")?;
+            let edits = entries.iter().map(|entry| Ok((field(entry, "u")?, field(entry, "v")?, field(entry, "weight")?))).collect::<Result<Vec<_>>>()?;
+            encode(crate::weight_edit::surface(&s, &edits)?)
+        }
+        "surface_relocate_seam" => {
+            let report = crate::periodic_seam::surface_report(
+                &s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "tolerance")?, field(&v, "maxCells")?,
+            )?;
+            encode(report.surface.ok_or_else(|| input(format!("Periodic seam verification refused: {:?}", report.verification.reason)))?)
+        }
         "surface_validate" => {
             s.validate()?;
             Ok(Value::Null)

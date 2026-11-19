@@ -4491,7 +4491,7 @@
     {
       "id": "NURBS-0135",
       "name": "перенос шва периодической кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4505,7 +4505,9 @@
         "crates/nurbs-core/tests/periodic_seam.rs",
         "docs/design/nurbs-periodic-seam.md",
         "crates/nurbs-core/tests/periodic_seam_candidates.rs",
-        "docs/design/nurbs-periodic-seam-verification.md"
+        "docs/design/nurbs-periodic-seam-verification.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ],
       "nativeApi": "nurbs_core::periodic_seam::curve_report"
     },
@@ -4531,7 +4533,7 @@
     {
       "id": "NURBS-0137",
       "name": "локальное изменение весов кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4541,7 +4543,9 @@
       "evidence": [
         "crates/nurbs-core/src/editing/weight_edit.rs",
         "crates/nurbs-core/tests/weight_edit.rs",
-        "docs/design/nurbs-weight-edit.md"
+        "docs/design/nurbs-weight-edit.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ]
     },
     {
@@ -4756,7 +4760,7 @@
     {
       "id": "NURBS-0148",
       "name": "перенос шва периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4771,14 +4775,16 @@
         "docs/design/nurbs-periodic-seam.md",
         "crates/nurbs-core/tests/periodic_seam_candidates.rs",
         "crates/nurbs-core/tests/periodic_surface_verification.rs",
-        "docs/design/nurbs-periodic-surface-verification.md"
+        "docs/design/nurbs-periodic-surface-verification.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ],
       "nativeApi": "nurbs_core::periodic_seam::surface_report"
     },
     {
       "id": "NURBS-0149",
       "name": "локальное изменение весов поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4788,7 +4794,9 @@
       "evidence": [
         "crates/nurbs-core/src/editing/weight_edit.rs",
         "crates/nurbs-core/tests/weight_edit.rs",
-        "docs/design/nurbs-weight-edit.md"
+        "docs/design/nurbs-weight-edit.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ]
     },
     {

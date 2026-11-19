@@ -158,6 +158,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // Verified periodic seam relocation and editable weights: 18,760,944 raw bytes, retaining the v25 limits.
+  '18d8435331735d1613dccfaabbb4932e023b8667778a5ea056861c4bcd48ec37':Object.freeze({
+    version:26,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

@@ -463,3 +463,11 @@ export function extractNurbsSurfaceIsocurvePoints(
     evaluator.dispose()
   }
 }
+
+export function editNurbsSurfaceWeights(surface: NurbsSurface, edits: [number, number, number][]): NurbsSurface {
+  return callNurbsRust('surface_edit_weights', { surface, edits: edits.map(([u, v, weight]) => ({ u, v, weight })) })
+}
+
+export function relocateNurbsSurfaceSeam(surface: NurbsSurface, axis: NurbsSurfaceAxis, parameter: number, tolerance: number, maxCells: number): NurbsSurface {
+  return callNurbsRust('surface_relocate_seam', { surface, axis, parameter, tolerance, maxCells })
+}
