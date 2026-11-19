@@ -14436,7 +14436,7 @@
     {
       "id": "NURBS-0558",
       "name": "Открытые B-rep-грани с точной обрезкой через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet",
@@ -14445,7 +14445,9 @@
         "crates/brep-core/tests/exact_periodic_trim_sheet_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-558-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-558-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-558-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Author open B-rep topology with exact periodic trim edge pairs and retained holes.",
@@ -14496,7 +14498,7 @@
     {
       "id": "NURBS-0561",
       "name": "Построение точных открытых периодически обрезанных граней через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_sheet_request",
@@ -14506,7 +14508,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-561-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-561-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-561-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Expose exact seam-spanning open sheet authoring through the Rust geometry bridge.",
@@ -14517,7 +14521,7 @@
     {
       "id": "NURBS-0562",
       "name": "Привязка исходных контуров периодической обрезки к идентификаторам граней и петель B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet_with_bindings",
@@ -14525,7 +14529,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-562-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-562-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-562-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Retain original contour identities across trim chart extraction, hole nesting, and edge subdivision.",
@@ -14536,7 +14542,7 @@
     {
       "id": "NURBS-0563",
       "name": "Параметрическая привязка рёбер периодической обрезки к сегментам исходного контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimPatchEdges::edge_sources",
@@ -14544,7 +14550,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-563-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-563-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-563-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Locate every generated edge on the source contour, oriented segment, and local interval.",
@@ -14555,7 +14563,7 @@
     {
       "id": "NURBS-0564",
       "name": "Привязка сегментов периодической обрезки к постоянным идентификаторам рёбер B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet_with_edge_bindings",
@@ -14563,7 +14571,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-564-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-564-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-564-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Resolve exact seam-split source intervals to persistent B-rep edge identities.",
@@ -14574,7 +14584,7 @@
     {
       "id": "NURBS-0565",
       "name": "Построение периодически обрезанных граней с привязками рёбер через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_sheet_bindings_request",
@@ -14584,7 +14594,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-565-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-565-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-565-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Return persistent edge IDs and exact source intervals through the shared geometry bridge.",
@@ -14595,7 +14607,7 @@
     {
       "id": "NURBS-0566",
       "name": "Восстановление исходной нумерации и направления сегментов периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges",
@@ -14603,7 +14615,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-566-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-566-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-566-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Recover directed rational source parameters before orientation normalization of outer and hole contours.",
@@ -14614,7 +14628,7 @@
     {
       "id": "NURBS-0567",
       "name": "Привязка исходного направления сегментов периодической обрезки к рёбрам B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet_with_input_bindings",
@@ -14622,7 +14636,9 @@
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
         "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
         "docs/qualification/nurbs-curvature-field-567-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-567-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-567-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Associate directed exact original contour parameters with persistent B-rep edge IDs.",
@@ -14633,7 +14649,7 @@
     {
       "id": "NURBS-0568",
       "name": "Точные направленные параметры исходных сегментов периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_sheet_input_bindings_request",
@@ -14643,7 +14659,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-568-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-568-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-568-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-sheet.r",
+        "tests/rushPeriodicTrimSheet.test.ts"
       ],
       "remainingQualification": [
         "Serialize exact directed source parameters with persistent edge IDs in the geometry bridge.",
