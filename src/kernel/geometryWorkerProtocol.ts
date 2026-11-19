@@ -118,6 +118,7 @@ export interface GeometryBuildSuccess extends GeometryJobEnvelope {
   phase: 'complete'
   execution: GeometryExecutionDescriptor
   meshes: MeshData[]
+  measurements?: import('../core/build').GeometryMeasurement[]
   warnings: string[]
   volume: number
   surfaceArea: number

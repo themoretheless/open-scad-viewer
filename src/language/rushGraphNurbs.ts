@@ -1527,6 +1527,8 @@ export const rushGraphNurbsSchema = z
           z.object({ id, op: z.literal('simplify_exact_doubly_periodic_surface'), input: id, max_work: z.number().int().min(1).max(1000000) }).strict(),
           z.object({ id, op: z.literal('reduce_exact_periodic_surface_period'), input: id, direction: z.enum(['u', 'v']), max_work: z.number().int().min(1).max(1000000) }).strict(),
           z.object({ id, op: z.literal('repeat_exact_periodic_surface_period'), input: id, direction: z.enum(['u', 'v']), turns: z.number().int().positive(), max_work: z.number().int().min(1).max(1000000) }).strict(),
+          z.object({ id, op: z.literal('curve_measure_directional_travel'), input: id, axis_vector: z.array(scalar).min(2).max(3), interval, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), reverse_limit: scalar.optional() }).strict(),
+          z.object({ id, op: z.literal('curve_measure_directional_travel_batch'), input: id, axis_vector: z.array(scalar).min(2).max(3), intervals: z.array(interval).min(1).max(256), tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), reverse_limit: scalar.optional() }).strict(),
           z.object({ id, op: z.literal('curve_reparameterize'), input: id, domain: interval }).strict(),
           z.object({ id, op: z.literal('curve_split'), input: id, parameter: scalar, part: z.literal([0, 1]) }).strict(),
           z.object({ id, op: z.literal('curve_bezier_span'), input: id, index: z.number().int().nonnegative() }).strict(),

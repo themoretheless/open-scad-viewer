@@ -71,6 +71,7 @@ export interface UseBuildAndRendererLifecycleOptions {
   gridStep: Ref<number>
   error: Ref<string>
   editorDiagnostic: Ref<EditorDiagnostic | null>
+  measurements?: Ref<import('../core/build').GeometryMeasurement[]>
   warnings: Ref<string[]>
   meshCount: Ref<number>
   triangleCount: Ref<number>
@@ -424,6 +425,7 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
     options.error.value = ''
     options.editorDiagnostic.value = null
     options.warnings.value = []
+    if (options.measurements) options.measurements.value = []
   }
 
   function handleBuildState(state: BuildCoordinatorState) {

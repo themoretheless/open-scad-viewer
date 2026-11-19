@@ -375,6 +375,22 @@ export function createOwnNurbsResolver(
               result = { kind: 'surface', data }
               break
             }
+          case 'curve_measure_directional_travel':
+          case 'curve_measure_directional_travel_batch': {
+            const curve = needCurve(n.input)
+            const batch = n.op === 'curve_measure_directional_travel_batch'
+            const report = callGeometryRust<object>(
+              batch ? 'nurbs_measure_curve_directional_travel_batch' : 'nurbs_measure_curve_directional_travel',
+              {
+                curve, direction: n.axis_vector, maxCells: n.max_cells, toleranceMm: n.tolerance_mm,
+                ...(batch ? { parameterIntervals: n.intervals } : { parameterInterval: n.interval }),
+                ...(n.reverse_limit === undefined ? {} : { reverseLimitMm: n.reverse_limit }),
+              },
+            )
+            constructionReports[key] = { measurement: { operation: n.op, report } }
+            result = { kind: 'curve', data: curve }
+            break
+          }
           case 'curve_reparameterize':
             result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }
             break

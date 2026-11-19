@@ -330,6 +330,7 @@ export function createRendererOperations(context: RendererOperationsContext) {
       context.options.volume.value = response.volume
       context.options.surfaceArea.value = response.surfaceArea
       context.options.warnings.value = response.warnings
+      if (context.options.measurements) context.options.measurements.value = response.measurements ?? []
       context.options.renderedSource.value = source
       context.options.renderedQuality.value = effectiveQuality
       context.options.syncSourceHighlightFromEditor()

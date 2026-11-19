@@ -42,6 +42,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
 ];
 
 const MODIFIER_OPS: &[&str] = &[
+    "curve_measure_directional_travel", "curve_measure_directional_travel_batch",
     "polygon_extrude",
     "polygon_sweep",
     "mesh_to_nurbs_brep",

@@ -16723,7 +16723,7 @@
     {
       "id": "NURBS-0675",
       "name": "Гарантированное измерение осевого хода на участке NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_interval",
@@ -16731,7 +16731,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-675-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-675-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-675-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Measure absolute and signed axial motion in an original-parameter window, clipping every intersected knot span.",
@@ -16761,7 +16763,7 @@
     {
       "id": "NURBS-0677",
       "name": "Измерение осевого хода NURBS-кривой и проверка обратного движения через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_interval",
@@ -16771,7 +16773,9 @@
         "crates/geometry-bridge/tests/curve_directional_travel_contracts.rs",
         "scripts/check-curve-directional-travel-wasm.mts",
         "docs/qualification/nurbs-curvature-field-677-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-677-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-677-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Expose signed and absolute axial travel on the original parameter interval with optional reverse-limit classification.",
@@ -16782,7 +16786,7 @@
     {
       "id": "NURBS-0678",
       "name": "Пакетное измерение осевого хода NURBS-кривой с общим лимитом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_intervals",
@@ -16790,7 +16794,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-678-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-678-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-678-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Measure ordered and overlapping original-parameter windows under a shared cell limit with reserved initial span coverage.",
@@ -16801,7 +16807,7 @@
     {
       "id": "NURBS-0679",
       "name": "Пакетное измерение осевого хода NURBS-кривой через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_intervals",
@@ -16811,7 +16817,9 @@
         "crates/geometry-bridge/tests/curve_directional_travel_contracts.rs",
         "scripts/check-curve-directional-travel-wasm.mts",
         "docs/qualification/nurbs-curvature-field-679-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-679-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-679-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Expose ordered window reports, a shared axial travel budget and optional reverse-limit checks per window.",
