@@ -29,7 +29,11 @@ export function directionalTravelSummary(operation: string, report: string, russ
   const pair = (value: unknown): value is number[] => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
   if (operation === 'surface_measure_trimmed_mass') {
     if (!pair(parsed?.massBoundsKg)) return [russian ? 'Масса не определена при заданных допусках и бюджете' : 'Mass unresolved under the requested tolerances and budget']
-    return [(russian ? 'Общая масса · ' : 'Total mass · ') + bounds(parsed.massBoundsKg) + (russian ? ' кг' : ' kg')]
+    const status = parsed.twoPlaneBalance?.status ?? parsed.axisBalance?.status
+    const verdict = status === 'within' ? (russian ? 'Балансировка в допуске' : 'Balance within tolerance')
+      : status === 'outside' ? (russian ? 'Дисбаланс превышает допуск' : 'Unbalance exceeds tolerance')
+      : status === 'undetermined' ? (russian ? 'Балансировка неопределённа' : 'Balance undetermined') : ''
+    return [...(verdict ? [verdict] : []), (russian ? 'Общая масса · ' : 'Total mass · ') + bounds(parsed.massBoundsKg) + (russian ? ' кг' : ' kg')]
   }
   if (operation.startsWith('curve_axis_motion_') && parsed) {
     const status = (key: unknown) => key === 'within' ? (russian ? 'В пределах лимита' : 'Within limit')

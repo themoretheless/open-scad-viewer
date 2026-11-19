@@ -413,6 +413,14 @@ export function createOwnNurbsResolver(
               throw new Error('A measurement plane or axis needs both its point and its direction.')
             }
             const report = callGeometryRust<object>('brep_measure_exact_periodic_trim_patch_set_density', {
+              ...(n.balance_tolerance === undefined ? {} : {axisBalanceToleranceMm:n.balance_tolerance}),
+              ...(n.static_unbalance === undefined ? {} : {includeStaticUnbalance:n.static_unbalance}),
+              ...(n.couple_unbalance === undefined ? {} : {includeCoupleUnbalance:n.couple_unbalance}),
+              ...(n.plane_offsets ? {balancePlaneOffsetsMm:n.plane_offsets} : {}),
+              ...(n.plane_tolerances ? {balancePlaneTolerancesKgMm:n.plane_tolerances} : {}),
+              ...(n.weight_radii ? {counterweightRadiiMm:n.weight_radii} : {}),
+              ...(n.weight_mass_limits ? {counterweightMassLimitsKg:n.weight_mass_limits} : {}),
+              ...(n.installed_weights ? {installedCounterweights:n.installed_weights.map(([massBoundsKg,...radialOffsetBoundsMm])=>({massBoundsKg,radialOffsetBoundsMm}))} : {}),
               surface, includeAxisRadiusOfGyration:n.radius_of_gyration ?? false, contours:n.contours, toleranceMm2:n.tolerance_mm2, toleranceUv:n.tolerance_uv, maxWork:n.max_work,
               maxSurfaceCells:n.max_surface_cells,maxTrimCells:n.max_trim_cells,
               componentDensities:n.component_densities.map(([outerContour,lo,hi])=>({outerContour,densityBoundsKgPerMm2:[lo,hi]})),
