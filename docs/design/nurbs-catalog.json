@@ -4297,7 +4297,7 @@
     {
       "id": "NURBS-0128",
       "name": "разбиение кривой по параметру",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4308,7 +4308,11 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "examples/rush/split-nurbs-span.r",
+        "tests/rushTextSplitCurve.test.ts"
       ]
     },
     {
@@ -4358,7 +4362,7 @@
     {
       "id": "NURBS-0131",
       "name": "разложение кривой на рациональные сегменты Безье",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4369,7 +4373,11 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/decompose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "examples/rush/split-nurbs-span.r",
+        "tests/rushTextSplitCurve.test.ts"
       ]
     },
     {

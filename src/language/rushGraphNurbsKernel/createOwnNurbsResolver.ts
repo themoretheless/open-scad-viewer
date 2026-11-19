@@ -46,6 +46,8 @@ import {
 } from '../../kernel/geometry/brep'
 import type { CertifiedMiterBoundaryOwner, NurbsBrep } from '../../kernel/geometry/brep'
 import {
+  decomposeNurbsCurve,
+  splitNurbsCurve,
   elevateNurbsCurve,
   evaluateNurbsCurvePoints,
   insertNurbsKnot,
@@ -237,6 +239,15 @@ export function createOwnNurbsResolver(
             }
             validateNurbsSurface(s)
             result = { kind: 'surface', data: s }
+            break
+          }
+          case 'curve_split':
+            result = { kind: 'curve', data: splitNurbsCurve(needCurve(n.input), n.parameter)[n.part] }
+            break
+          case 'curve_bezier_span': {
+            const span = decomposeNurbsCurve(needCurve(n.input))[n.index]
+            if (!span) throw new Error('Bezier span index outside curve')
+            result = { kind: 'curve', data: span.curve }
             break
           }
           case 'curve_edit': {
