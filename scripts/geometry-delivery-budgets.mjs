@@ -222,6 +222,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CQuDnQJd.js':108_600}),
   }),
+  // Exact periodic UV path measurements: 18,953,072 raw bytes, 6,765,284 packed bytes and 12,908,847 asset bytes.
+  'a7946f7571dc256d52f9ed122a15c295716be7e3a318daded61bca3dd738a797':Object.freeze({
+    version:34,geometryChunkBytes:6_770_000,totalAssetBytes:12_910_000,rawGeometryBytes:18_960_000,
+    namedJsChunkBytes:Object.freeze({
+      index:257_200,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CLGKAjgu.js':109_000}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

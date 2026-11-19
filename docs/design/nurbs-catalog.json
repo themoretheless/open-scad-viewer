@@ -13961,7 +13961,7 @@
     {
       "id": "NURBS-0537",
       "name": "Вычисление точки периодической NURBS-поверхности с точным приведением U и V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::evaluate_exact_wrapped_surface_point",
@@ -13971,7 +13971,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-537-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-537-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-537-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Reduce lifted parameters exactly modulo certified periods before standard point evaluation.",
@@ -13982,7 +13984,7 @@
     {
       "id": "NURBS-0538",
       "name": "Пакетное вычисление точек периодической NURBS-поверхности с точным приведением UV",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::evaluate_exact_wrapped_surface_points",
@@ -13992,7 +13994,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-538-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-538-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-538-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Evaluate ordered batches after exact periodic parameter reduction with one validated evaluator.",
@@ -14003,7 +14007,7 @@
     {
       "id": "NURBS-0539",
       "name": "Точное разворачивание дискретной UV-траектории через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::lift_exact_periodic_surface_path",
@@ -14013,7 +14017,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-539-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-539-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-539-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Lift native UV samples by the unique shortest signed step on each periodic axis.",
@@ -14024,7 +14030,7 @@
     {
       "id": "NURBS-0540",
       "name": "Точный подсчёт оборотов замкнутой дискретной UV-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_winding",
@@ -14034,7 +14040,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-540-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-540-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-540-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Count signed windings using exact shortest steps on a closed sequence of native UV samples.",
@@ -14045,7 +14053,7 @@
     {
       "id": "NURBS-0541",
       "name": "Точная знаковая площадь замкнутой дискретной UV-траектории через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_signed_area",
@@ -14055,7 +14063,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-541-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-541-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-541-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Integrate the algebraic UV area of a representable closed shortest-step lift.",
@@ -14066,7 +14076,7 @@
     {
       "id": "NURBS-0542",
       "name": "Точный UV-центроид замкнутого контура через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_centroid",
@@ -14076,7 +14086,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-542-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-542-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-542-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Compute exact rational area and centroid moments of a closed lifted UV polygon.",
@@ -14087,7 +14099,7 @@
     {
       "id": "NURBS-0543",
       "name": "Точные вторые центральные моменты замкнутого UV-контура через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_inertia",
@@ -14097,7 +14109,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-543-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-543-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-543-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Compute the signed rational central second moments of a closed lifted UV polygon.",

@@ -1550,6 +1550,13 @@ export const rushGraphNurbsSchema = z
             contour:z.number().int().nonnegative(),segment:z.number().int().nonnegative(),range_start:exactUnsignedRatio,
             range_end:exactUnsignedRatio,tolerance_mm:scalar,max_work:z.number().int().positive(),max_cells:z.number().int().min(1).max(100000),
           }).strict(),
+          z.object({id,op:z.literal('evaluate_exact_wrapped_surface_point'),input:id,uv,max_work:z.number().int().positive()}).strict(),
+          z.object({id,op:z.literal('evaluate_exact_wrapped_surface_points'),input:id,uv_points:z.array(uv).min(1),max_work:z.number().int().positive()}).strict(),
+          z.object({id,op:z.literal('lift_exact_periodic_surface_path'),input:id,uv_points:z.array(uv).min(1),max_work:z.number().int().positive()}).strict(),
+          z.object({id,op:z.literal('exact_periodic_surface_path_winding'),input:id,uv_points:z.array(uv).min(1),max_work:z.number().int().positive()}).strict(),
+          z.object({id,op:z.literal('exact_periodic_surface_path_signed_area'),input:id,uv_points:z.array(uv).min(1),max_work:z.number().int().positive()}).strict(),
+          z.object({id,op:z.literal('exact_periodic_surface_path_centroid'),input:id,uv_points:z.array(uv).min(1),max_work:z.number().int().positive()}).strict(),
+          z.object({id,op:z.literal('exact_periodic_surface_path_inertia'),input:id,uv_points:z.array(uv).min(1),max_work:z.number().int().positive()}).strict(),
           z.object({
             id, op: z.literal('surface_trim_area'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
             tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),

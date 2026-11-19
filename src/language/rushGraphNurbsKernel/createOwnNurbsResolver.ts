@@ -452,6 +452,21 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'evaluate_exact_wrapped_surface_point':
+          case 'evaluate_exact_wrapped_surface_points':
+          case 'lift_exact_periodic_surface_path':
+          case 'exact_periodic_surface_path_winding':
+          case 'exact_periodic_surface_path_signed_area':
+          case 'exact_periodic_surface_path_centroid':
+          case 'exact_periodic_surface_path_inertia': {
+            const surface=needSurface(n.input)
+            const report=callGeometryRust<object>(n.op,{
+              surface,max_work:n.max_work,...('uv' in n ? {uv:n.uv} : {parameters:n.uv_points}),
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_trim_area':
           case 'surface_trim_mass_properties':
           case 'surface_trim_window_properties':

@@ -1,4 +1,5 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
+  if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) return russian ? 'Измерение в периодических координатах' : 'Periodic chart measurement'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
   if (operation === 'surface_trim_patch_area_vector') return russian ? 'Вектор площади' : 'Area vector'
@@ -32,6 +33,14 @@ export function directionalTravelSummary(operation: string, report: string, russ
   const format = (value: number) => value.toLocaleString(russian ? 'ru' : 'en', { maximumSignificantDigits: 17 })
   const bounds = (pair: number[]) => pair[0] === pair[1] ? format(pair[0]!) : pair.map(format).join(' … ')
   const pair = (value: unknown): value is number[] => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
+  if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) {
+    if (parsed?.refusal) return [String(parsed.refusal)]
+    if (parsed?.signedArea) return [(russian ? 'Ориентированная площадь UV' : 'Signed UV area') + ' · ' + parsed.signedArea.numerator + '/' + parsed.signedArea.denominator]
+    if (pair(parsed?.winding)) return [(russian ? 'Обороты U, V' : 'U, V winding') + ' · ' + parsed.winding.join(', ')]
+    if (Array.isArray(parsed?.point)) return ['XYZ · ' + parsed.point.map(format).join(', ') + ' ' + unit]
+    const entries = parsed?.samples ?? parsed?.parameters
+    return Array.isArray(entries) ? [(russian ? 'Число точек · ' : 'Points · ') + entries.length] : []
+  }
   if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
     ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]
     : [russian ? 'Длина неопределённа' : 'Length unresolved']
