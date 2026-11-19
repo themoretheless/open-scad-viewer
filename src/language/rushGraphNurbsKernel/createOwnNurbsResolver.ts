@@ -1701,6 +1701,14 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'finite_za_worm':
+          case 'finite_za_wheel': {
+            const {id:_id,op,...spec}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;wallErrorUpperMm:number;solidGeometryCertified:boolean}>(op,spec)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'finite_external_thread':
           case 'finite_internal_thread': {
             const {id:_id,op,...spec}=n

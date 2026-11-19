@@ -3,6 +3,8 @@ use crate::*;
 
 #[path="radial_cam.rs"]
 mod radial_cam;
+#[path="worm_gear.rs"]
+mod worm_gear;
 #[path="finite_thread.rs"]
 mod finite_thread;
 #[path="rack_bevel.rs"]
@@ -27,6 +29,8 @@ pub(super) const OPS: &[&str] = &[
     "radial_cam_profile",
     "rack_profile",
     "brep_rack",
+    "finite_za_worm",
+    "finite_za_wheel",
     "finite_external_thread",
     "finite_internal_thread",
     "verified_bevel_gear",
@@ -101,6 +105,8 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "radial_cam_profile" => radial_cam::profile(&v),
         "rack_profile" => rack_bevel::rack(&v,false),
         "brep_rack" => rack_bevel::rack(&v,true),
+        "finite_za_worm" => worm_gear::worm(&v),
+        "finite_za_wheel" => worm_gear::wheel(&v),
         "finite_external_thread" => finite_thread::build(&v, false),
         "finite_internal_thread" => finite_thread::build(&v, true),
         "verified_bevel_gear" => rack_bevel::bevel(&v),

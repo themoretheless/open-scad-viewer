@@ -30,6 +30,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "radial_cam_walls" => &["center", "base_radius", "roller_radius", "phase", "end_angles", "end_lifts", "laws", "tolerance_mm", "max_spans", "vector"],
         "rack_profile" => &["teeth", "module", "pressure_angle", "backlash", "addendum", "dedendum", "backing_height"],
         "brep_rack" => &["teeth", "module", "pressure_angle", "backlash", "addendum", "dedendum", "backing_height", "z_min", "z_max"],
+        "finite_za_worm" => &["module", "diameter_quotient", "pressure_angle", "dedendum_factor", "backlash", "starts", "turns", "left_handed", "tolerance_mm", "z_min", "z_max"],
+        "finite_za_wheel" => &["module", "diameter_quotient", "pressure_angle", "dedendum_factor", "backlash", "starts", "turns", "left_handed", "tolerance_mm", "teeth", "start_index", "axial_shift", "y_breaks", "stock_radius"],
         "finite_external_thread" => &["diameter", "pitch", "clearance", "starts", "turns", "tolerance_mm", "left_handed", "z_min", "z_max"],
         "finite_internal_thread" => &["diameter", "pitch", "clearance", "starts", "turns", "tolerance_mm", "left_handed", "z_min", "z_max", "outer_radius"],
         "verified_bevel_gear" => &["teeth", "module", "pitch_cone_angle", "pressure_angle", "face_width", "addendum", "dedendum", "backlash", "tolerance_mm"],

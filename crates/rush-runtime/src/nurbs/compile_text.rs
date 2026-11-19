@@ -208,6 +208,8 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "radial_cam_walls",
             "rack_profile",
             "brep_rack",
+            "finite_za_worm",
+            "finite_za_wheel",
             "finite_external_thread",
             "finite_internal_thread",
             "verified_bevel_gear",
@@ -255,7 +257,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let catenoid=["catenoid_surface","catenoid_patches"].contains(&s(&node,"op"));
         let clothoid=s(&node,"op")=="clothoid_curve";
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
-        let mechanical_profile=["brep_rack","rack_profile","verified_bevel_gear","radial_cam_profile","radial_cam_walls","finite_external_thread","finite_internal_thread"].contains(&s(&node,"op"));
+        let mechanical_profile=["finite_za_wheel","finite_za_worm","brep_rack","rack_profile","verified_bevel_gear","radial_cam_profile","radial_cam_walls","finite_external_thread","finite_internal_thread"].contains(&s(&node,"op"));
         let loft_refs=["loft_match_surface","brep_rational_loft","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
             if exact_primitive && key == "axes" && exact_frustum {
@@ -385,7 +387,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     *entry=field(entry,SCALAR,&params,&format!("scale/{component}"))?;
                 }
             } else {
-                let dimension = if mechanical_profile && ["diameter","pitch","addendum","dedendum","backing_height","face_width","base_radius","roller_radius","end_lifts"].contains(&key.as_str()) { LENGTH } else if mechanical_profile && ["pitch_cone_angle","end_angles","phase"].contains(&key.as_str()) { ANGLE } else if exact_primitive { match key.as_str() { "max_work" => SCALAR, "axes" if !exact_ellipsoid => SCALAR, _ => LENGTH } } else if engineering_profile { match key.as_str() { "normal" | "teeth" | "ribs" => SCALAR, "gap_degrees" | "start_degrees" | "sweep_degrees" => ANGLE, _ => LENGTH } } else if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
+                let dimension = if mechanical_profile && ["y_breaks","stock_radius","axial_shift","diameter","pitch","addendum","dedendum","backing_height","face_width","base_radius","roller_radius","end_lifts"].contains(&key.as_str()) { LENGTH } else if mechanical_profile && ["pitch_cone_angle","end_angles","phase"].contains(&key.as_str()) { ANGLE } else if exact_primitive { match key.as_str() { "max_work" => SCALAR, "axes" if !exact_ellipsoid => SCALAR, _ => LENGTH } } else if engineering_profile { match key.as_str() { "normal" | "teeth" | "ribs" => SCALAR, "gap_degrees" | "start_degrees" | "sweep_degrees" => ANGLE, _ => LENGTH } } else if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
                     "height",
                     "width",
                     "z_min",
