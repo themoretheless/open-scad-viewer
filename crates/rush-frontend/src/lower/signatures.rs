@@ -190,6 +190,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "curve_directional_travel_full" => &["axis_vector", "tolerance_mm", "max_cells"],
         "curve_directional_travel_signed" => &["axis_vector", "tolerance_mm", "max_cells"],
         "curve_check_backtracking" => &["axis_vector", "tolerance_mm", "max_cells", "interval", "reverse_limit"],
+        "surface_measure_trimmed_mass" => &["contours", "component_densities", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "plane_point", "plane_normal", "axis_point", "axis_vector", "reference_point", "moment_tolerance", "radius_of_gyration"],
         "curve_axial_derivative_peak" => &["axis_vector", "interval", "order", "tolerance_mm", "max_cells", "parameter_tolerance"],
         "curve_measure_directional_travel" => &["axis_vector", "interval", "tolerance_mm", "max_cells", "reverse_limit"],
         "curve_measure_directional_travel_batch" => &["axis_vector", "intervals", "tolerance_mm", "max_cells", "reverse_limit"],

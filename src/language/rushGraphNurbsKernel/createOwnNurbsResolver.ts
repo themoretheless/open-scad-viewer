@@ -407,6 +407,24 @@ export function createOwnNurbsResolver(
             result = { kind:'curve',data:curve }
             break
           }
+          case 'surface_measure_trimmed_mass': {
+            const surface = needSurface(n.input)
+            if (!!n.plane_point !== !!n.plane_normal || !!n.axis_point !== !!n.axis_vector) {
+              throw new Error('A measurement plane or axis needs both its point and its direction.')
+            }
+            const report = callGeometryRust<object>('brep_measure_exact_periodic_trim_patch_set_density', {
+              surface, includeAxisRadiusOfGyration:n.radius_of_gyration ?? false, contours:n.contours, toleranceMm2:n.tolerance_mm2, toleranceUv:n.tolerance_uv, maxWork:n.max_work,
+              maxSurfaceCells:n.max_surface_cells,maxTrimCells:n.max_trim_cells,
+              componentDensities:n.component_densities.map(([outerContour,lo,hi])=>({outerContour,densityBoundsKgPerMm2:[lo,hi]})),
+              ...(n.plane_point ? {centerOfMassPlane:{pointMm:n.plane_point,normal:n.plane_normal}} : {}),
+              ...(n.axis_point ? {inertiaAxis:{pointMm:n.axis_point,direction:n.axis_vector}} : {}),
+              ...(n.reference_point ? {inertiaReferencePointMm:n.reference_point} : {}),
+              ...(n.moment_tolerance === undefined ? {} : {momentToleranceKgMm2:n.moment_tolerance}),
+            })
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'curve_axial_derivative_peak': {
             const curve = needCurve(n.input)
             const report = callGeometryRust<object>('nurbs_measure_curve_axial_derivative_peak', {

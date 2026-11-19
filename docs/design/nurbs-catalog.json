@@ -15840,7 +15840,7 @@
     {
       "id": "NURBS-0631",
       "name": "Прямое измерение массы периодически обрезанных NURBS-граней с разной плотностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density",
@@ -15848,7 +15848,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-631-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-631-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-631-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Measure and combine density-weighted periodic patches under one pair of integration budgets.",
@@ -15859,7 +15861,7 @@
     {
       "id": "NURBS-0632",
       "name": "Масса периодически обрезанных NURBS-граней с различной плотностью через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15869,7 +15871,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-632-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-632-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-632-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose density-weighted patch-set mass, centroid and inertia via outer-contour assignments.",
@@ -15880,7 +15884,7 @@
     {
       "id": "NURBS-0633",
       "name": "Масса каждой компоненты периодической обрезки в Rust и WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15892,7 +15896,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-633-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-633-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-633-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Return component mass bounds and sum them independently of centroidal inertia availability.",
@@ -15903,7 +15909,7 @@
     {
       "id": "NURBS-0634",
       "name": "Гарантированные доли массы отдельных граней периодической NURBS-обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_component_mass_fractions",
@@ -15911,7 +15917,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-634-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-634-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-634-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose each mass fraction using monotonic dependence on its own mass and the sum of the other component masses.",
@@ -15922,7 +15930,7 @@
     {
       "id": "NURBS-0635",
       "name": "Доли массы отдельных NURBS-граней в ответе WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15932,7 +15940,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-635-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-635-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-635-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Attach interval mass fractions to each outer-contour component in WASM.",
@@ -15962,7 +15972,7 @@
     {
       "id": "NURBS-0637",
       "name": "Гарантированное знаковое расстояние центра масс NURBS-сборки до плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_mass_weighted_centroid_plane_distance",
@@ -15970,7 +15980,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-637-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-637-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-637-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Project piece centers before weighted extremization to preserve cancellation across Cartesian axes.",
@@ -15981,7 +15993,7 @@
     {
       "id": "NURBS-0638",
       "name": "Знаковое расстояние центра масс периодической обрезки до заданной плоскости через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15992,7 +16004,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-638-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-638-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-638-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in signed plane distance computed from per-component mass and centroid enclosures.",
@@ -16003,7 +16017,7 @@
     {
       "id": "NURBS-0639",
       "name": "Гарантированный момент инерции разноплотной NURBS-сборки вокруг общей оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_inertia_about_line",
@@ -16011,7 +16025,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-639-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-639-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-639-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Sum density-weighted component moments about one fixed axis without propagating uncertainty through the aggregate centroid.",
@@ -16022,7 +16038,7 @@
     {
       "id": "NURBS-0640",
       "name": "Момент инерции разноплотных NURBS-граней вокруг общей оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16032,7 +16048,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-640-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-640-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-640-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in density-weighted moment about a fixed spatial axis through the existing request.",
@@ -16043,7 +16061,7 @@
     {
       "id": "NURBS-0641",
       "name": "Полный тензор инерции разноплотной NURBS-сборки относительно заданной точки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_inertia_about_point",
@@ -16051,7 +16069,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-641-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-641-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-641-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Translate each component tensor to the same fixed world point and add its contribution with outward rounding.",
@@ -16062,7 +16082,7 @@
     {
       "id": "NURBS-0642",
       "name": "Тензор инерции разноплотной NURBS-сборки относительно заданной точки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16072,7 +16092,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-642-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-642-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-642-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose optional density-weighted inertia at a fixed reference point through the WASM mass request.",
@@ -16083,7 +16105,7 @@
     {
       "id": "NURBS-0643",
       "name": "Главные моменты инерции разноплотной NURBS-сборки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16094,7 +16116,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-643-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-643-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-643-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose ordered enclosures for the eigenvalues of the density-weighted central tensor and report whether the requested tolerance was met.",
@@ -16105,7 +16129,7 @@
     {
       "id": "NURBS-0644",
       "name": "Радиус инерции разноплотной NURBS-сборки вокруг заданной оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16115,7 +16139,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-644-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-644-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-644-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Return an opt-in radius of gyration interval using the weighted mass and fixed-axis moment.",
@@ -16126,7 +16152,7 @@
     {
       "id": "NURBS-0645",
       "name": "Гарантированный первый момент массы разноплотной NURBS-сборки относительно плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_first_mass_moment_about_plane",
@@ -16134,7 +16160,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-645-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-645-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-645-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Add signed component first mass moments about an oriented world plane before normalization.",
@@ -16145,7 +16173,7 @@
     {
       "id": "NURBS-0646",
       "name": "Первый момент массы NURBS-сборки относительно плоскости через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16155,7 +16183,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-646-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-646-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-646-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Return the signed first mass moment about the query plane alongside the center distance.",
