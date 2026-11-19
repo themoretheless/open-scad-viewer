@@ -116,6 +116,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "pipe_surface" => &["radius", "normal", "sections", "max_deviation"],
         "screw_surface" => &["origin", "axis", "height", "turns", "phase_degrees", "max_deviation"],
         "surface_extrude_patches" => &["vector"],
+        "iso_curve" => &["direction", "parameter"],
         "curve_edit" => &["insert_knots", "degree", "trim", "reverse"],
         "surface_edit" => &["insert_knots_u", "insert_knots_v", "degree_u", "degree_v", "trim", "reverse_u", "reverse_v"],
         "surface_extrude" => &["vector"],
