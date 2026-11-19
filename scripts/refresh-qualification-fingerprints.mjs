@@ -12,6 +12,12 @@ export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v116-g1-v133-refreeze-review.md'
 export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v86.json'
 const RUNTIME_EVIDENCE_PATHS = [
+  'docs/qualification/runtime-provider-8fd1d445d233-2026-11-20.json',
+  'docs/qualification/runtime-direct-api-8fd1d4-2026-11-20/runtime-api-baseline.json',
+  'docs/qualification/runtime-direct-api-8fd1d4-2026-11-20/runtime-binding.json',
+  'docs/qualification/runtime-direct-api-8fd1d4-2026-11-20/node.json',
+  'docs/qualification/runtime-direct-api-8fd1d4-2026-11-20/report.json',
+  'src/core/runtimeGeometryEvidenceV27.ts',
   'docs/qualification/runtime-provider-7702e12173f8-2026-11-18.json',
   'docs/qualification/runtime-direct-api-7702e1-2026-11-18/runtime-api-baseline.json',
   'docs/qualification/runtime-direct-api-7702e1-2026-11-18/runtime-binding.json',

@@ -297,6 +297,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/do38haOu.js':110_900}),
   }),
+  // Post-merge loft kernel: raw 19,169,612 bytes; packed JS 6,844,734 bytes.
+  '8fd1d445d233c420c6d97467eb9e70488d8536217a3a754451a355c99103101f':Object.freeze({
+    version:37,geometryChunkBytes:6_850_000,totalAssetBytes:13_010_000,rawGeometryBytes:19_170_000,
+    namedJsChunkBytes:Object.freeze({
+      index:265_300,DirectModeler:498_800,geometryBuildEngine:313_300,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DijHYkRD.js':111_400}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
