@@ -134,7 +134,7 @@ const findInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
 const editorDiagnostic = ref<EditorDiagnostic | null>(null)
-import { directionalTravelSummary } from './language/directionalTravelSummary'
+import { curveMeasurementLabel, directionalTravelSummary } from './language/directionalTravelSummary'
 const measurements = ref<import('./core/build').GeometryMeasurement[]>([])
 const warnings = ref<string[]>([])
 const meshCount = ref(0)
@@ -793,7 +793,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <template v-else>{{ error }}</template>
         </div>
         <details v-for="measurement in measurements" :key="measurement.node" class="nurbs-measurement">
-          <summary>{{ measurement.node }} · {{ lang === 'ru' ? 'Ход вдоль оси' : 'Travel along axis' }}</summary>
+          <summary>{{ measurement.node }} · {{ curveMeasurementLabel(measurement.operation, lang === 'ru') }}</summary>
           <div v-for="(line, i) in directionalTravelSummary(measurement.operation, measurement.report, lang === 'ru')" :key="i">{{ line }}</div>
           <details><summary>{{ lang === 'ru' ? 'Подробный отчёт' : 'Detailed report' }}</summary><pre>{{ measurement.report }}</pre></details>
         </details>

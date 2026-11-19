@@ -16830,7 +16830,7 @@
     {
       "id": "NURBS-0680",
       "name": "Гарантированная оценка пиковой осевой скорости NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_speed",
@@ -16838,7 +16838,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-680-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-680-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-680-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose the supremum of absolute projected source-parameter velocity on a selected window.",
@@ -16849,7 +16851,7 @@
     {
       "id": "NURBS-0681",
       "name": "Локализация всех возможных пиков осевой скорости NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_speed",
@@ -16857,7 +16859,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-681-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-681-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-681-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Return the union of original parameter intervals that can still contain a global axial speed maximum.",
@@ -16868,7 +16872,7 @@
     {
       "id": "NURBS-0682",
       "name": "Гарантированная оценка пикового осевого ускорения NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_acceleration",
@@ -16876,7 +16880,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-682-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-682-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-682-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose the maximum absolute axial second derivative on the original curve clock.",
@@ -16887,7 +16893,7 @@
     {
       "id": "NURBS-0683",
       "name": "Гарантированная оценка пикового осевого рывка NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_jerk",
@@ -16895,7 +16901,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-683-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-683-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-683-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose the maximum absolute axial third derivative on the original parameter interval.",
@@ -16906,7 +16914,7 @@
     {
       "id": "NURBS-0684",
       "name": "Локализация пикового осевого ускорения NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration",
@@ -16914,7 +16922,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-684-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-684-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-684-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose every possible source parameter that attains the peak absolute axial acceleration.",
@@ -16925,7 +16935,7 @@
     {
       "id": "NURBS-0685",
       "name": "Локализация пикового осевого рывка NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_jerk",
@@ -16933,7 +16943,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-685-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-685-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-685-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose every possible source parameter that attains the peak absolute axial jerk.",

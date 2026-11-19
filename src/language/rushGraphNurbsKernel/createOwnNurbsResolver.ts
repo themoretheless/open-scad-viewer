@@ -375,6 +375,17 @@ export function createOwnNurbsResolver(
               result = { kind: 'surface', data }
               break
             }
+          case 'curve_axial_derivative_peak': {
+            const curve = needCurve(n.input)
+            const report = callGeometryRust<object>('nurbs_measure_curve_axial_derivative_peak', {
+              curve, direction: n.axis_vector, parameterInterval: n.interval, order: n.order,
+              tolerance: n.tolerance_mm, maxCells: n.max_cells,
+              ...(n.parameter_tolerance === undefined ? {} : { parameterTolerance: n.parameter_tolerance }),
+            })
+            constructionReports[key] = { measurement: { operation: n.op, report } }
+            result = { kind: 'curve', data: curve }
+            break
+          }
           case 'curve_measure_directional_travel':
           case 'curve_measure_directional_travel_batch': {
             const curve = needCurve(n.input)

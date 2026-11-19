@@ -198,6 +198,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/Bo28C-Kr.js':102_100}),
   }),
+  // Axial derivative peaks and their parameter locations: 18,879,542 raw bytes, 6,743,640 packed bytes and 12,859,443 asset bytes.
+  '62464fd2457d45bf5a76469b76081029d81e0b841fb02ea60444bf9b2247ab59':Object.freeze({
+    version:31,geometryChunkBytes:6_760_000,totalAssetBytes:12_860_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/glh_OBZk.js':102_500}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

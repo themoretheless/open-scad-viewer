@@ -2,6 +2,7 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "nurbs_measure_curve_axial_derivative_peak",
     "nurbs_measure_curve_directional_travel",
     "nurbs_measure_curve_directional_travel_batch",
     "brep_nurbs_exact_convex_prism_fillet",
@@ -33,8 +34,11 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "nurbs_measure_curve_axial_derivative_peak" => axial_derivative_peak(&v),
         "nurbs_measure_curve_directional_travel" => curve_directional_travel_request(&v),
-        "nurbs_measure_curve_directional_travel_batch" => curve_directional_travel_batch_request(&v),
+        "nurbs_measure_curve_directional_travel_batch" => {
+            curve_directional_travel_batch_request(&v)
+        }
         "brep_nurbs_exact_convex_prism_fillet"
         | "brep_nurbs_exact_simple_prism_fillet"
         | "brep_nurbs_exact_annular_fillet"
@@ -183,7 +187,8 @@ pub(crate) fn curve_directional_travel_request(request: &Value) -> Result<Value>
     let tolerance: f64 = field(request, "toleranceMm")?;
     let max_cells: usize = field(request, "maxCells")?;
     let reverse_limit = reverse_travel_limit(request)?;
-    let report = directional_travel_on_interval(&curve, interval, &direction, tolerance, max_cells)?;
+    let report =
+        directional_travel_on_interval(&curve, interval, &direction, tolerance, max_cells)?;
     directional_travel_response(interval, &report, reverse_limit)
 }
 
@@ -196,8 +201,12 @@ fn curve_directional_travel_batch_request(request: &Value) -> Result<Value> {
     let tolerance = field(request, "toleranceMm")?;
     let max_cells = field(request, "maxCells")?;
     let reverse_limit = reverse_travel_limit(request)?;
-    let reports = directional_travel_on_intervals(&curve, &intervals, &direction, tolerance, max_cells)?;
-    let cells = reports.iter().map(|report| report.total.cells).sum::<usize>();
+    let reports =
+        directional_travel_on_intervals(&curve, &intervals, &direction, tolerance, max_cells)?;
+    let cells = reports
+        .iter()
+        .map(|report| report.total.cells)
+        .sum::<usize>();
     let intervals = intervals
         .into_iter()
         .zip(&reports)
@@ -224,7 +233,7 @@ fn directional_travel_response(
     report: &nurbs_core::analysis::curve_measure::DirectionalTravelReport,
     reverse_limit: Option<f64>,
 ) -> Result<Value> {
-    use nurbs_core::analysis::curve_measure::{ReverseTravelStatus, StopReason};
+    use nurbs_core::analysis::curve_measure::ReverseTravelStatus;
     let reverse_status = reverse_limit
         .map(|limit| report.reverse_status(limit))
         .transpose()?
@@ -233,13 +242,7 @@ fn directional_travel_response(
             ReverseTravelStatus::Exceeds => "exceeds",
             ReverseTravelStatus::Undetermined => "undetermined",
         });
-    let stop_reason = match report.total.stop_reason {
-        StopReason::Tolerance => "tolerance",
-        StopReason::WorkLimit => "workLimit",
-        StopReason::PrecisionLimit => "precisionLimit",
-        StopReason::IterationLimit => "iterationLimit",
-        StopReason::TargetUncertainty => "targetUncertainty",
-    };
+    let stop_reason = stop_reason_label(report.total.stop_reason);
     Ok(json!({
         "parameterInterval": interval,
         "totalBoundsMm": report.total.bounds,
@@ -251,4 +254,81 @@ fn directional_travel_response(
         "stopReason": stop_reason,
         "reverseStatus": reverse_status,
     }))
+}
+
+fn stop_reason_label(reason: nurbs_core::analysis::curve_measure::StopReason) -> &'static str {
+    use nurbs_core::analysis::curve_measure::StopReason;
+    match reason {
+        StopReason::Tolerance => "tolerance",
+        StopReason::WorkLimit => "workLimit",
+        StopReason::PrecisionLimit => "precisionLimit",
+        StopReason::IterationLimit => "iterationLimit",
+        StopReason::TargetUncertainty => "targetUncertainty",
+    }
+}
+
+fn axial_derivative_peak(request: &Value) -> Result<Value> {
+    use nurbs_core::analysis::curve_measure::*;
+    let curve = field(request, "curve")?;
+    let interval = field(request, "parameterInterval")?;
+    let direction: Vec<f64> = field(request, "direction")?;
+    let tolerance = field(request, "tolerance")?;
+    let cells = field(request, "maxCells")?;
+    let order: usize = field(request, "order")?;
+    let location: Option<f64> = request
+        .get("parameterTolerance")
+        .map(|_| field(request, "parameterTolerance"))
+        .transpose()?;
+    let (bounds, cells, stop, locations) = match (order, location) {
+        (1, None) => {
+            let p = directional_peak_speed(&curve, interval, &direction, tolerance, cells)?;
+            (p.bounds, p.cells, p.stop_reason, None)
+        }
+        (1, Some(width)) => {
+            let p = locate_directional_peak_speed(
+                &curve, interval, &direction, tolerance, width, cells,
+            )?;
+            (
+                p.peak.bounds,
+                p.peak.cells,
+                p.peak.stop_reason,
+                Some(p.parameter_intervals),
+            )
+        }
+        (2, None) => {
+            let p = directional_peak_acceleration(&curve, interval, &direction, tolerance, cells)?;
+            (p.bounds, p.cells, p.stop_reason, None)
+        }
+        (2, Some(width)) => {
+            let p = locate_directional_peak_acceleration(
+                &curve, interval, &direction, tolerance, width, cells,
+            )?;
+            (
+                p.peak.bounds,
+                p.peak.cells,
+                p.peak.stop_reason,
+                Some(p.parameter_intervals),
+            )
+        }
+        (3, None) => {
+            let p = directional_peak_jerk(&curve, interval, &direction, tolerance, cells)?;
+            (p.bounds, p.cells, p.stop_reason, None)
+        }
+        (3, Some(width)) => {
+            let p = locate_directional_peak_jerk(
+                &curve, interval, &direction, tolerance, width, cells,
+            )?;
+            (
+                p.peak.bounds,
+                p.peak.cells,
+                p.peak.stop_reason,
+                Some(p.parameter_intervals),
+            )
+        }
+        _ => return Err(input("Derivative order must be 1, 2 or 3")),
+    };
+    Ok(
+        json!({"order":order,"parameterInterval":interval,"peakBounds":bounds,"cells":cells,
+        "stopReason":stop_reason_label(stop),"parameterIntervals":locations}),
+    )
 }

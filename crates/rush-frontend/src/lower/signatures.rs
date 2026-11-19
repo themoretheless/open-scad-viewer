@@ -179,6 +179,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "simplify_exact_doubly_periodic_surface" => &["max_work"],
         "reduce_exact_periodic_surface_period" => &["direction", "max_work"],
         "repeat_exact_periodic_surface_period" => &["direction", "turns", "max_work"],
+        "curve_axial_derivative_peak" => &["axis_vector", "interval", "order", "tolerance_mm", "max_cells", "parameter_tolerance"],
         "curve_measure_directional_travel" => &["axis_vector", "interval", "tolerance_mm", "max_cells", "reverse_limit"],
         "curve_measure_directional_travel_batch" => &["axis_vector", "intervals", "tolerance_mm", "max_cells", "reverse_limit"],
         "curve_reparameterize" => &["domain"],
