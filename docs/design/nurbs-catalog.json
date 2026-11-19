@@ -6283,7 +6283,7 @@
     {
       "id": "NURBS-0224",
       "name": "точное удаление узла NURBS с сохранением исходной параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_knot_removal::remove",
@@ -6293,7 +6293,9 @@
         "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
         "docs/design/nurbs-exact-knot-removal.md",
         "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "one verified proposal, not exhaustive representability search; nonperiodic clamped degree1..25, shared work refusal allowed; nominal geometry only, no machine-bit evaluation or B-rep authority",
@@ -6324,7 +6326,7 @@
     {
       "id": "NURBS-0226",
       "name": "точное удаление узла тензорной NURBS-поверхности с сохранением UV",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::remove",
@@ -6338,7 +6340,9 @@
         "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json",
         "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
         "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
@@ -6348,7 +6352,7 @@
     {
       "id": "NURBS-0227",
       "name": "точное понижение степени составной рациональной кривой Безье с сохранением параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_degree_reduction::reduce",
@@ -6362,7 +6366,9 @@
         "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py",
         "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
         "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority",
@@ -6372,7 +6378,7 @@
     {
       "id": "NURBS-0228",
       "name": "точное понижение степени NURBS-поверхности по U/V с сохранением UV и знаменателей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_degree_reduction::reduce",
@@ -6386,7 +6392,9 @@
         "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact_oracle.py",
         "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
         "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority; tensor row denominator identity also required",
@@ -6481,7 +6489,7 @@
     {
       "id": "NURBS-0233",
       "name": "Точная пакетная вставка внутренних узлов рациональной B-spline-кривой с сохранением всей параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::insert",
@@ -6491,7 +6499,9 @@
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/design/nurbs-exact-knot-insertion.md",
         "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "Validated nonperiodic curves and strictly internal knots only; exact binary64 output or atomic refusal; unchanged degree, multiplicity, 256-pole, 1m-work and 4096-bit proposal bounds. No floating-evaluator bit identity or downstream certificate reuse.",
@@ -6501,7 +6511,7 @@
     {
       "id": "NURBS-0234",
       "name": "Точная пакетная вставка внутренних узлов рациональной тензорной поверхности по U/V с сохранением всей параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::insert",
@@ -6513,7 +6523,9 @@
         "docs/design/nurbs-exact-surface-knot-insertion.md",
         "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/receipt.json",
         "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py",
-        "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "Selected axis nonperiodic, strictly internal knots only. Untouched periodic axis preserved. Global tensor weight gauge plus complete row geometry and proportional denominator proofs; atomic refusal under unchanged limits.",

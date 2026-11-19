@@ -471,3 +471,15 @@ export function editNurbsSurfaceWeights(surface: NurbsSurface, edits: [number, n
 export function relocateNurbsSurfaceSeam(surface: NurbsSurface, axis: NurbsSurfaceAxis, parameter: number, tolerance: number, maxCells: number): NurbsSurface {
   return callNurbsRust('surface_relocate_seam', { surface, axis, parameter, tolerance, maxCells })
 }
+
+export function surfaceExactInsertKnot(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number, count: number, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_exact_insert_knot', { surface, axis: direction, parameter, count, max_work })
+}
+
+export function surfaceExactRemoveKnot(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_exact_remove_knot', { surface, axis: direction, parameter, max_work })
+}
+
+export function surfaceExactReduceDegree(surface: NurbsSurface, direction: NurbsSurfaceAxis, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_exact_reduce_degree', { surface, axis: direction, max_work })
+}

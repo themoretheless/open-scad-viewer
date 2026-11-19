@@ -17,6 +17,27 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
                 )?;
                 encode(report.curve.ok_or_else(|| input(format!("Periodic seam verification refused: {:?}", report.verification.reason)))?)
             }
+            "curve_exact_insert_knot" => {
+                let report = crate::editing::exact_knot_insertion::insert(&c, field(&v, "parameter")?, field(&v, "count")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_exact_remove_knot" => {
+                let report = crate::editing::exact_knot_removal::remove(&c, field(&v, "parameter")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_exact_reduce_degree" => {
+                let report = crate::editing::exact_degree_reduction::reduce(&c, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
             "curve_validate" => {
                 c.validate()?;
                 Ok(Value::Null)
@@ -75,6 +96,27 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
                 &s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "tolerance")?, field(&v, "maxCells")?,
             )?;
             encode(report.surface.ok_or_else(|| input(format!("Periodic seam verification refused: {:?}", report.verification.reason)))?)
+        }
+        "surface_exact_insert_knot" => {
+            let report = crate::editing::exact_surface_knot_insertion::insert(&s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "count")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
+        "surface_exact_remove_knot" => {
+            let report = crate::editing::exact_surface_knot_removal::remove(&s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
+        "surface_exact_reduce_degree" => {
+            let report = crate::editing::exact_surface_degree_reduction::reduce(&s, field(&v, "axis")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
         }
         "surface_validate" => {
             s.validate()?;

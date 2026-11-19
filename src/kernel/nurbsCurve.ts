@@ -477,3 +477,15 @@ export function editNurbsCurveWeights(curve: NurbsCurve, edits: [number, number]
 export function relocateNurbsCurveSeam(curve: NurbsCurve, parameter: number, tolerance: number, maxCells: number): NurbsCurve {
   return callNurbsRust('curve_relocate_seam', { curve, parameter, tolerance, maxCells })
 }
+
+export function curveExactInsertKnot(curve: NurbsCurve, parameter: number, count: number, max_work: number): NurbsCurve {
+  return callNurbsRust('curve_exact_insert_knot', { curve, parameter, count, max_work })
+}
+
+export function curveExactRemoveKnot(curve: NurbsCurve, parameter: number, max_work: number): NurbsCurve {
+  return callNurbsRust('curve_exact_remove_knot', { curve, parameter, max_work })
+}
+
+export function curveExactReduceDegree(curve: NurbsCurve, max_work: number): NurbsCurve {
+  return callNurbsRust('curve_exact_reduce_degree', { curve, max_work })
+}

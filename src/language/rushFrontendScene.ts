@@ -1,3 +1,4 @@
+import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler'
 import { transformNurbsSurfacePatches } from '../kernel/nurbsSurface'
 import type { ProgressiveSweepPreview } from '../kernel/nurbsConstructors'
@@ -16,6 +17,7 @@ export async function buildTextNurbsScene(
   control: OwnNurbsBuildControl = {},
 ): Promise<GeometryEvaluationResult> {
   const start = performance.now()
+  if (typeof window !== 'undefined') await warmGeometryKernel()
   const scenePreview = control.onSweepPreview ? progressiveScenePreviewMapper(document) : null
   // GPU prefetch: eligible SDF grids are sampled by WebGPU before the
   // synchronous build — all grids in one session (one pipeline, one submit);

@@ -56,6 +56,9 @@ import {
   insertNurbsKnot,
   editNurbsCurveWeights,
   relocateNurbsCurveSeam,
+  curveExactInsertKnot,
+  curveExactRemoveKnot,
+  curveExactReduceDegree,
   reverseNurbsCurve,
   transformNurbsCurve,
   trimNurbsCurve,
@@ -68,6 +71,9 @@ import {
   isoNurbsCurve,
   editNurbsSurfaceWeights,
   relocateNurbsSurfaceSeam,
+  surfaceExactInsertKnot,
+  surfaceExactRemoveKnot,
+  surfaceExactReduceDegree,
   reverseNurbsSurface,
   splitNurbsSurface,
   transposeNurbsSurface,
@@ -284,6 +290,24 @@ export function createOwnNurbsResolver(
             break
           case 'surface_relocate_seam':
             result = { kind: 'surface', data: relocateNurbsSurfaceSeam(needSurface(n.input), n.direction, n.parameter, n.max_deviation, n.max_cells) }
+            break
+          case 'curve_exact_insert_knot':
+            result = { kind: 'curve', data: curveExactInsertKnot(needCurve(n.input), n.parameter, n.count, n.max_work) }
+            break
+          case 'curve_exact_remove_knot':
+            result = { kind: 'curve', data: curveExactRemoveKnot(needCurve(n.input), n.parameter, n.max_work) }
+            break
+          case 'curve_exact_reduce_degree':
+            result = { kind: 'curve', data: curveExactReduceDegree(needCurve(n.input), n.max_work) }
+            break
+          case 'surface_exact_insert_knot':
+            result = { kind: 'surface', data: surfaceExactInsertKnot(needSurface(n.input), n.direction, n.parameter, n.count, n.max_work) }
+            break
+          case 'surface_exact_remove_knot':
+            result = { kind: 'surface', data: surfaceExactRemoveKnot(needSurface(n.input), n.direction, n.parameter, n.max_work) }
+            break
+          case 'surface_exact_reduce_degree':
+            result = { kind: 'surface', data: surfaceExactReduceDegree(needSurface(n.input), n.direction, n.max_work) }
             break
           case 'curve_reparameterize':
             result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }
