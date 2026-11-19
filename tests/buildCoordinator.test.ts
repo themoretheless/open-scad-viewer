@@ -807,7 +807,7 @@ describe('coordinator Worker silence recovery', () => {
     expect(timers.size).toBe(0)
   })
 
-  it.each(['cancel', 'dispose'] as const)('clears and fences every timeout on %s', operation => {
+  it.each(['cancel', 'dispose'] as const)('fences the silence timer and bounds the Worker lifetime on %s', operation => {
     const timers = new FakeTimers()
     const { coordinator, workers, published } = harness({ timers, silence: 100, grace: 50 })
     coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
@@ -816,11 +816,15 @@ describe('coordinator Worker silence recovery', () => {
     const staleGrace = timers.scheduledCallbacks[0]
     coordinator[operation]()
     staleSilence()
+    if (operation === 'cancel') {
+      expect(timers.size).toBe(1)
+      expect(workers[0].terminated).toBe(false)
+      timers.advance(50)
+    }
     staleGrace()
     expect(timers.size).toBe(0)
     expect(workers).toHaveLength(1)
-    // Cancel keeps the warm Worker (cooperative kernel jobs); dispose terminates it.
-    expect(workers[0].terminated).toBe(operation === 'dispose')
+    expect(workers[0].terminated).toBe(true)
     expect(published).toEqual([])
     expect(coordinator.state.status).toBe(operation === 'dispose' ? 'disposed' : 'cancelled')
   })
@@ -954,6 +958,8 @@ describe('BuildCoordinator cooperative cancellation', () => {
     expect(coordinator.state).toMatchObject({ status: 'cancelled', activeJobIds: [] })
     // The worker acknowledges within its next kernel step; nothing is published.
     workers[0]!.emitMessage(cancelled(first))
+    timers.advance(300)
+    expect(workers[0]!.terminated).toBe(false)
     expect(published).toHaveLength(0)
 
     coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
@@ -988,6 +994,19 @@ describe('BuildCoordinator cooperative cancellation', () => {
     expect(workers[0]!.terminated).toBe(true)
     expect(workers).toHaveLength(2)
     expect(buildRequests(workers[1]!).at(-1)!.documentRevision).toBe(4)
+  })
+
+  it('terminates an unresponsive cancelled Worker even without a follow-up build', () => {
+    const timers = new FakeTimers()
+    const { coordinator, workers } = harness({ grace: 300, timers })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    coordinator.cancel('user')
+    timers.advance(299)
+    expect(workers[0]!.terminated).toBe(false)
+    timers.advance(1)
+    expect(workers[0]!.terminated).toBe(true)
+    expect(workers).toHaveLength(1)
+    expect(coordinator.state.status).toBe('cancelled')
   })
 
   it('dispose still terminates the Worker', () => {

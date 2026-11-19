@@ -73,13 +73,23 @@ assert.equal(sha(await readFile(path.join(dist,'wasm/geometry-kernel.wasm'))),wa
 assert.ok((await readFile('src/generated/geometry-kernels/identity.ts','utf8')).includes(wasmSha),'Generated identity must match public WASM')
 const workerFiles=(await readdir(path.join(dist,'assets'))).filter(name=>/^geometry\.worker-.*\.js$/.test(name))
 assert.ok(workerFiles.length,'Built geometry worker asset must exist')
-for(const file of workerFiles)assert.ok((await readFile(path.join(dist,'assets',file),'utf8')).includes(wasmSha),'Geometry worker must embed the current WASM fingerprint')
+async function workerHasFingerprint(file, visited = new Set()){
+ if(visited.has(file))return false
+ visited.add(file)
+ const source=await readFile(path.join(dist,'assets',file),'utf8')
+ if(source.includes(wasmSha))return true
+ for(const match of source.matchAll(/(?:from|import)["']\.\/([\w.-]+\.js)["']/g)){
+  if(await workerHasFingerprint(match[1],visited))return true
+ }
+ return false
+}
+for(const file of workerFiles)assert.ok(await workerHasFingerprint(file),'Geometry worker and dependencies must use the current WASM fingerprint')
 const report={schema:'sweep-miter-ui-matrix/1' ,recordedAt:new Date().toISOString(),
  scope:(bodyBoundaryMode?'Finite constructor-owned progressive body boundary UI scenarios; ':surfaceMode?'Finite progressive surface UI scenarios; ':'Finite retained-miter UI scenarios; ')+' held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.',
  nativeCancelProbe:nativeCancel,nativeRunningCancelProbe:nativeRunningCancel,
  geometryWasmSha256:wasmSha,
  artifactProvenance:{sha256:wasmSha,byteLength:wasm.length,sourcePublicDistVerified:true,geometryWorkerFiles:workerFiles},
- appSourceSha256:sha(await readFile('src/App.vue')),distIndexSha256:sha(await readFile(path.join(dist,'index.html'))),cases:[]}
+ appSourceSha256:sha(await readFile('src/App.svt')),distIndexSha256:sha(await readFile(path.join(dist,'index.html'))),cases:[]}
 if(nativeRunningCancel)report.scope+=' Running probes require authenticated native CPU samples at the profile tail without Debugger suspension, then actual Worker destruction. Measured UI cancellation includes scheduling and is not cooperative kernel polling latency.'
 else if(nativeCancel)report.scope+=' Native probes pause actual geometry abi_request activations and verify Worker destruction; they do not measure unconstrained cancellation latency.'
 report.evidenceOnly=evidenceOnly
@@ -87,21 +97,21 @@ report.gpuBackendRequested=gpuBackend
 report.selection={startAt:startAt??null,fullInventory,plannedCaseKeys}
 if(evidenceOnly)report.scope+=' Evidence-only run excludes viewport rendering qualification.'
 report.sourceHashes = Object.fromEntries(await Promise.all([
- 'src/App.vue', 'src/kernel/sweepRetainedCorrespondence.ts', 'src/kernel/geometry/brep.ts',
- 'src/kernel/nurbsMiterOwnedBoundary.ts','crates/brep-core/src/sweep_miter_owned.rs','crates/geometry-bridge/src/cad_miter_owned.rs',
+ 'src/App.svt', 'src/kernel/sweepRetainedCorrespondence.ts', 'src/kernel/geometry/brep.ts',
+ 'src/kernel/nurbsMiterOwnedBoundary.ts','crates/brep-core/src/sweep_offset/sweep_miter_owned.rs','crates/geometry-bridge/src/cad_miter_owned.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/mod.rs','crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs',
  'src/kernel/nurbsSectionProjection.ts','src/kernel/nurbsCircleSectionRepair.ts',
  'src/kernel/miterBodyLayout.ts','src/kernel/sweepBoundaryCertificate.ts',
- 'src/features/DirectModeler.vue', 'src/generated/geometry-kernels/bytes.ts',
+ 'src/features/DirectModeler.svt', 'src/generated/geometry-kernels/bytes.ts',
  'scripts/check-sweep-miter-matrix-browser.mjs','scripts/sweep-native-cancel-probe.mjs',
 ].map(async file => [file, sha(await readFile(file))])))
 const save=()=>writeFile(path.join(output,'matrix.json'),JSON.stringify(report,null,2)+'\n')
 const server=createServer(async(req,res)=>{
  try {
   const url=new URL(req.url,'http://localhost')
-  if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
+  if(url.pathname==='/favicon.ico'||url.pathname==='/__openscada/mcp-editor'){res.writeHead(204).end();return}
   const file=path.resolve(dist,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(dist+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
@@ -125,7 +135,7 @@ try {
   const page=await context.newPage(),pageErrors=[]
   page.setDefaultTimeout(30000)
   page.on('pageerror',error=>pageErrors.push(error.message))
-  page.on('console',message=>{if(message.type()==='error')pageErrors.push(message.text())})
+  page.on('console',message=>{if(message.type()==='error')pageErrors.push(message.text()+' '+message.location().url)})
   const entry={viewport,file,sourceSha256:sha(source),assertions:[],pageErrors,status:'running'}
   report.cases.push(entry);await save()
   try {
@@ -140,7 +150,16 @@ try {
    const openSource=async()=>{if(await sourceButton.getAttribute('aria-pressed')!=='true')await sourceButton.click()}
    await openSource()
    await page.getByRole('checkbox',{name:'Авто',exact:true}).uncheck()
-   const editor=page.locator('textarea.code-input')
+   const fillSource=async(text)=>{
+    await openSource()
+    const editor=page.locator('textarea.code-input:visible, .code-editor-cm .cm-content:visible')
+    if(await editor.evaluate(element=>element instanceof HTMLTextAreaElement)){
+     await editor.fill(text)
+     return
+    }
+    await editor.press('ControlOrMeta+a')
+    await page.keyboard.insertText(text)
+   }
    const load=async(text)=>page.locator('input[type="file"][accept*=".scad"][accept*=".r"]').setInputFiles({name:'sweep-matrix.r',mimeType:'text/plain',buffer:Buffer.from(text)})
    const build=async()=>{
     await page.getByRole('button',{name:'Собрать',exact:true}).click()
@@ -291,7 +310,7 @@ try {
        :source.replace(/max_deviation:\s*[0-9.]+mm/,'max_deviation: 0.0000001mm')
       :source+'\n// Native cancellation observes the original miter geometry in a new revision.\n'
      assert.notEqual(busySource,source)
-     await editor.fill(busySource)
+     await fillSource(busySource)
      if(nativeRunningCancel){
       await probe.armRunningGeometry()
       await page.evaluate(()=>{const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Собрать');if(!button||button.disabled)throw Error('Native build action is unavailable');button.click()})
@@ -324,7 +343,7 @@ try {
       const cancelStartedAt=Date.now()
       const observationToCancelInitiationMs=nativeRunningCancel?cancelStartedAt-nativeStack.observedAtEpochMs:null
       if(action==='cancel')await page.getByRole('button',{name:'Отмена',exact:true}).click()
-      else await editor.fill(source+'\n// Supersede an active Rust exact-solid request.\n')
+      else await fillSource(source+'\n// Supersede an active Rust exact-solid request.\n')
       await exactProbe.assertDestroyed()
       const workerDestroyedAfterMs=Date.now()-cancelStartedAt
       const terminateCall=await page.evaluate(start=>window.sweepTerminateCalls.find(call=>call.mode==='exact'&&call.atEpochMs>=start),cancelStartedAt)
@@ -339,7 +358,7 @@ try {
      entry.assertions.push({case:'native-solid-'+action+'-restoration',status:'passed'})
     }
    }
-   await editor.fill(source+'\n// New source revision whose build will be cancelled.\n')
+   await fillSource(source+'\n// New source revision whose build will be cancelled.\n')
    await page.evaluate(()=>window.sweepHoldBuild=true)
    await page.getByRole('button',{name:'Собрать',exact:true}).click()
    await page.waitForFunction(()=>window.sweepHeld.includes('build'))
@@ -360,7 +379,7 @@ try {
    entry.assertions.push({case:'solid-cancellation',status:'passed',fault:'held worker dispatch'})
    const before=await page.evaluate(()=>window.sweepTerminated.length)
    await toSolid();await page.waitForFunction(()=>window.sweepHeld.filter(x=>x==='exact').length===2)
-   await editor.fill(source+'\n// Source supersedes the held Solid request.\n')
+   await fillSource(source+'\n// Source supersedes the held Solid request.\n')
    await page.waitForFunction(n=>window.sweepTerminated.length>n,before)
    await waitSolidFinished()
    assert.equal((await download('superseded')).bodies.length,0)
@@ -399,8 +418,12 @@ try {
     console.log(viewport.width,file,entry.assertions.length,'checks passed (Solid refused)')
     continue
    }
+   await waitSolidFinished()
+   assert.equal(await page.locator('.message.error').count(),0,`${file}: ${(await page.locator('.message.error').allTextContents()).join(' ')}`)
    await page.waitForFunction(()=>document.querySelector('main.main')?.inert===true,{},{timeout:120000})
    await solid.getByRole('status',{name:'display-refinement',exact:true}).waitFor({state:'hidden',timeout:120000})
+   await page.waitForFunction(()=>Array.from(document.querySelectorAll('button')).some(button=>
+    button.textContent.trim()==='STEP сборки · тела и группы'&&!button.disabled),{},{timeout:120000})
    const document=await download('solid')
    assert.equal(document.bodies.length,1)
    assert.ok(document.bodies[0].brep?.faces.length>0)
