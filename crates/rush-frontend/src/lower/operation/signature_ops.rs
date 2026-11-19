@@ -134,6 +134,15 @@ impl Compiler {
     }
 
     fn lower_signature_argument(&mut self, name: &str, key: &str, v: V) -> R<J> {
+        if key == "laws" && matches!(name, "radial_cam_profile" | "radial_cam_walls") {
+            let V::Array(entries)=v else {return Err(crate::error("Cam motion laws must be a list"));};
+            let laws=entries.into_iter().map(|entry|{
+                let value=raw(entry)?;
+                value.as_str().or_else(||value.get("text").and_then(J::as_str))
+                    .map(|s|J::String(s.to_owned())).ok_or_else(||crate::error("Expected a cam motion law name"))
+            }).collect::<R<Vec<_>>>()?;
+            return Ok(J::Array(laws));
+        }
         if matches!(key, "range_start" | "range_end" | "exact_parameter" | "edge_id") {
             let value = raw(v)?;
             let ratio = value.as_str().or_else(|| value.get("text").and_then(J::as_str))

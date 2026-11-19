@@ -26,6 +26,11 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "brep_cylinder" => &["radius", "height"],
         "brep_frustum" => &["bottom_radius", "top_radius", "height"],
         "brep_tube" => &["outer_radius", "inner_radius", "height"],
+        "radial_cam_profile" => &["center", "base_radius", "roller_radius", "phase", "end_angles", "end_lifts", "laws", "tolerance_mm", "max_spans", "piece"],
+        "radial_cam_walls" => &["center", "base_radius", "roller_radius", "phase", "end_angles", "end_lifts", "laws", "tolerance_mm", "max_spans", "vector"],
+        "rack_profile" => &["teeth", "module", "pressure_angle", "backlash", "addendum", "dedendum", "backing_height"],
+        "brep_rack" => &["teeth", "module", "pressure_angle", "backlash", "addendum", "dedendum", "backing_height", "z_min", "z_max"],
+        "verified_bevel_gear" => &["teeth", "module", "pitch_cone_angle", "pressure_angle", "face_width", "addendum", "dedendum", "backlash", "tolerance_mm"],
         "brep_gear" => &[
             "module",
             "teeth",

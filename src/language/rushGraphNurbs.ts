@@ -1371,6 +1371,11 @@ export const rushGraphNurbsSchema = z
               verified_profile: z.boolean().optional(),
             })
             .strict(),
+          z.object({id,op:z.literal('radial_cam_profile'),center:z.tuple([scalar,scalar,scalar]),base_radius:scalar,roller_radius:scalar,phase:scalar,end_angles:z.array(scalar).min(1).max(64),end_lifts:z.array(scalar).min(1).max(64),laws:z.array(z.enum(['dwell','harmonic','cycloidal','polynomial345','polynomial4567'])).min(1).max(64),tolerance_mm:scalar,max_spans:z.number().int().min(1).max(4096),piece:z.number().int().nonnegative()}).strict(),
+          z.object({id,op:z.literal('radial_cam_walls'),center:z.tuple([scalar,scalar,scalar]),base_radius:scalar,roller_radius:scalar,phase:scalar,end_angles:z.array(scalar).min(1).max(64),end_lifts:z.array(scalar).min(1).max(64),laws:z.array(z.enum(['dwell','harmonic','cycloidal','polynomial345','polynomial4567'])).min(1).max(64),tolerance_mm:scalar,max_spans:z.number().int().min(1).max(4096),vector:z.tuple([scalar,scalar,scalar])}).strict(),
+          z.object({id,op:z.literal('rack_profile'),teeth:z.number().int().positive(),module:scalar,pressure_angle:scalar,backlash:scalar,addendum:scalar,dedendum:scalar,backing_height:scalar}).strict(),
+          z.object({id,op:z.literal('brep_rack'),teeth:z.number().int().positive(),module:scalar,pressure_angle:scalar,backlash:scalar,addendum:scalar,dedendum:scalar,backing_height:scalar,z_min:scalar,z_max:scalar}).strict(),
+          z.object({id,op:z.literal('verified_bevel_gear'),teeth:z.number().int().positive(),module:scalar,pitch_cone_angle:scalar,pressure_angle:scalar,face_width:scalar,addendum:scalar,dedendum:scalar,backlash:scalar,tolerance_mm:scalar}).strict(),
           z.object({ id, op: z.literal('brep_cylinder'), radius: scalar, height: scalar }).strict(),
           z
             .object({ id, op: z.literal('brep_frustum'), bottom_radius: scalar, top_radius: scalar, height: scalar })

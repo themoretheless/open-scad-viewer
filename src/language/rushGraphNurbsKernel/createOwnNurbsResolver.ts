@@ -1674,6 +1674,40 @@ export function createOwnNurbsResolver(
           case 'brep_sphere':
             result = { kind: 'brep', data: createBrepSphere(n.radius) }
             break
+          case 'radial_cam_profile':
+          case 'radial_cam_walls': {
+            const {id:_id,op,...args}=n
+            const {curves,...report}=callGeometryRust<{curves:NurbsCurve[];spans:number;stop:string;maxSampledErrorMm:number;maxSampledPressureAngleRadians:number;sampledUndercut:boolean}>('radial_cam_profile',args)
+            constructionReports[key]={measurement:{operation:op,report:{...report,pieces:curves.length}}}
+            if (n.op==='radial_cam_profile') {
+              const curve=curves[n.piece]
+              if (!curve) throw new Error('Cam profile piece outside the generated range')
+              result={kind:'curve',data:curve}
+            } else {
+              const patches=curves.map(curve=>extrudeNurbsCurve(curve,n.vector))
+              result={kind:'patches',data:{patches,faceIds:patches.map((_,i)=>i)}}
+            }
+            break
+          }
+          case 'rack_profile':
+          case 'brep_rack': {
+            const {id:_id,op,...spec}=n
+            const {model,curve,...report}=callGeometryRust<{model:NurbsBrep|null;curve:NurbsCurve;pitchMm:number;widthMm:number;toothThicknessAtPitchMm:number;toothCentersMm:number[]}>(op,spec)
+            constructionReports[key]={measurement:{operation:op,report}}
+            if (op==='rack_profile') result={kind:'curve',data:curve}
+            else {
+              if (!model) throw new Error('Missing extruded rack body')
+              result={kind:'brep',data:model}
+            }
+            break
+          }
+          case 'verified_bevel_gear': {
+            const {id:_id,op,...spec}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;worldErrorUpperMm:number;solidGeometryCertified:boolean}>(op,spec)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'brep_gear': {
             const spec = {
                 module: n.module,

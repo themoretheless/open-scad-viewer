@@ -1,6 +1,11 @@
 //! Primitive solids, extrusions, revolutions, faceted constructors, and transforms.
 use crate::*;
 
+#[path="radial_cam.rs"]
+mod radial_cam;
+#[path="rack_bevel.rs"]
+mod rack_bevel;
+
 pub(super) const OPS: &[&str] = &[
     "brep_nurbs_sketch_extrude",
     "brep_nurbs_affine_lattice",
@@ -17,6 +22,10 @@ pub(super) const OPS: &[&str] = &[
     "brep_implicit_sphere_source_construct",
     "brep_implicit_sphere_source_audit",
     "brep_implicit_affine_sphere_source_audit",
+    "radial_cam_profile",
+    "rack_profile",
+    "brep_rack",
+    "verified_bevel_gear",
     "brep_nurbs_gear",
     "brep_nurbs_verified_gear",
     "brep_nurbs_torus",
@@ -85,6 +94,10 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "brep_implicit_sphere_source_construct" => cad_implicit_body::sphere(v, false),
         "brep_implicit_sphere_source_audit" => cad_implicit_body::sphere(v, true),
         "brep_implicit_affine_sphere_source_audit" => cad_implicit_body::affine_sphere(v),
+        "radial_cam_profile" => radial_cam::profile(&v),
+        "rack_profile" => rack_bevel::rack(&v,false),
+        "brep_rack" => rack_bevel::rack(&v,true),
+        "verified_bevel_gear" => rack_bevel::bevel(&v),
         "brep_nurbs_gear" | "brep_nurbs_verified_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,
