@@ -528,7 +528,7 @@ fn capped(
     let frame = [cone.frame[0], cone.frame[1], cone.axis];
     let mut caps: [Vec<Vec<Curve>>; 2] = [Vec::new(), Vec::new()];
     let mut planes = Vec::new();
-    for slot in 0..2 {
+    for (slot, cap_loops) in caps.iter_mut().enumerate() {
         let (z, r) = if slot == 0 { (0., cone.r_bottom) } else { (cone.height, cone.r_top) };
         let origin: [f64; 3] = std::array::from_fn(|k| cone.bottom[k] + z * cone.axis[k]);
         let plane = crate::implicit_trace::PlaneImplicit { origin, normal: cone.axis };
@@ -539,7 +539,7 @@ fn capped(
             std::array::from_fn(|k| origin[k] + rr * (cp * frame[0][k] + sp * frame[1][k]))
         };
         match crate::implicit_trace::trace_intersection(&plane, ring, seed, terms, torus.minor, crate::TRACE_TOLERANCE) {
-            Ok(loops) => caps[slot] = loops.into_iter().map(|l| l.pieces).collect(),
+            Ok(loops) => *cap_loops = loops.into_iter().map(|l| l.pieces).collect(),
             Err(e) if e.message.contains("tangency") => {
                 return refuse(report, UnresolvedReason::TangencyOrMultipleRoot);
             }

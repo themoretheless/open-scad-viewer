@@ -98,11 +98,11 @@ pub(in crate::sweeps::progressive_sweep) fn coordinates_in_basis(
         ])
     };
     let start = decode(start)?;
-    let basis = [
-        decode(frame.transverse.unwrap())?,
-        decode(frame.binormal.unwrap())?,
-        decode(frame.longitudinal.unwrap())?,
-    ];
+    let (Status::Certified, Some(n), Some(b), Some(t)) =
+        (frame.status, frame.transverse, frame.binormal, frame.longitudinal) else {
+            return Err(crate::input("Incomplete initial frame enclosure"));
+        };
+    let basis = [decode(n)?, decode(b)?, decode(t)?];
     let mut coordinates = Vec::with_capacity(profile.control_points.len());
     for pole in &profile.control_points {
         let offset = interval_sub(
@@ -203,13 +203,16 @@ pub(crate) fn control_trajectory(
         return Ok(unresolved(0, "closed-frame-correction-unproved"));
     }
     let initial = initial_coordinates(sweep, max_cells)?;
-    if initial.status != Status::Certified {
-        return Ok(unresolved(initial.cells, initial.reason.unwrap()));
-    }
-    let (axis, normal) = sweep.frame_laws.unwrap();
+    let (Status::Certified, Some(control)) = (
+        initial.status,
+        initial.coordinates.as_ref().and_then(|coordinates| coordinates.get(profile_control)),
+    ) else {
+        return Ok(unresolved(initial.cells, initial.reason.unwrap_or("initial-frame-enclosure-unresolved")));
+    };
+    let Some((axis, normal)) = sweep.frame_laws else { return Ok(unresolved(initial.cells, "mode-not-authored")) };
     let mut report = authored_frame_certificate::certify_control_trajectory(
         authored_frame_certificate::AuthoredFrameLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
-        initial.coordinates.unwrap()[profile_control],
+        *control,
         traversal,
         max_cells - initial.cells,
     )?;

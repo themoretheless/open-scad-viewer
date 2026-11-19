@@ -202,8 +202,8 @@ fn gradients(p: &[Vector3<f64>; 4]) -> Result<(B, f64)> {
         .try_inverse()
         .ok_or_else(|| invalid("Singular tetrahedron"))?;
     let mut g = [Vector3::zeros(); 4];
-    for i in 1..4 {
-        g[i] = inv.row(i - 1).transpose();
+    for (row, gradient) in g[1..].iter_mut().enumerate() {
+        *gradient = inv.row(row).transpose();
     }
     g[0] = -g[1] - g[2] - g[3];
     let mut b = B::zeros();
@@ -325,7 +325,7 @@ pub fn solve(problem: &Problem) -> Result<Solution> {
             (b - a).cross(&(c - a)).norm() / 2.
         };
         let total: f64 = faces.iter().map(area).sum();
-        if !(total > 0.) {
+        if total.is_nan() || total <= 0. {
             return Err(invalid("Loaded group has no boundary faces"));
         }
         for f in &faces {
@@ -398,7 +398,7 @@ pub fn solve(problem: &Problem) -> Result<Solution> {
             k.mul(&p, &mut q);
             mask(&mut q);
             let pq = dotv(&p, &q);
-            if !(pq > 0.) {
+            if pq.is_nan() || pq <= 0. {
                 return Err(invalid("Stiffness is not positive definite on free DOFs"));
             }
             let alpha = rz / pq;
@@ -516,7 +516,7 @@ where
             "Convergence study needs 2..=4 sizes and 0 < tolerance < 1",
         ));
     }
-    if sizes_mm.windows(2).any(|w| !(w[1] < w[0])) {
+    if sizes_mm.windows(2).any(|w| w[1].partial_cmp(&w[0]) != Some(std::cmp::Ordering::Less)) {
         return Err(invalid("Mesh sizes must strictly decrease"));
     }
     let mut levels = Vec::new();

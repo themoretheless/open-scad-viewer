@@ -5,10 +5,7 @@ use super::*;
 /// Cooperative drivers replay this plan to match the one-shot fold exactly.
 pub fn difference_batches(base: &Mesh, cutters: &[&Mesh], batch: usize) -> Option<Vec<Vec<usize>>> {
     let batch = batch.max(1);
-    let base_box = bounds(base);
-    if base_box.is_none() {
-        return None;
-    }
+    let base_box = Some(bounds(base)?);
     let boxes: Vec<_> = cutters.iter().map(|m| bounds(m)).collect();
     let pad = bounds_pad(&[&[base_box][..], &boxes[..]].concat());
     let mut batches: Vec<Vec<usize>> = Vec::new();

@@ -80,7 +80,7 @@ impl Report {
         )?;
         let a = I::new(lengths[edge][0], lengths[edge][1])?;
         let b = I::new(lengths[edge + 1][0], lengths[edge + 1][1])?;
-        let total = lengths.last().unwrap();
+        let Some(total) = lengths.last() else { return Ok(None) };
         let value = a
             .add(I::new(fraction[0], fraction[1])?.mul(b.sub(a)?)?)?
             .div(I::new(total[0], total[1])?)?
@@ -189,8 +189,7 @@ impl Report {
         let Some(sites) = &self.sites else {
             return Ok(None);
         };
-        let normals = self.normals.as_ref().unwrap();
-        let tangents = self.tangents.as_ref().unwrap();
+        let (Some(normals), Some(tangents)) = (&self.normals, &self.tangents) else { return Ok(None) };
         let initial = decode(normals[0])?;
         let initial_binormal = cross(decode(tangents[0])?, initial)?;
         let profile = sub(point(authored), point(sites[0]))?;
@@ -276,15 +275,24 @@ impl Report {
             self.station_point(edge, fraction, authored, s, t)
         }
     }
+    /// Cumulative length at both edge endpoints and at the end of the path.
+    fn edge_lengths(&self, edge: usize) -> Option<[[f64; 2]; 3]> {
+        let lengths = self.cumulative_lengths.as_ref()?;
+        Some([*lengths.get(edge)?, *lengths.get(edge.checked_add(1)?)?, *lengths.last()?])
+    }
+
     pub(super) fn edge_path_enclosures(&self,edge:usize,fraction:[f64;2])->Result<(VectorEnclosure,VectorEnclosure,VectorEnclosure)> {
-        let sites=self.sites.as_ref().unwrap();let lengths=self.cumulative_lengths.as_ref().unwrap();
+        let sites = self.sites.as_ref().ok_or_else(|| crate::input("Missing path sites"))?;
+        let [start, end, total] = self.edge_lengths(edge).ok_or_else(|| crate::input("Missing edge lengths"))?;
+        let tangent = self.tangents.as_ref().and_then(|axes| axes.get(edge)).ok_or_else(|| crate::input("Missing edge tangent"))?;
+        check(edge < sites.len(), "Missing path edge")?;
         let f=I::new(fraction[0],fraction[1])?;
         let a=point(sites[edge]);let b=point(sites[(edge+1)%sites.len()]);
         let delta=sub(b,a)?;let part=mul(delta,f)?;
         let path=encode([a[0].add(part[0])?,a[1].add(part[1])?,a[2].add(part[2])?]);
         let interval=|v:[f64;2]|I::new(v[0],v[1]);
-        let rate=interval(*lengths.last().unwrap())?.div(interval(lengths[edge+1])?.sub(interval(lengths[edge])?)?)?;
-        Ok((self.tangents.as_ref().unwrap()[edge],path,encode(mul(delta,rate)?)))
+        let rate=interval(total)?.div(interval(end)?.sub(interval(start)?)?)?;
+        Ok((*tangent,path,encode(mul(delta,rate)?)))
     }
     /// Original profile coordinates in the certified initial path frame.
     /// Interval projection preserves construction rounding before authored-frame mapping.
@@ -339,8 +347,10 @@ impl Report {
         let Some(scale)=scale else {return Ok(None);};
         if scale[0]<=0. {return Ok(None);}
         let s=I::new(scale[0],scale[1])?;
-        let n=decode(frame.transverse.unwrap())?;
-        let b=decode(frame.binormal.unwrap())?;
+        let (Some(normal), Some(binormal), Some(longitudinal)) =
+            (frame.transverse, frame.binormal, frame.longitudinal) else { return Ok(None) };
+        let n = decode(normal)?;
+        let b = decode(binormal)?;
         let mut u=[I::new(local[0][0],local[0][1])?.mul(s)?,I::new(local[1][0],local[1][1])?.mul(s)?,I::point(0.)];
         if let Some((axes,center))=affine {
             let a=super::super::vector_certificate::certify_values_traversal(axes,traversal,max_cells-frame.cells-scale_charge,true)?;
@@ -349,7 +359,7 @@ impl Report {
             for k in 0..3 {u[k]=u[k].mul(I::new(av[k][0],av[k][1])?)?.add(I::new(cv[k][0],cv[k][1])?)?;}
         }
         let nx=mul(n,u[0])?;let by=mul(b,u[1])?;
-        let tz=mul(decode(frame.longitudinal.unwrap())?,u[2])?;
+        let tz=mul(decode(longitudinal)?,u[2])?;
         let q=[nx[0].add(by[0])?.add(tz[0])?,nx[1].add(by[1])?.add(tz[1])?,nx[2].add(by[2])?.add(tz[2])?];
         let Some(sheared)=self.miter_offset(edge,fraction,encode(q))? else {return Ok(None);};
         let Some(sites)=&self.sites else {return Ok(None);};
@@ -399,11 +409,11 @@ impl Report {
         if sv[0]<=0. {return Ok(None);}
         let interval=|v:[f64;2]|I::new(v[0],v[1]);
         let width=I::point(fraction[1]).sub(I::point(fraction[0]))?;
-        let lengths=self.cumulative_lengths.as_ref().unwrap();
-        let rate=interval(lengths[edge+1])?.sub(interval(lengths[edge])?)?.div(interval(*lengths.last().unwrap())?)?.mul(width)?;
+        let Some([start, end, total]) = self.edge_lengths(edge) else { return Ok(None) };
+        let rate=interval(end)?.sub(interval(start)?)?.div(interval(total)?)?.mul(width)?;
         let [a,b]=scale.domain();let sr=I::point(b).sub(I::point(a))?.mul(rate)?;
         let s0=interval(sv)?;let s1=interval(sd)?.mul(sr)?;let s2=interval(sdd)?.mul(sr.mul(sr)?)?;
-        let n=frame.transverse.as_ref().unwrap();let b=frame.binormal.as_ref().unwrap();
+        let (Some(n), Some(b)) = (&frame.transverse, &frame.binormal) else { return Ok(None) };
         let combine=|n:VectorEnclosure,b:VectorEnclosure|->Result<V> {
             let nx=mul(decode(n)?,I::new(local[0][0],local[0][1])?)?;let by=mul(decode(b)?,I::new(local[1][0],local[1][1])?)?;
             Ok([nx[0].add(by[0])?,nx[1].add(by[1])?,nx[2].add(by[2])?])
@@ -424,7 +434,8 @@ impl Report {
             smooth &= a.single_span && c.single_span;
             let domain_rate=|curve:&crate::curve::Curve|->Result<I>{let [a,b]=curve.domain();I::point(b).sub(I::point(a))?.mul(rate)};
             let ar=domain_rate(axes)?;let cr=domain_rate(center)?;
-            let bases=[frame.transverse.as_ref().unwrap(),frame.binormal.as_ref().unwrap(),frame.longitudinal.as_ref().unwrap()];
+            let Some(axis) = &frame.longitudinal else { return Ok(None) };
+            let bases = [n, b, axis];
             let mut q=[ [I::point(0.);3];3 ];
             for k in 0..3 {
                 let offset=interval(local[k])?;
@@ -439,8 +450,9 @@ impl Report {
             }
             (length(q[0])?,length(q[1])?,length(q[2])?)
         } else {(q0,q1,q2)};
-        let tangent=decode(self.tangents.as_ref().unwrap()[edge])?;
-        let planes=self.planes.as_ref().unwrap();
+        let Some(tangent) = self.tangents.as_ref().and_then(|axes| axes.get(edge)) else { return Ok(None) };
+        let tangent = decode(*tangent)?;
+        let Some(planes) = &self.planes else { return Ok(None) };
         let projection=|p:Option<VectorEnclosure>|->Result<V> {
             match p {None=>Ok([I::point(0.);3]),Some(p)=>{let h=decode(p)?;mul(h,I::point(1.).div(dot(tangent,h)?)?)}}
         };
@@ -505,12 +517,12 @@ impl Report {
             return Ok(None);
         }
         let scalar = |v: [f64; 2]| I::point(v[0].abs().max(v[1].abs()));
-        let lengths = self.cumulative_lengths.as_ref().unwrap();
+        let Some([start, end, total]) = self.edge_lengths(edge) else { return Ok(None) };
         let interval = |v: [f64; 2]| I::new(v[0], v[1]);
         let width = I::point(fraction[1]).sub(I::point(fraction[0]))?;
-        let rate = interval(lengths[edge + 1])?
-            .sub(interval(lengths[edge])?)?
-            .div(interval(*lengths.last().unwrap())?)?
+        let rate = interval(end)?
+            .sub(interval(start)?)?
+            .div(interval(total)?)?
             .mul(width)?;
         let domain_rate = |c: &crate::curve::Curve| -> Result<I> {
             let [a, b] = c.domain();
@@ -524,10 +536,10 @@ impl Report {
             .mul(tr)?
             .add(scalar(self.distributed_angle()).mul(rate)?)?;
         let theta2 = scalar(tdd).mul(tr)?.mul(tr)?;
-        let normals = self.normals.as_ref().unwrap();
-        let tangents = self.tangents.as_ref().unwrap();
+        let (Some(normals), Some(tangents)) = (&self.normals, &self.tangents) else { return Ok(None) };
         let initial = decode(normals[0])?;
-        let profile = sub(point(authored), point(self.sites.as_ref().unwrap()[0]))?;
+        let Some(origin) = self.sites.as_ref().and_then(|sites| sites.first()) else { return Ok(None) };
+        let profile = sub(point(authored), point(*origin))?;
         let x = dot(profile, initial)?;
         let y = dot(profile, cross(decode(tangents[0])?, initial)?)?;
         let mut smooth=s.single_span && t.single_span;
@@ -555,7 +567,7 @@ impl Report {
             )?)
         };
         let tangent = decode(tangents[edge])?;
-        let planes = self.planes.as_ref().unwrap();
+        let Some(planes) = &self.planes else { return Ok(None) };
         let transverse = |p: Option<VectorEnclosure>| -> Result<V> {
             match p {
                 None => Ok([I::point(0.); 3]),

@@ -226,10 +226,13 @@ fn decode(a: [[f64; 2]; 3]) -> Result<V> {
 fn jet(c: &Curve, r: &vector_certificate::Report) -> Result<Jet> {
     let [lo, hi] = c.domain();
     let span = I::point(hi).sub(I::point(lo))?;
+    let (Some(value), Some(first), Some(second)) = (r.value, r.first, r.second) else {
+        return Err(crate::input("Incomplete vector jet enclosure"));
+    };
     Ok(Jet {
-        v: decode(r.value.unwrap())?,
-        d: mul(decode(r.first.unwrap())?, span)?,
-        dd: mul(decode(r.second.unwrap())?, span.mul(span)?)?,
+        v: decode(value)?,
+        d: mul(decode(first)?, span)?,
+        dd: mul(decode(second)?, span.mul(span)?)?,
     })
 }
 fn encode(a: Jet) -> FrameJet {
@@ -288,7 +291,9 @@ fn apply_twist(
     let theta =
         super::scalar_certificate::certify_traversal(twist, traversal, max_cells - out.cells)?;
     out.cells += theta.cells;
-    if theta.status != Status::Certified {
+    let (Status::Certified, Some(value), Some(first), Some(second), Some(t), Some(n), Some(b)) =
+        (theta.status, theta.value, theta.first, theta.second, &out.longitudinal, &out.transverse, &out.binormal)
+    else {
         out.status = Status::Unresolved;
         out.reason = Some("twist-law-enclosure-unresolved");
         out.longitudinal = None;
@@ -296,21 +301,21 @@ fn apply_twist(
         out.binormal = None;
         out.single_span = false;
         return Ok(out);
-    }
+    };
     let [lo, hi] = twist.domain();
     let span = I::point(hi).sub(I::point(lo))?;
-    let td = I::new(theta.first.unwrap()[0], theta.first.unwrap()[1])?.mul(span)?;
-    let tdd = I::new(theta.second.unwrap()[0], theta.second.unwrap()[1])?.mul(span.mul(span)?)?;
-    let tr = super::trigonometric_certificate::certify(theta.value.unwrap())?;
+    let td = I::new(first[0], first[1])?.mul(span)?;
+    let tdd = I::new(second[0], second[1])?.mul(span.mul(span)?)?;
+    let tr = super::trigonometric_certificate::certify(value)?;
     let s = I::new(tr.sin[0], tr.sin[1])?;
     let c = I::new(tr.cos[0], tr.cos[1])?;
     let sd = c.mul(td)?;
     let cd = I::point(0.).sub(s.mul(td)?)?;
     let sdd = c.mul(tdd)?.sub(s.mul(square(td)?)?)?;
     let cdd = I::point(0.).sub(s.mul(tdd)?)?.sub(c.mul(square(td)?)?)?;
-    let t = decode_jet(out.longitudinal.as_ref().unwrap())?;
-    let n = decode_jet(out.transverse.as_ref().unwrap())?;
-    let b = decode_jet(out.binormal.as_ref().unwrap())?;
+    let t = decode_jet(t)?;
+    let n = decode_jet(n)?;
+    let b = decode_jet(b)?;
     let normal = add_jet(
         scalar_product(n, c, cd, cdd)?,
         scalar_product(b, s, sd, sdd)?,
@@ -590,12 +595,17 @@ fn certify_frame_cover(
         let report = certify_interval(interval, max_cells - out.cells)?;
         out.cells += report.cells;
         if report.status == Status::Certified {
+            let (Some(longitudinal), Some(transverse), Some(binormal)) =
+                (report.longitudinal, report.transverse, report.binormal) else {
+                    out.reason = Some("frame-regularity-incomplete-enclosure");
+                    return Ok(out);
+                };
             out.certified_intervals += 1;
             intervals.push(RegularFrameInterval {
                 traversal: interval,
-                longitudinal: report.longitudinal.unwrap(),
-                transverse: report.transverse.unwrap(),
-                binormal: report.binormal.unwrap(),
+                longitudinal,
+                transverse,
+                binormal,
             });
             continue;
         }

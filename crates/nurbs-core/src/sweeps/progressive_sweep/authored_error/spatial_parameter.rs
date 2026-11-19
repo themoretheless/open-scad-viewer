@@ -219,7 +219,7 @@ pub(super) fn section_interpolation(
             pose.rmf_values(transport, sweep, &qs, at, at, max_cells - out.cells)?
         } else {
             super::super::rmf_transport::relative_values(
-                &transport,
+                transport,
                 sweep.scale,
                 sweep.twist,
                 sweep.affine_laws,
@@ -293,7 +293,7 @@ pub(super) fn section_interpolation(
             )?
         } else {
             super::super::rmf_transport::relative_values(
-                &transport,
+                transport,
                 sweep.scale,
                 sweep.twist,
                 sweep.affine_laws,

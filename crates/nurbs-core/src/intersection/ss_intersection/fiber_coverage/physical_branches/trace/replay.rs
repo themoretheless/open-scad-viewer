@@ -105,7 +105,7 @@ pub(super) fn verify(
             plan[i - 1].1[1]
         };
         check(
-            same_source(&p.selector, &original)
+            same_source(&p.selector, original)
                 && p.selector.free_axis() == b.free_axis
                 && p.selector.domain()[axis] == [expected_clock; 2]
                 && contained(p.selector.domain(), original.domain())

@@ -34,7 +34,7 @@ fn flat_edges(edges: &[(usize, usize)]) -> Vec<usize> {
 fn canonical_indices(indices: &[usize]) -> Vec<usize> {
     assert_eq!(indices.len() % 3, 0, "invalid triangle indices");
     let mut canonical = Vec::with_capacity(indices.len());
-    for triangle in indices.chunks_exact(3) {
+    for triangle in indices.as_chunks::<3>().0 {
         let start = (0..3).min_by_key(|&index| triangle[index]).unwrap();
         canonical.extend((0..3).map(|index| triangle[(start + index) % 3]));
     }

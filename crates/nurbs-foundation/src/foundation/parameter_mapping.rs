@@ -430,7 +430,7 @@ fn materialize_mapping_tree(
         ));
     }
     let pieces = mapping.pieces()?;
-    let (result, growth) = materialize_pieces(curve, &pieces)?;
+    let (result, growth) = materialize_pieces(curve, pieces)?;
     Ok((
         result,
         growth,

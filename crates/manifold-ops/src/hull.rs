@@ -95,7 +95,7 @@ pub struct HullOutcome {
 
 /// Hull of a point cloud given as `xyz` triples.
 pub fn hull_points(positions: &[f64], options: HullOptions) -> Result<HullOutcome, HullError> {
-    if positions.len() % 3 != 0 {
+    if !positions.len().is_multiple_of(3) {
         return Err(HullError::InvalidInput(
             "positions length is not a multiple of 3".into(),
         ));
@@ -118,7 +118,7 @@ pub fn hull_mesh(
     indices: &[usize],
     options: HullOptions,
 ) -> Result<HullOutcome, HullError> {
-    if positions.len() % 3 != 0 || indices.len() % 3 != 0 {
+    if !positions.len().is_multiple_of(3) || !indices.len().is_multiple_of(3) {
         return Err(HullError::InvalidInput(
             "buffer lengths are not multiples of 3".into(),
         ));
@@ -160,14 +160,13 @@ fn weld(positions: &[f64], ids: &[usize], eps: f64) -> Vec<usize> {
         for dx in -1..=1 {
             for dy in -1..=1 {
                 for dz in -1..=1 {
-                    if let Some(list) = grid.get(&[c[0] + dx, c[1] + dy, c[2] + dz]) {
-                        if list
+                    if let Some(list) = grid.get(&[c[0] + dx, c[1] + dy, c[2] + dz])
+                        && list
                             .iter()
                             .any(|&j| norm(sub(point(positions, j), p)) <= eps)
                         {
                             continue 'next;
                         }
-                    }
                 }
             }
         }

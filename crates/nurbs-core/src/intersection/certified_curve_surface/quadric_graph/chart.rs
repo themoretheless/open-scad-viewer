@@ -135,7 +135,7 @@ impl Chart {
             });
             let ordinary = affine && (separable || coupled);
             let homogeneous =
-                !ordinary && super::homogeneous_affine::prove(s, axes, &origin, &u, &v);
+                !ordinary && super::homogeneous_affine::prove(s, axes, origin, u, v);
             let boundary_clocks = if !ordinary && !homogeneous {
                 super::homogeneous_separable::prove(s, axes, &frame)
             } else {

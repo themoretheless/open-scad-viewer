@@ -58,11 +58,8 @@ fn hull(n: &Net, b: &mut Budget) -> Result<[I; 3]> {
 }
 fn bound(jets: [[I; 3]; 3], low: I, high: I) -> Result<(NormalRadiusDecision, Option<[f64; 2]>)> {
     let [u, v, vv] = jets;
-    let cross = std::array::from_fn::<_, 3, _>(|k| (k, (k + 1) % 3, (k + 2) % 3))
-        .map(|(_, i, j)| u[i].mul(v[j]).and_then(|a| a.sub(u[j].mul(v[i])?)))
-        .into_iter()
-        .collect::<Result<Vec<_>>>()?;
-    let cross: [I; 3] = cross.try_into().unwrap();
+    let minor = |i: usize, j: usize| u[i].mul(v[j])?.sub(u[j].mul(v[i])?);
+    let cross = [minor(1, 2)?, minor(2, 0)?, minor(0, 1)?];
     let c = norm(cross)?;
     let e = norm(v)?;
     if c.lo <= 0. || e.lo <= 0. {
@@ -122,10 +119,10 @@ fn at(n: &Net, parameter: &[Q; 2], b: &mut Budget) -> Result<[I; 3]> {
                     &parameter[1],
                     b,
                 )
-                .map(|(a, _)| a.last().unwrap().clone())
+                .and_then(|(mut left, _)| left.pop().ok_or_else(|| crate::input("Empty coefficient row")))
             })
             .collect::<Result<Vec<_>>>()?;
-        let value = split(&values, &parameter[0], b)?.0.last().unwrap().clone();
+        let value = split(&values, &parameter[0], b)?.0.pop().ok_or_else(|| crate::input("Empty coefficient column"))?;
         out[k] = curvature::enclose(&value, b)?;
     }
     Ok(out)
@@ -135,17 +132,17 @@ fn midpoint(n: &Net, b: &mut Budget) -> Result<[I; 3]> {
 }
 fn display(region: &[[Q; 2]; 2]) -> [[f64; 2]; 2] {
     fn enclosure(q: &Q) -> [f64; 2] {
-        let x = q.to_f64().unwrap();
+        let Some(x) = q.to_f64() else { return [0., 1.] };
         let (mut lo, mut hi) = (x, x);
         for _ in 0..4 {
-            if Q::from_float(lo).unwrap() > *q {
+            if Q::from_float(lo).is_some_and(|value| value > *q) {
                 lo = lo.next_down();
             }
-            if Q::from_float(hi).unwrap() < *q {
+            if Q::from_float(hi).is_some_and(|value| value < *q) {
                 hi = hi.next_up();
             }
         }
-        if Q::from_float(lo).unwrap() <= *q && *q <= Q::from_float(hi).unwrap() {
+        if Q::from_float(lo).is_some_and(|value| value <= *q) && Q::from_float(hi).is_some_and(|value| *q <= value) {
             [lo, hi]
         } else {
             [0., 1.]
@@ -220,6 +217,11 @@ impl Patch {
             }
             Ok(false) => (),
         }
+        let exact_range = |[lo, hi]: [f64; 2]| -> Result<[Q; 2]> {
+            let rational = |x| Q::from_float(x).ok_or_else(|| crate::input("Non-finite normal-radius domain"));
+            Ok([rational(lo)?, rational(hi)?])
+        };
+        let exact_domain = [exact_range(domain[0])?, exact_range(domain[1])?];
         let setup = (|| -> Result<_> {
             let r = b.authored(radius_mm)?;
             let tolerance = b.authored(tolerance_mm)?;
@@ -234,8 +236,7 @@ impl Patch {
             let mut parameter = [Q::zero(), Q::zero()];
             for axis in 0..2 {
                 parameter[axis] = b.keep(
-                    (Q::from_float(domain[axis][0]).unwrap()
-                        + Q::from_float(domain[axis][1]).unwrap())
+                    (&exact_domain[axis][0] + &exact_domain[axis][1])
                         / Q::from_integer(2.into()),
                 )?;
             }
@@ -273,7 +274,6 @@ impl Patch {
             report.coefficient_work = b.used() - start;
             return Ok(report);
         }
-        let exact_domain = domain.map(|r| r.map(|x| Q::from_float(x).unwrap()));
         let mut stack = vec![(exact_domain, jets)];
         while let Some((region, jets)) = stack.pop() {
             if report.cells >= max_cells {

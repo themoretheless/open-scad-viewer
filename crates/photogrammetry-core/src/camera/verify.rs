@@ -153,7 +153,8 @@ pub fn verify_poses(
         || camera_intrinsics.iter().any(|&b| b >= intrinsics.len())
         || observations.iter().any(|o| o.camera >= poses.len())
         || options.max_pairs_per_track == 0
-        || !(options.min_triangulation_degrees >= 0.)
+        || options.min_triangulation_degrees.is_nan()
+        || options.min_triangulation_degrees < 0.
     {
         return Err(crate::error("Pose verification inputs do not match"));
     }
@@ -207,7 +208,7 @@ pub fn verify_poses(
                         };
                         let (ra, rb) = (sub(point, pa.center()), sub(point, pb.center()));
                         let cos = dot(ra, rb) / (norm(ra) * norm(rb));
-                        if !(cos <= min_cos) {
+                        if !cos.partial_cmp(&min_cos).is_some_and(|order| order.is_le()) {
                             continue;
                         }
                         pairs += 1;
@@ -265,7 +266,7 @@ pub fn verify_poses(
                     PoseStatus::Inconsistent,
                     "Points triangulated by other views lie behind the camera",
                 )
-            } else if !(median_residual <= options.max_median_residual) {
+            } else if !median_residual.partial_cmp(&options.max_median_residual).is_some_and(|order| order.is_le()) {
                 (
                     PoseStatus::Inconsistent,
                     "Median reprojection residual exceeds the limit",

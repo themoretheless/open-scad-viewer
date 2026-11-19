@@ -11,7 +11,7 @@ pub fn dispatch(op: &str, v: &Value) -> Result<Value> {
             crate::encode(brep_core::analytic::section_loft_surfaces(
                 &field::<Vec<Vec<Vec<Curve>>>>(v, "sections")?,
                 &field::<Vec<Vec<nurbs_core::surface::Surface>>>(v, "sides")?,
-                field(&v, "closed")?,
+                field(v, "closed")?,
             )?)
         }
         "brep_nurbs_rational_section_loft" => {

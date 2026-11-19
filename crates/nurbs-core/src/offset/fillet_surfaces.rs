@@ -601,7 +601,7 @@ fn estimate_skin_deviation(
     let params = stations_s;
     // Deviation estimate: mid-span samples against the spine chord.
     let mut deviation = 0_f64;
-    let (du, dv) = domain(&surface);
+    let (du, dv) = domain(surface);
     for k in 0..spine.len().saturating_sub(1) {
         let v_mid = (stations_s[k] + stations_s[k + 1]) * 0.5;
         let v =

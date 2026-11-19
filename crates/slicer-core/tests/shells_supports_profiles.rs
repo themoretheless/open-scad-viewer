@@ -51,9 +51,9 @@ fn cube_honours_perimeter_count_and_top_bottom_solid_layers() {
             .collect();
         let expected: Vec<usize> = (0..bottom).chain(20 - top..20).collect();
         assert_eq!(solid, expected, "walls={walls} top={top} bottom={bottom}");
-        for i in bottom..20 - top {
-            assert!(has(&planned[i], PathRole::Hatch));
-            assert!(!has(&planned[i], PathRole::SolidSkin));
+        for layer in &planned[bottom..20 - top] {
+            assert!(has(layer, PathRole::Hatch));
+            assert!(!has(layer, PathRole::SolidSkin));
         }
         // Solid layers are fully skinned, not mixed with sparse infill.
         for &i in &expected {

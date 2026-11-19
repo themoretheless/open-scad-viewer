@@ -1027,12 +1027,11 @@ fn export_grouped_with_styles(
     assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: &[&str], parents: &[Option<usize>],
     colours: Option<&[Option<StepOccurrenceColour<'_>>]>,
 ) -> Result<String> {
-    if let Some(colours) = colours {
-        if colours.len() != parents.len() || colours.iter().flatten().any(|style|
-            style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x))) {
+    if let Some(colours) = colours
+        && (colours.len() != parents.len() || colours.iter().flatten().any(|style|
+            style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x)))) {
             return Err(refuse("Expected one optional named RGB style per occurrence"));
         }
-    }
     if parents.len() != assembly.occurrences().len()
         || groups.len() > 256
         || groups.iter().any(|name| name.is_empty() || name.chars().any(char::is_control))

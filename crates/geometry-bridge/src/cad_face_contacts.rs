@@ -112,7 +112,7 @@ fn volume_value(r:&brep_core::volume_validity::Report,charts:&brep_core::sweep_r
             "outward":s.outward,"attempts":s.attempts.len(),
             "normalMethods":s.attempts.iter().map(|a|a.normal_method).collect::<Vec<_>>(),
             "unresolved":s.attempts.last().map(|a|a.ray.unresolved.iter().map(|u|json!({"face":u.face,"uv":u.uv,"reason":u.reason})).collect::<Vec<_>>()).unwrap_or_default()})).collect::<Vec<_>>() });
-    if capture_charts {output["retainedWallCharts"]=super::cad_sweep_smoothness::charts_value(&charts);}
+    if capture_charts {output["retainedWallCharts"]=super::cad_sweep_smoothness::charts_value(charts);}
     Ok(output)
 }
 struct VolumeSession {
