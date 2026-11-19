@@ -1,0 +1,29 @@
+{
+  "sourceBase": "9210179b88ac68bb36e43ba42e063624381bb7bc",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Original periodic cylinder admits a closed solid with an extended stored UV shore and a full-world active subinterval. Finite native regression checks chart quotient, cap contacts, material parity, and bounded refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --test closed_solid periodic_cylinder_qualifies_as_closed_material",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.01s",
+      "file": "solid.log.gz",
+      "sha256": "433aa217903837df526666944c907651e3842a939e822f8ff2b63e739ba97aa0"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib periodic_charts",
+      "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2062 filtered out; finished in 0.00s",
+      "file": "charts.log.gz",
+      "sha256": "85021378e64b21ff577f2b4748acb32bdcb788992e3cf80bb45532edf8e731f7"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "2e74ae07539ff8c49ca47bbcf6c928192ca6f8cc77b6df60f507d8974926346e",
+    "count": 4920
+  }
+}

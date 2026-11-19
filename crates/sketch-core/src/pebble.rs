@@ -153,9 +153,9 @@ pub fn pebble_game_2d(vertex_count: usize, edges: &[(usize, usize)]) -> Result<P
         let mut member = vec![false; vertex_count];
         member[u] = true;
         member[v] = true;
-        for w in 0..vertex_count {
-            if w != u && w != v && !game.can_reach_pebble(w, &[u, v]) {
-                member[w] = true;
+        for (w, included) in member.iter_mut().enumerate() {
+            if !*included && !game.can_reach_pebble(w, &[u, v]) {
+                *included = true;
             }
         }
         let component: Vec<usize> = (0..vertex_count).filter(|&w| member[w]).collect();

@@ -398,14 +398,12 @@ pub(crate) fn parse(
         if let Value::Call(kind, args) = &entity.value
             && kind == "PRODUCT_DEFINITION_SHAPE"
             && args.len() == 3
-        {
-            if let Some(product) = shape_product.get(&shape).and_then(|id| result.products.get_mut(id)) {
+            && let Some(product) = shape_product.get(&shape).and_then(|id| result.products.get_mut(id)) {
                 let name = decode_step_string(string_value(&args[0], "shape name")?)?;
                 if !name.is_empty() {
                     product.shape_name = Some(name);
                 }
             }
-        }
     }
     for entity in entities.values() {
         if let Value::Call(kind, args) = &entity.value
@@ -617,14 +615,14 @@ pub(crate) fn emit(
     }
     let mut measures = Vec::new();
     if let Some(volume) = product.validation.volume_mm3 {
-        let unit = writer.emit(format!("(NAMED_UNIT(*)SI_UNIT($,.CUBIC_METRE.)VOLUME_UNIT())"));
+        let unit = writer.emit("(NAMED_UNIT(*)SI_UNIT($,.CUBIC_METRE.)VOLUME_UNIT())".to_string());
         measures.push(writer.emit(format!(
             "MEASURE_REPRESENTATION_ITEM('volume',VOLUME_MEASURE({}),#{unit})",
             real(volume * 1e-9)
         )));
     }
     if let Some(area) = product.validation.surface_area_mm2 {
-        let unit = writer.emit(format!("(NAMED_UNIT(*)SI_UNIT($,.SQUARE_METRE.)AREA_UNIT())"));
+        let unit = writer.emit("(NAMED_UNIT(*)SI_UNIT($,.SQUARE_METRE.)AREA_UNIT())".to_string());
         measures.push(writer.emit(format!(
             "MEASURE_REPRESENTATION_ITEM('surface area',AREA_MEASURE({}),#{unit})",
             real(area * 1e-6)

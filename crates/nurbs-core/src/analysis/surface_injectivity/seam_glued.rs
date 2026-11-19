@@ -1,6 +1,8 @@
 //! Common contraction on a continuously glued ORIGINAL periodic rectangle.
 use super::*;
 mod periodic_extrusion;
+mod radial_tensor;
+pub use radial_tensor::{AngularRingReport, RadialBandPairReport, RadialTensor, certify_angular_ring, certify_radial_band_cycle, certify_radial_band_pair, factor_radial_tensor};
 pub use periodic_extrusion::{PeriodicExtrusionReport, certify_periodic_extrusion};
 #[derive(Clone, Debug)]
 pub struct GluedRectangleReport {

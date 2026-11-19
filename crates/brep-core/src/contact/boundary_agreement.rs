@@ -234,15 +234,17 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
                 .collect::<Vec<_>>();
             // The authored lift describes the endpoint's sheet. Literal joins
             // in the same chart need no periodic equivalence proof.
-            let closed = if curves.iter().zip(&ranges).all(|(c, r)| c.domain() == *r) {
-                nurbs_core::trim_domain::exact_loop_joins(&curves)?
-            } else {
+            let mut closed = None;
+            if curves.iter().zip(&ranges).all(|(c, r)| c.domain() == *r) {
+                closed = nurbs_core::trim_domain::exact_loop_joins(&curves)?;
+            }
+            if closed.is_none() {
                 let joins = nurbs_core::trim_domain::exact_trimmed_loop_joins(
                     &curves, &ranges, max_work - report.work,
                 )?;
                 report.work += joins.work_used;
-                joins.closed
-            };
+                closed = joins.closed;
+            }
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));
             for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
@@ -271,10 +273,17 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
                         curve, &coedge.pcurve, surface, coedge.reversed, max_work - report.work,
                     )?
                 } else {
-                    curve_surface_agreement::verify_exact_trimmed(
+                    let proof = curve_surface_agreement::verify_exact_trimmed(
                         curve, &coedge.pcurve, surface, coedge.reversed,
                         trim.curve_parameter, trim.pcurve_parameter, max_work - report.work,
-                    )?
+                    )?;
+                    if proof.is_none() && trim.curve_parameter == curve.domain() {
+                        restricted_periodic_lift(
+                            curve, coedge, surface, trim.pcurve_parameter, &mut report.work, max_work,
+                        )?
+                    } else {
+                        proof
+                    }
                 }
             }else{
                 curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
@@ -293,6 +302,36 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
     }
     Ok(report)
 }
+/// The interval is bound to a complete original world edge by the caller.
+/// Exact restriction preserves the UV clock, including its traversal direction.
+pub(crate) fn restricted_periodic_lift(
+    curve: &crate::Curve,
+    coedge: &crate::Coedge,
+    surface: &crate::Surface,
+    [a, b]: [f64; 2],
+    work: &mut u64,
+    limit: u64,
+) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    let range = [a.min(b), a.max(b)];
+    if !(surface.periodic_u || surface.periodic_v)
+        || coedge.pcurve.periodic
+        || range == coedge.pcurve.domain()
+        || *work == limit
+    {
+        return Ok(None);
+    }
+    let restriction = nurbs_core::editing::exact_curve_merge::clamp_exact_curve_on(
+        &coedge.pcurve, range, limit - *work,
+    )?;
+    *work += restriction.work_used;
+    let Some(pcurve) = restriction.curve.filter(|_| *work < limit) else {
+        return Ok(None);
+    };
+    curve_surface_agreement::verify_exact(
+        curve, &pcurve, surface, coedge.reversed ^ (a > b), limit - *work,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -413,6 +452,27 @@ mod tests {
         assert!(!partial.all_equal);
         assert!(partial.work <= needed - 1);
         assert_eq!(partial.uses.len(), 24);
+    }
+    #[test]
+    fn exact_closure_uses_native_endpoints_of_an_unclamped_use() {
+        let mut model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let outer = model.faces[0].outer;
+        let pcurve = &mut model.0.loops[outer].coedges[0].pcurve;
+        let a = &pcurve.control_points[0];
+        let b = &pcurve.control_points[1];
+        pcurve.control_points = [-0.25, 0.25, 0.75, 1.25].map(|t| {
+            a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+        }).to_vec();
+        pcurve.degree = 2;
+        pcurve.knots = vec![-2., -1., 0., 1., 2., 3., 4.];
+        pcurve.weights = vec![1.; 4];
+        model.validate().unwrap();
+
+        let report = verify_exact(&model, 1_000_000).unwrap();
+        assert!(report.all_joins_exact);
+        let short = verify_exact(&model, 1).unwrap();
+        assert!(!short.all_joins_exact);
+        assert!(short.work <= 1);
     }
     #[test]
     fn exact_closure_distinguishes_a_subtolerance_gap_and_keeps_every_use() {

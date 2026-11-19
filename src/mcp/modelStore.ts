@@ -175,6 +175,7 @@ export interface CatalogStats {
 export interface ModelStore {
   saveModel(input: SaveModelInput): Promise<StoredModel>
   saveModelSource(input: SaveModelSourceInput): Promise<StoredModel>
+  deleteModel?(id: string): Promise<boolean>
   getModel(id: string): Promise<StoredModel | null>
   getModelRevision(id: string, revision: number): Promise<StoredModelRevision | null>
   listModels(limit?: number): Promise<StoredModelSummary[]>

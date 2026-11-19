@@ -55,7 +55,7 @@ impl Pose {
 /// Points behind (or on) the camera plane and folded distortion maps return `None`.
 pub fn project_calibrated(calibration: &Calibration, pose: &Pose, point: V3) -> Option<[f64; 2]> {
     let [x, y, z] = pose.camera_point(point);
-    if !(z > 1e-12) {
+    if z.is_nan() || z <= 1e-12 {
         return None;
     }
     calibration.project_ray([x / z, y / z])
@@ -216,7 +216,8 @@ fn validate(
     if options.max_iterations == 0
         || options.max_trials == 0
         || !(options.initial_damping > 0. && options.initial_damping.is_finite())
-        || !(options.relative_cost_tolerance >= 0.)
+        || options.relative_cost_tolerance.is_nan()
+        || options.relative_cost_tolerance < 0.
         || options
             .huber_delta
             .is_some_and(|d| !(d > 0. && d.is_finite()))
@@ -523,7 +524,7 @@ pub(crate) fn cholesky_solve(a: &mut [f64], b: &mut [f64]) -> Option<()> {
         for k in 0..j {
             d -= a[j * n + k] * a[j * n + k];
         }
-        if !(d > 0.) || !d.is_finite() {
+        if d <= 0. || !d.is_finite() {
             return None;
         }
         let d = d.sqrt();
@@ -620,7 +621,7 @@ fn apply(
         let origin = state.poses[anchor].center();
         let target = norm(sub(state.poses[other].center(), origin));
         let current = norm(sub(next.poses[other].center(), origin));
-        if !(current > 1e-12) {
+        if current.is_nan() || current <= 1e-12 {
             return None;
         }
         let factor = target / current;

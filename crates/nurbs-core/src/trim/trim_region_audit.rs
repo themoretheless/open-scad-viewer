@@ -13,9 +13,9 @@ pub struct Report {
     pub domain_cells:usize,
     pub problem_loops:Option<[usize;2]>,
 }
-fn classify(domain:&TrimDomain,p:[f64;2],out:&mut Report,max:usize)->Result<Option<(Location,Option<i32>)>>{
+fn classify_box(domain:&TrimDomain,rectangle:[[f64;2];2],out:&mut Report,max:usize)->Result<Option<(Location,Option<i32>)>>{
     if out.domain_cells==max {return Ok(None);}
-    let r=domain.classify(p.map(|x|[x,x]),(max-out.domain_cells).min(4096))?;
+    let r=domain.classify(rectangle,(max-out.domain_cells).min(4096))?;
     out.domain_cells+=r.cells;
     Ok(Some((r.location,r.winding)))
 }
@@ -61,20 +61,20 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
         'search:for n in [2,4,8,16] {for x in (1..n).step_by(2){for y in (1..n).step_by(2){
             let fractions=[x as f64/n as f64,y as f64/n as f64];
             let p=std::array::from_fn(|k|bounds[k][0]*(1.-fractions[k])+bounds[k][1]*fractions[k]);
-            let Some((location,winding))=classify(&domains[i],p,&mut out,max_domain_cells)? else {return Ok(out)};
+            let Some((location,winding))=classify_box(&domains[i],p.map(|x|[x,x]),&mut out,max_domain_cells)? else {return Ok(out)};
             if location==Location::Inside && winding.is_some_and(|w|w==1||w==-1){out.winding[i]=winding;break 'search;}
         }}}
         if out.winding[i].is_none(){out.problem_loops=Some([i,i]);return Ok(out);}
     }
     out.reason="hole-containment-unproven";
     for i in 1..loops.len(){
-        let p=&loops[i][0].control_points[0];let point=[p[0],p[1]];
-        let Some((location,_))=classify(&domains[0],point,&mut out,max_domain_cells)? else{return Ok(out)};
+        let endpoint=domains[i].first_endpoint_box();
+        let Some((location,_))=classify_box(&domains[0],endpoint,&mut out,max_domain_cells)? else{return Ok(out)};
         if location==Location::Unresolved {out.problem_loops=Some([0,i]);return Ok(out);}
         if location==Location::Outside {out.valid=Some(false);out.reason="hole-outside-outer";out.problem_loops=Some([0,i]);return Ok(out);}
         if out.winding[i]==out.winding[0] {out.valid=Some(false);out.reason="hole-orientation";out.problem_loops=Some([0,i]);return Ok(out);}
         for j in 1..loops.len(){if i!=j {
-            let Some((location,_))=classify(&domains[j],point,&mut out,max_domain_cells)? else{return Ok(out)};
+            let Some((location,_))=classify_box(&domains[j],endpoint,&mut out,max_domain_cells)? else{return Ok(out)};
             if location==Location::Unresolved {out.problem_loops=Some([i,j]);return Ok(out);}
             if location==Location::Inside {out.valid=Some(false);out.reason="nested-holes";out.problem_loops=Some([i,j]);return Ok(out);}
         }}
@@ -133,6 +133,37 @@ mod tests {
             (vec![square(0.,10.,false),square(2.,8.,true),square(3.,4.,true)],"nested-holes"),
         ]{let r=audit(loops);assert_eq!(r.valid,Some(false));assert_eq!(r.reason,reason);assert!(r.problem_loops.is_some());}
         assert_eq!(audit(vec![square(0.,10.,false),square(0.,4.,true)]).valid,None);
+    }
+    #[test]
+    fn unclamped_hole_uses_its_active_endpoint_for_nesting() {
+        for (left, right, inside) in [(1., 9., true), (11., 19., false)] {
+            let outer = square(0., 10., false);
+            let mut hole = square(left, right, true);
+            for p in hole.iter_mut().flat_map(|c| &mut c.control_points) {
+                p[1] = if p[1] == left { 2. } else { 4. };
+            }
+            hole[0] = Curve {
+                degree: 2,
+                knots: vec![-2., -1., 0., 1., 2., 3., 4.],
+                control_points: [-0.25, 0.25, 0.75, 1.25]
+                    .map(|t| vec![left + t * (right - left), 4.]).to_vec(),
+                weights: vec![1.; 4],
+                periodic: false,
+            };
+            assert_eq!(hole[0].evaluate(0.).unwrap().point, [left, 4.]);
+            // The first pole lies on the opposite side of the outer contour
+            // from the active start. A pole-based witness reverses the answer.
+            assert_eq!((0. ..10.).contains(&hole[0].control_points[0][0]), !inside);
+            let loops = [outer, hole];
+            let report = inspect(&loops, 1e-8, 1000, 100_000, 100_000).unwrap();
+            assert_eq!(report.valid, Some(inside), "{}", report.reason);
+            let forest = nesting::inspect(&loops, 1e-8, nesting::Limits::default()).unwrap();
+            assert!(forest.proven, "{}", forest.reason);
+            assert_eq!(forest.inside[1][0], Some(inside));
+            assert_eq!(forest.nodes.unwrap()[1].parent, inside.then_some(0));
+            let short = inspect(&loops, 1e-8, 1000, report.cells - 1, 100_000).unwrap();
+            assert_eq!(short.valid, None);
+        }
     }
     #[test]
     fn resource_limits_preserve_unknown_and_do_not_modify_inputs(){

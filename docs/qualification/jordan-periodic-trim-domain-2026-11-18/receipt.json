@@ -1,0 +1,35 @@
+{
+  "sourceBase": "775a736fe1558972352ee30900469d1053a60f34",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Strict interior containment over one exact periodic trim turn. Covers nonbinary homogeneous wrap, invalid exact knot shift, boundary contact in the final span, and one-short work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib strict_hole_containment",
+      "result": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s",
+      "file": "native.log.gz",
+      "sha256": "c6a14e8be2b4d17b1dfeef01ed66952f93c153c855b01332f283c1387556ea15"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 1.07s",
+      "file": "brep.log.gz",
+      "sha256": "76dd115ce0363839b7a78806c37ced342012a17bcef7a78621690df91888c194"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2006 filtered out; finished in 13.75s",
+      "file": "shell.log.gz",
+      "sha256": "e237016778d127cfcde3da88d7d822881ad426dc8d28ce6583a40b8ab1b17802"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "8c7fd96177759f57e3c5a6d3fc673c59255426f233521c8d1e258a95926bf14b",
+    "count": 4919
+  }
+}

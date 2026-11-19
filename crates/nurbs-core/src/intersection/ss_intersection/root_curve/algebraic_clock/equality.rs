@@ -5,11 +5,11 @@ pub(super) fn compare(a: (&[Q],&[Q;2]), b: (&[Q],&[Q;2]), w: &mut Work) -> Resul
             a.1[1].clone().min(b.1[1].clone())];
         if d[1]<d[0] {return Ok(false);}
         if d[0]==d[1] {
-            let same=evaluate(&a.0,&d[0],w)?.is_zero()
-                && evaluate(&b.0,&d[0],w)?.is_zero();
+            let same=evaluate(a.0,&d[0],w)?.is_zero()
+                && evaluate(b.0,&d[0],w)?.is_zero();
             return Ok(same);
         }
-        let common=gcd(&a.0,&b.0,w)?;
+        let common=gcd(a.0,b.0,w)?;
         if common.len()<2 {return Ok(false);}
         // Each nonpoint isolator has nonroot endpoints. Hence an intersection
         // endpoint cannot be a common root unless one isolator was a point.

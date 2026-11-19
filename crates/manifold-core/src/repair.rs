@@ -660,10 +660,10 @@ fn orient_outward(positions: &[f64], triangles: &mut [[usize; 3]]) -> (usize, us
     }
     // Per-root signed volume, summed in triangle order (roots are triangle ids).
     let mut volume = vec![0.0f64; n];
-    for ti in 0..n {
+    for (ti, triangle) in triangles.iter().enumerate() {
         let root = find(&mut parent, ti);
         let p = |v: usize| [positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]];
-        let [a, b, c] = triangles[ti].map(p);
+        let [a, b, c] = triangle.map(p);
         let det = a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
             + a[2] * (b[0] * c[1] - b[1] * c[0]);
         volume[root] += det / 6.0;
@@ -675,9 +675,9 @@ fn orient_outward(positions: &[f64], triangles: &mut [[usize; 3]]) -> (usize, us
         .map(|(r, _)| r)
         .collect();
     let mut flipped = 0;
-    for ti in 0..n {
+    for (ti, triangle) in triangles.iter_mut().enumerate() {
         if inverted.contains(&find(&mut parent, ti)) {
-            triangles[ti].swap(1, 2);
+            triangle.swap(1, 2);
             flipped += 1;
         }
     }
@@ -1055,11 +1055,11 @@ fn within_limits(positions: &[f64], loop_vs: &[usize], limits: &HoleFillLimits) 
     }
     let n = newell(positions, loop_vs);
     let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
-    if limits.max_area.is_some_and(|max| !(len / 2.0 <= max)) {
+    if limits.max_area.is_some_and(|max| !(len / 2.0).partial_cmp(&max).is_some_and(|order| order.is_le())) {
         return false;
     }
     if let Some(max) = limits.max_plane_deviation {
-        if !(len > 0.0) {
+        if len.is_nan() || len <= 0.0 {
             return false;
         }
         let k = loop_vs.len() as f64;
@@ -1078,7 +1078,7 @@ fn within_limits(positions: &[f64], loop_vs: &[usize], limits: &HoleFillLimits) 
                     .abs()
             })
             .fold(0.0f64, f64::max);
-        if !(deviation <= max) {
+        if !deviation.partial_cmp(&max).is_some_and(|order| order.is_le()) {
             return false;
         }
     }

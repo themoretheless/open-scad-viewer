@@ -1,0 +1,29 @@
+{
+  "sourceBase": "bb0c742425235ef13fe90be9471915dc57269a40",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "One original material body with exact C0/G1/G2 classes, outward-relative seam normals, smooth original face interiors and complete ordinary and pole vertex neighborhoods.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "tests": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib ordinary_vertices",
+      "file": "atlas.log.gz",
+      "sha256": "0c6588e90204c134a02ca536d79e127d2d8a04b3c9635e2b8cd794fee5438dd2",
+      "result": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2037 filtered out; finished in 0.07s"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib c2_bowl::unified",
+      "file": "unified.log.gz",
+      "sha256": "90a956745e400249c6d468ee1e576bc910f3cbfc337a717b24cc101c8cb89c45",
+      "result": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2035 filtered out; finished in 1.89s"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "335ca46cd77fe289dea2ea20633b3136a552d32cf67ac83ad8ab8b09243be157",
+    "count": 4912
+  }
+}

@@ -3,6 +3,7 @@
 //! hole winding/containment checks remain mandatory in final qualification.
 use super::*;
 mod full;
+pub(crate) mod radial_incidence;
 use num_rational::BigRational as Q;
 use num_traits::ToPrimitive;
 fn q(x: f64) -> Q {
@@ -72,6 +73,77 @@ pub(crate) fn verify(
     pairs: &mut usize,
     max_pairs: usize,
 ) -> Result<bool> {
+    verify_impl(model, face, remaining, pairs, max_pairs, false)
+}
+
+/// Called after exact original lifts and active material loops have passed.
+pub(crate) fn verify_active(
+    model: &Model,
+    face: usize,
+    remaining: &mut usize,
+    pairs: &mut usize,
+    max_pairs: usize,
+) -> Result<bool> {
+    verify_impl(model, face, remaining, pairs, max_pairs, true)
+}
+
+enum ChartTrace<'a> {
+    Curve(std::borrow::Cow<'a, nurbs_core::curve::Curve>),
+    Segment([[f64; 2]; 2]),
+}
+
+impl<'a> ChartTrace<'a> {
+    fn read(c: &'a crate::Coedge, active: bool, remaining: &mut usize) -> Result<Self> {
+        use std::borrow::Cow;
+        let Some(trim) = c
+            .trim()
+            .filter(|t| active && t.pcurve_parameter != c.pcurve.domain())
+        else {
+            return Ok(Self::Curve(Cow::Borrowed(&c.pcurve)));
+        };
+        let mut used = 0;
+        let segment =
+            crate::shared_boundary::chart_segments::natural_segment(c, &mut used, *remaining);
+        charge(remaining, used)?;
+        if let Some(endpoints) = segment {
+            return Ok(Self::Segment(endpoints));
+        }
+        if c.pcurve.periodic || *remaining == 0 {
+            return Err(error("Active periodic chart contour is unproved"));
+        }
+        let [a, b] = trim.pcurve_parameter;
+        let restriction = nurbs_core::editing::exact_curve_merge::clamp_exact_curve_on(
+            &c.pcurve,
+            [a.min(b), a.max(b)],
+            (*remaining as u64).min(cad_predicates::MAX_WORK),
+        )?;
+        charge(remaining, restriction.work_used as usize)?;
+        let curve = restriction
+            .curve
+            .ok_or_else(|| error("Active periodic chart contour has no exact restriction"))?;
+        Ok(Self::Curve(Cow::Owned(curve)))
+    }
+
+    fn poles(&self) -> impl Iterator<Item = &[f64]> {
+        let (curve, segment) = match self {
+            Self::Curve(c) => (c.control_points.as_slice(), &[][..]),
+            Self::Segment(points) => (&[][..], &points[..]),
+        };
+        curve
+            .iter()
+            .map(Vec::as_slice)
+            .chain(segment.iter().map(|point| &point[..]))
+    }
+}
+
+fn verify_impl(
+    model: &Model,
+    face: usize,
+    remaining: &mut usize,
+    pairs: &mut usize,
+    max_pairs: usize,
+    active: bool,
+) -> Result<bool> {
     let f = &model.faces[face];
     let s = &f.surface;
     let natural = [
@@ -80,10 +152,12 @@ pub(crate) fn verify(
     ];
     let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
     let mut outer_bounds = bounds;
+    let mut outer_traces = Vec::new();
     for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
         for c in &model.loops[wire].coedges {
-            charge(remaining, c.pcurve.control_points.len())?;
-            for p in &c.pcurve.control_points {
+            let trace = ChartTrace::read(c, active, remaining)?;
+            charge(remaining, trace.poles().count())?;
+            for p in trace.poles() {
                 for k in 0..2 {
                     bounds[k][0] = bounds[k][0].min(p[k]);
                     bounds[k][1] = bounds[k][1].max(p[k]);
@@ -92,6 +166,9 @@ pub(crate) fn verify(
                         outer_bounds[k][1] = outer_bounds[k][1].max(p[k]);
                     }
                 }
+            }
+            if wire == f.outer {
+                outer_traces.push(trace);
             }
         }
     }
@@ -115,6 +192,7 @@ pub(crate) fn verify(
         model,
         face,
         outer_bounds,
+        &outer_traces,
         natural,
         remaining,
         pairs,
@@ -140,12 +218,18 @@ pub(crate) fn verify(
                 continue;
             }
             let proof = nurbs_core::surface_injectivity::certify_periodic_extrusion(
-                s, k, max_pairs - *pairs, *remaining,
+                s,
+                k,
+                max_pairs - *pairs,
+                *remaining,
             )?;
             charge(remaining, proof.cells)?;
             *pairs += proof.pairs;
-            if proof.proven && proof.regular_interior
-                && proof.collapsed_end.is_none_or(|end| bounds[1 - k][end] != natural[1 - k][end])
+            if proof.proven
+                && proof.regular_interior
+                && proof
+                    .collapsed_end
+                    .is_none_or(|end| bounds[1 - k][end] != natural[1 - k][end])
             {
                 return Ok(true);
             }
@@ -173,6 +257,38 @@ mod tests {
         assert!(axis([1e6, 1e6 + 0.25], [0., 0.5], true).is_err());
         assert!(axis([-1., (-1f64).next_up()], [0., 2f64.powi(-63)], true).is_err());
     }
+    #[test]
+    fn curved_chart_contour_uses_only_its_exact_active_poles() {
+        let pcurve = nurbs_core::curve::Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 0.5, 0.5, 1., 1., 1.],
+            control_points: vec![
+                vec![0., 0.],
+                vec![0.25, 0.5],
+                vec![0.5, 0.],
+                vec![0.75, -0.5],
+                vec![1., 0.],
+            ],
+            weights: vec![1.; 5],
+            periodic: false,
+        };
+        let edge = crate::Coedge::new(0, false, pcurve)
+            .with_trim(brep_topology::CoedgeTrim {
+                curve_parameter: [0., 1.],
+                pcurve_parameter: [0.5, 1.],
+                periodic_lift: [[0; 2]; 2],
+            })
+            .unwrap();
+        let mut remaining = 10000;
+        let trace = ChartTrace::read(&edge, true, &mut remaining).unwrap();
+        assert_eq!(
+            trace.poles().collect::<Vec<_>>(),
+            [&[0.5, 0.][..], &[0.75, -0.5], &[1., 0.]]
+        );
+        assert!(remaining < 10000);
+        assert!(ChartTrace::read(&edge, true, &mut 1).is_err());
+    }
+
     #[test]
     fn opposite_shores_use_original_endpoints_and_preserve_negative_sheet_coverage() {
         assert_eq!(

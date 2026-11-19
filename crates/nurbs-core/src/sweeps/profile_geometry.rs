@@ -296,7 +296,7 @@ fn periodic(s: &Surface, max_cells: usize) -> Result<Value> {
                 // rotation < 4*pi force exactly one turn, with either orientation.
                 if q.upper < 1.
                     && (angular.lo > 0. || angular.hi < 0.)
-                    && rotation_upper < 4. * 3.141592653589793
+                    && rotation_upper < 4. * std::f64::consts::PI
                 {
                     return Ok(
                         json!({"certified":true,"cells":work,"reason":"global-periodic-lift-contraction",

@@ -19,8 +19,31 @@ pub(in crate::sweeps::progressive_sweep) struct ArcMap {
     nodes: Vec<f64>,
     total: I,
     prefixes: Vec<I>,
+    suffixes: Vec<I>,
 }
 impl ArcMap {
+    /// A positive-speed arc map can normalize a proven C1 Cartesian path
+    /// directly. The exact join proof is charged against the same source
+    /// ledger and uses the immutable path that owns this arc map.
+    pub(super) fn certify_periodic_tangent(
+        &self,
+        spent: &mut u64,
+        max: u64,
+    ) -> Result<bool> {
+        if !self.path.periodic {
+            return Ok(false);
+        }
+        use super::super::endpoint_jets;
+        let knots = endpoint_jets::certify_basis_knots(&self.path, 1, max - *spent)?;
+        *spent += knots.exact_work;
+        if !knots.certified {
+            return Ok(false);
+        }
+        let seam = endpoint_jets::certify(&self.path, 1, max - *spent)?;
+        *spent += seam.exact_work;
+        Ok(seam.certified)
+    }
+
     pub(super) fn length(&self) -> I { self.total }
     pub(in crate::sweeps::progressive_sweep) fn build(path: &Curve, spent: &mut usize, max: usize) -> Result<Option<Self>> {
         let max = max.min(spent.saturating_add(100000));
@@ -151,14 +174,45 @@ impl ArcMap {
             nodes,
             total,
             prefixes,
+            suffixes,
         }))
     }
-    pub(in crate::sweeps::progressive_sweep) fn phase(
+    /// Optional tighter complete source cover. A failed component/span never
+    /// contributes a partial intersection to the already valid coarse phase.
+    fn restricted_jets(&self,traversal:[f64;2],spent:&mut usize,max:usize)->Result<Option<(I,I,[V3;2])>> {
+        let [a,b]=self.path.domain();let width=I::point(b).sub(I::point(a))?;
+        let raw=I::point(a).add(width.mul(I::new(traversal[0],traversal[1])?)?)?.intersect(a,b)?;
+        let mut answer:Option<(I,I,[V3;2])>=None;
+        for span in self.path.degree..self.path.control_points.len() {
+            let lo=raw.lo.max(self.path.knots[span]);let hi=raw.hi.min(self.path.knots[span+1]);
+            if self.path.knots[span]>=self.path.knots[span+1] || lo>hi {continue;}
+            if *spent==max {return Ok(None);}
+            let p=vector_certificate::certify_span_jets(&self.path,span,[lo,hi],(max-*spent).min(100000))?;
+            *spent+=p.cells;if p.status!=Status::Certified {return Ok(None);}
+            let v=iv::scale(decode(p.first.unwrap())?,width)?;
+            let acc=iv::scale(decode(p.second.unwrap())?,width.mul(width)?)?;
+            let speed=iv::norm(v)?;if speed.lo<=0. {return Ok(None);}
+            let q=speed.mul(speed)?;
+            let first=self.total.div(speed)?;
+            let second=I::point(0.).sub(self.total.mul(self.total)?.mul(iv::dot_tight(v,acc)?)?.div(q.mul(q)?)?)?;
+            let tangent=iv::div(v,speed)?;
+            let omega=iv::div(iv::cross(v,acc)?,q)?;
+            let tangent_rate=iv::cross(omega,tangent)?;
+            let jets=[iv::scale(tangent,self.total)?,iv::scale(tangent_rate,self.total.mul(self.total)?.div(speed)?)?];
+            if let Some((f,d,old))=&mut answer {
+                *f=I::new(f.lo.min(first.lo),f.hi.max(first.hi))?;
+                *d=I::new(d.lo.min(second.lo),d.hi.max(second.hi))?;
+                for a in 0..2 {for k in 0..3 {old[a][k]=I::new(old[a][k].lo.min(jets[a][k].lo),old[a][k].hi.max(jets[a][k].hi))?;}}
+            }else {answer=Some((first,second,jets));}
+        }
+        Ok(answer)
+    }
+    fn bracket(
         &self,
         station: [f64; 2],
         spent: &mut usize,
         max: usize,
-    ) -> Result<Option<frame::PathPhase>> {
+    ) -> Result<Option<[usize; 2]>> {
         check(
             station.iter().all(|x| x.is_finite())
                 && 0. <= station[0]
@@ -180,16 +234,41 @@ impl ArcMap {
             .stations
             .partition_point(|p| p[0] < station[1])
             .min(self.nodes.len() - 1);
-        let coarse = [self.nodes[lower], self.nodes[upper]];
-        let target = I::new(station[0], station[1])?.mul(self.total)?;
+        Ok(Some([lower, upper]))
+    }
+
+    /// Coarse but complete inverse range for value-only separation tests.
+    pub(super) fn traversal_bracket(
+        &self,
+        station: [f64; 2],
+        spent: &mut usize,
+        max: usize,
+    ) -> Result<Option<[f64; 2]>> {
+        Ok(self
+            .bracket(station, spent, max)?
+            .map(|[lo, hi]| [self.nodes[lo], self.nodes[hi]]))
+    }
+
+    pub(in crate::sweeps::progressive_sweep) fn phase(
+        &self,
+        station: [f64; 2],
+        spent: &mut usize,
+        max: usize,
+    ) -> Result<Option<frame::PathPhase>> {
+        let Some([lower, upper]) = self.bracket(station, spent, max)? else {
+            return Ok(None);
+        };
+        let fraction = I::new(station[0], station[1])?;
+        let remaining = I::point(1.).sub(fraction)?;
         let mut traversal = [f64::INFINITY, f64::NEG_INFINITY];
         let mut speed: Option<I> = None;
         let mut rate: Option<I> = None;
         let mut position: Option<[V3; 2]> = None;
-        for (index, c) in self.cells.iter().enumerate() {
-            if c.domain[1] < coarse[0] || c.domain[0] > coarse[1] {
-                continue;
-            }
+        // Include both cells touching either end of the coarse bracket.
+        let first = lower.saturating_sub(1);
+        let end = upper.saturating_add(1).min(self.cells.len());
+        for index in first..end {
+            let c = &self.cells[index];
             if *spent == max {
                 return Ok(None);
             }
@@ -197,7 +276,13 @@ impl ArcMap {
             // The integral mean speed belongs to the original whole-cell
             // speed box. Solve its positive interval inequality, not a fitted
             // piecewise-linear inverse; all possible parameters are retained.
-            let delta = target.sub(self.prefixes[index])?.div(c.speed)?;
+            // With L = prefix + suffix, the distance into this cell is
+            // station * suffix - (1 - station) * prefix. This cancels the
+            // shared prefix error before dividing by the mean speed.
+            let delta = fraction
+                .mul(self.suffixes[index])?
+                .sub(remaining.mul(self.prefixes[index])?)?
+                .div(c.speed)?;
             let h = I::point(c.domain[1]).sub(I::point(c.domain[0]))?;
             if delta.hi < 0. || delta.lo > h.hi {
                 continue;
@@ -250,48 +335,16 @@ impl ArcMap {
                 .mul(rate)?
                 .div(speed.mul(speed)?.mul(speed)?)?,
         )?;
-        if traversal[0] < traversal[1] {
-            // Narrowed inverse parameters must get their OWN original jets;
-            // keeping full-cell tangents/rates leaves a permanent derivative
-            // uncertainty floor even as station boxes are subdivided.
-            let fresh =
-                vector_certificate::certify_traversal(&self.path, traversal, max - *spent, false)?;
-            *spent += fresh.cells;
-            if fresh.status != Status::Certified {
-                return Ok(None);
-            }
-            let [a, b] = self.path.domain();
-            let width = I::point(b).sub(I::point(a))?;
-            let v = iv::scale(decode(fresh.first.unwrap())?, width)?;
-            let acc = iv::scale(decode(fresh.second.unwrap())?, width.mul(width)?)?;
-            let w = iv::norm(v)?;
-            if w.lo > 0. {
-                let wt = iv::dot_tight(v, acc)?.div(w)?;
-                let next_first = self.total.div(w)?;
-                let next_second = I::point(0.).sub(
-                    self.total
-                        .mul(self.total)?
-                        .mul(wt)?
-                        .div(w.mul(w)?.mul(w)?)?,
-                )?;
-                first = first.intersect(next_first.lo, next_first.hi)?;
-                second = second.intersect(next_second.lo, next_second.hi)?;
-                let tangent = iv::div(v, w)?;
-                let omega = iv::div(iv::cross(v, acc)?, w.mul(w)?)?;
-                let tangent_rate = iv::cross(omega, tangent)?;
-                let jets = [
-                    iv::scale(tangent, self.total)?,
-                    iv::scale(tangent_rate, self.total.mul(self.total)?.div(w)?)?,
-                ];
-                if let Some(old) = &mut position {
-                    for a in 0..2 {
-                        for k in 0..3 {
-                            old[a][k] = old[a][k].intersect(jets[a][k].lo, jets[a][k].hi)?;
-                        }
-                    }
-                }
-            }
-        }
+        // Compose each original span's tangent and curvature BEFORE taking
+        // a hull. A raw speed jump must not be mixed into a spurious physical
+        // acceleration/curvature floor at the shared geometric knot.
+        if let Some((next_first,next_second,jets))=self.restricted_jets(traversal,spent,max)? {
+            first=first.intersect(next_first.lo,next_first.hi)?;
+            second=second.intersect(next_second.lo,next_second.hi)?;
+            if let Some(old)=&mut position {for a in 0..2 {for k in 0..3 {
+                old[a][k]=old[a][k].intersect(jets[a][k].lo,jets[a][k].hi)?;
+            }}}
+        }else if *spent==max {return Ok(None);}
         Ok(Some(frame::PathPhase {
             traversal,
             first,

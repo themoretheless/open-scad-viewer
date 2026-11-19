@@ -1,0 +1,35 @@
+{
+  "sourceBase": "b45c72b25fdb498757496df19b4afd75fb78a5ee",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "The production edge split divides an exactly bound curved authored seam between noncoplanar rational loft walls into three exact children. Jordan contact bounds exactly that chain, and one-short work refuses. Includes source-shell and independent exact-root partition regression suites.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 0.77s",
+      "file": "brep.log.gz",
+      "sha256": "a87e1e3b2072642229cbd7323a5be3b3c8c88da0973c4921e9fe5ff64cbbd9b4"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 8.63s",
+      "file": "shell.log.gz",
+      "sha256": "9e38a99510ca410756599af5cbda2254efd6e3777b345c7f555abdcceafe0903"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --test exact_shared_root_partition",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "file": "root.log.gz",
+      "sha256": "7385f16c1354cff8a3fdb2d86362a6f1d4c9e39cbf197ef5a97d24b89eae2dfe"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "11307b469af24abea33c0533e32159e0103d12be5454b75f1dfc41389ce20e5f",
+    "count": 4918
+  }
+}

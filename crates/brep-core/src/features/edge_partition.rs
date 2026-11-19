@@ -62,11 +62,42 @@ fn check_agreement(
     Ok(())
 }
 
+fn check_trimmed_agreement(
+    curve: &Curve,
+    pcurve: &Curve,
+    surface: &Surface,
+    reversed: bool,
+    parameters: [[f64; 2]; 2],
+    tolerance: f64,
+    cells: &mut usize,
+    max_cells: usize,
+) -> Result<()> {
+    if *cells == max_cells {
+        return Err(unresolved("Shared correspondence budget exhausted"));
+    }
+    let proof = curve_surface_agreement::verify_parameter_correspondence(
+        curve,
+        pcurve,
+        surface,
+        &parameters,
+        reversed,
+        tolerance,
+        (max_cells - *cells).min(100000),
+    )?;
+    *cells += proof.cells;
+    if proof.status != Status::WithinTolerance {
+        return Err(unresolved(
+            "Trimmed original-domain or face-lift agreement is unresolved or mismatching",
+        ));
+    }
+    Ok(())
+}
+
 mod authored;
 pub use authored::partition;
 pub(crate) use authored::partition_with_position;
 mod vertex_proposal;
-pub use vertex_proposal::partition_to_vertex;
+pub use vertex_proposal::{partition_to_vertex, partition_to_vertex_and_uv};
 
 // Prefer a low-complexity binary fraction inside the certified band. This
 // only selects a representative; original-domain, root-position and face-lift

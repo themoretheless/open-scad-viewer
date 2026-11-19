@@ -136,6 +136,47 @@ fn projection_and_direction_on_a_known_intersection() {
 }
 
 #[test]
+fn coincident_trim_edge_at_an_original_corner_is_not_an_isolated_contact() {
+    // The cylinder's top rim is also a circle on this sphere. At its authored
+    // seam corner the cap and sphere normals are transverse, so normal cross
+    // products alone must not suppress the coincident-boundary refusal.
+    let c = cylinder(3., 10.).unwrap();
+    let rim = placed(sphere(13f64.sqrt()).unwrap(), [0., 0., 8.]);
+    let tracer = Tracer {
+        a: Chart::new(&c, 5).unwrap(),
+        b: Chart::new(&rim, 0).unwrap(),
+        scale: 10.,
+        step: 0.2,
+    };
+    let pt = TracePoint {
+        p: [3., 0., 10.],
+        a: [1., 0.5],
+        b: [3. / (13f64.sqrt() + 2.), 0.],
+    };
+    assert!(dist(tracer.a.point(pt.a).unwrap(), pt.p) < 1e-12);
+    assert!(dist(tracer.b.point(pt.b).unwrap(), pt.p) < 1e-12);
+    assert!(tracer.direction(&pt).unwrap().is_some());
+    assert!(!tracer.isolated_transverse_vertex_contact(&pt).unwrap());
+
+    let reverse = Tracer {
+        a: Chart::new(&rim, 0).unwrap(),
+        b: Chart::new(&c, 5).unwrap(),
+        scale: 10.,
+        step: 0.2,
+    };
+    let reverse_pt = TracePoint {
+        a: pt.b,
+        b: pt.a,
+        ..pt
+    };
+    assert!(
+        !reverse
+            .isolated_transverse_vertex_contact(&reverse_pt)
+            .unwrap()
+    );
+}
+
+#[test]
 fn marching_closes_a_loop_that_stays_inside_both_faces() {
     // A box face whose normal is the octant diagonal cuts a unit sphere
     // 0.9 mm from its centre: the cap is a ring inside one sphere patch

@@ -60,18 +60,21 @@ pub(super) fn control_trajectory(
     }
     let anchor = certify(sweep, max_cells)?;
     let mut cells = anchor.cells;
-    if anchor.status != Status::Certified {
-        return Ok(unresolved(cells, anchor.reason.unwrap()));
-    }
+    let (Status::Certified, Some(anchor_coordinates)) = (anchor.status, anchor.coordinates) else {
+        return Ok(unresolved(cells, anchor.reason.unwrap_or("contact-anchor-enclosure-unresolved")));
+    };
     let initial = authored_error::guided_initial_coordinates(sweep, max_cells - cells)?;
     cells += initial.cells;
-    if initial.status != Status::Certified {
-        return Ok(unresolved(cells, initial.reason.unwrap()));
-    }
+    let (Status::Certified, Some(coordinates)) = (initial.status, initial.coordinates) else {
+        return Ok(unresolved(cells, initial.reason.unwrap_or("contact-initial-frame-unresolved")));
+    };
+    let Some(&control_coordinates) = coordinates.get(control) else {
+        return Ok(unresolved(cells, "contact-control-enclosure-unresolved"));
+    };
     let mut report = authored_frame_certificate::certify_contact_control_trajectory(
         authored_frame_certificate::ContactLaws { path: sweep.path, guide, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-        initial.coordinates.unwrap()[control],
-        anchor.coordinates.unwrap()[0],
+        control_coordinates,
+        anchor_coordinates[0],
         traversal,
         max_cells - cells,
     )?;
@@ -114,18 +117,21 @@ pub(super) fn control_value(
     }
     let anchor = certify(sweep, max_cells)?;
     let mut cells = anchor.cells;
-    if anchor.status != Status::Certified {
-        return Ok(unresolved(cells, anchor.reason.unwrap()));
-    }
+    let (Status::Certified, Some(anchor_coordinates)) = (anchor.status, anchor.coordinates) else {
+        return Ok(unresolved(cells, anchor.reason.unwrap_or("contact-anchor-enclosure-unresolved")));
+    };
     let initial = authored_error::guided_initial_coordinates(sweep, max_cells - cells)?;
     cells += initial.cells;
-    if initial.status != Status::Certified {
-        return Ok(unresolved(cells, initial.reason.unwrap()));
-    }
+    let (Status::Certified, Some(coordinates)) = (initial.status, initial.coordinates) else {
+        return Ok(unresolved(cells, initial.reason.unwrap_or("contact-initial-frame-unresolved")));
+    };
+    let Some(&control_coordinates) = coordinates.get(control) else {
+        return Ok(unresolved(cells, "contact-control-enclosure-unresolved"));
+    };
     let mut report = authored_frame_certificate::certify_contact_control_value(
         authored_frame_certificate::ContactLaws { path: sweep.path, guide, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-        initial.coordinates.unwrap()[control],
-        anchor.coordinates.unwrap()[0],
+        control_coordinates,
+        anchor_coordinates[0],
         traversal,
         max_cells - cells,
     )?;
@@ -169,12 +175,13 @@ pub(super) fn fit(
         return Ok(out);
     }
     out.reason = Some("contact-fit-enclosure-unresolved");
+    let Some(anchor_coordinates) = anchor.coordinates else { return Ok(out) };
     let mut fitted = authored_frame_certificate::certify_contact_fit(
         sweep.path,
         guide,
         sweep.scale,
         sweep.affine_laws,
-        anchor.coordinates.unwrap()[0],
+        anchor_coordinates[0],
         traversal,
         max_cells - out.cells,
     )?;
@@ -256,11 +263,13 @@ pub(super) fn certify(sweep: &Sweep<'_>, max_cells: usize) -> Result<ContactAnch
             I::new(v[2][0], v[2][1])?,
         ])
     };
+    let (Some(transverse), Some(binormal), Some(longitudinal)) =
+        (frame.transverse, frame.binormal, frame.longitudinal) else { return Ok(out) };
     let offset = subtract(decode(point)?, decode(start)?)?;
     let coordinates = [
-        dot_tight(offset, decode(frame.transverse.unwrap())?)?,
-        dot_tight(offset, decode(frame.binormal.unwrap())?)?,
-        dot_tight(offset, decode(frame.longitudinal.unwrap())?)?,
+        dot_tight(offset, decode(transverse)?)?,
+        dot_tight(offset, decode(binormal)?)?,
+        dot_tight(offset, decode(longitudinal)?)?,
     ];
     out.reason = Some("contact-anchor-positivity-unresolved");
     if coordinates[0].lo <= 0. {

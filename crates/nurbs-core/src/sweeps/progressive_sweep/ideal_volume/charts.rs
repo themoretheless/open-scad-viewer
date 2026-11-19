@@ -17,7 +17,12 @@ fn c0(degree: usize, knots: &[f64], end: usize) -> bool {
         .all(|u| knots.iter().filter(|v| *v == u).count() <= degree)
 }
 pub(super) fn curve_c0(c: &Curve) -> bool {
-    !c.periodic && c0(c.degree, &c.knots, c.control_points.len())
+    !c.periodic && curve_active_c0(c)
+}
+/// C0 across interior knots of the active curve domain. The endpoint
+/// identification of a periodic path is established separately.
+pub(super) fn curve_active_c0(c: &Curve) -> bool {
+    c0(c.degree, &c.knots, c.control_points.len())
 }
 pub(crate) fn surface_c0(s: &Surface) -> bool {
     !s.periodic_u
@@ -157,6 +162,74 @@ pub(super) fn margin(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<f64>
         lower = lower.min(row.lo);
     }
     Ok(lower)
+}
+#[derive(Clone, Copy)]
+pub(super) enum CorrectedFrame {
+    ForwardLine,
+    RegularPrincipal,
+    Planar { principal_sign: Option<f64> },
+}
+
+pub(super) fn prepare_corrected_frame(
+    s: &Sweep<'_>,
+    closed: bool,
+    out: &mut IdealVolumeReport,
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<Option<CorrectedFrame>> {
+    if s.options.orientation != Orientation::CorrectedFrenet
+        || s.frame_laws.is_some()
+        || s.orientation_guide.is_some()
+    {
+        return Ok(None);
+    }
+    if closed {
+        // Closed volume premises have already certified this exact branch.
+        return Ok(Some(CorrectedFrame::RegularPrincipal));
+    }
+    // On a forward line, Corrected Frenet keeps the initial perpendicular
+    // seed. Only the authored twist contributes frame jets in station units.
+    let remaining = (max_cells - out.cells)
+        .min(100000)
+        .min((max_exact_work - out.exact_work) as usize);
+    let line = super::super::source_line::certify(s.path, remaining)?;
+    out.cells += line.cells;
+    out.exact_work += line.cells as u64;
+    if line.certified {
+        return Ok(Some(CorrectedFrame::ForwardLine));
+    }
+    let plane = super::super::source_plane::certify(
+        s.path, s.options.normal, max_exact_work - out.exact_work,
+    )?;
+    out.exact_work += plane.exact_work;
+    if !plane.proved {
+        if plane.reason != Some("source-plane-coefficients-nonzero") || s.contact_point.is_some() {
+            return Ok(None);
+        }
+        let remaining = (max_cells - out.cells)
+            .min(100000)
+            .min((max_exact_work - out.exact_work) as usize);
+        let (regular, work) =
+            super::super::authored_error::certify_corrected_regular_branch(s.path, remaining)?;
+        out.cells += work;
+        out.exact_work += work as u64;
+        return Ok(regular.then_some(CorrectedFrame::RegularPrincipal));
+    }
+    let principal_sign = if s.affine_laws.is_some() {
+        let remaining = (max_cells - out.cells)
+            .min(100000)
+            .min((max_exact_work - out.exact_work) as usize);
+        let (work, sign) = frame::certify_initial_planar_principal_phase(
+            s.path, s.options.normal, remaining,
+        )?;
+        out.cells += work;
+        out.exact_work += work as u64;
+        let Some(sign) = sign else { return Ok(None); };
+        Some(sign)
+    } else {
+        None
+    };
+    Ok(Some(CorrectedFrame::Planar { principal_sign }))
 }
 pub(super) fn original_jets(
     s: &Sweep<'_>,

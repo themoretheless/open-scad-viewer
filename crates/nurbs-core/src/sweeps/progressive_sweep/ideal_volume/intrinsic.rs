@@ -43,13 +43,11 @@ impl Tube {
         let path = s.path;
         let p = path.degree;
         let [a, b] = path.domain();
-        if p == 0
-            || path.periodic
-            || path.knots[..=p].iter().any(|u| *u != a)
-            || path.knots[path.control_points.len()..]
-                .iter()
-                .any(|u| *u != b)
-        {
+        let clamped = !path.periodic
+            && path.knots[..=p].iter().all(|u| *u == a)
+            && path.knots[path.control_points.len()..].iter().all(|u| *u == b);
+        let periodic_path = super::closed::uses_periodic_path(s, closed);
+        if p == 0 || !(clamped || periodic_path) {
             return Ok(None);
         }
         if out.cells == max || out.exact_work == exact {
@@ -60,10 +58,14 @@ impl Tube {
         // Integrating the tangent-rate bound across source knots/seams needs
         // its OWN connected position/forward-tangent premises. An authored
         // smooth frame does not establish any path derivative continuity.
-        if c.transport.is_none() && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
-            return Ok(None);
+        if c.transport.is_none() {
+            let cartesian = periodic_path
+                && c.arc.as_ref().unwrap().certify_periodic_tangent(&mut out.exact_work, exact)?;
+            if !cartesian && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
+                return Ok(None);
+            }
         }
-        let mut transverse_carrier = plane::certify_frame(
+        let mut transverse_carrier = clamped && plane::certify_frame(
             path,
             cap,
             s.frame_laws.map(|(a, _)| a),
@@ -111,11 +113,11 @@ impl Tube {
         } else if !carrier::certify_pair(c.caps, out, max)? {
             return Ok(None);
         }
-        let origin = path.control_points[0]
-            .iter()
-            .copied()
-            .map(I::point)
-            .collect::<Vec<_>>();
+        let origin = if clamped {
+            std::array::from_fn(|k| I::point(path.control_points[0][k]))
+        } else {
+            c.start
+        };
         let mut radius = 0_f64;
         for (i, cap) in c.caps.iter().enumerate() {
             if i == 1 && c.same_cap() {
@@ -212,6 +214,9 @@ impl Tube {
             let Some(phase) = map.phase(b[2], &mut out.cells, stage_max)? else {
                 return Ok(false);
             };
+            if let Some((omega,bend))=frame_bounds::frenet_rates(c,b[2],phase,out,max)? {
+                angular=angular.max(omega);curvature=curvature.max(bend);continue;
+            }
             let Some(jets) = phase.position_jets else {
                 return Ok(false);
             };

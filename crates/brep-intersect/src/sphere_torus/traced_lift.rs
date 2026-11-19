@@ -16,6 +16,8 @@ use super::*;
 use crate::plane_torus::arc_parameter;
 use nurbs_core::foundation::interpolation::{Parameterization, interpolate_curve};
 
+type PatchCurves = Vec<(usize, Vec<Curve>)>;
+
 /// Certified bound on the distance of the pcurve images from the other
 /// surface.
 pub const LIFT_TOLERANCE: f64 = 1e-6;
@@ -406,14 +408,14 @@ pub(crate) fn seam_breaks(ctx: &Context, piece: &Curve, torus_side: bool) -> Res
                 }
             }
             let cut = 0.5 * (a + b);
-            if cut - breaks.last().unwrap() > MERGE * (hi - lo) {
+            if breaks.last().is_some_and(|&previous| cut - previous > MERGE * (hi - lo)) {
                 breaks.push(cut);
             }
         }
         prev = label;
         prev_t = t;
     }
-    if breaks.len() > 1 && hi - breaks.last().unwrap() <= MERGE * (hi - lo) {
+    if breaks.len() > 1 && breaks.last().is_some_and(|&previous| hi - previous <= MERGE * (hi - lo)) {
         breaks.pop();
     }
     breaks.push(hi);
@@ -426,8 +428,8 @@ fn lift_side(
     ctx: &Context,
     pieces: &[Curve],
     torus_side: bool,
-) -> Result<(Vec<(usize, Vec<Curve>)>, f64)> {
-    let mut grouped: Vec<(usize, Vec<Curve>)> = Vec::new();
+) -> Result<(PatchCurves, f64)> {
+    let mut grouped: PatchCurves = Vec::new();
     let mut worst = 0_f64;
     for piece in pieces {
         let breaks = seam_breaks(ctx, piece, torus_side)?;
@@ -493,7 +495,7 @@ pub(crate) fn lift_traced_with(
     sphere_model: &Model,
     other_model: &Model,
     pieces: &[Curve],
-) -> Result<(Vec<SpherePatchCircle>, Vec<(usize, Vec<Curve>)>, f64)> {
+) -> Result<(Vec<SpherePatchCircle>, PatchCurves, f64)> {
     let ctx = Context::new(sphere, other, sphere_model, other_model);
     let (s, ds) = lift_side(&ctx, pieces, false)?;
     let (t, dt) = lift_side(&ctx, pieces, true)?;
@@ -537,10 +539,10 @@ fn lift_onto(
     this_model: &Model,
     that: Other<'_>,
     pieces: &[Curve],
-) -> Result<(Vec<(usize, Vec<Curve>)>, f64)> {
+) -> Result<(PatchCurves, f64)> {
     let refuse = |m: &str| Error::new("BREP_INTERSECTION_LIFT_REFUSED", m.to_string());
     let label = |p: [f64; 3]| this.patch(p).ok_or_else(|| refuse("traced point lies on no patch"));
-    let mut grouped: Vec<(usize, Vec<Curve>)> = Vec::new();
+    let mut grouped: PatchCurves = Vec::new();
     let mut worst = 0_f64;
     for piece in pieces {
         let [lo, hi] = piece.domain();
@@ -560,14 +562,14 @@ fn lift_onto(
                     }
                 }
                 let cut = 0.5 * (a + b);
-                if cut - breaks.last().unwrap() > 1e-9 * (hi - lo) {
+                if breaks.last().is_some_and(|&previous| cut - previous > 1e-9 * (hi - lo)) {
                     breaks.push(cut);
                 }
             }
             prev = l;
             prev_t = t;
         }
-        if breaks.len() > 1 && hi - breaks.last().unwrap() <= 1e-9 * (hi - lo) {
+        if breaks.len() > 1 && breaks.last().is_some_and(|&previous| hi - previous <= 1e-9 * (hi - lo)) {
             breaks.pop();
         }
         breaks.push(hi);
@@ -634,7 +636,7 @@ pub(crate) fn lift_pair(
     b: Other<'_>,
     b_model: &Model,
     pieces: &[Curve],
-) -> Result<(Vec<(usize, Vec<Curve>)>, Vec<(usize, Vec<Curve>)>, f64)> {
+) -> Result<(PatchCurves, PatchCurves, f64)> {
     let (la, da) = lift_onto(a, a_model, b, pieces)?;
     let (lb, db) = lift_onto(b, b_model, a, pieces)?;
     Ok((la, lb, da.max(db)))

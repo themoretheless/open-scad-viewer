@@ -330,7 +330,7 @@ fn crosshatch_trihexagon_cubic_and_brim_generation_work() {
         .iter()
         .filter(|(_, end, _)| (end[2] - 0.0).abs() < 1e-6)
         .count();
-    assert!(bed_contacts >= 1 && bed_contacts <= 2, "bed_contacts={bed_contacts}");
+    assert!((1..=2).contains(&bed_contacts), "bed_contacts={bed_contacts}");
     // Trunk radii increase toward the bed
     let max_radius = trunks.iter().map(|(_, _, r)| *r).fold(0.0_f64, f64::max);
     let min_radius = trunks.iter().map(|(_, _, r)| *r).fold(f64::INFINITY, f64::min);

@@ -1,0 +1,29 @@
+{
+  "sourceBase": "b1e1a21a5162aede2311aed3c304e647b738f554",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact authored seam on two rational walls whose initial certified projections differ. One projection folds on the opposite chart. The projection proposed by the second chart certifies the original pair in both face orders, with identical work and one-short refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 1.41s",
+      "file": "brep.log.gz",
+      "sha256": "4bcc6c7c776f1bdf18418f6620bf36552c52a411b2825fb1aafad13565a1f445"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 20.50s",
+      "file": "shell.log.gz",
+      "sha256": "a1aa3c3ca3ab2b3a365635ef8d9fd86b3f2f75f5ac69bbd82c35030b905e82dc"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "a6546d631a3dc6b8d1d146ea9abcadcfc4cd2cab4ff9e97275997e41aadabb05",
+    "count": 4918
+  }
+}

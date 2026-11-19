@@ -33,3 +33,14 @@ export class ModelNotFoundError extends Error {
     this.name = 'ModelNotFoundError'
   }
 }
+
+export class InvalidToolInputError extends Error {
+  readonly code: PublicErrorCode
+  readonly nextAction: string | undefined
+  constructor(message: string, options: { code?: PublicErrorCode | undefined; nextAction?: string | undefined } = {}) {
+    super(message)
+    this.name = 'InvalidToolInputError'
+    this.code = options.code ?? 'invalid_argument'
+    this.nextAction = options.nextAction
+  }
+}

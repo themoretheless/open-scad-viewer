@@ -9784,7 +9784,7 @@ fn ball_obstacle_clearance_respects_tool_radius_and_normal_scale() {
     };
     let obstacle = [WorkspaceHalfSpace { normal: &[0., 4.], offset: 0. }];
     let check = |curve: &Curve, radius| {
-        partition_curve_ball_obstacle_clearance(&curve, [0., 1.], &[&obstacle], radius, 0.01, 1)
+        partition_curve_ball_obstacle_clearance(curve, [0., 1.], &[&obstacle], radius, 0.01, 1)
     };
     assert_eq!(check(&line(0.25), 0.125).unwrap().cells[0].status, Status::Within);
     assert_eq!(check(&line(0.25), 0.25).unwrap().cells[0].status, Status::Undetermined);

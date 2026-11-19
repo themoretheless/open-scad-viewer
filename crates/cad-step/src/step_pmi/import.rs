@@ -467,7 +467,7 @@ fn import_parsed_pmi(
 ) -> PmiResult<StepPmiModel> {
     let mut model = StepPmiModel::default();
     let mut aspect_ids = BTreeSet::new();
-    for (&id, _) in entities {
+    for &id in entities.keys() {
         let parts = components(entities, id)
             .map_err(|e| semantic_error(PmiErrorKind::MalformedPart21, id, e.message))?;
         if parts.iter().any(|(ty, _)| is_shape_aspect_type(ty)) {
@@ -475,7 +475,7 @@ fn import_parsed_pmi(
         }
     }
 
-    for (&id, _) in entities {
+    for &id in entities.keys() {
         let parts = components(entities, id)
             .map_err(|e| semantic_error(PmiErrorKind::MalformedPart21, id, e.message))?;
         if let Some((_, args)) = parts
@@ -599,7 +599,7 @@ fn import_parsed_pmi(
         });
     }
 
-    for (&id, _) in entities {
+    for &id in entities.keys() {
         let parts = components(entities, id)
             .map_err(|e| semantic_error(PmiErrorKind::MalformedPart21, id, e.message))?;
         let tolerance_part = parts

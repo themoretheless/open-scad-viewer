@@ -277,3 +277,107 @@ fn implicit_source_sphere_budgets_and_invalid_tail_inputs_never_return_partial_s
     l.implicit_exact_work = 0;
     assert!(verify_sphere(&malformed, [0.; 3], 2., 1e-8, l).is_err());
 }
+
+#[test]
+fn original_affine_sphere_owns_sheared_pole_charts_and_exact_seams() {
+    let source = AffineSphere {
+        center: [4., -2., 1.],
+        linear: [[2., 0.5, 0.], [0., 1., -0.25], [0., 0., 0.5]],
+        radius: 2.,
+    };
+    let mut model = crate::analytic::sphere_exact(source.radius).unwrap();
+    let place = |point: &mut [f64]| {
+        let [x, y, z] = [point[0], point[1], point[2]];
+        point.copy_from_slice(&[4. + 2. * x + 0.5 * y, -2. + y - 0.25 * z, 1. + 0.5 * z]);
+    };
+    for v in &mut model.vertices {
+        place(&mut v.point);
+    }
+    for point in model
+        .edges
+        .iter_mut()
+        .flat_map(|edge| &mut edge.curve.control_points)
+    {
+        place(point);
+    }
+    for point in model
+        .faces
+        .iter_mut()
+        .flat_map(|face| face.surface.control_points.iter_mut().flatten())
+    {
+        place(point);
+    }
+    let AffineSphereAttempt::Certified(body) =
+        verify_affine_sphere(&model, source, 1e-8, 1000, limits()).unwrap()
+    else {
+        panic!("exact sheared ellipsoid must own its original shell");
+    };
+    assert_eq!(body.model(), &model);
+    assert_eq!(body.source(), source);
+    let proof = body.normalized_proof();
+    assert!(proof.source_topology_preserved && proof.source_g1 && proof.source_g2);
+    assert_eq!(proof.boundary_error_upper, Some(0.));
+    assert!(!proof.collapsed_edges.is_empty());
+    assert!(matches!(
+        verify_affine_sphere(&model, source, 1e-8, body.mapped_points() - 1, limits()).unwrap(),
+        AffineSphereAttempt::Refused {
+            reason: "original-affine-sphere-point-budget-exhausted",
+            normalized: None,
+            ..
+        }
+    ));
+
+    let mut reflected = source;
+    for row in &mut reflected.linear {
+        row[0] = -row[0];
+    }
+    let AffineSphereAttempt::Certified(body) =
+        verify_affine_sphere(&model, reflected, 1e-8, 1000, limits()).unwrap()
+    else {
+        panic!("a reflected frame describes the same outward shell");
+    };
+    assert_eq!(body.source(), reflected);
+    assert_eq!(body.model(), &model);
+    assert!(body.normalized_proof().source_g2);
+
+    let mut inside_out = model.clone();
+    for face in &mut inside_out.shells[0].faces {
+        face.reversed ^= true;
+    }
+    assert!(!matches!(
+        verify_affine_sphere(&inside_out, reflected, 1e-8, 1000, limits()),
+        Ok(AffineSphereAttempt::Certified(_))
+    ));
+
+    let mut altered = model;
+    altered.faces[0].surface.control_points[1][1][0] += 0.125;
+    assert!(matches!(
+        verify_affine_sphere(&altered, source, 1e-8, 1000, limits()).unwrap(),
+        AffineSphereAttempt::Refused { normalized: Some(report), .. } if !report.source_g2
+    ));
+}
+
+#[test]
+fn original_affine_sphere_refuses_unrepresentable_inverse_and_singular_map() {
+    let model = crate::analytic::sphere_exact(2.).unwrap();
+    let mut source = AffineSphere {
+        center: [0.; 3],
+        linear: [[3., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        radius: 2.,
+    };
+    assert!(matches!(
+        verify_affine_sphere(&model, source, 1e-8, 1000, limits()).unwrap(),
+        AffineSphereAttempt::Refused {
+            reason: "original-affine-sphere-exact-inverse-unproved",
+            ..
+        }
+    ));
+    source.linear[0][0] = 0.;
+    assert!(matches!(
+        verify_affine_sphere(&model, source, 1e-8, 1000, limits()).unwrap(),
+        AffineSphereAttempt::Refused {
+            reason: "original-affine-sphere-singular-map",
+            ..
+        }
+    ));
+}

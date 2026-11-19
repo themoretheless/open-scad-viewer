@@ -35,8 +35,8 @@ pub struct Transformed {
 }
 
 fn buffers(positions: &[f64], indices: &[usize]) -> Result<(), TransformError> {
-    if positions.len() % 3 != 0
-        || indices.len() % 3 != 0
+    if !positions.len().is_multiple_of(3)
+        || !indices.len().is_multiple_of(3)
         || indices.iter().any(|&i| i >= positions.len() / 3)
     {
         return Err(TransformError::InvalidInput(
@@ -67,7 +67,7 @@ pub fn transform(
     let r = |i: usize| [m[i][0], m[i][1], m[i][2]];
     let det = dot(r(0), cross(r(1), r(2)));
     let scale = (0..3).map(|i| dot(r(i), r(i)).sqrt()).product::<f64>();
-    if !(det.abs() > 1e-12 * scale) || det.is_nan() {
+    if det.abs().partial_cmp(&(1e-12 * scale)) != Some(std::cmp::Ordering::Greater) {
         return Err(TransformError::InvalidMatrix("singular linear part".into()));
     }
     let out = (0..positions.len() / 3)

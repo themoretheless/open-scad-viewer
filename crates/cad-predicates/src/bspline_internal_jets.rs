@@ -373,6 +373,20 @@ mod tests;
 // A nonzero common velocity component is a smooth direction chart. For
 // arc length, first chart jets use the positive endpoint speed ratio;
 // second jets use r_tt/Q-r_t(v.a)/Q². Every operation is rational.
+// sqrt(q) * d³z/ds³, with h=v.a and hp=a.a+v.j. Keeping the
+// final odd speed factor outside the rational expression lets a positive
+// velocity-component ratio compare both source sides without square roots.
+fn third_arc_chart(zt:&Rational,ztt:&Rational,zttt:&Rational,q:&Rational,
+    h:&Rational,hp:&Rational,ctx:&mut PredicateContext<'_>)->Result<Rational,Reason> {
+    let q2=q.mul(q,ctx)?;let q3=q2.mul(q,ctx)?;
+    let three=Rational::scalar(Expansion::scalar(3.));
+    let four=Rational::scalar(Expansion::scalar(4.));
+    let a=zttt.div_positive(q,ctx)?;
+    let b=three.mul(h,ctx)?.mul(ztt,ctx)?.div_positive(&q2,ctx)?;
+    let c=hp.mul(zt,ctx)?.div_positive(&q2,ctx)?;
+    let d=four.mul(h,ctx)?.mul(h,ctx)?.mul(zt,ctx)?.div_positive(&q3,ctx)?;
+    a.sub(&b,ctx)?.sub(&c,ctx)?.add(&d,ctx)
+}
 fn direction_equal(
     l: &[[Rational; 3]],
     r: &[[Rational; 3]],
@@ -423,28 +437,32 @@ fn direction_equal(
     }
     let chart = |x: &[[Rational; 3]],
                  ctx: &mut PredicateContext<'_>|
-     -> Result<(Vec<(Rational, Rational, Rational)>, Rational), Reason> {
+     -> Result<(Vec<(Rational, Rational, Rational, Rational)>, Rational), Reason> {
         let c = Rational::scalar(Expansion::scalar(sign));
         let mut v = Vec::new();
         let mut a = Vec::new();
         let mut j = Vec::new();
+        let mut snap = Vec::new();
         for k in 0..3 {
             v.push(x[1][k].mul(&c, ctx)?);
             a.push(x[2][k].mul(&Rational::scalar(Expansion::scalar(2. * sign)), ctx)?);
-            j.push(if order == 2 {
+            j.push(if order >= 2 {
                 x[3][k].mul(&Rational::scalar(Expansion::scalar(6. * sign)), ctx)?
             } else {
                 Rational::zero()
             });
+            snap.push(if order==3 {x[4][k].mul(&Rational::scalar(Expansion::scalar(24.*sign)),ctx)?}else{Rational::zero()});
         }
         if v[axis].n.sign() != Sign::Positive || v[axis].d.sign() != Sign::Positive {
             return Err(Reason::MissingProof);
         }
         let mut q = Rational::zero();
         let mut va = Rational::zero();
+        let mut hp = Rational::zero();
         for k in 0..3 {
             q = q.add(&v[k].mul(&v[k], ctx)?, ctx)?;
             va = va.add(&v[k].mul(&a[k], ctx)?, ctx)?;
+            if order==3 {hp=hp.add(&a[k].mul(&a[k],ctx)?.add(&v[k].mul(&j[k],ctx)?,ctx)?,ctx)?;}
         }
         let two = Rational::scalar(Expansion::scalar(2.));
         let mut out = Vec::new();
@@ -453,20 +471,28 @@ fn direction_equal(
             let d = a[k]
                 .sub(&z.mul(&a[axis], ctx)?, ctx)?
                 .div_positive(&v[axis], ctx)?;
-            let dd = if order == 2 {
+            let raw_dd = if order >= 2 {
                 j[k].sub(&z.mul(&j[axis], ctx)?, ctx)?
                     .sub(&two.mul(&d, ctx)?.mul(&a[axis], ctx)?, ctx)?
                     .div_positive(&v[axis], ctx)?
             } else {
                 Rational::zero()
             };
-            let dd = if arc && order == 2 {
-                dd.div_positive(&q, ctx)?
+            let ddd=if order==3 {
+                let three=Rational::scalar(Expansion::scalar(3.));
+                let raw=snap[k].sub(&z.mul(&snap[axis],ctx)?,ctx)?
+                    .sub(&three.mul(&d,ctx)?.mul(&j[axis],ctx)?,ctx)?
+                    .sub(&three.mul(&raw_dd,ctx)?.mul(&a[axis],ctx)?,ctx)?
+                    .div_positive(&v[axis],ctx)?;
+                if arc {third_arc_chart(&d,&raw_dd,&raw,&q,&va,&hp,ctx)?}else{raw}
+            }else{Rational::zero()};
+            let dd = if arc && order >= 2 {
+                raw_dd.div_positive(&q, ctx)?
                     .sub(&d.mul(&va, ctx)?.div_positive(&q.mul(&q, ctx)?, ctx)?, ctx)?
             } else {
-                dd
+                raw_dd
             };
-            out.push((z, d, dd));
+            out.push((z, d, dd, ddd));
         }
         Ok((out, v[axis].clone()))
     };
@@ -482,15 +508,19 @@ fn direction_equal(
         } else {
             lc[k].1.clone()
         };
-        if !first.equal(&rc[k].1, ctx)? || (order == 2 && !lc[k].2.equal(&rc[k].2, ctx)?) {
+        if !first.equal(&rc[k].1, ctx)? || (order >= 2 && !lc[k].2.equal(&rc[k].2, ctx)?) {
             return Ok(false);
+        }
+        if order==3 {
+            let third=if arc {lc[k].3.mul(&ratio,ctx)?}else{lc[k].3.clone()};
+            if !third.equal(&rc[k].3,ctx)? {return Ok(false);}
         }
     }
     Ok(true)
 }
 
-/// Exact C1/C2 of a nonzero unit-direction field at original internal knots
-/// (orders 1/2), or C0 position with continuous unit tangent (order 0).
+/// Exact C1/C2/C3 of a nonzero unit-direction field at original internal knots
+/// (orders 1/2/3), or C0 position with continuous unit tangent (order 0).
 /// or the active endpoints. Arc-length chart jets use positive speed ratios.
 /// This does not prove whole-domain regularity, position continuity, surface
 /// smoothness or closed transport holonomy; those remain caller premises.
@@ -504,7 +534,7 @@ pub fn rational_bspline_direction_jet_identity(
     arc_length: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
-        || !(0..=2).contains(&order)
+        || !(0..=3).contains(&order)
         || controls.len() < degree + 1
         || knots.len() != controls.len() + degree + 1
     {

@@ -1,0 +1,35 @@
+{
+  "sourceBase": "cd116eef95c2638632f0a51d73cdb38033cf3de8",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Geometric G2 at exactly agreeing complete Bezier edges with distinct chart axes, ends and reflected traversal. Both charts must be regular and occupy opposite local projected sides. Same-side and one-short budget refusals plus classified closed sweep and source shell regressions.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 2035 filtered out; finished in 0.28s",
+      "file": "axes.log.gz",
+      "sha256": "422ff65f1ae36edb98a48bbd7119d1e448467fbb6d43398578379dd3674536ec"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed::classified",
+      "result": "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2030 filtered out; finished in 27.43s",
+      "file": "closed.log.gz",
+      "sha256": "3f6246e94bb75d88db666b1b1c22660362158c5de6a199599e3c9c2a4750b5b6"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 1998 filtered out; finished in 13.97s",
+      "file": "source.log.gz",
+      "sha256": "f4cdc2a62a50d1ec07bae999d644d8c143dd995bace6e97789eaafc076994a38"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "1893c1aa6ff2d3d0e41981cd258c2df46a03ef7094faaa80695061728f09a29f",
+    "count": 4917
+  }
+}

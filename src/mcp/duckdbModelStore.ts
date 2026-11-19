@@ -25,6 +25,7 @@ import { parseGeometrySourceRoutingHeader } from '../core/geometryExecution'
 import { boundedLimit, isoTimestamp, requiredString, safeInteger } from './duckdbModelStore/boundedLimit'
 import {
   databaseKeys,
+  deleteModelDirect,
   getArtifactDirect,
   getBuildDirect,
   getModelDirect,
@@ -397,6 +398,22 @@ export class DuckDbModelStore implements ModelStore {
 
   getCatalogStats(): Promise<CatalogStats> {
     return this.serial(() => queryCatalogStats(this.executor()))
+  }
+
+  deleteModel(id: string): Promise<boolean> {
+    validateModelId(id)
+    const db = this.executor()
+    return this.serial(async () => {
+      const deleted = await deleteModelDirect(db, id)
+      if (deleted) {
+        try {
+          await hardenDatabasePermissions(this.databasePath)
+        } catch (error) {
+          console.error('Could not harden DuckDB file permissions after delete:', error)
+        }
+      }
+      return deleted
+    })
   }
 
   close(): Promise<void> {

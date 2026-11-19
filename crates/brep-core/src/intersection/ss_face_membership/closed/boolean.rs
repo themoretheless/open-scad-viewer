@@ -2,12 +2,7 @@
 use super::*;
 use crate::trimmed_shell_recipe as shell;
 pub type GraphBooleanLimits = GraphLensLimits;
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum GraphBooleanOperation {
-    Union,
-    Intersection,
-    Difference { minuend: usize },
-}
+pub use crate::source_body::graph_body::GraphBooleanOperation;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GraphBooleanComponent {
     Envelope,

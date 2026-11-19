@@ -7,8 +7,7 @@
 //! SS curve, sampled point or result triangulation takes part. Crossing roofs
 //! stay with the closed-graph SS Boolean; a strict upper-minus-lower slab is
 //! refused here because it needs new boundary construction.
-use super::{QualifiedGraphBody, error, require};
-use crate::ss_face_membership::GraphBooleanOperation;
+use super::{GraphBooleanOperation, QualifiedGraphBody, error, require};
 use crate::{Model, Result};
 use nurbs_core::ss_intersection::{GraphOrderLimits, prove_polynomial_graph_boundary_side};
 

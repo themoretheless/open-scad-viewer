@@ -33,6 +33,7 @@ pub(super) struct Context<'a, 'b> {
     pub(super) arc: Option<arc::ArcMap>,
     pub(super) guide_arc: Option<arc::ArcMap>,
     pub(super) shared_guide: bool,
+    pub(super) corrected_frame: Option<CorrectedFrame>,
     // Allocated only for ONE atlas certificate and its ONE aggregate ledger.
     // No source proof or cache credit escapes into another call/budget.
     pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::PairedPose>>>,
@@ -41,6 +42,72 @@ pub(super) struct Context<'a, 'b> {
 impl Context<'_, '_> {
     pub(super) fn same_cap(&self) -> bool {
         self.cap_identity.as_ref().is_some_and(|p| p.matches(self.caps))
+    }
+    pub(super) fn frame_jets(
+        &self,
+        station: [f64; 2],
+        phase: frame::PathPhase,
+        guide_phase: Option<frame::PathPhase>,
+        max: usize,
+    ) -> Result<Option<frame::Report>> {
+        let s = self.s;
+        if let Some(corrected) = self.corrected_frame {
+            return match corrected {
+                CorrectedFrame::ForwardLine => {
+                    frame::certify_fixed_path(s.path, s.options.normal, s.twist, station, max)
+                        .map(Some)
+                }
+                CorrectedFrame::RegularPrincipal => {
+                    if let Some(arc) = &self.arc {
+                        arc_frames::certify_frenet_arc(s, station, phase, arc.length(), max)
+                            .map(Some)
+                    } else {
+                        frame::certify_frenet_path(s.path, s.twist, station, max).map(Some)
+                    }
+                }
+                CorrectedFrame::Planar { principal_sign } => {
+                    let (twist, traversal) = if self.arc.is_some() {
+                        (&self.zero, phase.traversal)
+                    } else {
+                        (s.twist, station)
+                    };
+                    let mut report = frame::certify_fixed_normal_path(
+                        s.path, s.options.normal, twist, traversal, max,
+                    )?;
+                    if let Some(sign) = principal_sign {
+                        report = frame::apply_planar_principal_phase(report, sign)?;
+                    }
+                    if self.arc.is_some() {
+                        report = frame::compose_and_twist(report, phase, s.twist, station, max)?;
+                    }
+                    Ok(Some(report))
+                }
+            };
+        }
+        if self.arc.is_some() {
+            arc_frames::arc_frame(
+                s,
+                station,
+                phase,
+                guide_phase,
+                arc_frames::ArcFrameSources {
+                    offset: self.offset.as_ref(),
+                    transport: self.transport.as_ref(),
+                    shared_guide: self.shared_guide,
+                    zero: &self.zero,
+                    length: self.arc.as_ref().map(|map| map.length()),
+                },
+                max,
+            )
+        } else {
+            original_jets(
+                s,
+                station,
+                max,
+                self.offset.as_ref(),
+                self.transport.as_ref(),
+            )
+        }
     }
     fn cached_cap_jets(
         &self,
@@ -224,29 +291,7 @@ impl Context<'_, '_> {
         } else {
             None
         };
-        let frame = if self.arc.is_some() {
-            arc_frames::arc_frame(
-                s,
-                b[2],
-                phase,
-                guide_phase,
-                arc_frames::ArcFrameSources {
-                    offset: self.offset.as_ref(),
-                    transport: self.transport.as_ref(),
-                    shared_guide: self.shared_guide,
-                    zero,
-                },
-                max_cells - out.cells,
-            )?
-        } else {
-            original_jets(
-                s,
-                b[2],
-                max_cells - out.cells,
-                self.offset.as_ref(),
-                self.transport.as_ref(),
-            )?
-        };
+        let frame = self.frame_jets(b[2], phase, guide_phase, max_cells - out.cells)?;
         let Some(mut f) = frame else {
             return Ok(Enclosed::Unsupported(
                 "ideal-volume-original-frame-jets-unproved",

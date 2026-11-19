@@ -79,7 +79,7 @@ export function publishRuntimeDirectApi(qualificationDirectory,recordedAt){
     },
   })
   writeFileSync(path('src/core/currentRuntimeGeometryEvidence.ts'),
-    `// Runtime v10: finite exact-artifact API baseline, broader qualification separate.\nexport const CURRENT_RUNTIME_GEOMETRY_EVIDENCE = Object.freeze(${JSON.stringify(artifact,null,2)} as const)\n`)
+    `// Finite exact-artifact API baseline, broader qualification separate.\nexport const CURRENT_RUNTIME_GEOMETRY_EVIDENCE = Object.freeze(${JSON.stringify(artifact,null,2)} as const)\n`)
   const auditPath=`${qualificationDirectory}/runtime-binding.json`
   const audit=execFileSync(process.execPath,['--import','tsx','scripts/audit-runtime-manifests.mts'],{cwd:root,encoding:'utf8'})
   writeExclusive(auditPath,audit)

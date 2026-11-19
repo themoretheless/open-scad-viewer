@@ -1,0 +1,35 @@
+{
+  "sourceBase": "fbdb2e6da23123fbc0567e1d3b0f0b9255e63cd6",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Strict containment of the active interval of a nonperiodic unclamped rational trim in both traversals. Original control overhang and nonbinary endpoint. Exact boundary contact and one-short work refuse.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib strict_hole_containment",
+      "result": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s",
+      "file": "native.log.gz",
+      "sha256": "a6db433cb083f4353fef39482c9ab153c79b67a027afce7000d710e4843fe443"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2045 filtered out; finished in 0.98s",
+      "file": "brep.log.gz",
+      "sha256": "895501ace99351158ec99f526f2a9c3cab449c283f650c2a3bf968f2eef38b68"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2005 filtered out; finished in 13.31s",
+      "file": "shell.log.gz",
+      "sha256": "656236b0628ab3de513d57e3391cfe0f2113462ee0d1e7618966fb3014264a2b"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "9f6226e7992ed4613d20d562563b4be1901d583c196de676e1c6529573b1c252",
+    "count": 4919
+  }
+}

@@ -4,6 +4,10 @@ use super::scalar_certificate::{self, Status};
 use crate::{Result, check, curve::Curve};
 mod third;
 mod fourth;
+mod span_fourth;
+mod span_jets;
+pub(crate) use span_jets::certify as certify_span_jets;
+pub(crate) use span_fourth::certify as certify_fourth_span;
 pub use fourth::{FourthReport,certify_fourth_traversal};
 pub use third::{ThirdReport, certify_third_traversal};
 #[derive(Clone, Debug)]

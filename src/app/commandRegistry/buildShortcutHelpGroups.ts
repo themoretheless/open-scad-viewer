@@ -1,4 +1,4 @@
-import { COMMAND_REGISTRY } from '../commandRegistry'
+import { COMMAND_REGISTRY } from './commands'
 import type {
   BuildPaletteDescriptorsOptions,
   CommandDefinition,

@@ -16,10 +16,13 @@ pub fn diagnose_complete(v: Value) -> Result<Value> {
     Ok(
         json!({"scope":"all-owned-retained-boundary-joins","order":order,
         "extractionComplete":r.extraction_complete,"vertexLinksComplete":r.vertex_links_complete,
-        "edgeIds":r.edge_ids,"unresolvedEdges":r.unresolved_edges,"exactWork":r.exact_work,"parameterWork":r.parameter_work,
+        "edgeIds":r.edge_ids,"periodicEdgeIds":r.periodic_edge_ids,"unresolvedEdges":r.unresolved_edges,"exactWork":r.exact_work,"parameterWork":r.parameter_work,
         "edgeCorrespondenceCertified":r.edge_correspondence.as_ref().is_some_and(|p|p.all_equal&&p.all_joins_exact),
         "agreementWork":r.edge_correspondence.as_ref().map_or(0,|p|p.work),
         "allFacesRegular":r.regularity.all_faces_regular,"regularityCells":r.regularity.cells,
+                "faceInteriorCertified":r.face_interiors.certified,"faceInteriorCells":r.face_interiors.cells,
+                "faceInteriorExactWork":r.face_interiors.exact_work,"unresolvedInteriorFace":r.face_interiors.unresolved_face,
+                "geometricInteriorSeams":r.face_interiors.geometric_seams,
         "fullBoundaryG1Certified":r.g1_certified,"fullBoundaryG2Certified":r.g2_certified,
         "proof":collection(&r.proof,order),"idealSourceSmoothnessCertified":false,"solidCertified":false}),
     )

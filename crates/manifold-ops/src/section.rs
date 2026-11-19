@@ -72,8 +72,8 @@ fn validate(
     origin: [f64; 3],
     normal: [f64; 3],
 ) -> Result<PlaneFrame, SectionError> {
-    if positions.len() % 3 != 0
-        || indices.len() % 3 != 0
+    if !positions.len().is_multiple_of(3)
+        || !indices.len().is_multiple_of(3)
         || positions.iter().any(|v| !v.is_finite())
     {
         return Err(SectionError::InvalidInput(

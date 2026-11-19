@@ -107,7 +107,7 @@ pub fn admission(v: Value) -> Result<Value> {
         } else {
             "material orientation"
         };
-        return Err(input(&format!(
+        return Err(input(format!(
             "{} Solid geometry could not be proved: {stage}.",
             if op == "brep_progressive_sweep" || op == "brep_progressive_miter_sweep" {
                 "Progressive sweep"
@@ -167,7 +167,7 @@ fn cap_correction(
         json!({"sections":sections,"corrections":corrections,"maxWork":options["maxWork"]}),
     )?;
     if result["sections"].is_null() || result["wallDisplacementUpper"].is_null() {
-        return Err(input(&format!(
+        return Err(input(format!(
             "Miter cap correction unproved: {}",
             result["reason"]
         )));

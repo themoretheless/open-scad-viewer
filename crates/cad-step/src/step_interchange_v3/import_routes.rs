@@ -2575,7 +2575,7 @@ fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<Stri
             let id = products.get(&rep).ok_or_else(|| refuse("Selected representation has no product"))?;
             let (kind, args) = call(&entities, *id)?;
             if kind != "PRODUCT" || args.len() < 2 { return Err(refuse("Malformed named product")); }
-            step_xde::decode_step_string(&string_value(&args[1], "product name")?)
+            step_xde::decode_step_string(string_value(&args[1], "product name")?)
         };
         if let (Some(paths), Some(representations)) = (paths, representation_paths) {
             for path in representations {

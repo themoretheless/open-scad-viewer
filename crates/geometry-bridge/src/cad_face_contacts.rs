@@ -112,7 +112,7 @@ fn volume_value(r:&brep_core::volume_validity::Report,charts:&brep_core::sweep_r
             "outward":s.outward,"attempts":s.attempts.len(),
             "normalMethods":s.attempts.iter().map(|a|a.normal_method).collect::<Vec<_>>(),
             "unresolved":s.attempts.last().map(|a|a.ray.unresolved.iter().map(|u|json!({"face":u.face,"uv":u.uv,"reason":u.reason})).collect::<Vec<_>>()).unwrap_or_default()})).collect::<Vec<_>>() });
-    if capture_charts {output["retainedWallCharts"]=super::cad_sweep_smoothness::charts_value(&charts);}
+    if capture_charts {output["retainedWallCharts"]=super::cad_sweep_smoothness::charts_value(charts);}
     Ok(output)
 }
 struct VolumeSession {
@@ -342,7 +342,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
             (witness,r.cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.radial_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
             brep_core::face_contacts::SharedBoundary::ProjectedTrimNetwork(c)=>json!({"kind":"projected-trim-network","certified":true,"faces":c.faces,"edges":c.edges,"vertices":c.vertices,"cells":c.cells,"axes":c.axes,"determinantSigns":c.determinant_signs}),
             brep_core::face_contacts::SharedBoundary::ProjectedTrimPartition(c)=>json!({"kind":"projected-trim-partition","certified":true,"faces":c.faces,"edge":c.edge(),"vertex":c.vertex(),"cells":c.cells,"axes":c.axes,"determinantSigns":c.determinant_signs}),

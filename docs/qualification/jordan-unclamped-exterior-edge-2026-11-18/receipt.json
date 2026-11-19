@@ -1,0 +1,29 @@
+{
+  "sourceBase": "1edb9e8ef49a667d721c2a1ac98a3d5a7b188abf",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact active clamping of an unclamped reversed exterior edge in the shared projected Jordan loop. Independently proves complete original world-curve identity and sole authored seam contact. Includes one-short work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 1.37s",
+      "file": "brep.log.gz",
+      "sha256": "f70c96de65fe314ff6e639e951eb82cec0242fa3faecfec19d965eeee37d3e24"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2006 filtered out; finished in 14.64s",
+      "file": "shell.log.gz",
+      "sha256": "a7e2f514fe94e68accffec990df07249cff81d184eaabb0745b2b9d8537350f1"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "85c9abfd001ebb1a6c4acda2fe027ba98ced838db9caf7e1d28be257d5ccdd9d",
+    "count": 4919
+  }
+}

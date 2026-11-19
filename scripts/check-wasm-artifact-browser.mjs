@@ -34,9 +34,9 @@ try {
   await page.route(`${origin}__probe`, route => route.fulfill({contentType: 'text/html', body: '<!doctype html><title>WASM artifact check</title>'}))
   await page.goto(`${origin}__probe`)
   const report = await page.evaluate(async identity => {
-    const {compileStreamingWasm} = await import('/src/services/wasmStreaming.ts')
-    const {assertVerifiedWasmModule} = await import('/src/services/wasmArtifact.ts')
-    const {setOptionalWasmCompiler, compileOptionalWasm} = await import('/src/services/wasmCompilation.ts')
+    const {compileStreamingWasm} = await import('/src/kernel/wasmStreaming.ts')
+    const {assertVerifiedWasmModule} = await import('/src/kernel/wasmArtifact.ts')
+    const {setOptionalWasmCompiler, compileOptionalWasm} = await import('/src/kernel/wasmCompilation.ts')
     const results = []
     for (const mode of ['valid', 'damaged', 'truncated', 'oversized', 'stalled']) {
       const start = performance.now()

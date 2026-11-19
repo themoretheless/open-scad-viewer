@@ -2506,6 +2506,7 @@ function bakeNurbs(){void runNativeNurbs({kind:'bake',id:selection.value,created
 const appliedSeeds = new WeakSet<DirectDocument>()
 const { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commitInWorker, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
 
+const pendingBodyAppends=ref(0)
 /** A rebuild replaces the group of the same name, so repeated builds do not pile up. */
 watch(() => props.appendBodies, request => {
   if (!request) return
@@ -2527,7 +2528,9 @@ watch(() => props.appendBodies, request => {
     cancelGesture()
     // The worker runs the authoritative parser over the raw request bodies.
     const selected=request.bodies[0]?.id ?? ''
+    pendingBodyAppends.value++
     void commitInWorker(()=>next,()=>{selection.value=selected;sync()})
+      .finally(()=>{pendingBodyAppends.value--})
   })
 })
 
@@ -2664,7 +2667,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       </span>
       <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button type="button" @click="openNewGroupFromMenu">{{ label('Новая группа из кода', 'New group from source') }}</button>
-        <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
+        <button :disabled="restoringDraft || pendingBodyAppends > 0" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-units">{{ label('Единицы документа', 'Document units') }}<select data-testid="document-units" :value="documentUnit(document)" :disabled="restoringDraft || historyPending" :aria-label="label('Единицы документа', 'Document units')" @change="setDocumentUnits(($event.target as HTMLSelectElement).value)"><option v-for="unit in DOCUMENT_LENGTH_UNITS" :key="unit" :value="unit">{{ label(UNIT_LABELS[unit][0], UNIT_LABELS[unit][1]) }}</option></select></label>
         <FrozenGraphBodyPanel ref="frozenBodyPanel" :active="props.open&&!commandActive" :ru="ru" v-model:selected-edge="frozenBodyEdge" @display="showFrozenBody" @fit="fit('3d',false,true)" />
         <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>

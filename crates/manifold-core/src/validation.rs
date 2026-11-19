@@ -38,12 +38,12 @@ impl std::error::Error for IndexedMeshError {}
 
 /// Validate the complete indexed-triangle transport before any topology pass.
 pub fn validate_indexed_mesh(positions: &[f64], indices: &[usize]) -> Result<(), IndexedMeshError> {
-    if positions.len() % 3 != 0 {
+    if !positions.len().is_multiple_of(3) {
         return Err(IndexedMeshError::PositionsLength {
             len: positions.len(),
         });
     }
-    if indices.len() % 3 != 0 {
+    if !indices.len().is_multiple_of(3) {
         return Err(IndexedMeshError::IndicesLength { len: indices.len() });
     }
     if let Some(index) = positions.iter().position(|value| !value.is_finite()) {

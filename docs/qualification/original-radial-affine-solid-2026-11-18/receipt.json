@@ -1,0 +1,30 @@
+{
+  "sourceBase": "2c7dd067003777a4056afb700aebc368ad236dcc",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Four-band radial shell on an authored axis shear and combined section-plane tilt. Native G2, global chart and pair embedding, outward orientation, material ownership and hole parity are checked. The same test binary additionally passes 58 related regressions.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib four_band",
+      "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2068 filtered out; finished in 0.47s",
+      "file": "solid.log.gz",
+      "sha256": "c1ccd0e6809aa6825aa967f092353e172408e086b9a82afda537f144e464486f"
+    },
+    {
+      "command": "replay Cargo brep-core unit-test binary with periodic_charts::tests radial_incidence::tests boundary_embedding::tests face_contacts::tests sweep_smoothness::complete:: body_analysis::volume_validity::tests --test-threads=3",
+      "binarySha256": "e9d819d055a7c82ca71829fa647e8b6b849cd08657d77fe2450f82755a8aa864",
+      "result": "test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 2012 filtered out; finished in 5.24s",
+      "file": "regressions.log.gz",
+      "sha256": "9c3aded597dc858030ac11cff73a848e8c66101602a804d3cb0e45626c7ccac9"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "a8ddff080e21a287429ae4382721649418ec2b26c9c9d0430d2c1bf17aa8a4ec",
+    "count": 4922
+  }
+}

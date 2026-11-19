@@ -1,0 +1,225 @@
+{
+  "rustSourceCommit": "db654fe39",
+  "integratedMainCommit": "bafeeb054",
+  "geometryWasm": {
+    "sha256": "516fa1bfeb9005d388792b6e7ba6a996c8236d5ccaec82ade454eea191050fd6",
+    "byteLength": 18961944
+  },
+  "nativePassed": {
+    "indexedAndAutomaticRuledLoft": 6,
+    "completeSweepSmoothness": 14,
+    "closedSweepBoundaryOwnership": 72
+  },
+  "node22Passed": {
+    "loftAndSolidUi": 470,
+    "runtimeDirectApi": 115,
+    "mcpAndRuntimeManifests": 37,
+    "g0AndG1BindingTests": 33
+  },
+  "productionAssetVerification": {
+    "passed": true,
+    "assetCount": 243
+  },
+  "browser": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "assertions": [
+        {
+          "case": "cartesian-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-auto-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-mapped-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "mapped-natural-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "authored-nonplanar-cap-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "embedding-budget-refusal",
+          "status": "refused"
+        },
+        {
+          "case": "solid-budget-refusal",
+          "status": "refused without publishing a body"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "superseded exact worker terminated"
+        },
+        {
+          "case": "solid-publication",
+          "status": "one retained six-face B-rep"
+        },
+        {
+          "case": "restore",
+          "status": "Solid restored after reload"
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "assertions": [
+        {
+          "case": "cartesian-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-auto-control-tangent-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "cartesian-mapped-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "mapped-natural-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "authored-nonplanar-cap-loft.r",
+          "status": "built"
+        },
+        {
+          "case": "embedding-budget-refusal",
+          "status": "refused"
+        },
+        {
+          "case": "solid-budget-refusal",
+          "status": "refused without publishing a body"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "cancelled",
+          "fault": "explicitly held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "superseded exact worker terminated"
+        },
+        {
+          "case": "solid-publication",
+          "status": "one retained six-face B-rep"
+        },
+        {
+          "case": "restore",
+          "status": "Solid restored after reload"
+        }
+      ],
+      "pageErrors": []
+    }
+  ],
+  "independentStep": {
+    "parser": "OpenCascade/cadquery-ocp",
+    "scope": "six finite source/STEP geometry, topology and nonplanar-cap volume cases; not global qualification",
+    "cases": [
+      {
+        "case": "cartesian-control-tangent",
+        "valid": true,
+        "faces": 1,
+        "solids": 0,
+        "samples": 25,
+        "maxPositionError": 2.1316282072803006e-14,
+        "maxVDerivativeError": 3.552713678800501e-14,
+        "volume": null,
+        "relativeVolumeError": null
+      },
+      {
+        "case": "cartesian-auto-control-tangent",
+        "valid": true,
+        "faces": 1,
+        "solids": 0,
+        "samples": 25,
+        "maxPositionError": 1.4210854715202004e-14,
+        "maxVDerivativeError": 4.263256414560601e-14,
+        "volume": null,
+        "relativeVolumeError": null
+      },
+      {
+        "case": "cartesian-nested-mapped",
+        "valid": true,
+        "faces": 1,
+        "solids": 0,
+        "samples": 25,
+        "maxPositionError": 4.973799150320701e-14,
+        "maxVDerivativeError": 9.947598300641403e-14,
+        "volume": null,
+        "relativeVolumeError": null
+      },
+      {
+        "case": "cartesian-auto-nested-mapped",
+        "valid": true,
+        "faces": 1,
+        "solids": 0,
+        "samples": 25,
+        "maxPositionError": 2.664535259099164e-14,
+        "maxVDerivativeError": 6.394884621840902e-14,
+        "volume": null,
+        "relativeVolumeError": null
+      },
+      {
+        "case": "piecewise-mapped-natural",
+        "valid": true,
+        "faces": 1,
+        "solids": 0,
+        "samples": 25,
+        "maxPositionError": 1.4210854715202004e-14,
+        "maxVDerivativeError": 4.263256414560601e-14,
+        "volume": null,
+        "relativeVolumeError": null
+      },
+      {
+        "case": "authored-nonplanar-caps",
+        "valid": true,
+        "faces": 6,
+        "solids": 1,
+        "samples": 150,
+        "maxPositionError": 2.220446049250313e-16,
+        "maxVDerivativeError": 2.220446049250313e-16,
+        "volume": 1.0,
+        "relativeVolumeError": 0.0
+      }
+    ]
+  },
+  "architectureAudit": {
+    "passed": false,
+    "cleanBaseDiagnostics": 346,
+    "integratedDiagnostics": 351
+  },
+  "g1SemanticWork": {
+    "plan": "semantic-manifold-g1-plan-v127",
+    "completed": 0,
+    "planned": 4740
+  }
+}

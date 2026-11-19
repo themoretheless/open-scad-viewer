@@ -1,0 +1,199 @@
+{
+  "sourceBase": "72d82d213cb9ef66f0c56064b767c75ef15ed4a5",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Native closed original Frenet geometric C2 traversal, full embedding and material C0/G2 checks",
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "7ec9f468c51ab36a2ea49a1a3a0b998202afcebdfb86747931a5121f0507d01b"
+  },
+  "oracle": {
+    "file": "exact-oracle-result.json",
+    "sha256": "0882f138eeaae8477a60160d708486f8279e75bfb0b0b5aa344741aa4b4d914f"
+  },
+  "tests": {
+    "native": {
+      "file": "native.log.gz",
+      "sha256": "4afb62855c429d09457eced6a82d942bd8c8e9f71f12e9622e67424a533c4aad",
+      "terminalResults": [
+        "test result: ok. 159 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+        "test result: ok. 2276 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 139.44s"
+      ]
+    },
+    "material": {
+      "file": "material.log.gz",
+      "sha256": "96792de45187bdce1864c32a07afcb78975d4aa70c253d3b8bfad9a9f53584f7",
+      "terminalResults": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 82.63s"
+      ]
+    },
+    "no-codec": {
+      "file": "no-codec.log.gz",
+      "sha256": "27a4c58e5f948b3d5db75c0db6587a31f3ffd4320bf0d5b613e8fe2026b63c9b",
+      "terminalResults": [
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2064 filtered out; finished in 17.09s"
+      ]
+    }
+  },
+  "publicMatrix": [
+    {
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": false,
+      "hole": false,
+      "cells": 4092,
+      "exact": 52006,
+      "products": 52
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": false,
+      "hole": true,
+      "cells": 4176,
+      "exact": 96596,
+      "products": 104
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": true,
+      "hole": false,
+      "cells": 4060,
+      "exact": 60189,
+      "products": 52
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": true,
+      "hole": true,
+      "cells": 4112,
+      "exact": 113613,
+      "products": 104
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 30317,
+      "exact": 53857,
+      "products": 52
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 30401,
+      "exact": 98447,
+      "products": 104
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 33410,
+      "exact": 61360,
+      "products": 52
+    },
+    {
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 33462,
+      "exact": 114784,
+      "products": 104
+    },
+    {
+      "split": false,
+      "reclock": true,
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 34983,
+      "exact": 126769,
+      "products": 52
+    },
+    {
+      "split": false,
+      "reclock": true,
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 35067,
+      "exact": 171359,
+      "products": 104
+    },
+    {
+      "split": false,
+      "reclock": true,
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 38076,
+      "exact": 134272,
+      "products": 52
+    },
+    {
+      "split": false,
+      "reclock": true,
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 38128,
+      "exact": 187696,
+      "products": 104
+    },
+    {
+      "split": true,
+      "reclock": true,
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 40388,
+      "exact": 185826,
+      "products": 52
+    },
+    {
+      "split": true,
+      "reclock": true,
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 40472,
+      "exact": 230416,
+      "products": 104
+    },
+    {
+      "split": true,
+      "reclock": true,
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 43932,
+      "exact": 193317,
+      "products": 52
+    },
+    {
+      "split": true,
+      "reclock": true,
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 43984,
+      "exact": 246741,
+      "products": 104
+    }
+  ]
+}

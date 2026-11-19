@@ -11,6 +11,7 @@ from OCP.BRepCheck import BRepCheck_Analyzer
 from OCP.BRepGProp import BRepGProp
 from OCP.GProp import GProp_GProps
 from OCP.gp import gp_Pnt,gp_Vec
+face_cast=getattr(TopoDS,'Face',None) or TopoDS.Face_s
 root=Path(sys.argv[1]);manifest=json.loads((root/'wasm-rush-round-trip.json').read_text());reports=[]
 for case in manifest['cases']:
  name=case['case'];reader=STEPControl_Reader()
@@ -18,7 +19,7 @@ for case in manifest['cases']:
  assert reader.TransferRoots()==1,name
  shape=reader.OneShape();assert BRepCheck_Analyzer(shape).IsValid(),name
  faces=[];exp=TopExp_Explorer(shape,TopAbs_FACE)
- while exp.More():faces.append(BRepAdaptor_Surface(TopoDS.Face(exp.Current())));exp.Next()
+ while exp.More():faces.append(BRepAdaptor_Surface(face_cast(exp.Current())));exp.Next()
  assert len(faces)==case['faces'],(name,len(faces))
  solids=0;exp=TopExp_Explorer(shape,TopAbs_SOLID)
  while exp.More():solids+=1;exp.Next()

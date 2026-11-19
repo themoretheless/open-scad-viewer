@@ -138,18 +138,16 @@ fn planar(c: Curve) -> Curve {
 /// `union`, `difference` or `intersection` of a canonical sphere solid and
 /// a canonical ring-torus solid in either order, for off-axis contacts.
 pub fn sphere_torus_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
-    let (sphere_index, sphere_model, torus_model) = match (
+    let (sphere_index, sphere_model, torus_model, sphere, torus) = match (
         sphere_sphere::recognize_any(a)?,
         recognize_torus(b)?,
     ) {
-        (Some(_), Some(_)) => (0, a, b),
+        (Some(sphere), Some(torus)) => (0, a, b, sphere, torus),
         _ => match (recognize_torus(a)?, sphere_sphere::recognize_any(b)?) {
-            (Some(_), Some(_)) => (1, b, a),
+            (Some(torus), Some(sphere)) => (1, b, a, sphere, torus),
             _ => return Err(refuse("Sphere-torus Boolean needs a canonical sphere and torus")),
         },
     };
-    let sphere = sphere_sphere::recognize_any(sphere_model)?.expect("recognized above");
-    let torus = recognize_torus(torus_model)?.expect("recognized above");
     let report = intersect_sphere_torus(sphere_model, torus_model, Options::default())?;
     if !report.unresolved.is_empty() {
         return Err(refuse("Sphere-torus Boolean: the intersection is not resolved"));
@@ -342,16 +340,14 @@ pub(crate) fn traced_boolean(
 /// Off-axis sphere x cylinder Boolean (sphere strictly between the caps).
 pub fn sphere_cylinder_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     use crate::sphere_cylinder::{SphereCylinderComponent, intersect_sphere_cylinder, recognize_cylinder};
-    let (sphere_index, sphere_model, other_model) =
+    let (sphere_index, sphere_model, other_model, sphere, cylinder) =
         match (sphere_sphere::recognize_any(a)?, recognize_cylinder(b)?) {
-            (Some(_), Some(_)) => (0, a, b),
+            (Some(sphere), Some(cylinder)) => (0, a, b, sphere, cylinder),
             _ => match (recognize_cylinder(a)?, sphere_sphere::recognize_any(b)?) {
-                (Some(_), Some(_)) => (1, b, a),
+                (Some(cylinder), Some(sphere)) => (1, b, a, sphere, cylinder),
                 _ => return Err(refuse("Sphere-cylinder Boolean needs a canonical sphere and cylinder")),
             },
         };
-    let sphere = sphere_sphere::recognize_any(sphere_model)?.expect("recognized above");
-    let cylinder = recognize_cylinder(other_model)?.expect("recognized above");
     let report = intersect_sphere_cylinder(sphere_model, other_model, Options::default())?;
     if !report.unresolved.is_empty() {
         return Err(refuse("Sphere-cylinder Boolean: the intersection is not resolved"));
@@ -401,16 +397,14 @@ pub fn sphere_cylinder_boolean(a: &Model, b: &Model, operation: &str) -> Result<
 pub fn sphere_cone_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     use crate::sphere_cone::{SphereConeComponent, intersect_sphere_cone};
     use brep_core::intersections::recognize_cone;
-    let (sphere_index, sphere_model, other_model) =
+    let (sphere_index, sphere_model, other_model, sphere, cone) =
         match (sphere_sphere::recognize_any(a)?, recognize_cone(b)?) {
-            (Some(_), Some(_)) => (0, a, b),
+            (Some(sphere), Some(cone)) => (0, a, b, sphere, cone),
             _ => match (recognize_cone(a)?, sphere_sphere::recognize_any(b)?) {
-                (Some(_), Some(_)) => (1, b, a),
+                (Some(cone), Some(sphere)) => (1, b, a, sphere, cone),
                 _ => return Err(refuse("Sphere-cone Boolean needs a canonical sphere and cone")),
             },
         };
-    let sphere = sphere_sphere::recognize_any(sphere_model)?.expect("recognized above");
-    let cone = recognize_cone(other_model)?.expect("recognized above");
     let report = intersect_sphere_cone(sphere_model, other_model, Options::default())?;
     if !report.unresolved.is_empty() {
         return Err(refuse("Sphere-cone Boolean: the intersection is not resolved"));
@@ -640,9 +634,8 @@ fn pair_boolean(
                     ];
                     if let [Some(x), Some(y)] = certified {
                         tolerance = tolerance.max(2. * agree.max(x).max(y));
-                        let second = pcs.pop().expect("two pcurves");
-                        let first = pcs.pop().expect("two pcurves");
-                        break Some((curve, [first, second]));
+                        let pair = pcs.try_into().map_err(|_| refuse("Expected one pcurve per face"))?;
+                        break Some((curve, pair));
                     }
                 }
                 if count >= 129 {

@@ -109,6 +109,57 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // v20 measured 18,881,767 raw WASM bytes, 6,732,083 packed geometry bytes,
+  // and 12,833,309 total asset bytes on the Solid and Rust integration build.
+  '5c5f9b414d6c8db79af8d901314e97a747689ecdaab05ef08d3fb7c31dacc94a':Object.freeze({
+    version:20,geometryChunkBytes:6_741_000,totalAssetBytes:12_842_000,rawGeometryBytes:18_891_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:545_500,geometryBuildEngine:338_800,wasmStreaming:220_600,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // v21 measured 18,961,944 raw WASM bytes, 6,759,159 packed geometry bytes,
+  // and 12,861,112 total asset bytes for the loft integration.
+  '516fa1bfeb9005d388792b6e7ba6a996c8236d5ccaec82ade454eea191050fd6':Object.freeze({
+    version:21,geometryChunkBytes:6_768_100,totalAssetBytes:12_870_100,rawGeometryBytes:18_971_500,
+    namedJsChunkBytes:Object.freeze({
+      index: 271_900, DirectModeler: 545_700, geometryBuildEngine: 339_000, wasmStreaming: 220_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/workerHandlerRuntime-BYRGBGGQ.js':114_700}),
+  }),
+  // v22 measured 18,996,362 raw WASM bytes, 6,770,982 packed geometry bytes,
+  // and 12,873,243 total asset bytes.
+  '8a82d7afc51a7ee70d1e5bfb36623a2c76d8a86f16f9703e2f86c97884c50bf1':Object.freeze({
+    version:22,geometryChunkBytes:6_780_000,totalAssetBytes:12_882_300,rawGeometryBytes:19_006_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:545_700,geometryBuildEngine:339_000,wasmStreaming:220_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/workerHandlerRuntime-DjZK5xjP.js':114_700}),
+  }),
+  // v23 measured 19,016,254 raw WASM bytes, 6,781,272 packed geometry bytes,
+  // and 12,868,831 total asset bytes after merging main and the Jordan certificates.
+  '71294e3370d75ca6b9b1a162b2ef1b2ab9d1957b3059e60c1859ce2170f6b49a':Object.freeze({
+    version:23,geometryChunkBytes:6_791_000,totalAssetBytes:12_878_000,rawGeometryBytes:19_026_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/workerHandlerRuntime-B6B-VcZM.js':114_700}),
+  }),
+  // v24 measured 19,087,967 raw WASM bytes, 6,806,892 packed geometry bytes,
+  // and 12,894,974 total asset bytes for the merged loft and affine shell runtime.
+  'a0f18dd409f746f9930d0b4c966747cc8b25e813711762ff8edabfe152fd6f2a':Object.freeze({
+    version:24,geometryChunkBytes:6_817_000,totalAssetBytes:12_905_000,rawGeometryBytes:19_098_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
+    }),
+  }),
+  // v25 measured 19,096,303 raw geometry bytes, 6,809,720 packed bytes and 12,900,792 asset bytes.
+  '7702e12173f81b2db74472762ce0f5e9824be6d65311b4d2142416c7f1cb0ae4':Object.freeze({
+    version:25,geometryChunkBytes:6_817_000,totalAssetBytes:12_905_000,rawGeometryBytes:19_098_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_900,DirectModeler:499_000,geometryBuildEngine:339_000,wasmStreaming:220_800,
+    }),
+  }),
   // Shared STEP export build. Measured raw kernel 18,907,780 bytes,
   // packed geometry 6,741,729 bytes and distribution assets 12,831,417 bytes.
   '087654c90fa17d70d73bb3aeab3f79179bf865393575ee55cc85a367bcbbab4f':Object.freeze({

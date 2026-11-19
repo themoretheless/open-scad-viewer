@@ -6,21 +6,31 @@ pub struct Limits {
     pub order: usize,
     pub exact_work: u64,
     pub agreement_work: u64,
+    /// Shared cells for face rank and exact interior knot joins.
     pub regularity_cells: usize,
 }
 pub struct Report {
     pub extraction_complete: bool,
+    /// Edges indexed by the standalone strip proof collection.
     pub edge_ids: Vec<usize>,
+    /// Physical same-face seam edges proved by the original periodic atlas.
+    pub periodic_edge_ids: Vec<usize>,
     pub unresolved_edges: Vec<usize>,
     pub edge_correspondence: Option<crate::boundary_agreement::ExactReport>,
     pub vertex_links_complete: bool,
     pub regularity: crate::boundary_embedding::regularity::Report,
     pub proof: ProjectiveSeamCollectionReport,
+    pub face_interiors: InteriorReport,
     pub g1_certified: bool,
     pub g2_certified: bool,
     pub exact_work: u64,
     pub parameter_work: u64,
 }
+mod graph_jets;
+pub(crate) mod interiors;
+mod periodic_uses;
+pub(super) use periodic_uses::selected_periodic_join;
+pub use interiors::InteriorReport;
 mod reversal;
 use reversal::reverse_along;
 // Every oriented face corner connects two (edge,end) nodes in the link
@@ -73,40 +83,55 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         "Invalid complete boundary smoothness budget",
     )?;
     let mut uses = vec![Vec::new(); model.edges.len()];
+    let mut parameter_work = 0;
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let side = coedge_side(&f.surface, &c.pcurve, c.reversed);
-                uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1)));
+                let (side, used) = periodic_uses::full_side(
+                    model, &f.surface, c, limits.exact_work - parameter_work,
+                );
+                parameter_work += used;
+                uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1), c.reversed));
             }
         }
     }
-    let mut patches = Vec::new();
+    let mut charts = periodic_uses::Charts::new(model.faces.len());
     let mut seams = Vec::new();
     let mut edge_ids = Vec::new();
     let mut unresolved_edges = Vec::new();
-    let mut parameter_work = 0;
+    let mut periodic_candidates = Vec::new();
     for (edge, owned) in uses.iter().enumerate() {
-        let [(a, Some(ab), Some(ad)), (b, Some(bb), Some(bd))] = owned.as_slice() else {
+        let [(a, Some(ab), Some(ad), ar), (b, Some(bb), Some(bd), br)] = owned.as_slice() else {
             unresolved_edges.push(edge);
             continue;
         };
-        let left = model.faces[*a].surface.clone();
-        let mut right = model.faces[*b].surface.clone();
+        if a == b && periodic_uses::opposite_sides(&model.faces[*a].surface, ab, bb) {
+            if ad == bd && ar != br {
+                periodic_candidates.push(edge);
+            } else {
+                unresolved_edges.push(edge);
+            }
+            continue;
+        }
+        let Some(left) = charts.native(model, *a, &mut parameter_work, limits.exact_work)? else {
+            unresolved_edges.push(edge);
+            continue;
+        };
+        let Some(mut right) = charts.native(model, *b, &mut parameter_work, limits.exact_work)? else {
+            unresolved_edges.push(edge);
+            continue;
+        };
         if ad != bd {
-            let (reversed, work) =
-                reverse_along(&mut right, bb, limits.exact_work - parameter_work)?;
-            parameter_work += work;
-            if !reversed {
+            let Some(reflected) = charts.reflected(
+                *b, right, bb, &mut parameter_work, limits.exact_work,
+            )? else {
                 unresolved_edges.push(edge);
                 continue;
-            }
+            };
+            right = reflected;
         }
-        let start = patches.len();
-        patches.push(left);
-        patches.push(right);
         seams.push(ProjectiveSeam {
-            patches: [start, start + 1],
+            patches: [left, right],
             boundaries: [(*ab).into(), (*bb).into()],
             order: limits.order,
             normal_scale: 1.,
@@ -126,28 +151,44 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     let vertex_links_complete = vertex_links(model);
     let regularity =
         crate::boundary_embedding::regularity::inspect(model, limits.regularity_cells)?;
-    let complete = vertex_links_complete
-        && !edge_ids.is_empty()
-        && unresolved_edges.is_empty()
+    let world_owned = vertex_links_complete
         && correspondence
             .as_ref()
             .is_some_and(|p| p.all_equal && p.all_joins_exact);
-    let proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
-        &patches,
-        &seams,
-        limits.exact_work - parameter_work,
+    let proof = graph_jets::qualify(&charts.patches, &seams, limits.exact_work - parameter_work)?;
+    let seam_work = parameter_work + proof.exact_work;
+    let face_interiors = interiors::inspect_with_charts(
+        model,
+        limits.order,
+        limits.regularity_cells - regularity.cells,
+        limits.exact_work - seam_work,
+        Some(&charts),
     )?;
-    let g1_certified = complete && regularity.all_faces_regular && proof.certified;
+    let periodic_edge_ids = if world_owned && face_interiors.certified {
+        periodic_candidates
+    } else {
+        unresolved_edges.extend(periodic_candidates);
+        unresolved_edges.sort_unstable();
+        Vec::new()
+    };
+    let complete = world_owned
+        && !(edge_ids.is_empty() && periodic_edge_ids.is_empty())
+        && unresolved_edges.is_empty();
+    let ordinary_proven = edge_ids.is_empty() || proof.certified;
+    let g1_certified =
+        complete && regularity.all_faces_regular && ordinary_proven && face_interiors.certified;
     let g2_certified = g1_certified && limits.order == 2;
-    let work = parameter_work + proof.exact_work;
+    let work = seam_work + face_interiors.exact_work;
     Ok(Report {
         extraction_complete: complete,
         edge_ids,
+        periodic_edge_ids,
         unresolved_edges,
         edge_correspondence: correspondence,
         vertex_links_complete,
         regularity,
         proof,
+        face_interiors,
         g1_certified,
         g2_certified,
         exact_work: work,
@@ -287,6 +328,48 @@ mod tests {
         )
         .unwrap();
         assert!(!short.g2_certified);
+        let mut trimmed = model.clone();
+        let outer = trimmed.faces[0].outer;
+        let edge = trimmed.loops[outer].coedges[0].edge;
+        let world = trimmed.edges[edge].curve.domain();
+        let c = &mut trimmed.0.loops[outer].coedges[0];
+        let a = &c.pcurve.control_points[0];
+        let b = &c.pcurve.control_points[1];
+        c.pcurve = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 4., 4., 4.],
+            control_points: [-1., 0., 3.].map(|t| {
+                a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+            }).to_vec(),
+            weights: vec![1., 2., 3.],
+            periodic: false,
+        };
+        *c = c.clone().with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: world,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0; 2]; 2],
+        }).unwrap();
+        trimmed.validate().unwrap();
+        let limits = Limits {
+            order: 2,
+            exact_work: 2_000_000,
+            agreement_work: 1_000_000,
+            regularity_cells: 100_000,
+        };
+        let active = inspect(&trimmed, limits).unwrap();
+        assert!(active.g2_certified && active.parameter_work > g2.parameter_work);
+        assert!(!inspect(&trimmed, Limits { exact_work: active.exact_work - 1, ..limits })
+            .unwrap().g2_certified);
+        let classified = classified::inspect(
+            &trimmed, &vec![classified::Class::G2; trimmed.edges.len()],
+            classified::Limits {
+                incidence_steps: 10_000,
+                exact_work: 2_000_000,
+                agreement_work: 1_000_000,
+                regularity_cells: 100_000,
+            },
+        ).unwrap();
+        assert!(classified.certified, "{}", classified.reason);
         let mut bad = model.clone();
         bad.edges[0].curve.control_points[1][0] += 0.125;
         if let Ok(bad) = inspect(

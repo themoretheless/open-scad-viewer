@@ -1,0 +1,23 @@
+{
+  "sourceBase": "687aa3d56ac31d32830f189cb2d4f85b35023c7f",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Native proof of two exact positive-radius bands with compatible azimuthal curves and a simple regular closed meridian. The source-carrier proof excludes contacts outside the two meridian joins. The regression rejects an interrupted meridian and mandatory-budget exhaustion. BRep incidence and material admission have separate checks.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib radial_band_pair_requires",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2048 filtered out; finished in 0.01s",
+      "file": "pair.log.gz",
+      "sha256": "c8832806065169d34fb537309dc9b84ac1f580afd47380a55e0b42760e9a375f"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "b2a6bf7d7a9db21f7c96553e00ce06b66cb039e6dd85f96a694e085a84a39f95",
+    "count": 4922
+  }
+}

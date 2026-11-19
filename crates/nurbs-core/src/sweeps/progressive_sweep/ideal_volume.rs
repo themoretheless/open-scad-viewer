@@ -37,6 +37,8 @@ pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
 mod exact;
+mod frenet_clock;
+mod fixed_rank;
 mod carrier_rank;
 mod contact_coincidence;
 pub(crate) mod cap_difference;
@@ -123,7 +125,10 @@ impl MultiSweep<'_> {
         }
         if !surface_c0(caps[0])
             || !surface_c0(caps[1])
-            || [s.path, s.scale, s.twist].into_iter().any(|c| !curve_c0(c))
+            || !(curve_c0(s.path)
+                || (closed::uses_periodic_path(s, closed) && curve_active_c0(s.path)))
+            || !curve_c0(s.scale)
+            || !curve_c0(s.twist)
             || s.affine_laws
                 .is_some_and(|(a, c)| !curve_c0(a) || !curve_c0(c))
         {
@@ -142,9 +147,12 @@ impl MultiSweep<'_> {
         // scalar and positional C0 premises above suffice for the piecewise
         // segment integral; the stronger frame C1 gate is conservative.
         if closed {
+            // The stage limit is relative to the work already paid for cap
+            // identity and rank inspection, just as for the open frame gate.
+            let seam_ceiling = out.cells + (max_cells - out.cells).min(100000);
             if !closed::premises(
                 s, caps, cap_identity.as_ref(), &mut out,
-                max_cells.min(100000), max_exact_work,
+                seam_ceiling, max_exact_work,
             )? {
                 return Ok(out);
             }
@@ -159,14 +167,36 @@ impl MultiSweep<'_> {
                 return Ok(out);
             }
         }
+        // Closed Frenet position, frame and pose laws use physical arc.
+        // Once the original seam is proved, exact positive Bézier clock
+        // changes preserve the complete map and all its physical jets.
+        let conditioned = frenet_clock::conditioned(s, closed, &mut out.cells, max_cells);
+        let conditioned_sweep = conditioned.as_ref().map(|path| Sweep {
+            station_cache: Default::default(),
+            profile: s.profile,
+            path,
+            scale: s.scale,
+            twist: s.twist,
+            affine_laws: s.affine_laws,
+            frame_laws: s.frame_laws,
+            orientation_guide: s.orientation_guide,
+            contact_point: s.contact_point,
+            contact_source: s.contact_source,
+            spatial_rmf_error_limits: s.spatial_rmf_error_limits,
+            options: s.options,
+            next_sections: s.next_sections,
+        });
+        let s = conditioned_sweep.as_ref().unwrap_or(s);
         let zero = constant_vector_law([0.; 3])?;
-        let Some(initial) = super::profile_domain::original_frame(
-            s,
-            &zero,
-            [0., 0.],
-            (max_cells - out.cells).min(100000),
-            true,
-        )?
+        let initial_budget = (max_cells - out.cells).min(100000);
+        let initial = if closed && s.options.orientation == Orientation::CorrectedFrenet
+            && s.frame_laws.is_none() && s.orientation_guide.is_none()
+        {
+            Some(frame::certify_frenet_path_values(s.path, &zero, [0., 0.], initial_budget)?)
+        } else {
+            super::profile_domain::original_frame(s, &zero, [0., 0.], initial_budget, true)?
+        };
+        let Some(initial) = initial
         else {
             out.reason = Some("ideal-volume-initial-frame-unproved");
             return Ok(out);
@@ -176,11 +206,13 @@ impl MultiSweep<'_> {
             out.reason = Some("ideal-volume-initial-frame-unproved");
             return Ok(out);
         }
-        let basis = [
-            decode(initial.transverse.unwrap())?,
-            decode(initial.binormal.unwrap())?,
-            decode(initial.longitudinal.unwrap())?,
-        ];
+        let (Some(transverse), Some(binormal), Some(longitudinal)) =
+            (initial.transverse, initial.binormal, initial.longitudinal)
+        else {
+            out.reason = Some("ideal-volume-initial-frame-unproved");
+            return Ok(out);
+        };
+        let basis = [decode(transverse)?, decode(binormal)?, decode(longitudinal)?];
         let start = crate::sweeps::progressive_miter::vector_certificate::certify_values_traversal(
             s.path,
             [0., 0.],
@@ -251,6 +283,15 @@ impl MultiSweep<'_> {
         } else {
             None
         };
+        // Closed premises already bound the exact same filled carrier and
+        // source positions at the endpoints. ArcMap has proved regular
+        // parameter inversion when that policy is selected.
+        if closed {
+            if let Some(reason) = fixed_rank::obstruction(s, caps[0], &mut out, max_cells, max_exact_work)? {
+                out.reason = Some(reason);
+                return Ok(out);
+            }
+        }
         let mut shared_guide = false;
         let guide_arc = if arc.is_some() {
             if let Some(guide) = s.orientation_guide {
@@ -276,6 +317,9 @@ impl MultiSweep<'_> {
         let cap_difference = if cap_identity.is_none() {
             cap_difference::Difference::prepare(caps, &mut out.cells, max_cells)?
         } else { None };
+        let corrected_frame = charts::prepare_corrected_frame(
+            s, closed, &mut out, max_cells, max_exact_work,
+        )?;
         let context = cell::Context {
             s,
             caps,
@@ -290,6 +334,7 @@ impl MultiSweep<'_> {
             arc,
             guide_arc,
             shared_guide,
+            corrected_frame,
             poses: atlas.then(Default::default),
             cap_jets: atlas.then(Default::default),
         };

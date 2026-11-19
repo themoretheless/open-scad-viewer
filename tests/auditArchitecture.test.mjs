@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   auditArchitecture,
   crateCycles,
@@ -44,7 +45,7 @@ test('manifest edges read workspace deps by name, normal and dev separately', ()
 })
 
 test('the real workspace has crate edges and no cycles', () => {
-  const edges = crateEdges(new URL('..', import.meta.url).pathname)
+  const edges = crateEdges(fileURLToPath(new URL('..', import.meta.url)))
   assert.ok(edges.some(([from, to, kind]) => from === 'brep-core' && to === 'nurbs-core' && kind === 'normal'))
   assert.deepEqual(crateCycles(edges), [])
   assert.deepEqual(

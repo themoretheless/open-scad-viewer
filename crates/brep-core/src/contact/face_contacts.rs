@@ -50,6 +50,8 @@ pub struct Pair {
     /// Disjointness was proven exactly by control-hull separation, so no
     /// trimmed search report exists for this pair.
     pub hull_disjoint: bool,
+    /// Separation proved by a simple original meridian cycle.
+    pub radial_disjoint: bool,
     /// Exact control-hull separation work spent on this pair. Attributed to
     /// the pair so per-pair work adds up to the report totals.
     pub hull_cells: usize,
@@ -186,6 +188,7 @@ pub fn inspect_incident_with_vertices(
         && report.pairs.iter().all(|p| {
             p.boundary.is_some()
                 || p.hull_disjoint
+                || p.radial_disjoint
                 || p.result.as_ref().is_some_and(|r| r.absence_proven)
         });
     // Exact vertex contact is a real contact, never a disjointness proof.
@@ -286,19 +289,22 @@ fn inspect_impl(
     caps: &[[usize; 3]],
     modes: ContactModes,
 ) -> Result<Report> {
-    let ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
+    inspect_with_radial_certificates(model, tolerance_uv, limits, hulls, caps, modes, Vec::new())
+}
+
+pub(crate) fn inspect_with_radial_certificates(
+    model: &Model,
+    tolerance_uv: f64,
+    limits: Limits,
+    hulls: &[crate::boundary_hull_contact::Certificate],
+    caps: &[[usize; 3]],
+    modes: ContactModes,
+    radial_disjoint: Vec<[usize; 2]>,
+) -> Result<Report> {
     let mut inspector = Inspector::new(
-        std::sync::Arc::new(model.clone()),
-        tolerance_uv,
-        limits,
-        hulls.to_vec(),
-        caps.to_vec(),
-        crate::face_contacts::ContactModes {
-            sweep_hulls,
-            joint_exact_domain,
-            prepared,
-        },
-    )?;
+        std::sync::Arc::new(model.clone()), tolerance_uv, limits,
+        hulls.to_vec(), caps.to_vec(), modes,
+    )?.with_radial_separation(radial_disjoint);
     while !inspector.finished() { inspector.advance(64)?; }
     inspector.finish()
 }
@@ -321,6 +327,7 @@ pub(crate) struct Inspector {
     done: bool,
     failed: bool,
     incident: Option<usize>,
+    radial_disjoint: Vec<[usize; 2]>,
 }
 impl Inspector {
     pub(crate) fn new(
@@ -394,6 +401,7 @@ impl Inspector {
             done: n < 2,
             failed: false,
             incident: None,
+            radial_disjoint: Vec::new(),
         })
     }
     pub(crate) fn finished(&self) -> bool {
@@ -417,6 +425,13 @@ impl Inspector {
         self.failed = result.is_err();
         result
     }
+    pub(crate) fn with_radial_separation(mut self, mut pairs: Vec<[usize; 2]>) -> Self {
+        pairs.sort_unstable();
+        pairs.dedup();
+        self.radial_disjoint = pairs;
+        self
+    }
+
     fn advance_inner(&mut self, max_units: usize) -> Result<usize> {
         if self.done {
             return Ok(0);
@@ -445,6 +460,15 @@ impl Inspector {
             {
                 self.stop_at([a, b]);
                 return Ok(used);
+            }
+            if self.radial_disjoint.binary_search(&[a, b]).is_ok() {
+                self.report.pairs.push(Pair {
+                    faces: [a, b], result: None, boundary: None,
+                    hull_disjoint: false, radial_disjoint: true, hull_cells: 0,
+                    boundary_cells: 0, source_chart_cells: 0, volume_separation: None,
+                    reason: "pair-disjoint",
+                });
+                continue;
             }
             let context = PairContext {
                 model: &model,
@@ -866,7 +890,7 @@ impl PairContext<'_> {
     fn jordan_partition(&self, work: &mut PairWork, out: &mut Report) -> Result<()> {
         if self.chart_open(work, out) {
             self.chart_attempt(work, out, usize::MAX, |model, faces, budget| {
-                let (certificate, cells) = crate::shared_boundary::jordan_partition::certify(model, faces, budget);
+                let (certificate, cells) = crate::shared_boundary::jordan_partition::certify_audited(model, faces, budget);
                 Ok((cells, certificate.map(SharedBoundary::ExactHull)))
             })?;
         }
@@ -938,6 +962,7 @@ impl PairContext<'_> {
             result,
             boundary: work.boundary,
             hull_disjoint: work.hull_disjoint,
+            radial_disjoint: false,
             hull_cells: work.hull_cells,
             boundary_cells: work.boundary_cells,
             source_chart_cells: work.source_chart_cells,

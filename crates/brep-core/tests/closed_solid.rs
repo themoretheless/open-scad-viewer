@@ -58,14 +58,35 @@ fn closed_material_ray_preserves_entry_and_exit_enclosures() {
 #[test]
 fn periodic_cylinder_qualifies_as_closed_material_through_its_owned_rims() {
     let mut model = full_periodic_cylinder::source();
-    let edge = &model.loops[0].coedges[1];
-    let trim = brep_topology::CoedgeTrim {
-        curve_parameter: model.edges[edge.edge].curve.domain(),
-        pcurve_parameter: edge.pcurve.domain(),
-        periodic_lift: [[1, 0]; 2],
+    let edge_index = model.loops[0].coedges[1].edge;
+    let world = model.edges[edge_index].curve.domain();
+    let edge = &mut model.loops[0].coedges[1];
+    edge.pcurve = nurbs_core::curve::Curve {
+        degree: 1, knots: vec![0., 0., 1., 2., 4., 4.],
+        control_points: vec![vec![3., -1.], vec![4., 0.], vec![4., 1.], vec![3., 3.]],
+        weights: vec![1.; 4], periodic: false,
     };
-    model.loops[0].coedges[1] = edge.clone().with_trim(trim).unwrap();
+    *edge = edge.clone().with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: world,
+        pcurve_parameter: [1., 2.],
+        periodic_lift: [[1, 0]; 2],
+    }).unwrap();
     model.rebuild_topology_ids();
+    let mut mismatched = model.clone();
+    let edge = &mut mismatched.loops[0].coedges[1];
+    *edge = edge.clone().with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: world,
+        pcurve_parameter: [1., 1.5],
+        periodic_lift: [[1, 0]; 2],
+    }).unwrap();
+    mismatched.rebuild_topology_ids();
+    match solid::qualify(mismatched, policy()) {
+        Ok(mismatch) => {
+            assert!(!mismatch.geometry().boundary.agreement.all_equal);
+            assert!(mismatch.solid().is_none());
+        }
+        Err(error) => assert!(error.message.contains("pcurve/surface and 3D edge disagree"), "{error:?}"),
+    }
     let limited = solid::qualify(model.clone(), solid::AdmissionPolicy {
         max_linear_cells: 1,
         ..policy()
@@ -399,10 +420,8 @@ fn policy() -> solid::AdmissionPolicy {
     }
 }
 
-#[test]
-fn open_ss_network_selects_boolean_material_inside_its_actual_descendants() {
-    use brep_core::ss_face_membership as trim;
-    use nurbs_core::{ss_intersection as ss, surface::Axis, surface_edit::elevate};
+fn open_ss_intersection_operands() -> [brep_core::Model; 2] {
+    use nurbs_core::{surface::Axis, surface_edit::elevate};
     let a = brep_core::cuboid([0., 0., -1.], [1., 1., 0.]).unwrap();
     let taller = brep_core::cuboid([0., 0., -2.], [1., 1., 0.]).unwrap();
     let mut b = brep_core::transform::affine(&taller, [
@@ -418,6 +437,88 @@ fn open_ss_network_selects_boolean_material_inside_its_actual_descendants() {
     assert!(certify_affine(&b.faces[0].surface).is_none());
     assert!(certify_affine(&b.faces[1].surface).is_some());
     b.rebuild_topology_ids();
+    [a, b]
+}
+
+#[test]
+fn independent_open_ss_networks_complete_both_intersection_bodies() {
+    use brep_core::ss_face_membership as trim;
+    use nurbs_core::ss_intersection as ss;
+
+    let originals = open_ss_intersection_operands();
+    let solids = originals.each_ref().map(|model| {
+        let translated = brep_core::transform::affine(model, [
+            [1., 0., 0., 4.], [0., 1., 0., 0.],
+            [0., 0., 1., 0.], [0., 0., 0., 1.],
+        ]).unwrap();
+        let combined = brep_core::operations::boolean(model, &translated, "union").unwrap();
+        let admission = solid::qualify(combined, policy()).unwrap();
+        let report = admission.geometry();
+        assert!(report.proven,
+            "Disjoint fixture must qualify (agreement={}, joins={}, trim={}, injective={}, pairs={}, nesting={:?})",
+            report.boundary.agreement.all_equal,
+            report.boundary.agreement.all_joins_exact,
+            report.boundary.trim.all_valid,
+            report.boundary.intersections.faces.all_faces_injective,
+            report.boundary.intersections.pairs.all_pairs_classified,
+            report.nesting.as_ref().and_then(|nesting| nesting.roles_consistent));
+        admission.into_solid().unwrap()
+    });
+    let operands = solids.each_ref();
+    let face_pairs = [[1, 1], [7, 7]];
+    let sources = face_pairs.map(|[a, b]| ss::FiberSources::new(
+        &solids[0].model().faces[a].surface, &solids[1].model().faces[b].surface,
+    ).unwrap());
+    let branches = sources.each_ref().map(|source| {
+        ss::qualify_quadratic_graph_ss(source, Default::default()).unwrap()
+    });
+    let roots = std::array::from_fn::<_, 2, _>(|i| {
+        trim::qualify_coedge_roots(
+            &branches[i],
+            [(solids[0].model(), face_pairs[i][0]), (solids[1].model(), face_pairs[i][1])],
+            1e-8, Default::default(),
+        ).unwrap()
+    });
+    let representatives = roots.each_ref().map(|roots| {
+        trim::qualify_cut_representatives(roots, Default::default()).unwrap()
+    });
+    let inputs = representatives.each_ref().map(|reps| {
+        trim::partition_cut_representatives(reps, Default::default()).unwrap()
+    });
+    let networks = inputs.each_ref().map(|input| {
+        trim::discover_open_ss_network(input, 0, Default::default(), Default::default())
+            .unwrap().unwrap()
+    });
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    let repair = solid::ShellRepairPolicy {
+        establish_forest: policy(), establish_orientation: policy(), readmit: policy(),
+    };
+    let results = networks[0].complete_source_intersection_with_networks(
+        &[&networks[1]], operands, &directions, Default::default(),
+        trim::OpenSSIntersectionCompletionLimits {
+            face_pairs: 100, polygon_tests_per_pair: 256, rim_pairs: 128,
+        },
+        repair,
+    ).unwrap();
+    assert_eq!(results.len(), 2);
+    for result in results {
+        let model = result.model();
+        assert_eq!(model.bodies.len(), 1);
+        assert_eq!(model.faces.len(), 7);
+        assert!(brep_topology::explorer::boundary_edges(&model.0).is_empty());
+        let volume = result.volume_bounds(solid::VolumeLimits {
+            axis: 2, origin: 0., absolute_error: 1e-4, cells: 100_000, spans: 100_000,
+            domain_cells: 100_000, algebra: Default::default(),
+        }).unwrap().positive_volume.unwrap();
+        assert!(volume[0] <= 0.875 && 0.875 <= volume[1]);
+    }
+}
+
+#[test]
+fn open_ss_network_selects_boolean_material_inside_its_actual_descendants() {
+    use brep_core::ss_face_membership as trim;
+    use nurbs_core::ss_intersection as ss;
+    let [a, b] = open_ss_intersection_operands();
     let [a, b] = [a, b].map(|model| solid::qualify(model, policy()).unwrap().into_solid().unwrap());
     let face = 1;
     let source = ss::FiberSources::new(&a.model().faces[face].surface, &b.model().faces[face].surface).unwrap();
@@ -645,6 +746,10 @@ fn open_ss_network_selects_boolean_material_inside_its_actual_descendants() {
         ).err().expect("Completion must reject incomplete search");
         assert_eq!(error.code, "BREP_RESOURCE_LIMIT");
     }
+    let shared_face = network.complete_source_intersection_with_networks(
+        &[&network], [&a, &b], &directions, Default::default(), limits, shell,
+    ).err().expect("An original face needs one partition owner");
+    assert!(shared_face.message.contains("joint partition"));
     let automatic = network.complete_source_intersection(
         [&a, &b], &directions, Default::default(), limits, shell,
     ).unwrap();
@@ -1083,6 +1188,76 @@ fn exact_patch_sewing_reverses_a_periodic_rim_clock() {
     assert_eq!(result.model().faces.len(), 3);
     assert_eq!(result.model().edges.len(), 3);
     result.reverify().unwrap();
+}
+
+#[test]
+fn exact_patch_sewing_matches_a_periodic_rim_to_a_clamped_copy() {
+    let source = full_periodic_cylinder::source();
+    let wall = open_patch(&source, &[0]);
+    let mut cap = open_patch(&source, &[1]);
+    let rim = &mut cap.edges[0].curve;
+    assert!(rim.periodic);
+    // The active spans have full interior multiplicity. The literal active
+    // poles and endpoint knots give a clamped encoding of the same ring.
+    rim.periodic = false;
+    rim.control_points.pop();
+    rim.weights.pop();
+    rim.knots = vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.];
+    rim.validate().unwrap();
+    cap.rebuild_topology_ids();
+    let top = open_patch(&source, &[2]);
+
+    let shell = solid::ShellRepairPolicy {
+        establish_forest: policy(),
+        establish_orientation: policy(),
+        readmit: policy(),
+    };
+    let assemble = brep_core::ss_face_membership::assemble_exact_patch_solid;
+    let mut patches = [wall, cap, top];
+    let result = assemble(&patches, 8, shell).unwrap();
+    assert_eq!(result.model().bodies.len(), 1);
+    assert_eq!(result.model().edges.len(), 3);
+    result.reverify().unwrap();
+
+    let reclocked = &mut patches[1];
+    for knot in &mut reclocked.edges[0].curve.knots {
+        *knot = 2. + 2. * *knot;
+    }
+    let use_ = &mut reclocked.loops[0].coedges[0];
+    *use_ = use_.clone().with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: [2., 10.],
+        pcurve_parameter: [0., 4.],
+        periodic_lift: [[0; 2]; 2],
+    }).unwrap();
+    reclocked.rebuild_topology_ids();
+    let result = assemble(&patches, 8, shell).unwrap();
+    let cap_loop = result.model().faces[1].outer;
+    let trim = result.model().loops[cap_loop].coedges[0].trim().unwrap();
+    assert_eq!(trim.curve_parameter, [0., 4.]);
+    assert_eq!(trim.pcurve_parameter, [0., 4.]);
+    result.reverify().unwrap();
+
+    patches.swap(0, 1);
+    let reordered = assemble(&patches, 8, shell).unwrap();
+    let cap_loop = reordered.model().faces[0].outer;
+    let rim_use = &reordered.model().loops[cap_loop].coedges[0];
+    assert!(reordered.model().edges[rim_use.edge].curve.periodic);
+    assert_eq!(rim_use.trim().unwrap().curve_parameter, [0., 4.]);
+    reordered.reverify().unwrap();
+    patches.swap(0, 1);
+
+    patches[1].shells[0].faces[0].reversed ^= true;
+    patches[1].rebuild_topology_ids();
+    let error = assemble(&patches, 8, shell).err().unwrap();
+    assert!(error.message.contains("rim has no mate"), "{error:?}");
+    patches[1].shells[0].faces[0].reversed ^= true;
+
+    // Keep this cap internally consistent while changing the shared rim.
+    patches[1].edges[0].curve.control_points[2][0] = 0.25;
+    patches[1].loops[0].coedges[0].pcurve.control_points[2][0] = 0.25;
+    patches[1].rebuild_topology_ids();
+    let error = assemble(&patches, 8, shell).err().unwrap();
+    assert!(error.message.contains("rim has no mate"), "{error:?}");
 }
 
 #[test]

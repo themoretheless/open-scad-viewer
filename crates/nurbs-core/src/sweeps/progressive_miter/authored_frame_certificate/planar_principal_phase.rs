@@ -274,8 +274,22 @@ pub(crate) fn certify_planar_principal_control_trajectories(
 ) -> Result<TrajectoriesReport> {
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let PrincipalPlane { normal, sign } = plane;
+    let frame = apply_planar_principal_phase(
+        certify_fixed_normal_path(path, normal, twist, traversal, max_cells)?,
+        sign,
+    )?;
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
+}
+
+pub(crate) fn apply_planar_principal_phase(mut frame: Report, sign: f64) -> Result<Report> {
     check(sign == 1. || sign == -1., "Invalid planar principal phase")?;
-    let mut frame = certify_fixed_normal_path(path, normal, twist, traversal, max_cells)?;
     if frame.status == Status::Certified {
         let signed_jet = |mut j: FrameJet, s: f64| {
             j.value = signed(j.value, s);
@@ -288,12 +302,5 @@ pub(crate) fn certify_planar_principal_control_trajectories(
         frame.transverse = Some(signed_jet(b, sign));
         frame.binormal = Some(signed_jet(n, -sign));
     }
-    super::trajectory::control_trajectories_with_fit(
-        super::ControlLaws { path, scale, affine },
-        qs,
-        traversal,
-        max_cells,
-        frame,
-        None,
-    )
+    Ok(frame)
 }

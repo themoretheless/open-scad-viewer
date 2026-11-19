@@ -38,6 +38,9 @@ fn fit(samples: &[P]) -> Result<Curve> {
 /// cubic stays small; consecutive pieces share their end sample exactly.
 fn pieces_of(arc: &Arc, per: usize) -> Result<Vec<Curve>> {
     let n = arc.samples.len();
+    if n < 2 {
+        return Err(refuse("a contact arc needs two endpoints"));
+    }
     let count = (n - 1).div_ceil(per - 1).max(1);
     let mut out = Vec::with_capacity(count);
     for k in 0..count {
@@ -88,14 +91,16 @@ fn clip(loops: &[Vec<Curve>], h: &dyn Fn(P) -> f64) -> Result<(Vec<Arc>, Vec<Vec
                 flat.push((i, t));
             }
         }
-        if pts.iter().all(|&p| inside(p)) {
+        if pts.is_empty() {
+            return Err(refuse("empty traced contact loop"));
+        }
+        let Some(start) = pts.iter().position(|&p| !inside(p)) else {
             closed.push(pieces.clone());
             continue;
-        }
+        };
         if pts.iter().all(|&p| !inside(p)) {
             continue;
         }
-        let start = (0..flat.len()).find(|&k| !inside(pts[k])).expect("some sample outside");
         let n = flat.len();
         let mut current: Option<Vec<P>> = None;
         for step in 1..=n {
@@ -149,7 +154,7 @@ fn clip(loops: &[Vec<Curve>], h: &dyn Fn(P) -> f64) -> Result<(Vec<Arc>, Vec<Vec
                     current = Some(arc);
                 } else if let Some(mut arc) = current.take() {
                     // The crossing replaces a sample it nearly coincides with.
-                    if arc.len() > 1 && near(*arc.last().unwrap(), cross) {
+                    if arc.len() > 1 && arc.last().is_some_and(|&p| near(p, cross)) {
                         arc.pop();
                         let (j, t2) = flat[(k0 + n - 1) % n];
                         if j == i && t2 < tc && arc.len() > 1 {
@@ -176,7 +181,9 @@ fn clip(loops: &[Vec<Curve>], h: &dyn Fn(P) -> f64) -> Result<(Vec<Arc>, Vec<Vec
     // Two boundary crossings almost on top of each other mean the curve
     // nearly touches the boundary there: a tangency, not two crossings.
     for arc in &open {
-        let d = sub(arc.samples[0], *arc.samples.last().unwrap());
+        let first = arc.samples.first().ok_or_else(|| refuse("empty contact arc"))?;
+        let last = arc.samples.last().ok_or_else(|| refuse("empty contact arc"))?;
+        let d = sub(*first, *last);
         if arc.samples.len() <= 3 && dot(d, d).sqrt() < 1e-5 {
             return Err(refuse("a contact arc nearly touches a face boundary"));
         }
@@ -287,8 +294,8 @@ fn join(wall: Vec<Arc>, caps: Vec<Arc>, mut closed: Vec<Vec<Curve>>) -> Result<V
     while let Some(first) = arcs.iter().position(|(_, used)| !used) {
         arcs[first].1 = true;
         let mut cycle = pieces_of(&arcs[first].0, 65)?;
-        let head = arcs[first].0.samples[0];
-        let mut tail = *arcs[first].0.samples.last().unwrap();
+        let head = *arcs[first].0.samples.first().ok_or_else(|| refuse("empty contact arc"))?;
+        let mut tail = *arcs[first].0.samples.last().ok_or_else(|| refuse("empty contact arc"))?;
         let mut guard = 0;
         while !same(tail, head) {
             guard += 1;
@@ -299,9 +306,9 @@ fn join(wall: Vec<Arc>, caps: Vec<Arc>, mut closed: Vec<Vec<Curve>>) -> Result<V
                 if *used {
                     return None;
                 }
-                if same(arc.samples[0], tail) {
+                if same(*arc.samples.first()?, tail) {
                     Some((i, true))
-                } else if same(*arc.samples.last().unwrap(), tail) {
+                } else if same(*arc.samples.last()?, tail) {
                     Some((i, false))
                 } else {
                     None
@@ -316,7 +323,7 @@ fn join(wall: Vec<Arc>, caps: Vec<Arc>, mut closed: Vec<Vec<Curve>>) -> Result<V
             }
             // Snap the join exactly onto the previous end.
             samples[0] = tail;
-            tail = *samples.last().unwrap();
+            tail = *samples.last().ok_or_else(|| refuse("empty contact arc"))?;
             cycle.extend(pieces_of(&Arc { samples }, 65)?);
         }
         // Close exactly.
@@ -370,7 +377,7 @@ pub(crate) fn certified_cycles(
                 .iter()
                 .map(|&(q, _)| (q, (z - q).abs()))
                 .min_by(|a, b| a.1.total_cmp(&b.1))
-                .expect("two planes");
+                .ok_or_else(|| refuse("missing cap planes"))?;
             let plane;
             let surface: &dyn crate::implicit_trace::Implicit = if wall_distance(mid) <= plane_gap {
                 wall
@@ -400,4 +407,18 @@ pub(crate) fn certified_cycles(
         });
     }
     Ok(Some(out))
+}
+
+#[cfg(test)]
+mod clip_tests {
+    use super::*;
+
+    #[test]
+    fn empty_traced_loop_cannot_certify_a_closed_contact() -> Result<()> {
+        assert!(clip(&[Vec::new()], &|_| -1.).is_err());
+        let (open, closed) = clip(&[], &|_| -1.)?;
+        assert!(open.is_empty() && closed.is_empty());
+        assert!(join(vec![Arc { samples: Vec::new() }], vec![], vec![]).is_err());
+        Ok(())
+    }
 }

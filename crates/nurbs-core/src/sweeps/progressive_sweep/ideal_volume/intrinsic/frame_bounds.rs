@@ -31,6 +31,17 @@ pub(super) fn tangent_continuity(
     Ok(true)
 }
 
+pub(super) fn frenet_rates(c:&cell::Context<'_, '_>,station:[f64;2],phase:frame::PathPhase,
+    out:&mut IdealVolumeReport,max:usize)->Result<Option<(f64,f64)>> {
+    let principal = c.s.options.orientation == Orientation::Frenet
+        || matches!(c.corrected_frame, Some(CorrectedFrame::RegularPrincipal));
+    if !principal || c.s.frame_laws.is_some() || c.s.orientation_guide.is_some() || c.transport.is_some() {
+        return Ok(None);
+    }
+    let Some(map)=&c.arc else{return Ok(None);};
+    let (rate,cells)=arc_frames::frenet_rates::certify(c.s,station,phase,map.length(),(max-out.cells).min(100000))?;
+    out.cells+=cells;Ok(rate.map(|r|{debug_assert_eq!(r.cells,cells);(r.omega,r.bend)}))
+}
 pub(super) fn jets(
     c: &cell::Context<'_, '_>,
     station: [f64; 2],
@@ -55,19 +66,7 @@ pub(super) fn jets(
     } else {
         None
     };
-    let result = arc_frames::arc_frame(
-        c.s,
-        station,
-        phase,
-        guide,
-        arc_frames::ArcFrameSources {
-            offset: c.offset.as_ref(),
-            transport: c.transport.as_ref(),
-            shared_guide: c.shared_guide,
-            zero: &c.zero,
-        },
-        stage - out.cells,
-    )?;
+    let result = c.frame_jets(station, phase, guide, stage - out.cells)?;
     let Some(result) = result else {
         return Ok(None);
     };

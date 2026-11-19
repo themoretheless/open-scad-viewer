@@ -25,7 +25,7 @@ import {
 import { G1_AMENDMENTS, g1RefreshInputPaths, prepareG1PlanRefresh } from '../scripts/refresh-g1-plan.mjs'
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
-const fingerprintPath = resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v108.json')
+const fingerprintPath = resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v115.json')
 const fingerprintV1Path = resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v1.json')
 const statusPath = resolve(repositoryRoot, 'docs/qualification/g0-contract-pack-status-v1.json')
 const inventoryPath = resolve(repositoryRoot, 'docs/qualification/g2a-predicate-inventory-v1.json')
@@ -58,10 +58,10 @@ describe('G0 toolchain fingerprints', () => {
   it('uses the frozen G0.2 schema id', () => {
     const doc = JSON.parse(readFileSync(fingerprintPath, 'utf8')) as FingerprintDoc
     expect(doc.schema).toBe('open-scad-viewer/g0-toolchain-fingerprints')
-    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v108')
+    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v115')
     expect(doc).toMatchObject({
-      previousFingerprintId: 'g0-toolchain-fingerprints-v107',
-      previousFingerprintSha256: FROZEN_ARCHIVES['docs/qualification/g0-toolchain-fingerprints-v107.json'],
+      previousFingerprintId: 'g0-toolchain-fingerprints-v114',
+      previousFingerprintSha256: FROZEN_ARCHIVES['docs/qualification/g0-toolchain-fingerprints-v114.json'],
     })
   })
 
@@ -174,7 +174,7 @@ describe('G0/G1 re-freeze generator', { timeout: 120_000 }, () => {
     const first = prepare(root)
     const second = prepare(root)
     expect(first.artifactBytes).toEqual(second.artifactBytes)
-    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v125')
+    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v132')
     expect(first.status).toMatchObject({
       qualificationClaim: 'none',
       qualificationApproval: 'not-approved',
@@ -215,7 +215,7 @@ describe('G0/G1 re-freeze generator', { timeout: 120_000 }, () => {
     const prepared = prepare(root)
     publishQualificationRefresh(prepared)
     for (const [id, path] of Object.entries(REFRESH_OUTPUTS)) {
-      expect(readFileSync(resolve(root, path))).toEqual(prepared.artifactBytes[id])
+      expect(readFileSync(resolve(root, path)).equals(prepared.artifactBytes[id]), path).toBe(true)
     }
     for (const [path, hash] of Object.entries(FROZEN_ARCHIVES)) {
       expect(sha256(readFileSync(resolve(root, path))), path).toBe(hash)
@@ -258,7 +258,7 @@ describe('G0/G1 re-freeze generator', { timeout: 120_000 }, () => {
   it('refuses a zero-counter freeze when the new candidate already has result bookkeeping', () => {
     const root = fixture()
     const prepared = prepare(root)
-    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v125/result.json')
+    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v132/result.json')
     mkdirSync(dirname(resultPath), { recursive: true })
     writeFileSync(resultPath, '{"completedWorkUnits":1}\n')
     expect(() => prepare(root)).toThrow(/already has execution bookkeeping/u)
@@ -283,9 +283,9 @@ describe('G0/G1 re-freeze generator', { timeout: 120_000 }, () => {
       // Version-only retargeting is reversible; prove this fixture is the exact
       // recorded executor, rather than merely assuming the old behavior survived.
       const historical = readFileSync(resolve(root, path), 'utf8')
-        .replaceAll('semantic-manifold-g1-plan-v125', 'semantic-manifold-g1-plan-v24')
-        .replaceAll('semantic-manifold-g1-candidate-run-v125', 'semantic-manifold-g1-candidate-run-v24')
-        .replace('G1 v125 clean-run', 'G1 v24 clean-run')
+        .replaceAll('semantic-manifold-g1-plan-v132', 'semantic-manifold-g1-plan-v24')
+        .replaceAll('semantic-manifold-g1-candidate-run-v132', 'semantic-manifold-g1-candidate-run-v24')
+        .replace('G1 v132 clean-run', 'G1 v24 clean-run')
       expect(sha256(Buffer.from(historical))).toBe(
         historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256,
       )

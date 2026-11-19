@@ -1,0 +1,29 @@
+{
+  "sourceBase": "5155e762fb17f4cc9894f5aef0a743470c17162f",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact projected exterior with a reversed multispan authored edge. Original edge is refined by exact knot insertion. The noncoplanar pair retains its sole declared contact in the common projection, and one-short work refuses.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 0.89s",
+      "file": "brep.log.gz",
+      "sha256": "b70d3978ff75f5a39a7323c22582378501f598fe5d22664d4a0226f3105e9239"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 10.93s",
+      "file": "shell.log.gz",
+      "sha256": "03952cc7d7f4e85da6d61abda2a54658a038ed464eec57b51d926fcac9a982fa"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "2f4c8a8d47d520f962a2a8ebf494462b394139943bd0c2ccf2a7f27799dd6d83",
+    "count": 4918
+  }
+}

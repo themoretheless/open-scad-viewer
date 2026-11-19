@@ -324,9 +324,12 @@ pub(super) fn guided_control_value(
         return Ok(unresolved(0, "contact-width-law-unproved"));
     }
     let initial = guided_initial_coordinates(sweep, max_cells)?;
-    if initial.status != Status::Certified {
-        return Ok(unresolved(initial.cells, initial.reason.unwrap()));
-    }
+    let (Status::Certified, Some(control)) = (
+        initial.status,
+        initial.coordinates.as_ref().and_then(|coordinates| coordinates.get(profile_control)),
+    ) else {
+        return Ok(unresolved(initial.cells, initial.reason.unwrap_or("initial-frame-enclosure-unresolved")));
+    };
     let mut report = authored_frame_certificate::certify_path_guide_control_value(
         crate::sweeps::progressive_sweep::SweepLaws {
             path: sweep.path,
@@ -335,7 +338,7 @@ pub(super) fn guided_control_value(
             affine: sweep.affine_laws,
         },
         guide,
-        initial.coordinates.unwrap()[profile_control],
+        *control,
         traversal,
         max_cells - initial.cells,
     )?;
@@ -581,6 +584,14 @@ pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usiz
 
 
 
+
+pub(super) fn certify_corrected_regular_branch(
+    path: &Curve,
+    max_cells: usize,
+) -> Result<(bool, usize)> {
+    let report = corrected_regular::certify(path, max_cells)?;
+    Ok((report.certified, report.cells))
+}
 
 pub(super) fn corrected_regular_frame_values(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize)->Result<authored_frame_certificate::ValuesReport>{
  let refused=|cells|authored_frame_certificate::ValuesReport{status:Status::Unresolved,cells,longitudinal:None,transverse:None,binormal:None};

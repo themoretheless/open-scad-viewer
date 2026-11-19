@@ -16,6 +16,16 @@ fn endpoint_identity(c: &Curve, spent: &mut usize, max: usize) -> bool {
         && c.knots[c.control_points.len()..].iter().all(|&u| u == b)
         && c.control_points.first() == c.control_points.last()
 }
+pub(super) fn uses_periodic_path(s: &Sweep<'_>, closed: bool) -> bool {
+    closed
+        && s.path.periodic
+        && (s.frame_laws.is_some()
+            || s.orientation_guide.is_some()
+            || matches!(s.options.orientation, Orientation::Fixed | Orientation::FixedNormal | Orientation::Frenet | Orientation::CorrectedFrenet)
+            || (s.options.orientation == Orientation::RotationMinimizing
+                && s.spatial_rmf_error_limits.is_some()))
+}
+
 pub(super) fn premises(
     s: &Sweep<'_>,
     caps: [&Surface; 2],
@@ -28,12 +38,25 @@ pub(super) fn premises(
         out.reason = Some("ideal-volume-closed-common-carrier-required");
         return Ok(false);
     }
-    for law in [s.path, s.scale, s.twist]
+    let laws = [(s.path, uses_periodic_path(s, true)), (s.scale, false), (s.twist, false)]
         .into_iter()
-        .chain(s.orientation_guide)
-        .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [a, c]))
+        .chain(s.orientation_guide.map(|g| (g, g.periodic)))
+        .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [(a, false), (c, false)]));
+    for (law, active_basis) in laws
     {
-        if !endpoint_identity(law, &mut out.cells, max_cells) {
+        // Periodic path and guide storage require an identity of the
+        // original active endpoint basis. Frame and pose laws still
+        // pass through their respective full continuity proofs below.
+        let equal = if active_basis {
+            let seam = super::super::endpoint_jets::certify_position(
+                law, true, max_work - out.exact_work,
+            )?;
+            out.exact_work += seam.exact_work;
+            seam.certified
+        } else {
+            endpoint_identity(law, &mut out.cells, max_cells)
+        };
+        if !equal {
             out.reason = Some("ideal-volume-exact-source-seam-unproved");
             return Ok(false);
         }
@@ -63,22 +86,22 @@ pub(super) fn premises(
             r.reason,
         )
     } else {
-        // Explicit spatial Bishop uses its OWN corrected derivative owner and
-        // periodic source theorem. Frenet owns its nonzero curvature cover.
-        // Corrected-Frenet/implicit fallback modes
-        // still require their original source derivative owners.
-        if !matches!(s.options.orientation,Orientation::FixedNormal|Orientation::Frenet)
-            && !(s.options.orientation == Orientation::RotationMinimizing
-                && s.spatial_rmf_error_limits.is_some())
+        // The quotient uses the regular principal branch for Corrected
+        // Frenet. The public frame report may also prove a planar fallback,
+        // which does not authorize the principal jets used by this volume.
+        if s.options.orientation == Orientation::RotationMinimizing
+            && s.spatial_rmf_error_limits.is_none()
         {
             out.reason = Some("ideal-volume-closed-frame-jets-unproved");
             return Ok(false);
         }
-        let r = s.certify_closed_path_frame_smoothness(
-            1,
-            max_cells - out.cells,
-            max_work - out.exact_work,
-        )?;
+        let cells = max_cells - out.cells;
+        let work = max_work - out.exact_work;
+        let r = if s.options.orientation == Orientation::CorrectedFrenet {
+            super::super::original_smoothness::closed_frenet::certify(s, 1, cells, work)?
+        } else {
+            s.certify_closed_path_frame_smoothness(1, cells, work)?
+        };
         (
             r.closed_source_frame_smoothness_certified,
             r.cells,

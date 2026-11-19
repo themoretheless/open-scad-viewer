@@ -4029,6 +4029,8 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
     expect(refused.unresolved.map(u => u.reason)).toEqual(['unsupported_surface'])
   }
   // JSON roundtrip preserves the regions.
-  const round = JSON.parse(JSON.stringify(off)) as typeof off
-  expect(round).toEqual(off)
+  const round = JSON.parse(JSON.stringify(near)) as typeof near
+  expect(round.unresolved.map(u => u.reason)).toEqual(['near_coincidence'])
+  const offRound = JSON.parse(JSON.stringify(off)) as typeof off
+  expect(offRound).toEqual(off)
 })

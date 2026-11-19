@@ -66,6 +66,27 @@ square bijection with error-free UV subtraction. Corner-derived projective
 proposals only select a bounded candidate: original whole-domain interval
 Jacobian contraction still owns injectivity and shares the original work ledger.
 
+## Affine source shells in Rust
+
+`verify_affine_sphere` accepts the original model and an authored center,
+linear map and sphere radius. It converts the binary64 input coefficients to
+exact rationals, proves a nonzero determinant and applies the exact inverse
+to each Cartesian vertex, edge control point and face control point. Every
+inverse coefficient must round trip exactly to binary64 before the sphere
+audit runs. All parameter-space data and topology travel unchanged. The map
+uses a separate point allowance. For an orientation-reversing frame,
+the proof reflects one normalized coordinate. That sphere symmetry keeps
+the original material domain and gives an orientation-preserving proof map.
+
+The affine diffeomorphism transfers the complete regular embedded sphere to
+the original ellipsoid. It preserves the bounded material, outward orientation,
+and geometric G1/G2 across authored joins, including collapsed pole charts.
+The certificate retains the supplied model. The supporting sphere report
+expresses its metric diagnostics in normalized coordinates. Singular maps,
+unrepresentable inverse points, exhausted work and failed sphere audits
+return refusal. The Rust JSON operation `brep_implicit_affine_sphere_source_audit`
+accepts `source.linear` by row and uses `limits.maxPoints` for the inverse map.
+
 ## Qualification limits
 
 Native fixtures include regular and pole charts, literal nonbinary radius,

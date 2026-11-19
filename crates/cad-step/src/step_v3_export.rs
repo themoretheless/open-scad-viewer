@@ -301,6 +301,18 @@ fn export_step_direct_impl(
         semantic.presentation.validate_for_model(model)?;
         semantic.xde.validate_for_model(model)?;
     }
+    // AP242 reverses each cavity in ORIENTED_CLOSED_SHELL. Emit the
+    // underlying shell in its own sense before canonicalizing its charts.
+    let shell_geometry = (ap242_composition && model.bodies.iter().any(|b| !b.inner_shells.is_empty())).then(|| {
+        let mut geometry = model.clone();
+        for shell in model.bodies.iter().flat_map(|body| &body.inner_shells) {
+            for face in &mut geometry.0.shells[*shell].faces {
+                face.reversed = !face.reversed;
+            }
+        }
+        geometry
+    });
+    let model = shell_geometry.as_ref().unwrap_or(model);
     // /6 exchanges the authored chart directly, including its original face
     // senses. Other routes mirror reversed faces into canonical forward charts.
     let canonical = (capability != STEP_INTERCHANGE_V6_CAPABILITY)
@@ -327,9 +339,24 @@ fn export_step_direct_impl(
         let p = w.point(&v.point);
         vertex_entities.push(w.emit(format!("VERTEX_POINT('',#{p})")));
     }
+    // At a shared pole several UV intervals map to one spatial vertex.
+    // Give each incident face its own carrier for unambiguous PCURVE selection.
+    let mut pole_uses = vec![0usize; model.edges.len()];
+    for coedge in model.loops.iter().flat_map(|wire| &wire.coedges) {
+        if model.edges[coedge.edge].degenerate {
+            pole_uses[coedge.edge] += 1;
+        }
+    }
     let mut surface_cache = BTreeMap::<String, usize>::new();
     let mut surfaces = Vec::new();
     for face in &model.faces {
+        if ap242_composition && std::iter::once(&face.outer).chain(&face.holes)
+            .flat_map(|&wire| &model.loops[wire].coedges)
+            .any(|coedge| pole_uses[coedge.edge] > 2)
+        {
+            surfaces.push(emit_surface_v5(&mut w, &face.surface));
+            continue;
+        }
         let key = format!("{:?}", face.surface);
         let id = if let Some(id) = surface_cache.get(&key) {
             *id
@@ -1000,12 +1027,11 @@ fn export_grouped_with_styles(
     assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: &[&str], parents: &[Option<usize>],
     colours: Option<&[Option<StepOccurrenceColour<'_>>]>,
 ) -> Result<String> {
-    if let Some(colours) = colours {
-        if colours.len() != parents.len() || colours.iter().flatten().any(|style|
-            style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x))) {
+    if let Some(colours) = colours
+        && (colours.len() != parents.len() || colours.iter().flatten().any(|style|
+            style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x)))) {
             return Err(refuse("Expected one optional named RGB style per occurrence"));
         }
-    }
     if parents.len() != assembly.occurrences().len()
         || groups.len() > 256
         || groups.iter().any(|name| name.is_empty() || name.chars().any(char::is_control))

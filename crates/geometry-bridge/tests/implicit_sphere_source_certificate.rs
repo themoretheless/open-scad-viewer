@@ -60,3 +60,42 @@ fn wrong_original_radius_inexact_translation_and_short_proofs_never_produce_soli
     invalid["limits"]["implicitExactWork"] = json!(0);
     assert!(dispatch(invalid).is_err());
 }
+
+#[test]
+fn affine_source_audit_preserves_the_world_model_and_refuses_short_proofs() {
+    let mut input = support::request(2., [0.; 3]);
+    let built = dispatch(input.clone()).unwrap();
+    support::full(&built, "construct");
+    input["op"] = json!("brep_implicit_affine_sphere_source_audit");
+    input["source"]["linear"] = json!([[-1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]);
+    input["model"] = built["model"].clone();
+    input["limits"]["maxPoints"] = json!(1000);
+
+    let audited = dispatch(input.clone()).unwrap();
+    assert_eq!(audited["model"], input["model"]);
+    assert_eq!(audited["solidGeometryCertified"], true);
+    assert_eq!(audited["idealSourceBoundaryG2Certified"], true);
+    assert_eq!(audited["topologyPreserved"], true);
+    assert_eq!(audited["boundaryErrorUpper"], 0.);
+    assert_eq!(audited["source"]["linear"], input["source"]["linear"]);
+    assert_eq!(
+        audited["normalizedProof"]["poleEdges"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+
+    input["limits"]["maxPoints"] = json!(0);
+    input["certified"] = json!(true);
+    input["idealSourceBoundaryG2Certified"] = json!(true);
+    let refused = dispatch(input).unwrap();
+    assert_eq!(refused["certified"], false);
+    assert_eq!(refused["idealSourceBoundaryG2Certified"], false);
+    assert!(refused["model"].is_null());
+    assert!(refused["normalizedProof"].is_null());
+    assert_eq!(
+        refused["reason"],
+        "original-affine-sphere-point-budget-exhausted"
+    );
+}

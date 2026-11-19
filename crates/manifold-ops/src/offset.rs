@@ -42,8 +42,8 @@ impl std::fmt::Display for OffsetError {
 impl std::error::Error for OffsetError {}
 
 fn admit(positions: &[f64], indices: &[usize], distance: f64) -> Result<(), OffsetError> {
-    if positions.len() % 3 != 0
-        || indices.len() % 3 != 0
+    if !positions.len().is_multiple_of(3)
+        || !indices.len().is_multiple_of(3)
         || indices.iter().any(|&i| i >= positions.len() / 3)
     {
         return Err(OffsetError::InvalidInput("malformed mesh buffers".into()));
@@ -167,7 +167,7 @@ pub fn shell(
     thickness: f64,
     inward: bool,
 ) -> Result<(Vec<f64>, Vec<usize>), OffsetError> {
-    if !(thickness > 0.0) {
+    if thickness.is_nan() || thickness <= 0.0 {
         return Err(OffsetError::InvalidInput(
             "shell thickness must be positive".into(),
         ));

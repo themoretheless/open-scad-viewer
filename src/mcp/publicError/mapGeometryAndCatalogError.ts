@@ -13,7 +13,7 @@ import {
   GeometryEngineUnavailableError,
   GeometryLanguageContractError,
 } from '../../kernel/geometryBuildEngine'
-import { ModelNotFoundError, type PublicToolError } from '../publicError'
+import { InvalidToolInputError, ModelNotFoundError, type PublicToolError } from '../publicError'
 import { isAbortError, isQuarantinedGeometryHostError } from './isAbortError'
 
 function mapCatalogError(error: unknown): { error: PublicToolError; internal: boolean } | null {
@@ -226,6 +226,18 @@ function mapGeometryRuntimeError(error: unknown): { error: PublicToolError; inte
         message: error.message,
         retryable: false,
         next_action: 'Adjust the source so all transforms, vertices, and computed metrics are finite.',
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof InvalidToolInputError) {
+    return {
+      error: {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+        next_action:
+          error.nextAction ?? 'Verify input structure, units, and file bounds against the tool schema before retrying.',
       },
       internal: false,
     }

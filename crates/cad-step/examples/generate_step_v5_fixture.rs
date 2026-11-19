@@ -209,6 +209,11 @@ fn multiple_void_model() -> Model {
         &mut model,
         freeform_cuboid_solid([6., 6., 6.], [8., 8., 8.]).unwrap(),
     );
+    for cavity in &mut model.0.shells[1..] {
+        for face in &mut cavity.faces {
+            face.reversed = !face.reversed;
+        }
+    }
     model.0.bodies = vec![Body {
         outer_shell: 0,
         inner_shells: vec![1, 2],

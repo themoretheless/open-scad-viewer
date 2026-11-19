@@ -109,3 +109,39 @@ fn refined_original_arc_jets_remove_fictitious_bending_on_a_nonuniform_line() {
     }
     assert_eq!(p, original);
 }
+
+#[test]
+fn inverse_length_encloses_both_clocks_at_an_original_speed_jump() {
+    let path = Curve {
+        degree: 1,
+        knots: vec![-3., -3., 1., 5., 5.],
+        control_points: vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![4., 0., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut cells = 0;
+    let map = ArcMap::build(&path, &mut cells, 100000).unwrap().unwrap();
+    contains(map.total, 4.);
+    for station in [0., 0.125, 0.25, 0.75, 1.] {
+        let phase = map
+            .phase([station, station], &mut cells, 100000)
+            .unwrap()
+            .unwrap();
+        let t = if station <= 0.25 {
+            2. * station
+        } else {
+            0.5 + (4. * station - 1.) / 6.
+        };
+        contains(I::new(phase.traversal[0], phase.traversal[1]).unwrap(), t);
+        if station <= 0.25 {
+            contains(phase.first, 2.);
+        }
+        if station >= 0.25 {
+            contains(phase.first, 2. / 3.);
+        }
+        let [velocity, acceleration] = phase.position_jets.unwrap();
+        contains(velocity[0], 4.);
+        contains(acceleration[0], 0.);
+        assert!(acceleration[0].hi - acceleration[0].lo < 1e-10);
+    }
+}

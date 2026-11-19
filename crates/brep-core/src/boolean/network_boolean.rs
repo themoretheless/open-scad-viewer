@@ -59,8 +59,9 @@ pub struct NetworkPiece {
 /// operand `o` lies inside the *other* operand. Ambiguity must be an error.
 pub type Inside<'a> = dyn Fn(usize, [f64; 3]) -> Result<bool> + 'a;
 
-/// Assemble `operation` ("union", "difference", "intersection") of two
-/// single-shell solids from a caller-supplied intersection network.
+/// Assemble union, difference, intersection or XOR of two single-shell
+/// solids from a caller-supplied intersection network. XOR preserves separate
+/// topology for the two differences at shared intersection curves.
 pub fn network_boolean(
     a: &Model,
     b: &Model,
@@ -71,10 +72,10 @@ pub fn network_boolean(
 ) -> Result<Model> {
     a.validate()?;
     b.validate()?;
-    if !matches!(operation, "union" | "difference" | "intersection") {
+    if !matches!(operation, "union" | "difference" | "intersection" | "xor") {
         return Err(Error::new(
             "BREP_UNSUPPORTED_OPERATION",
-            "Network Boolean admits union, difference or intersection",
+            "Network Boolean admits union, difference, intersection or xor",
         ));
     }
     if !(tolerance.is_finite() && tolerance > 0.) {
@@ -96,6 +97,9 @@ pub fn network_boolean(
         }
     }
     if pieces.is_empty() {
+        if let Some(result) = crate::boolean_support::simplify(a, b, operation)? {
+            return Ok(result);
+        }
         let relation = if inside(0, a.vertices[0].point)? {
             SpatialRelation::BContainsA
         } else if inside(1, b.vertices[0].point)? {
@@ -105,7 +109,31 @@ pub fn network_boolean(
         };
         return imprint_pipeline::regularized_empty_algebra(a, b, operation, relation);
     }
-    let mut asm = Assembler::new(a, b, operation)?;
+    let tolerance = tolerance.max(a.tolerance_mm).max(b.tolerance_mm);
+    if operation == "xor" {
+        let mut second_difference = Assembler::new(a, b, "difference")?;
+        second_difference.want_inside.reverse();
+        second_difference.flip.reverse();
+        let first = assemble_retained_network(
+            operands, Assembler::new(a, b, "difference")?, pieces, inside, tolerance,
+        )?;
+        let second = assemble_retained_network(
+            operands, second_difference, pieces, inside, tolerance,
+        )?;
+        return crate::boolean_support::concatenate_bodies(&first, &second);
+    }
+    assemble_retained_network(
+        operands, Assembler::new(a, b, operation)?, pieces, inside, tolerance,
+    )
+}
+
+fn assemble_retained_network(
+    operands: [&Model; 2],
+    mut asm: Assembler<'_>,
+    pieces: &[NetworkPiece],
+    inside: &Inside<'_>,
+    tolerance: f64,
+) -> Result<Model> {
     let mut free: BTreeMap<usize, usize> = BTreeMap::new();
     let mut vertex = |asm: &mut Assembler, end: NetworkEnd| -> usize {
         match end {
@@ -139,7 +167,7 @@ pub fn network_boolean(
         }
     };
     let mut per_face: [Vec<Vec<(usize, Curve)>>; 2] =
-        [vec![Vec::new(); a.faces.len()], vec![Vec::new(); b.faces.len()]];
+        operands.map(|model| vec![Vec::new(); model.faces.len()]);
     for piece in pieces {
         let v0 = vertex(&mut asm, piece.ends[0]);
         let v1 = vertex(&mut asm, piece.ends[1]);
@@ -186,5 +214,80 @@ pub fn network_boolean(
             asm.emit_chart(o, face, reversed, list, chart.len(), &keep)?;
         }
     }
-    asm.finish(tolerance.max(a.tolerance_mm).max(b.tolerance_mm))
+    asm.finish(tolerance)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn network_xor_closes_both_differences_at_a_shared_rim() {
+        let a = crate::cuboid([0.; 3], [2.; 3]).unwrap();
+        let b = crate::cuboid([1.; 3], [3.; 3]).unwrap();
+        let solids = [&a, &b];
+        let rim = [
+            [2., 1., 1.], [2., 2., 1.], [1., 2., 1.],
+            [1., 2., 2.], [1., 1., 2.], [2., 1., 2.],
+        ];
+        let end = |point: [f64; 3]| {
+            let on = std::array::from_fn(|side| {
+                let model = solids[side];
+                model.edges.iter().enumerate().find_map(|(edge, curve)| {
+                    let [a, b] = curve.vertices.map(|v| model.vertices[v].point);
+                    let axis = (0..3).find(|&axis| a[axis] != b[axis])?;
+                    let ratio = (point[axis] - a[axis]) / (b[axis] - a[axis]);
+                    if !(0. < ratio && ratio < 1.)
+                        || (0..3).any(|i| i != axis && point[i] != a[i])
+                    {
+                        return None;
+                    }
+                    let [lo, hi] = curve.curve.domain();
+                    Some((side, edge, lo + ratio * (hi - lo)))
+                })
+            });
+            assert_eq!(on.iter().flatten().count(), 1);
+            NetworkEnd::Edges { on, point }
+        };
+        let pieces = (0..rim.len()).map(|index| {
+            let [start, finish] = [rim[index], rim[(index + 1) % rim.len()]];
+            let faces = std::array::from_fn(|side| {
+                let boundary = if side == 0 { 2. } else { 1. };
+                let axis = (0..3).find(|&i| start[i] == boundary && finish[i] == boundary).unwrap();
+                solids[side].faces.iter().position(|face| {
+                    face.surface.control_points.iter().flatten().all(|p| p[axis] == boundary)
+                }).unwrap()
+            });
+            let pcurves = std::array::from_fn(|side| {
+                let surface = &solids[side].faces[faces[side]].surface;
+                let origin = &surface.control_points[0][0];
+                let axes = [&surface.control_points[1][0], &surface.control_points[0][1]];
+                let knots = [&surface.knots_u, &surface.knots_v];
+                let uv = |point: [f64; 3]| {
+                    (0..2).map(|i| {
+                        let axis = (0..3).find(|&k| axes[i][k] != origin[k]).unwrap();
+                        let unit = (point[axis] - origin[axis]) / (axes[i][axis] - origin[axis]);
+                        knots[i][1] + unit * (knots[i][2] - knots[i][1])
+                    }).collect::<Vec<_>>()
+                };
+                Curve::from_polyline(vec![uv(start), uv(finish)]).unwrap()
+            });
+            NetworkPiece {
+                faces,
+                curve: Curve::from_polyline(vec![start.to_vec(), finish.to_vec()]).unwrap(),
+                pcurves,
+                ends: [end(start), end(finish)],
+            }
+        }).collect::<Vec<_>>();
+        let inside = |side: usize, point: [f64; 3]| {
+            let lo = if side == 0 { 1. } else { 0. };
+            Ok(point.into_iter().all(|x| lo < x && x < lo + 2.))
+        };
+        let result = network_boolean(&a, &b, "xor", &pieces, &inside, 1e-7).unwrap();
+        assert_eq!(result.bodies.len(), 2);
+        assert!(result.shells.iter().all(|shell| shell.closed));
+        assert!(brep_topology::explorer::boundary_edges(&result.0).is_empty());
+        let mass = crate::analysis::mass_properties(&result, 1e-6, 200000).unwrap();
+        assert!((mass.signed_volume_mm3 - 14.).abs() < 1e-6);
+    }
 }

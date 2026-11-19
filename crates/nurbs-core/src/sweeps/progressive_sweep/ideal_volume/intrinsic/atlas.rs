@@ -13,6 +13,7 @@ fn split(t: Range) -> Option<[Range; 2]> {
 fn source_center(
     c: &cell::Context<'_, '_>,
     t: Range,
+    refine: bool,
     out: &mut IdealVolumeReport,
     max: usize,
 ) -> Result<Option<V3>> {
@@ -22,12 +23,18 @@ fn source_center(
     out.cells += 1;
     out.boxes += 1;
     let stage = max.min(out.cells.saturating_add(100000));
-    let Some(phase) = c.arc.as_ref().unwrap().phase(t, &mut out.cells, stage)? else {
+    let map = c.arc.as_ref().unwrap();
+    let traversal = if refine {
+        map.phase(t, &mut out.cells, stage)?.map(|p| p.traversal)
+    } else {
+        map.traversal_bracket(t, &mut out.cells, stage)?
+    };
+    let Some(traversal) = traversal else {
         return Ok(None);
     };
     let report = crate::sweeps::progressive_miter::vector_certificate::certify_values_traversal(
         c.s.path,
-        phase.traversal,
+        traversal,
         (max - out.cells).min(100000),
         false,
     )?;
@@ -65,7 +72,11 @@ pub(super) fn certify(
             return Ok(*proved);
         }
         let mut proved = tube.local(c, pieces, out, max)?;
-        if !proved && tube.transverse_carrier && tube.extended_laws && out.cells < max {
+        // The closed physical owner deliberately rejects wide lifts as a
+        // search proposal. Do not immediately spend an expensive UV metric
+        // attempt on the same wide lift; refine its complete pair cover first.
+        let narrow = !closed || pieces.iter().map(|b| b[2][1] - b[2][0]).sum::<f64>() <= 0.125;
+        if !proved && narrow && tube.transverse_carrier && tube.extended_laws && out.cells < max {
             // A containing physical disk can include a focal point outside
             // the actual carrier. Its failure must not suppress a successful
             // original UV-chart proof. Both cover exactly the same source
@@ -77,12 +88,12 @@ pub(super) fn certify(
         }
         Ok(proved)
     };
-    let mut value = |t: Range, out: &mut IdealVolumeReport| -> Result<Option<V3>> {
-        let key = t.map(f64::to_bits);
+    let mut value = |t: Range, refine: bool, out: &mut IdealVolumeReport| -> Result<Option<V3>> {
+        let key = (t.map(f64::to_bits), refine);
         if let Some(v) = values.get(&key) {
             return Ok(*v);
         }
-        let v = source_center(c, t, out, max)?;
+        let v = source_center(c, t, refine, out, max)?;
         if v.is_some() || out.cells < max {
             values.insert(key, v);
         }
@@ -95,10 +106,14 @@ pub(super) fn certify(
             return Ok(());
         }
         out.cells += 1;
-        if !tube.transverse_carrier && a != b {
-            // Spatial balls are a cheap complete separation proof. Do not
-            // spend a UV metric trial after this pair has already finished.
-            if let (Some(x), Some(y)) = (value(a, out)?, value(b, out)?) {
+        if a != b {
+            // Certified balls enclose every original section in either carrier
+            // mode. Resolve separated pairs before an expensive joint metric
+            // trial. Diagonal pairs still require their full regularity proof.
+            if let (Some(x), Some(y)) = (
+                value(a, tube.transverse_carrier, out)?,
+                value(b, tube.transverse_carrier, out)?,
+            ) {
                 if separated_section_balls(x, y, tube.radius)? {
                     continue;
                 }
@@ -120,8 +135,11 @@ pub(super) fn certify(
                 continue;
             }
         }
-        if a != b {
-            if let (Some(x), Some(y)) = (value(a, out)?, value(b, out)?) {
+        // A node bracket can keep a nonvanishing center uncertainty as
+        // pair boxes shrink. For small unresolved spatial pairs, retry
+        // separation with the original integral inverse enclosure.
+        if a != b && !tube.transverse_carrier && (a[1] - a[0]).max(b[1] - b[0]) <= 1. / 64. {
+            if let (Some(x), Some(y)) = (value(a, true, out)?, value(b, true, out)?) {
                 if separated_section_balls(x, y, tube.radius)? {
                     continue;
                 }

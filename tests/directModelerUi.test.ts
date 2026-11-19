@@ -8326,6 +8326,8 @@ it('retries a failed body calculation without changing inputs or adding history 
   expect(ui.doc().bodies).toHaveLength(2)
   await ui.click('↶')
   expect(ui.doc()).toEqual(before)
+  await ui.click('Split')
+  expect(ui.all().some(node => node.tag === 'button' && ui.text(node) === 'Retry calculation')).toBe(false)
 })
 
 it.each([
@@ -13295,6 +13297,7 @@ it('commits appended mesh bodies in the worker, selects them after the commit an
   await ui.setProps({ appendBodies: { bodies: [body('m1')], group: { name: 'Mesh', source: 'a.stl' } } })
   await flushClearance()
   expect(commits).toHaveLength(1)
+  expect(ui.button('Download JSON project').props.disabled).toBe(true)
   expect(ui.doc()).toEqual(before)
   previewWorkerRun.mockImplementation(() => undefined)
   await ui.click('Box')
@@ -13308,6 +13311,7 @@ it('commits appended mesh bodies in the worker, selects them after the commit an
   await flushClearance()
   commits[1].resolve(parseDirectDocument(commits[1].job.text))
   await flushClearance()
+  expect(ui.button('Download JSON project').props.disabled).toBe(false)
   expect(ui.doc().bodies.map(b => b.id)).toContain('m2')
   expect(ui.doc().groups?.map(g => g.name)).toContain('Mesh')
   expect(ui.text(ui.all()[0])).toContain('Imported m2')

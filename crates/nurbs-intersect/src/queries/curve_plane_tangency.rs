@@ -38,8 +38,8 @@ fn exact_coefficients(curve: &Curve, plane: Plane) -> Option<Vec<Expansion>> {
 fn halve(c: &[Expansion]) -> Option<(Vec<Expansion>, Vec<Expansion>)> {
     let n = c.len();
     let mut row = c.to_vec();
-    let mut left = vec![row[0].clone()];
-    let mut right = vec![row[n - 1].clone()];
+    let mut left = vec![row.first()?.clone()];
+    let mut right = vec![row.last()?.clone()];
     for len in (1..n).rev() {
         for i in 0..len {
             row[i] = scale(&add(&row[i], &row[i + 1]), 0.5);
@@ -57,8 +57,7 @@ fn halve(c: &[Expansion]) -> Option<(Vec<Expansion>, Vec<Expansion>)> {
 /// coefficients (positive degree/width factors dropped).
 fn differences(c: &[Expansion]) -> Vec<Vec<Expansion>> {
     let mut all = vec![c.to_vec()];
-    while all.last().unwrap().len() > 1 {
-        let last = all.last().unwrap();
+    while let Some(last) = all.last().filter(|row| row.len() > 1) {
         all.push(last.windows(2).map(|w| add(&w[1], &neg(&w[0]))).collect());
     }
     all
@@ -91,22 +90,21 @@ pub(crate) struct CertifiedRoot {
 pub(crate) enum SpanClass {
     Overlap,
     Roots(Vec<CertifiedRoot>),
-    Refused([f64; 2]),
 }
 
-/// Classify all roots of one span. `boxes` is the shared work counter.
+/// Classify all roots of one span, returning the unresolved interval on failure. `boxes` is the shared work counter.
 pub(crate) fn classify_span(
     span: &Curve,
     plane: Plane,
     domain: [f64; 2],
     options: Options,
     boxes: &mut usize,
-) -> SpanClass {
+) -> std::result::Result<SpanClass, [f64; 2]> {
     let Some(coefficients) = exact_coefficients(span, plane) else {
-        return SpanClass::Refused(domain);
+        return Err(domain);
     };
     if coefficients.iter().all(|c| sign(c) == 0) {
-        return SpanClass::Overlap;
+        return Ok(SpanClass::Overlap);
     }
     let map = |s: f64| domain[0] + (domain[1] - domain[0]) * s;
     let mut roots: Vec<CertifiedRoot> = Vec::new();
@@ -122,18 +120,18 @@ pub(crate) fn classify_span(
     let mut pending = vec![(0f64, 1f64, coefficients, 0usize)];
     while let Some((lo, hi, c, depth)) = pending.pop() {
         if *boxes >= options.max_boxes {
-            return SpanClass::Refused([map(lo), map(hi)]);
+            return Err([map(lo), map(hi)]);
         }
         *boxes += 1;
         let diffs = differences(&c);
         let Some(m) = strict_order(&diffs) else {
             // Identically zero on a sub-box means zero on the whole span.
-            return SpanClass::Refused([map(lo), map(hi)]);
+            return Err([map(lo), map(hi)]);
         };
         let (Some((k_lo, s_lo)), Some((k_hi, s_hi))) =
             (endpoint(&diffs, false), endpoint(&diffs, true))
         else {
-            return SpanClass::Refused([map(lo), map(hi)]);
+            return Err([map(lo), map(hi)]);
         };
         if k_lo > 0 {
             push(&mut roots, lo, [lo, lo], k_lo);
@@ -142,7 +140,7 @@ pub(crate) fn classify_span(
             push(&mut roots, hi, [hi, hi], k_hi);
         }
         let Some(r) = (m as u32).checked_sub(k_lo + k_hi) else {
-            return SpanClass::Refused([map(lo), map(hi)]);
+            return Err([map(lo), map(hi)]);
         };
         let odd = s_lo != s_hi;
         if r == 0 || (r == 1 && !odd) {
@@ -151,16 +149,25 @@ pub(crate) fn classify_span(
         if r == 1 {
             // Exactly one simple interior root: bisect on exact signs.
             let (mut a, mut b, mut cc, mut sa) = (lo, hi, c, s_lo);
+            let mut refinement_depth = depth;
             loop {
                 let mid = a + (b - a) * 0.5;
                 if (map(b) - map(a)) <= options.parameter_tolerance || mid == a || mid == b {
                     push(&mut roots, mid, [a, b], 1);
                     break;
                 }
+                if *boxes >= options.max_boxes || refinement_depth >= options.max_depth {
+                    return Err([map(a), map(b)]);
+                }
+                *boxes += 1;
+                refinement_depth += 1;
                 let Some((left, right)) = halve(&cc) else {
-                    return SpanClass::Refused([map(a), map(b)]);
+                    return Err([map(a), map(b)]);
                 };
-                let sm = sign(left.last().unwrap());
+                let Some(midpoint) = left.last() else {
+                    return Err([map(a), map(b)]);
+                };
+                let sm = sign(midpoint);
                 if sm == 0 {
                     push(&mut roots, mid, [mid, mid], 1);
                     break;
@@ -175,16 +182,16 @@ pub(crate) fn classify_span(
         }
         let mid = lo + (hi - lo) * 0.5;
         if depth >= options.max_depth || mid == lo || mid == hi {
-            return SpanClass::Refused([map(lo), map(hi)]);
+            return Err([map(lo), map(hi)]);
         }
         let Some((left, right)) = halve(&c) else {
-            return SpanClass::Refused([map(lo), map(hi)]);
+            return Err([map(lo), map(hi)]);
         };
         pending.push((mid, hi, right, depth + 1));
         pending.push((lo, mid, left, depth + 1));
     }
     roots.sort_by(|a, b| a.parameter.total_cmp(&b.parameter));
-    SpanClass::Roots(roots)
+    Ok(SpanClass::Roots(roots))
 }
 
 /// Re-run a curve/plane query whose subdivision report refused a tangency or
@@ -204,8 +211,8 @@ pub(crate) fn certify_tangencies(
     for span_domain in spans(&curve.knots, curve.degree, curve.control_points.len()) {
         let span = curve.trim(span_domain[0], span_domain[1])?;
         match classify_span(&span, plane, span_domain, options, &mut boxes) {
-            SpanClass::Refused(_) => return Ok(None),
-            SpanClass::Overlap => {
+            Err(_) => return Ok(None),
+            Ok(SpanClass::Overlap) => {
                 if let Some(CurvePlaneComponent::Overlap {
                     parameter_interval, ..
                 }) = components.last_mut()
@@ -219,7 +226,7 @@ pub(crate) fn certify_tangencies(
                     });
                 }
             }
-            SpanClass::Roots(roots) => {
+            Ok(SpanClass::Roots(roots)) => {
                 for root in roots {
                     let on_knot = root.parameter == span_domain[0] || root.parameter == span_domain[1];
                     let at_end = root.parameter == domain[0] || root.parameter == domain[1];
@@ -276,8 +283,9 @@ pub(crate) fn certify_tangencies(
             _ => true,
         })
         .collect();
-    let mut keep = keep.into_iter();
-    components.retain(|_| keep.next().unwrap());
+    let components = components.into_iter().zip(keep)
+        .filter_map(|(component, keep)| keep.then_some(component))
+        .collect();
     let mut report = Report {
         components,
         boxes_visited: boxes,

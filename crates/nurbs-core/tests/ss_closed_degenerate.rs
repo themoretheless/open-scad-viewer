@@ -242,6 +242,35 @@ fn public_dispatch_uses_complete_exact_graph_owners_and_preserves_regular_origin
     };
     o.reverify().unwrap();
 }
+
+#[test]
+fn regular_open_arcs_publish_qualified_world_and_uv_traces() {
+    let source = regular_fixture::sources(&[0.1875, -0.3125, 0.1875], 0.);
+    let dispatched = ss::construct_qualified_ss_branches(&source, Default::default()).unwrap();
+    let ss::QualifiedSurfaceIntersection::RegularOpenArcs(owner) = &dispatched else {
+        panic!("Expected regular open arcs");
+    };
+    for branch in 0..owner.branches().len() {
+        let trace = ss::construct_physical_fiber_trace(owner, branch, Default::default()).unwrap();
+        assert_eq!(trace.branch(), branch);
+        assert!(!trace.arcs().is_empty());
+        assert_eq!(trace.ports().len(), trace.arcs().len() + 1);
+        assert!(!trace.segments().is_empty());
+        assert!(trace.world_error_upper() <= 1e-6);
+        assert!(trace.uv_error_upper().iter().all(|e| *e <= 1e-6));
+        for segment in trace.segments() {
+            assert!(!segment.curve().control_points.is_empty());
+            assert!(
+                segment
+                    .pcurves()
+                    .iter()
+                    .all(|c| !c.control_points.is_empty())
+            );
+        }
+        trace.reverify().unwrap();
+    }
+}
+
 #[test]
 fn crossing_edge_stations_retain_independent_diagonal_geometry_and_true_shared_singular_node() {
     let o = own(&pair(1., -1., 0.));

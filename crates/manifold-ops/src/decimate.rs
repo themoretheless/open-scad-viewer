@@ -125,7 +125,7 @@ impl Quadric {
         let r = [-q[3], -q[6], -q[8]];
         let det = dot(m[0], cross(m[1], m[2]));
         let scale_ = m.iter().flatten().fold(0.0_f64, |a, v| a.max(v.abs()));
-        if !(det.abs() > 1e-10 * scale_.powi(3)) {
+        if det.abs().partial_cmp(&(1e-10 * scale_.powi(3))) != Some(std::cmp::Ordering::Greater) {
             return None;
         }
         let col = |c: usize| [m[0][c], m[1][c], m[2][c]];
@@ -291,7 +291,7 @@ pub fn decimate(
     indices: &[usize],
     options: DecimateOptions,
 ) -> Result<DecimateOutcome, DecimateError> {
-    if positions.len() % 3 != 0 || indices.len() % 3 != 0 {
+    if !positions.len().is_multiple_of(3) || !indices.len().is_multiple_of(3) {
         return Err(DecimateError::InvalidInput(
             "buffer lengths are not multiples of 3".into(),
         ));
@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn non_manifold_input_is_refused() {
         let (p, mut t) = sphere(1.0, 6, 8);
-        t.extend_from_slice(&t[0..3].to_vec());
+        t.extend_from_within(..3);
         assert_eq!(
             decimate(&p, &t, DecimateOptions::default()).unwrap_err(),
             DecimateError::NotManifold

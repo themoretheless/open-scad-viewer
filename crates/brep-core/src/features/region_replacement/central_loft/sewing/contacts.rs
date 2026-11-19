@@ -235,6 +235,7 @@ pub(super) fn inspect(
     for p in &pairs.pairs {
         if p.boundary.is_some()
             || p.hull_disjoint
+            || p.radial_disjoint
             || p.volume_separation.is_some()
             || p.result.as_ref().is_some_and(|r| r.absence_proven)
         {

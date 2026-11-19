@@ -2276,9 +2276,9 @@ impl<'a> DirectBuilder<'a> {
                                 "Void ORIENTED_CLOSED_SHELL must oppose its CLOSED_SHELL",
                             ));
                         }
-                        voids.push(one_ref(&va[2], "ORIENTED_CLOSED_SHELL element")?);
+                        voids.push((one_ref(&va[2], "ORIENTED_CLOSED_SHELL element")?, !orientation));
                     } else {
-                        voids.push(void_id);
+                        voids.push((void_id, false));
                     }
                 }
                 (one_ref(&a[1], "outer shell")?, voids)
@@ -2292,7 +2292,15 @@ impl<'a> DirectBuilder<'a> {
         let outer_shell = self.shell(outer)?;
         let inner_shells = inners
             .into_iter()
-            .map(|s| self.shell(s))
+            .map(|(entity, reversed)| {
+                let shell = self.shell(entity)?;
+                if reversed {
+                    for face in &mut self.shells[shell].faces {
+                        face.reversed = !face.reversed;
+                    }
+                }
+                Ok(shell)
+            })
             .collect::<Result<Vec<_>>>()?;
         self.bodies.push(Body {
             outer_shell,

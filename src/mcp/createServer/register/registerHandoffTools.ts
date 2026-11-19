@@ -58,90 +58,89 @@ const looseHandoffBundleInputSchema = z
   })
   .passthrough()
 
-/** Explicit verified browser <-> MCP handoff bundle tools with strict CAS on import. */
-export function registerHandoffTools(ctx: McpServerContext): void {
-  const { store, geometry, server, notifyResourceListChanged } = ctx
-
-  if (ctx.options.localEditor) {
-    server.registerTool(
-      'openscad_open_in_editor',
-      {
-        title: 'Open a saved model in the local OpenSCADA editor',
-        description:
-          'Load a saved model revision into an already open local Vite OpenSCADA tab and show its Parameters panel. The tab acknowledges the load before success is returned.',
-        inputSchema: z
-          .object({
-            model_id: idSchema,
-            revision: z.number().int().nonnegative().optional(),
-            port: z
-              .number()
-              .int()
-              .min(1)
-              .max(65_535)
-              .optional()
-              .describe('Local OpenSCADA port. Defaults to OPENSCADA_EDITOR_PORT or 5173.'),
-          })
-          .strict(),
-        outputSchema: toolOutputSchema(
-          z.object({
-            model_id: idSchema,
-            revision: z.number().int().nonnegative(),
-            status: z.enum(['opened', 'no_editor', 'busy', 'editor_blocked', 'unconfirmed']),
-          }),
-        ),
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-      },
-      async (input, context) => {
+function registerOpenInEditorTool(ctx: McpServerContext): void {
+  const { store, server } = ctx
+  server.registerTool(
+    'openscad_open_in_editor',
+    {
+      title: 'Open a saved model in the local OpenSCADA editor',
+      description:
+        'Load a saved model revision into an already open local Vite OpenSCADA tab and show its Parameters panel. The tab acknowledges the load before success is returned.',
+      inputSchema: z
+        .object({
+          model_id: idSchema,
+          revision: z.number().int().nonnegative().optional(),
+          port: z
+            .number()
+            .int()
+            .min(1)
+            .max(65_535)
+            .optional()
+            .describe('Local OpenSCADA port. Defaults to OPENSCADA_EDITOR_PORT or 5173.'),
+        })
+        .strict(),
+      outputSchema: toolOutputSchema(
+        z.object({
+          model_id: idSchema,
+          revision: z.number().int().nonnegative(),
+          status: z.enum(['opened', 'no_editor', 'busy', 'editor_blocked', 'unconfirmed']),
+        }),
+      ),
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async (input, context) => {
+      try {
+        const model =
+          input.revision === undefined
+            ? await store.getModel(input.model_id)
+            : await store.getModelRevision(input.model_id, input.revision)
+        if (!model) return errorResult(new ModelNotFoundError(input.model_id, input.revision))
+        const port = input.port ?? Number(process.env.OPENSCAD_EDITOR_PORT ?? LOCAL_EDITOR_DEFAULT_PORT)
+        if (!isEditorPort(port)) throw new TypeError('OPENSCADA_EDITOR_PORT must be a TCP port from 1 to 65535.')
+        const bundle = createOpenScadHandoffBundle({
+          origin: 'mcp-catalog',
+          id: model.id,
+          name: model.name,
+          source: model.source,
+          revision: model.revision,
+        })
+        const signal = context.mcpReq.signal
+        let status: 'opened' | 'no_editor' | 'busy' | 'editor_blocked' | 'unconfirmed'
         try {
-          const model =
-            input.revision === undefined
-              ? await store.getModel(input.model_id)
-              : await store.getModelRevision(input.model_id, input.revision)
-          if (!model) return errorResult(new ModelNotFoundError(input.model_id, input.revision))
-          const port = input.port ?? Number(process.env.OPENSCADA_EDITOR_PORT ?? LOCAL_EDITOR_DEFAULT_PORT)
-          if (!isEditorPort(port)) throw new TypeError('OPENSCADA_EDITOR_PORT must be a TCP port from 1 to 65535.')
-          const bundle = createOpenScadHandoffBundle({
-            origin: 'mcp-catalog',
-            id: model.id,
-            name: model.name,
-            source: model.source,
-            revision: model.revision,
+          const response = await fetch(`http://127.0.0.1:${port}${LOCAL_EDITOR_PATH}`, {
+            method: 'POST',
+            redirect: 'error',
+            headers: { [LOCAL_EDITOR_HEADER]: 'open', 'Content-Type': 'application/json' },
+            body: JSON.stringify(bundle),
+            signal: AbortSignal.any([signal, AbortSignal.timeout(LOCAL_EDITOR_TIMEOUT_MS + 1_000)]),
           })
-          const signal = context.mcpReq.signal
-          let status: 'opened' | 'no_editor' | 'busy' | 'editor_blocked' | 'unconfirmed'
-          try {
-            const response = await fetch(`http://127.0.0.1:${port}${LOCAL_EDITOR_PATH}`, {
-              method: 'POST',
-              redirect: 'error',
-              headers: { [LOCAL_EDITOR_HEADER]: 'open', 'Content-Type': 'application/json' },
-              body: JSON.stringify(bundle),
-              signal: AbortSignal.any([signal, AbortSignal.timeout(LOCAL_EDITOR_TIMEOUT_MS + 1_000)]),
-            })
-            await response.body?.cancel()
-            status =
-              response.headers.get(LOCAL_EDITOR_HEADER) !== 'bridge'
-                ? 'no_editor'
-                : response.status === 200
-                  ? 'opened'
-                  : response.status === 409
-                    ? 'busy'
-                    : response.status === 422
-                      ? 'editor_blocked'
-                      : response.status === 504
-                        ? 'unconfirmed'
-                        : 'no_editor'
-          } catch (error) {
-            if (signal.aborted) throw error
-            status = error instanceof Error && error.name === 'TimeoutError' ? 'unconfirmed' : 'no_editor'
-          }
-          return textResult({ model_id: model.id, revision: model.revision, status })
+          await response.body?.cancel()
+          status =
+            response.headers.get(LOCAL_EDITOR_HEADER) !== 'bridge'
+              ? 'no_editor'
+              : response.status === 200
+                ? 'opened'
+                : response.status === 409
+                  ? 'busy'
+                  : response.status === 422
+                    ? 'editor_blocked'
+                    : response.status === 504
+                      ? 'unconfirmed'
+                      : 'no_editor'
         } catch (error) {
-          return errorResult(error)
+          if (signal.aborted) throw error
+          status = error instanceof Error && error.name === 'TimeoutError' ? 'unconfirmed' : 'no_editor'
         }
-      },
-    )
-  }
+        return textResult({ model_id: model.id, revision: model.revision, status })
+      } catch (error) {
+        return errorResult(error)
+      }
+    },
+  )
+}
 
+function registerExportHandoffBundleTool(ctx: McpServerContext): void {
+  const { store, geometry, server } = ctx
   server.registerTool(
     'openscad_export_handoff_bundle',
     {
@@ -199,7 +198,10 @@ export function registerHandoffTools(ctx: McpServerContext): void {
       }
     },
   )
+}
 
+function registerImportHandoffBundleTool(ctx: McpServerContext): void {
+  const { store, geometry, server, notifyResourceListChanged } = ctx
   server.registerTool(
     'openscad_import_handoff_bundle',
     {
@@ -288,4 +290,77 @@ export function registerHandoffTools(ctx: McpServerContext): void {
       }
     },
   )
+}
+
+function registerEditorStatusTool(server: McpServerContext['server']): void {
+  server.registerTool(
+    'openscad_editor_status',
+    {
+      title: 'Check local OpenSCADA editor bridge status',
+      description:
+        'Non-destructively probe whether a local Vite OpenSCADA bridge and active browser tab are listening on localhost without pushing a model.',
+      inputSchema: z
+        .object({
+          port: z
+            .number()
+            .int()
+            .min(1)
+            .max(65_535)
+            .optional()
+            .describe('Local OpenSCADA port. Defaults to OPENSCADA_EDITOR_PORT or 5173.'),
+        })
+        .strict(),
+      outputSchema: toolOutputSchema(
+        z.object({
+          port: z.number().int().min(1).max(65_535),
+          status: z.enum(['tab_ready', 'vite_ready_no_tab', 'busy', 'unreachable']),
+        }),
+      ),
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async (input, context) => {
+      try {
+        const port = input.port ?? Number(process.env.OPENSCAD_EDITOR_PORT ?? LOCAL_EDITOR_DEFAULT_PORT)
+        if (!isEditorPort(port)) throw new TypeError('OPENSCADA_EDITOR_PORT must be a TCP port from 1 to 65535.')
+        const signal = context.mcpReq.signal
+        let status: 'tab_ready' | 'vite_ready_no_tab' | 'busy' | 'unreachable'
+        try {
+          const response = await fetch(`http://127.0.0.1:${port}${LOCAL_EDITOR_PATH}`, {
+            method: 'POST',
+            redirect: 'error',
+            headers: { [LOCAL_EDITOR_HEADER]: 'open', 'Content-Type': 'application/json' },
+            body: '',
+            signal: AbortSignal.any([signal, AbortSignal.timeout(2_500)]),
+          })
+          await response.body?.cancel()
+          status =
+            response.headers.get(LOCAL_EDITOR_HEADER) !== 'bridge'
+              ? 'unreachable'
+              : response.status === 400
+                ? 'tab_ready'
+                : response.status === 412
+                  ? 'vite_ready_no_tab'
+                  : response.status === 409
+                    ? 'busy'
+                    : 'unreachable'
+        } catch (error) {
+          if (signal.aborted) throw error
+          status = 'unreachable'
+        }
+        return textResult({ port, status })
+      } catch (error) {
+        return errorResult(error)
+      }
+    },
+  )
+}
+
+/** Explicit verified browser <-> MCP handoff bundle tools with strict CAS on import. */
+export function registerHandoffTools(ctx: McpServerContext): void {
+  if (ctx.options.localEditor) {
+    registerEditorStatusTool(ctx.server)
+    registerOpenInEditorTool(ctx)
+  }
+  registerExportHandoffBundleTool(ctx)
+  registerImportHandoffBundleTool(ctx)
 }

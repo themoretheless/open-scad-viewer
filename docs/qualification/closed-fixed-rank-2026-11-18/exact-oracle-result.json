@@ -1,0 +1,12 @@
+{
+  "initialDerivative": [
+    "-68/3",
+    "0",
+    "0"
+  ],
+  "capProjection": "0",
+  "stationaryInteriorKnots": [
+    2,
+    6
+  ]
+}

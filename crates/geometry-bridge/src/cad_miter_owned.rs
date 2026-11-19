@@ -693,13 +693,13 @@ pub fn place(v: Value) -> Result<Value> {
             closed: body.closed(),
             source_budget: final_budget,
         };
-        final_budget = optional_field(&step, "budget")?;
+        final_budget = optional_field(step, "budget")?;
         report = brep_core::sweep_affine_boundary::place(
             model,
             &premises,
-            field(&step, "matrix")?,
-            field(&step, "quantum")?,
-            field(&step, "maxWork")?,
+            field(step, "matrix")?,
+            field(step, "quantum")?,
+            field(step, "maxWork")?,
             final_budget,
         )?;
     }

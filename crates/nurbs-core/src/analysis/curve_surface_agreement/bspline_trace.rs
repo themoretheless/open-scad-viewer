@@ -7,6 +7,17 @@ pub(super) fn verify(
     reversed: bool,
     max_work: u64,
 ) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    verify_active(c, p, s, reversed, max_work, None)
+}
+
+pub(super) fn verify_active(
+    c: &Curve,
+    p: &Curve,
+    s: &Surface,
+    reversed: bool,
+    max_work: u64,
+    original: Option<(&Curve, [f64; 2])>,
+) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
     use cad_predicates::{
         AuthoredScalar, BezierIdentity, BezierIdentityDecision, BsplineStripLocation, Limits,
         ParameterIdentity, PredicateContext, Reason, SourceArena, ToleranceContext,
@@ -134,6 +145,12 @@ pub(super) fn verify(
         values.extend(p.control_points.iter().flatten().copied());
         values.extend_from_slice(&p.weights);
         values.extend_from_slice(&p.knots);
+        if let Some((source, interval)) = original {
+            values.extend(source.control_points.iter().flatten().copied());
+            values.extend_from_slice(&source.weights);
+            values.extend_from_slice(&source.knots);
+            values.extend(interval);
+        }
         let source = SourceArena::authored(
             "original-bspline-isoparametric-trace",
             1,

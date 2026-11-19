@@ -1,0 +1,35 @@
+{
+  "sourceBase": "4ccbfb8a098436f306618a1b0844828312f51841",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Whole-chart injectivity certified through the public Rust chart API using an exactly representable oblique projection. The rational bowed chart defeats all coordinate projections. Exact projection and proof share one budget and the one-short oblique control refuses.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib surface_injectivity",
+      "result": "test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 2008 filtered out; finished in 0.05s",
+      "file": "native.log.gz",
+      "sha256": "d7b6ef953569fdfbf16803181d51f42417bcedc9ee469eb40f79711ece8db53a"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 0.86s",
+      "file": "brep.log.gz",
+      "sha256": "3b93aa5aca4e8e078b248cb0104bb0f70fc7b46a09201c8def09069c5413cb7f"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 10.59s",
+      "file": "shell.log.gz",
+      "sha256": "450c123774957e90b6401fc186f8c0e9e91553a8a78b2dbb35708fb8edbbe62f"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "05a83b55f1745acaf15ab747dd124f16773cf93f248f5f8afc67875b6324bcac",
+    "count": 4918
+  }
+}

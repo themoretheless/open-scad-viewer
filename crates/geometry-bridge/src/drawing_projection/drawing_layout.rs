@@ -30,7 +30,7 @@ pub fn drawing(v: &Value) -> Result<Value> {
     let dimensions = linked_dimensions(v, &bodies, &view)?;
     let mut references = Vec::new();
     for body in &bodies {
-        let mesh: Mesh = field(&body, "mesh")?;
+        let mesh: Mesh = field(body, "mesh")?;
         mesh.validate()?;
         let points: Vec<_> = mesh
             .positions
@@ -56,7 +56,7 @@ pub fn drawing(v: &Value) -> Result<Value> {
             return Err(input("Drawing exceeds 100000 triangles"));
         }
         if body.get("brep").is_some_and(|b| !b.is_null()) {
-            let model: brep_core::Model = field(&body, "brep")?;
+            let model: brep_core::Model = field(body, "brep")?;
             model.validate()?;
             references.push(json!({"bodyId":body["id"],"topologySignature":topology_signature(&model),"vertices":model.vertices.iter().map(|v|project(&v.point,&view)).collect::<Vec<_>>(),"vertexIds":model.1.vertices.clone()}));
             if occlusion == "brep" {
