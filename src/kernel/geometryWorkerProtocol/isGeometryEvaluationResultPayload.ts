@@ -32,6 +32,19 @@ import {
 } from '../../core/workerPayloadPrimitives'
 import { sha256Hex } from '../../core/sha256'
 
+function validMeasurements(rows: unknown): boolean {
+  if (!isDenseExactArray(rows, 4096)) return false
+  let characters = 0
+  return rows.every(row => {
+    if (!isRecord(row) || !hasExactKeys(row, ['node', 'operation', 'report'])) return false
+    if (typeof row.node !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(row.node)) return false
+    if (typeof row.operation !== 'string' || !/^[a-z][a-z0-9_]{0,95}$/.test(row.operation)) return false
+    if (typeof row.report !== 'string') return false
+    characters += row.report.length
+    return characters <= MAX_NATIVE_GEOMETRY_CHARACTERS
+  })
+}
+
 /**
  * Reject oversized publications before the deep element/BVH graph scan. This
  * loop is O(mesh count), never O(vertex/triangle count), and allocates no
@@ -53,6 +66,7 @@ export function hasSafeSuccessPayload(
   )
     return false
 
+  if (value.measurements !== undefined && !validMeasurements(value.measurements)) return false
   let nativeCharacters = 0
   let triangles = 0
   let bytes = 0
@@ -277,7 +291,7 @@ function lodPayloadSize(value: unknown, payloadBuffers: Set<ArrayBuffer>): { tri
 export function isGeometryEvaluationResultPayload(value: unknown): value is GeometryEvaluationResult {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ['meshes', 'warnings', 'volume', 'surfaceArea', 'quality', 'reduced', 'timings']) ||
+    !hasExactKeys(value, ['meshes', 'warnings', 'volume', 'surfaceArea', 'quality', 'reduced', 'timings'], ['measurements']) ||
     !hasSafeSuccessPayload(value) ||
     !isDenseExactArray(value.meshes, GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes) ||
     !value.meshes.every(isMeshData) ||
@@ -581,7 +595,7 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerWi
             'reduced',
             'timings',
             'durationMs',
-          ])
+          ], ['measurements'])
         )
           return false
         // The eager view shares asset views between instances; deep checks run on it.

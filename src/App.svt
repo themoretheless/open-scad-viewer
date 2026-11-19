@@ -135,6 +135,8 @@ const findInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
 const editorDiagnostic = ref<EditorDiagnostic | null>(null)
+import { curveMeasurementLabel, directionalTravelSummary } from './language/directionalTravelSummary'
+const measurements = ref<import('./core/build').GeometryMeasurement[]>([])
 const warnings = ref<string[]>([])
 const meshCount = ref(0)
 const triangleCount = ref(0)
@@ -314,7 +316,7 @@ const {
 const build = useBuildAndRendererLifecycle({
   canvasRef, code, project: () => projectFiles.project.value, lang, autoRender, sourceViewportVisible, viewportController, sceneController, sceneMeshes, meshVisibility, selectedMesh, selectedHit, isolated,
   measurement, measureActive, displayMode, shadingModel, matcapId, envId, shadowsEnabled, renderThemeId, selectionMode, gridVisible, gridStep, error, editorDiagnostic,
-  warnings, meshCount, triangleCount, volume, surfaceArea, renderDuration, rendering, renderingQuality, renderedQuality, renderedSource, gpuOk, rendererInitializing,
+  measurements, warnings, meshCount, triangleCount, volume, surfaceArea, renderDuration, rendering, renderingQuality, renderedQuality, renderedSource, gpuOk, rendererInitializing,
   rendererUnavailableMessage, mainSelectedIndices, mainShiftSelection, sweepViewportProgress, defaultMaterialState, effectiveCanvasColor, applySection, syncSectionRange,
   syncSourceHighlightFromEditor, syncCameraState, isComponentActive: () => componentActive, showNotice, translate: t
 })
@@ -794,6 +796,11 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           </button>
           <template v-else>{{ error }}</template>
         </div>
+        <details v-for="measurement in measurements" :key="measurement.node" class="nurbs-measurement">
+          <summary>{{ measurement.node }} · {{ curveMeasurementLabel(measurement.operation, lang === 'ru') }}</summary>
+          <div v-for="(line, i) in directionalTravelSummary(measurement.operation, measurement.report, lang === 'ru')" :key="i">{{ line }}</div>
+          <details><summary>{{ lang === 'ru' ? 'Подробный отчёт' : 'Detailed report' }}</summary><pre>{{ measurement.report }}</pre></details>
+        </details>
         <div v-if="warnings.length" class="message warning" role="status">
           <div v-for="warning in warnings" :key="warning">⚠ {{ presentBuildWarning(warning, t) }}</div>
         </div>

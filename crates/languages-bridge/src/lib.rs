@@ -81,6 +81,20 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
         })?;
         let own = node_list.iter().any(|n| {
             [
+                "rounded_rectangle_profile",
+                "capsule_profile",
+                "annular_sector_surface",
+                "keyway_profile",
+                "t_slot_profile",
+                "dovetail_profile",
+                "poly_v_belt_profile",
+                "toothed_belt_profile",
+                "o_ring_groove_profile",
+                "retaining_ring_profile",
+                "hex_fastener_profile",
+                "square_fastener_profile",
+                "exact_ellipse", "exact_ellipsoid", "exact_ring_torus",
+                "exact_frustum_side", "exact_planar_region",
                 "polygon_profile",
                 "polygon_loft",
                 "triangle_mesh",
@@ -95,6 +109,7 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 "brep_frustum",
                 "brep_tube",
                 "brep_gear",
+                "brep_rational_loft",
                 "brep_extrude_curves",
                 "parabola_curve",
                 "hyperbola_curve",

@@ -5,6 +5,81 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
     if op.starts_with("curve_") || op == "extrude" || op == "revolve" {
         let c: curve::Curve = field(&v, "curve")?;
         return match op {
+            "curve_edit_weights" => {
+                let entries = v["edits"].as_array().ok_or_else(|| input("Expected weight edits"))?;
+                check((1..=256).contains(&entries.len()), "Invalid number of weight edits")?;
+                let edits = entries.iter().map(|entry| Ok((field(entry, "index")?, field(entry, "weight")?))).collect::<Result<Vec<_>>>()?;
+                encode(crate::weight_edit::curve(&c, &edits)?)
+            }
+            "curve_relocate_seam" => {
+                let report = crate::periodic_seam::curve_report(
+                    &c, field(&v, "parameter")?, field(&v, "tolerance")?, field(&v, "maxCells")?,
+                )?;
+                encode(report.curve.ok_or_else(|| input(format!("Periodic seam verification refused: {:?}", report.verification.reason)))?)
+            }
+            "curve_exact_insert_knot" => {
+                let report = crate::editing::exact_knot_insertion::insert(&c, field(&v, "parameter")?, field(&v, "count")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_exact_remove_knot" => {
+                let report = crate::editing::exact_knot_removal::remove(&c, field(&v, "parameter")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_exact_reduce_degree" => {
+                let report = crate::editing::exact_degree_reduction::reduce(&c, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_normalize_weights" => {
+                let report = crate::editing::rational_gauge::normalize_curve(&c)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.geometry.ok_or_else(|| input("Missing exact edit output"))?)
+            }
+            "curve_cancel_factor" => {
+                let report = crate::editing::rational_factor::cancel(&c, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_exact_split" => {
+                let report = crate::editing::exact_knot_insertion::split(&c, field(&v, "parameter")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.pieces.ok_or_else(|| input("Missing exact edit output"))?.get(field::<usize>(&v, "part")?).ok_or_else(|| input("Piece index outside partition"))?)
+            }
+            "curve_exact_restrict" => {
+                let report = crate::editing::exact_knot_insertion::restrict(&c, field(&v, "domain")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve.ok_or_else(|| input("Missing exact edit output"))?)
+            }
+            "curve_exact_partition" => {
+                let report = crate::editing::exact_knot_insertion::partition(&c, &field::<Vec<f64>>(&v, "cuts")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.pieces.ok_or_else(|| input("Missing exact edit output"))?.get(field::<usize>(&v, "part")?).ok_or_else(|| input("Piece index outside partition"))?)
+            }
+            "curve_exact_elevate" => {
+                let report = crate::editing::exact_knot_insertion::elevate_exact(&c, field(&v, "degree")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve.ok_or_else(|| input("Missing exact edit output"))?)
+            }
             "curve_validate" => {
                 c.validate()?;
                 Ok(Value::Null)
@@ -52,6 +127,46 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
 
     let s: surface::Surface = field(&v, "surface")?;
     match op {
+        "surface_edit_weights" => {
+            let entries = v["edits"].as_array().ok_or_else(|| input("Expected weight edits"))?;
+            check((1..=1024).contains(&entries.len()), "Invalid number of weight edits")?;
+            let edits = entries.iter().map(|entry| Ok((field(entry, "u")?, field(entry, "v")?, field(entry, "weight")?))).collect::<Result<Vec<_>>>()?;
+            encode(crate::weight_edit::surface(&s, &edits)?)
+        }
+        "surface_relocate_seam" => {
+            let report = crate::periodic_seam::surface_report(
+                &s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "tolerance")?, field(&v, "maxCells")?,
+            )?;
+            encode(report.surface.ok_or_else(|| input(format!("Periodic seam verification refused: {:?}", report.verification.reason)))?)
+        }
+        "surface_exact_insert_knot" => {
+            let report = crate::editing::exact_surface_knot_insertion::insert(&s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "count")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
+        "surface_exact_remove_knot" => {
+            let report = crate::editing::exact_surface_knot_removal::remove(&s, field(&v, "axis")?, field(&v, "parameter")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
+        "surface_exact_reduce_degree" => {
+            let report = crate::editing::exact_surface_degree_reduction::reduce(&s, field(&v, "axis")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
+        "surface_cancel_factor" => {
+            let report = crate::editing::rational_surface_factor::cancel(&s, field(&v, "axis")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
         "surface_validate" => {
             s.validate()?;
             Ok(Value::Null)
@@ -64,6 +179,13 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
             encode(s.edit_axis(field(&v, "axis")?, |c| c.elevate(field(&v, "degree")?))?)
         }
         "surface_reverse" => encode(s.edit_axis(field(&v, "axis")?, |c| c.reverse())?),
+        "surface_split" => encode(crate::surface_edit::split(
+            &s,
+            field(&v, "axis")?,
+            field(&v, "u")?,
+        )?),
+        "surface_transpose" => encode(crate::surface_edit::transpose(&s)?),
+        "surface_decompose" => encode(crate::surface_edit::decompose(&s)?),
         "surface_trim" => encode(s.trim(field(&v, "bounds")?)?),
         "surface_iso" => encode(s.iso(field(&v, "axis")?, field(&v, "u")?)?),
         "surface_bounds" => encode(s.bounds()?),

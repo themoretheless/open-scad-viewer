@@ -4,11 +4,13 @@ mod booleans;
 mod lofts;
 mod signature_ops;
 mod sweeps;
+mod periodic_assembly;
 
 const LOFT_OPS: &[&str] = &[
     "boundary_fill",
     "gordon_surface",
     "loft_match_surface",
+    "brep_rational_loft",
     "brep_natural_loft",
     "brep_capped_loft",
     "loft_embedding_limits",
@@ -59,6 +61,9 @@ impl Compiler {
             "rect" => "rectangle",
             _ => name,
         };
+        if periodic_assembly::OPS.contains(&name) {
+            return self.periodic_assembly_operation(name, input, args);
+        }
         if LOFT_OPS.contains(&name) {
             return self.loft_operation(name, input, args);
         }

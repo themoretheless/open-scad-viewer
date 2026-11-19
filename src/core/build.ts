@@ -31,7 +31,14 @@ export interface ExactSolidPlan {
   roots: ReadonlyArray<{ name: string; id: string } | { name: string; inexact: string }>
 }
 
+export interface GeometryMeasurement {
+  node: string
+  operation: string
+  report: string
+}
+
 export interface GeometryEvaluationResult {
+  measurements?: GeometryMeasurement[]
   meshes: MeshData[]
   /** Absent when the evaluator does not record exact solids. */
   exactSolids?: ExactSolidPlan

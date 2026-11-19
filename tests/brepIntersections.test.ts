@@ -4002,7 +4002,7 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
     ]),
   )
   expect(near.unresolved.map(u => u.reason)).toEqual(['near_coincidence'])
-  // The off-axis path certifies disjoint tubes with separated height ranges.
+  // The lateral shift preserves both Z ranges: [-1,1] and [2,4] are disjoint.
   const off = intersectTorusTorus(
     first,
     transformNurbsBrep(at(3), [
@@ -4015,6 +4015,7 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
   expect(off.coverage).toBe('numerically_resolved')
   expect(off.components).toHaveLength(0)
   expect(off.unresolved).toHaveLength(0)
+  expect(off.permitsTopologyChange).toBe(false)
   // Non-canonical operands on either side: explicit unsupported_surface.
   for (const [a, b] of [
     [createBrepSphere(2), first],
@@ -4030,4 +4031,6 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
   // JSON roundtrip preserves the regions.
   const round = JSON.parse(JSON.stringify(near)) as typeof near
   expect(round.unresolved.map(u => u.reason)).toEqual(['near_coincidence'])
+  const offRound = JSON.parse(JSON.stringify(off)) as typeof off
+  expect(offRound).toEqual(off)
 })

@@ -69,6 +69,15 @@ export function insertNurbsSurfaceKnot(
 export function elevateNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis, targetDegree: number): NurbsSurface {
   return callNurbsRust('surface_elevate', { surface, axis, degree: targetDegree })
 }
+export function splitNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis, u: number): [NurbsSurface, NurbsSurface] {
+  return callNurbsRust('surface_split', { surface, axis, u })
+}
+export function transposeNurbsSurface(surface: NurbsSurface): NurbsSurface {
+  return callNurbsRust('surface_transpose', { surface })
+}
+export function decomposeNurbsSurface(surface: NurbsSurface): NurbsSurface[] {
+  return callNurbsRust('surface_decompose', { surface })
+}
 export function reverseNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis): NurbsSurface {
   return callNurbsRust('surface_reverse', { surface, axis })
 }
@@ -453,4 +462,28 @@ export function extractNurbsSurfaceIsocurvePoints(
   } finally {
     evaluator.dispose()
   }
+}
+
+export function editNurbsSurfaceWeights(surface: NurbsSurface, edits: [number, number, number][]): NurbsSurface {
+  return callNurbsRust('surface_edit_weights', { surface, edits: edits.map(([u, v, weight]) => ({ u, v, weight })) })
+}
+
+export function relocateNurbsSurfaceSeam(surface: NurbsSurface, axis: NurbsSurfaceAxis, parameter: number, tolerance: number, maxCells: number): NurbsSurface {
+  return callNurbsRust('surface_relocate_seam', { surface, axis, parameter, tolerance, maxCells })
+}
+
+export function surfaceExactInsertKnot(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number, count: number, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_exact_insert_knot', { surface, axis: direction, parameter, count, max_work })
+}
+
+export function surfaceExactRemoveKnot(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_exact_remove_knot', { surface, axis: direction, parameter, max_work })
+}
+
+export function surfaceExactReduceDegree(surface: NurbsSurface, direction: NurbsSurfaceAxis, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_exact_reduce_degree', { surface, axis: direction, max_work })
+}
+
+export function surfaceCancelFactor(surface: NurbsSurface, direction: NurbsSurfaceAxis, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_cancel_factor', { surface, axis: direction, max_work })
 }

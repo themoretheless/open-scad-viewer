@@ -2,6 +2,7 @@
 use super::*;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if let Some(result) = engineering_profile(v, op) { return Some(result); }
     if let Some(res) = try_dispatch_affine_pipes_and_helicoids(v, op) {
         return Some(res);
     }
@@ -12,6 +13,25 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
         return Some(res);
     }
     try_dispatch_polynomials_and_quadrics(v, op)
+}
+
+fn engineering_profile(v: &Value, op: &str) -> Option<Result<Value>> {
+    use crate::engineering_profiles as P;
+    Some(match op {
+        "rounded_rectangle_profile" => (|| encode(P::rounded_rectangle(field(v, "center")?, field(v, "width")?, field(v, "height")?, field(v, "radius")?)?))(),
+        "capsule_profile" => (|| encode(P::capsule(field(v, "center")?, field(v, "straight")?, field(v, "radius")?)?))(),
+        "annular_sector_surface" => (|| encode(P::annular_sector(field(v, "center")?, field(v, "normal")?, field(v, "inner_radius")?, field(v, "outer_radius")?, field(v, "start_degrees")?, field(v, "sweep_degrees")?)?))(),
+        "keyway_profile" => (|| encode(P::keyway(field(v, "mouth")?, field(v, "width")?, field(v, "depth")?)?))(),
+        "t_slot_profile" => (|| encode(P::t_slot(field(v, "mouth")?, field(v, "neck_width")?, field(v, "flange_width")?, field(v, "neck_depth")?, field(v, "total_depth")?)?))(),
+        "dovetail_profile" => (|| encode(P::dovetail(field(v, "mouth")?, field(v, "mouth_width")?, field(v, "base_width")?, field(v, "depth")?)?))(),
+        "poly_v_belt_profile" => (|| encode(P::poly_v_belt(field(v, "center")?, field(v, "ribs")?, field(v, "pitch")?, field(v, "back_thickness")?, field(v, "rib_height")?)?))(),
+        "toothed_belt_profile" => (|| encode(P::toothed_belt(field(v, "center")?, P::ToothedBelt { teeth: field(v, "teeth")?, pitch: field(v, "pitch")?, base_width: field(v, "base_width")?, tip_width: field(v, "tip_width")?, back_thickness: field(v, "back_thickness")?, tooth_height: field(v, "tooth_height")? })?))(),
+        "o_ring_groove_profile" => (|| encode(P::o_ring_groove(field(v, "mouth")?, field(v, "width")?, field(v, "depth")?, field(v, "radius")?)?))(),
+        "retaining_ring_profile" => (|| encode(P::retaining_ring(field(v, "center")?, field(v, "inner_radius")?, field(v, "outer_radius")?, field(v, "gap_degrees")?)?))(),
+        "hex_fastener_profile" => (|| encode(P::hex_fastener(field(v, "center")?, field(v, "across_flats")?)?))(),
+        "square_fastener_profile" => (|| encode(P::square_fastener(field(v, "center")?, field(v, "across_flats")?)?))(),
+        _ => return None,
+    })
 }
 
 fn try_dispatch_affine_pipes_and_helicoids(v: &Value, op: &str) -> Option<Result<Value>> {

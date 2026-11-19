@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 
 
 import {readFileSync} from 'node:fs'
@@ -223,7 +224,7 @@ const closedSpatialRmfTubeFixture=(hollow=false,varying=false,periodic=false,par
  if(!('nativeGeometry' in built))throw Error('Closed spatial RMF retained body missing')
  const evidence=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Closed spatial RMF boundary error unproved')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  if(multipleHoles){
   deepStrictEqual(model.bodies[0]!.innerShells,[1,2,3])
   deepStrictEqual(model.shells.length,4)
@@ -242,7 +243,7 @@ const correctedFrenetBodyFixture=(sourceFile:string,capHoleFaces=2)=>{
  if(!native)throw Error('Missing corrected Frenet retained body: '+sourceFile)
  const evidence=readSweepBodyBoundaryViewportEvidence(native)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Complete corrected Frenet wall/cap bound required: '+sourceFile)
- const model=JSON.parse(native.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(native).geometry as NurbsBrep
  const reversed=(id:number)=>model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
  if(/affine-(inflection|zero-curvature)/.test(sourceFile)){
   deepStrictEqual(graph.nodes.find(n=>n.op==='brep_progressive_sweep')?.axis_scale?.values,[[1.25,.75,1],[1.25,.75,1]])
@@ -275,7 +276,7 @@ const sharpProfileStationG2Fixture=()=>{
  if(!evidence?.continuousBound||!evidence.boundaryErrorWithinBudget||!evidence.solidGeometryCertified
   ||evidence.profileG1Certified!==false||evidence.profileG2Certified!==false||evidence.stationG2Certified!==true)
   throw Error('Incomplete sharp-profile/nonuniform-station qualification')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  const caps=[model.faces.length-2,model.faces.length-1]
  const reversed=(id:number)=>model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
  return {file:'rush-sharp-profile-nonuniform-station-g2-miter.step',model,faces:model.faces.length,
@@ -295,7 +296,7 @@ const closedContactBodyFixture=(arc=false,rationalPhase=false)=>{
  if(!built.nativeGeometry)throw Error('Missing closed contact retained body')
  const evidence=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Original complete closed contact bound required')
- const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry).geometry as NurbsBrep
  if(model.shells.length!==2)throw Error('Closed contact outer/inner shells required')
  return {file:sourceFile.split('/').at(-1)!.replace(/\.r$/,'.step'),model,faces:model.faces.length,
   shells:2,capHoleFaces:0,capFaces:[],outwardCapContours:[],requireNativeSolid:true,

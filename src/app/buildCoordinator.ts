@@ -249,7 +249,7 @@ export class BuildCoordinator {
   }
 
   /**
-   * Cancels every unfinished build without replacing the Worker. Kernel work
+   * Cancels every unfinished build and keeps responsive Workers warm. Kernel work
    * runs as start/step/cancel jobs that yield to the Worker message loop, so
    * the cancel message is observed within a bounded number of steps and the
    * warm Worker (with its compiled WASM) serves the next build. Cancelled jobs
@@ -258,7 +258,6 @@ export class BuildCoordinator {
    */
   cancel(reason: GeometryCancelReason = 'user') {
     if (this.snapshot.status === 'disposed') return
-    this.clearHardRestartTimer()
     this.clearWorkerSilenceTimer()
     const generation = this.binding?.generation
     for (const [jobId, record] of this.jobs) {
@@ -288,6 +287,8 @@ export class BuildCoordinator {
       activeJobIds: [],
       error: null,
     })
+    if (reason === 'disposed') this.clearHardRestartTimer()
+    else if (this.hasPostedWork()) this.armHardRestartTimer()
   }
 
   dispose() {
@@ -353,6 +354,10 @@ export class BuildCoordinator {
       const record = this.jobs.get(jobId)
       if (record) this.postCancel(record, 'superseded')
     }
+    this.armHardRestartTimer()
+  }
+
+  private armHardRestartTimer() {
     if (this.hardRestartTimer !== null) return
     if (this.supersedeGraceMs === 0) {
       this.restartAndPostPending()
@@ -712,7 +717,7 @@ export class BuildCoordinator {
   private finishSupersededJob(jobId: GeometryJobId) {
     this.jobs.delete(jobId)
     this.supersededWorkerJobs.delete(jobId)
-    if (this.supersededWorkerJobs.size === 0 && this.pendingJobIds.length > 0) {
+    if (this.supersededWorkerJobs.size === 0) {
       this.postPendingOnWarmWorker()
     }
   }

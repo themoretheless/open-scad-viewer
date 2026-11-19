@@ -34,7 +34,7 @@ it('keeps historical manifests byte-identical when current evidence changes', as
   }
 })
 
-it('keeps v6 through v14 runtime records immutable when current v15 evidence changes', async () => {
+it('keeps v6 through v26 runtime records immutable when current v27 evidence changes', async () => {
   const oldMesh = GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v6']
   const oldBrep = GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v6']
   const oldMeshV7 = GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v7']
@@ -83,19 +83,48 @@ it('keeps v6 through v14 runtime records immutable when current v15 evidence cha
     expect(refreshed['brep-closed-v12'].manifestDigest).toBe(
       '54e27a0fc0189c541e0990e9f87d00b85214b399fbc5808b1bf48944577c56a8',
     )
-    expect(refreshed['own-rust-node-v13'].manifestDigest).toBe(
-      GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v13'].manifestDigest,
-    )
-    expect(refreshed['brep-closed-v13'].manifestDigest).toBe(
-      GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v13'].manifestDigest,
-    )
-    expect(refreshed['own-rust-node-v14'].manifestDigest).toBe(
-      GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v14'].manifestDigest,
-    )
-    expect(refreshed['brep-closed-v14'].manifestDigest).toBe(
-      GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v14'].manifestDigest,
-    )
-    expect(refreshed['own-rust-node-v15'].qualification.recordId).toBe('candidate-test')
+    for (const id of ['own-rust-node-v13', 'brep-closed-v13'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    expect(refreshed['own-rust-node-v14']).toEqual(GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v14'])
+    expect(refreshed['brep-closed-v14']).toEqual(GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v14'])
+    for (const id of ['own-rust-node-v15', 'brep-closed-v15'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v16', 'brep-closed-v16'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v17', 'brep-closed-v17'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v18', 'brep-closed-v18'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v19', 'brep-closed-v19'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v20', 'brep-closed-v20'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v21', 'brep-closed-v21'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v22', 'brep-closed-v22'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v23', 'brep-closed-v23'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v24', 'brep-closed-v24'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v25', 'brep-closed-v25'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    for (const id of ['own-rust-node-v26', 'brep-closed-v26'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    expect(refreshed['own-rust-node-v27'].qualification.recordId).toBe('candidate-test')
   } finally {
     vi.doUnmock('../src/core/currentRuntimeGeometryEvidence')
     vi.resetModules()

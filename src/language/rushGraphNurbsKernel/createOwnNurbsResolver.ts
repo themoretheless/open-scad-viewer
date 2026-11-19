@@ -1,3 +1,5 @@
+import { reparameterizeNurbsCurveExact } from '../../kernel/nurbsFoundation'
+import { approximateCurveEdit, approximateSurfaceEdit } from './approximateEdits'
 import { callGeometryRust } from '../../kernel/geometry/kernel'
 import { prepareExactFullRoundDisplay } from '../../kernel/geometry/brepExactDisplay'
 import { buildProgressiveSweepNode } from './buildProgressiveSweepNode'
@@ -33,6 +35,7 @@ import {
   createCappedBrepLoftSurfaces,
   createCappedBrepLoftWithCaps,
   createNaturalBrepSectionLoft,
+  createRationalBrepSectionLoft,
   createProgressiveBrepProfileBody,
   createProgressiveMiterBrepProfileBody,
   extrudeBrepCurves,
@@ -51,6 +54,17 @@ import {
   elevateNurbsCurve,
   evaluateNurbsCurvePoints,
   insertNurbsKnot,
+  editNurbsCurveWeights,
+  relocateNurbsCurveSeam,
+  curveExactInsertKnot,
+  curveExactRemoveKnot,
+  curveExactReduceDegree,
+  curveNormalizeWeights,
+  curveCancelFactor,
+  curveExactSplit,
+  curveExactRestrict,
+  curveExactPartition,
+  curveExactElevate,
   reverseNurbsCurve,
   transformNurbsCurve,
   trimNurbsCurve,
@@ -61,7 +75,16 @@ import {
   elevateNurbsSurface,
   insertNurbsSurfaceKnot,
   isoNurbsCurve,
+  editNurbsSurfaceWeights,
+  relocateNurbsSurfaceSeam,
+  surfaceExactInsertKnot,
+  surfaceExactRemoveKnot,
+  surfaceExactReduceDegree,
+  surfaceCancelFactor,
   reverseNurbsSurface,
+  splitNurbsSurface,
+  transposeNurbsSurface,
+  decomposeNurbsSurface,
   transformNurbsSurface,
   transformNurbsSurfacePatches,
   trimNurbsSurface,
@@ -241,6 +264,332 @@ export function createOwnNurbsResolver(
             result = { kind: 'surface', data: s }
             break
           }
+          case 'curve_remove_knot':
+          case 'curve_reduce_degree':
+          case 'curve_rebuild':
+            result = { kind: 'curve', data: approximateCurveEdit(needCurve(n.input), n) }
+            break
+          case 'surface_remove_knot':
+          case 'surface_reduce_degree':
+          case 'surface_rebuild':
+            result = { kind: 'surface', data: approximateSurfaceEdit(needSurface(n.input), n) }
+            break
+          case 'surface_split':
+            result = { kind: 'surface', data: splitNurbsSurface(needSurface(n.input), n.direction, n.parameter)[n.part] }
+            break
+          case 'surface_transpose':
+            result = { kind: 'surface', data: transposeNurbsSurface(needSurface(n.input)) }
+            break
+          case 'surface_bezier_patch': {
+            const patch = decomposeNurbsSurface(needSurface(n.input))[n.index]
+            if (!patch) throw new Error('Bezier patch index outside surface')
+            result = { kind: 'surface', data: patch }
+            break
+          }
+          case 'curve_edit_weights':
+            result = { kind: 'curve', data: editNurbsCurveWeights(needCurve(n.input), n.edits) }
+            break
+          case 'curve_relocate_seam':
+            result = { kind: 'curve', data: relocateNurbsCurveSeam(needCurve(n.input), n.parameter, n.max_deviation, n.max_cells) }
+            break
+          case 'surface_edit_weights':
+            result = { kind: 'surface', data: editNurbsSurfaceWeights(needSurface(n.input), n.edits) }
+            break
+          case 'surface_relocate_seam':
+            result = { kind: 'surface', data: relocateNurbsSurfaceSeam(needSurface(n.input), n.direction, n.parameter, n.max_deviation, n.max_cells) }
+            break
+          case 'curve_exact_insert_knot':
+            result = { kind: 'curve', data: curveExactInsertKnot(needCurve(n.input), n.parameter, n.count, n.max_work) }
+            break
+          case 'curve_exact_remove_knot':
+            result = { kind: 'curve', data: curveExactRemoveKnot(needCurve(n.input), n.parameter, n.max_work) }
+            break
+          case 'curve_exact_reduce_degree':
+            result = { kind: 'curve', data: curveExactReduceDegree(needCurve(n.input), n.max_work) }
+            break
+          case 'surface_exact_insert_knot':
+            result = { kind: 'surface', data: surfaceExactInsertKnot(needSurface(n.input), n.direction, n.parameter, n.count, n.max_work) }
+            break
+          case 'surface_exact_remove_knot':
+            result = { kind: 'surface', data: surfaceExactRemoveKnot(needSurface(n.input), n.direction, n.parameter, n.max_work) }
+            break
+          case 'surface_exact_reduce_degree':
+            result = { kind: 'surface', data: surfaceExactReduceDegree(needSurface(n.input), n.direction, n.max_work) }
+            break
+          case 'curve_normalize_weights':
+            result = { kind: 'curve', data: curveNormalizeWeights(needCurve(n.input)) }
+            break
+          case 'curve_cancel_factor':
+            result = { kind: 'curve', data: curveCancelFactor(needCurve(n.input), n.max_work) }
+            break
+          case 'surface_cancel_factor':
+            result = { kind: 'surface', data: surfaceCancelFactor(needSurface(n.input), n.direction, n.max_work) }
+            break
+          case 'curve_exact_split':
+            result = { kind: 'curve', data: curveExactSplit(needCurve(n.input), n.parameter, n.part, n.max_work) }
+            break
+          case 'curve_exact_restrict':
+            result = { kind: 'curve', data: curveExactRestrict(needCurve(n.input), n.domain, n.max_work) }
+            break
+          case 'curve_exact_partition':
+            result = { kind: 'curve', data: curveExactPartition(needCurve(n.input), n.cuts, n.part, n.max_work) }
+            break
+          case 'curve_exact_elevate':
+            result = { kind: 'curve', data: curveExactElevate(needCurve(n.input), n.degree, n.max_work) }
+            break
+          case 'assemble_exact_periodic_surface_axis':
+          case 'assemble_periodic_surface_axis_with_exact_weight_scaling':
+          case 'assemble_periodic_surface_axis_with_exact_knot_union':
+          case 'assemble_periodic_surface_axis_with_exact_basis_matching':
+          case 'assemble_periodic_surface_axis_with_exact_degree_matching':
+          case 'assemble_exact_doubly_periodic_surface':
+          case 'assemble_doubly_periodic_surface_with_exact_weight_scaling':
+            {
+              const layout = 'direction' in n ? { axis: n.direction } : { columns: n.columns }
+              result = { kind: 'surface', data: callGeometryRust<NurbsSurface>(n.op, {
+                inputs: n.inputs.map(needSurface), max_work: n.max_work, ...layout,
+              }) }
+              break
+            }
+          case 'rotate_periodic_surface_at_exact_knot':
+          case 'insert_and_rotate_periodic_surface_seam':
+          case 'open_exact_periodic_surface_axis':
+          case 'restrict_exact_periodic_surface_axis':
+          case 'restrict_exact_periodic_surface_over_turns':
+          case 'restrict_exact_doubly_periodic_surface':
+          case 'restrict_exact_doubly_periodic_surface_over_turns':
+          case 'partition_exact_periodic_surface_axis':
+          case 'partition_exact_periodic_surface_over_turns':
+          case 'partition_exact_doubly_periodic_surface':
+          case 'partition_exact_doubly_periodic_surface_over_turns':
+          case 'remove_exact_periodic_surface_knot':
+          case 'simplify_exact_periodic_surface_axis':
+          case 'remove_exact_periodic_surface_seam_knot':
+          case 'simplify_exact_doubly_periodic_surface':
+          case 'reduce_exact_periodic_surface_period':
+          case 'repeat_exact_periodic_surface_period':
+            {
+              const { id: _id, op, input, ...parameters } = n
+              const { direction, ...rest } = 'direction' in parameters ? parameters : { ...parameters, direction: undefined }
+              const data = callGeometryRust<NurbsSurface>(op, { surface: needSurface(input), ...rest, axis: direction })
+              result = { kind: 'surface', data }
+              break
+            }
+          case 'curve_axis_motion_partition_speed':
+          case 'curve_axis_motion_partition_motion':
+          case 'curve_axis_motion_partition_axes':
+          case 'curve_axis_motion_limits':
+          case 'curve_axis_motion_slowdown':
+          case 'curve_axis_motion_multi_slowdown':
+          case 'curve_axis_motion_duration':
+          case 'curve_axis_motion_deadline': {
+            const curve = needCurve(n.input)
+            const mode = n.op.slice('curve_axis_motion_'.length)
+            const report = callGeometryRust<object>('nurbs_curve_axis_motion', {
+              curve, mode: mode === 'multi_slowdown' ? 'multiSlowdown' : mode,
+              parameterInterval: n.interval, directions: 'axis_vector' in n ? [n.axis_vector] : n.directions, limits: 'speed_limit' in n ? [[n.speed_limit, 0, 0]] : n.limits,
+              ...('parameter_tolerance' in n ? { parameterTolerance:n.parameter_tolerance } : { tolerances:n.tolerances }),
+              maxCells: n.max_cells, ...('deadline' in n ? { deadline:n.deadline } : {}),
+            })
+            constructionReports[key] = { measurement: { operation: n.op, report } }
+            result = { kind:'curve', data:curve }
+            break
+          }
+          case 'curve_directional_travel_full':
+          case 'curve_directional_travel_signed':
+          case 'curve_check_backtracking': {
+            const curve = needCurve(n.input)
+            const report = callGeometryRust<object>('nurbs_' + n.op, {
+              curve, direction: n.axis_vector, toleranceMm:n.tolerance_mm,maxCells:n.max_cells,
+              ...(n.op === 'curve_check_backtracking' ? { parameterInterval:n.interval, reverseLimitMm:n.reverse_limit } : {}),
+            })
+            constructionReports[key] = { measurement:{operation:n.op,report} }
+            result = { kind:'curve',data:curve }
+            break
+          }
+          case 'surface_trim_contour_audit':
+          case 'surface_trim_contour_station':
+          case 'surface_trim_contour_station_box':
+          case 'surface_trim_contour_divide':
+          case 'surface_trim_patch_area_vector':
+          case 'surface_trim_patch_projected_area': {
+            const surface = needSurface(n.input)
+            const operation = {
+              surface_trim_contour_audit:'brep_audit_exact_periodic_trim_contour',
+              surface_trim_contour_station:'brep_locate_exact_periodic_trim_contour_station',
+              surface_trim_contour_station_box:'brep_enclose_exact_periodic_trim_contour_station',
+              surface_trim_contour_divide:'brep_divide_exact_periodic_trim_contour_by_length',
+              surface_trim_patch_area_vector:'brep_bound_exact_periodic_trim_patch_area',
+              surface_trim_patch_projected_area:'brep_bound_exact_periodic_trim_directional_area',
+            }[n.op]
+            const report = callGeometryRust<object>(operation, {
+              surface,contours:n.contours,maxWork:n.max_work,
+              ...('contour' in n ? {contour:n.contour} : {}),
+              ...('outer_contour' in n ? {outerContour:n.outer_contour} : {}),
+              ...('distance_mm' in n ? {distanceMm:n.distance_mm} : {}),
+              ...('divisions' in n ? {divisions:n.divisions} : {}),
+              ...('tolerance_mm' in n ? {toleranceMm:n.tolerance_mm} : {}),
+              ...('parameter_tolerance' in n ? {parameterTolerance:n.parameter_tolerance} : {}),
+              ...('max_cells' in n ? {maxCells:n.max_cells} : {}),
+              ...('tolerance_mm2' in n ? {toleranceMm2:n.tolerance_mm2} : {}),
+              ...('normal' in n ? {normal:n.normal} : {}),
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'surface_trim_range_length': {
+            const surface=needSurface(n.input)
+            const range=[n.range_start,n.range_end].map(pair=>{
+              const [numerator,denominator]=pair.split('/')
+              return {numerator,denominator}
+            })
+            const report=callGeometryRust<object>('brep_measure_exact_periodic_trim_range',{
+              surface,contours:n.contours,contour:n.contour,segment:n.segment,range,
+              toleranceMm:n.tolerance_mm,maxWork:n.max_work,maxCells:n.max_cells,
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'evaluate_exact_wrapped_surface_point':
+          case 'evaluate_exact_wrapped_surface_points':
+          case 'lift_exact_periodic_surface_path':
+          case 'exact_periodic_surface_path_winding':
+          case 'exact_periodic_surface_path_signed_area':
+          case 'exact_periodic_surface_path_centroid':
+          case 'exact_periodic_surface_path_inertia': {
+            const surface=needSurface(n.input)
+            const report=callGeometryRust<object>(n.op,{
+              surface,max_work:n.max_work,...('uv' in n ? {uv:n.uv} : {parameters:n.uv_points}),
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'classify_exact_periodic_surface_path_point':
+          case 'classify_exact_periodic_surface_path_points':
+          case 'classify_exact_periodic_surface_region_points':
+          case 'certify_exact_periodic_surface_path_simplicity':
+          case 'check_exact_periodic_surface_path_contact':
+          case 'relate_exact_periodic_surface_paths':
+          case 'exact_periodic_surface_contour_forest':
+          case 'exact_periodic_surface_region_area':
+          case 'exact_periodic_surface_region_component_centroids':
+          case 'exact_periodic_surface_region_component_inertia': {
+            const {id:_id,op,input,...parameters}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'measure_input_contour_length':
+          case 'measure_input_segment_length':
+          case 'measure_input_segment_range_length':
+          case 'locate_input_segment_at_length':
+          case 'measure_input_contour_prefix_lengths':
+          case 'locate_input_contour_at_lengths':
+          case 'divide_input_contour_by_length':
+          case 'exact_input_contour_projected_area':
+          case 'exact_input_contour_polynomial_projected_area':
+          case 'bound_input_contour_projected_area':
+          case 'bound_input_patch_max_projected_area':
+          case 'bound_input_patch_max_projection_direction': {
+            const {id:_id,op,input,...parameters}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'surface_trim_area':
+          case 'surface_trim_mass_properties':
+          case 'surface_trim_window_properties':
+          case 'surface_trim_set_properties': {
+            const surface = needSurface(n.input)
+            if (n.op === 'surface_trim_set_properties' && !!n.axis_point !== !!n.axis_vector) {
+              throw new Error('The inertia axis needs both its point and direction.')
+            }
+            const operation = {
+              surface_trim_area:'brep_measure_exact_periodic_trim_surface_area',
+              surface_trim_mass_properties:'brep_measure_exact_periodic_trim_surface_mass_properties',
+              surface_trim_window_properties:'brep_measure_exact_periodic_trim_window_mass_properties',
+              surface_trim_set_properties:'brep_measure_exact_periodic_trim_patch_set_mass_properties',
+            }[n.op]
+            const report = callGeometryRust<object>(operation,{
+              surface,contours:n.contours,toleranceMm2:n.tolerance_mm2,toleranceUv:n.tolerance_uv,maxWork:n.max_work,
+              maxSurfaceCells:n.max_surface_cells,maxTrimCells:n.max_trim_cells,
+              ...('outer_contour' in n ? {outerContour:n.outer_contour} : {}),
+              ...('uv_window' in n ? {uvWindow:n.uv_window} : {}),
+              ...('moment_tolerance' in n ? {momentToleranceMm4:n.moment_tolerance} : {}),
+              ...('axis_point' in n && n.axis_point ? {inertiaAxis:{pointMm:n.axis_point,direction:n.axis_vector}} : {}),
+              ...('reference_point' in n ? {inertiaReferencePointMm:n.reference_point} : {}),
+              ...('radius_of_gyration' in n ? {includeAxisRadiusOfGyration:n.radius_of_gyration} : {}),
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'surface_measure_trimmed_mass': {
+            const surface = needSurface(n.input)
+            if (!!n.plane_point !== !!n.plane_normal || !!n.axis_point !== !!n.axis_vector) {
+              throw new Error('A measurement plane or axis needs both its point and its direction.')
+            }
+            const report = callGeometryRust<object>('brep_measure_exact_periodic_trim_patch_set_density', {
+              ...(n.principal_axes === undefined ? {} : {includePrincipalAxes:n.principal_axes}),
+              ...(n.probe_point ? {principalAxisProbePointMm:n.probe_point} : {}),
+              ...(n.probe_direction ? {principalAxisProbeDirection:n.probe_direction} : {}),
+              ...(n.balance_tolerance === undefined ? {} : {axisBalanceToleranceMm:n.balance_tolerance}),
+              ...(n.static_unbalance === undefined ? {} : {includeStaticUnbalance:n.static_unbalance}),
+              ...(n.couple_unbalance === undefined ? {} : {includeCoupleUnbalance:n.couple_unbalance}),
+              ...(n.plane_offsets ? {balancePlaneOffsetsMm:n.plane_offsets} : {}),
+              ...(n.plane_tolerances ? {balancePlaneTolerancesKgMm:n.plane_tolerances} : {}),
+              ...(n.weight_radii ? {counterweightRadiiMm:n.weight_radii} : {}),
+              ...(n.weight_mass_limits ? {counterweightMassLimitsKg:n.weight_mass_limits} : {}),
+              ...(n.installed_weights ? {installedCounterweights:n.installed_weights.map(([massBoundsKg,...radialOffsetBoundsMm])=>({massBoundsKg,radialOffsetBoundsMm}))} : {}),
+              surface, includeAxisRadiusOfGyration:n.radius_of_gyration ?? false, contours:n.contours, toleranceMm2:n.tolerance_mm2, toleranceUv:n.tolerance_uv, maxWork:n.max_work,
+              maxSurfaceCells:n.max_surface_cells,maxTrimCells:n.max_trim_cells,
+              componentDensities:n.component_densities.map(([outerContour,lo,hi])=>({outerContour,densityBoundsKgPerMm2:[lo,hi]})),
+              ...(n.plane_point ? {centerOfMassPlane:{pointMm:n.plane_point,normal:n.plane_normal}} : {}),
+              ...(n.axis_point ? {inertiaAxis:{pointMm:n.axis_point,direction:n.axis_vector}} : {}),
+              ...(n.reference_point ? {inertiaReferencePointMm:n.reference_point} : {}),
+              ...(n.moment_tolerance === undefined ? {} : {momentToleranceKgMm2:n.moment_tolerance}),
+            })
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
+          case 'curve_axial_derivative_peak': {
+            const curve = needCurve(n.input)
+            const report = callGeometryRust<object>('nurbs_measure_curve_axial_derivative_peak', {
+              curve, direction: n.axis_vector, parameterInterval: n.interval, order: n.order,
+              tolerance: n.tolerance_mm, maxCells: n.max_cells,
+              ...(n.parameter_tolerance === undefined ? {} : { parameterTolerance: n.parameter_tolerance }),
+            })
+            constructionReports[key] = { measurement: { operation: n.op, report } }
+            result = { kind: 'curve', data: curve }
+            break
+          }
+          case 'curve_measure_directional_travel':
+          case 'curve_measure_directional_travel_batch': {
+            const curve = needCurve(n.input)
+            const batch = n.op === 'curve_measure_directional_travel_batch'
+            const report = callGeometryRust<object>(
+              batch ? 'nurbs_measure_curve_directional_travel_batch' : 'nurbs_measure_curve_directional_travel',
+              {
+                curve, direction: n.axis_vector, maxCells: n.max_cells, toleranceMm: n.tolerance_mm,
+                ...(batch ? { parameterIntervals: n.intervals } : { parameterInterval: n.interval }),
+                ...(n.reverse_limit === undefined ? {} : { reverseLimitMm: n.reverse_limit }),
+              },
+            )
+            constructionReports[key] = { measurement: { operation: n.op, report } }
+            result = { kind: 'curve', data: curve }
+            break
+          }
+          case 'curve_reparameterize':
+            result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }
+            break
           case 'curve_split':
             result = { kind: 'curve', data: splitNurbsCurve(needCurve(n.input), n.parameter)[n.part] }
             break
@@ -967,6 +1316,10 @@ export function createOwnNurbsResolver(
             result = { kind: 'brep', data: body.model }
             break
           }
+          case 'brep_rational_loft':
+            result = { kind: 'brep', data: createRationalBrepSectionLoft(n.sections.map(section =>
+              section.map(loop => loop.map(needCurve)))) }
+            break
           case 'brep_natural_loft':
             result = {
               kind: 'brep',

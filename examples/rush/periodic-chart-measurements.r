@@ -1,0 +1,11 @@
+// @rush/1
+profile = nurbs_curve(degree:1,knots:[-1,0,1,2,3,4,5],control_points:[[0,0,0],[1mm,0,0],[1mm,1mm,0],[0,1mm,0],[0,0,0]],weights:[1,1,1,1,1],periodic:true)
+chart = profile.surface_extrude(vector:[0,0,2mm])
+measurement1 = chart.evaluate_exact_wrapped_surface_point(uv:[4.5,0.5],max_work:1000000)
+measurement2 = measurement1.evaluate_exact_wrapped_surface_points(uv_points:[[-0.5,0.25],[4.5,0.75]],max_work:1000000)
+measurement3 = measurement2.lift_exact_periodic_surface_path(uv_points:[[3.5,0.25],[0.5,0.25],[0.5,0.75],[3.5,0.75],[3.5,0.25]],max_work:1000000)
+measurement4 = measurement3.exact_periodic_surface_path_winding(uv_points:[[3.5,0.25],[0.5,0.25],[0.5,0.75],[3.5,0.75],[3.5,0.25]],max_work:1000000)
+measurement5 = measurement4.exact_periodic_surface_path_signed_area(uv_points:[[3.5,0.25],[0.5,0.25],[0.5,0.75],[3.5,0.75],[3.5,0.25]],max_work:1000000)
+measurement6 = measurement5.exact_periodic_surface_path_centroid(uv_points:[[3.5,0.25],[0.5,0.25],[0.5,0.75],[3.5,0.75],[3.5,0.25]],max_work:1000000)
+measurement7 = measurement6.exact_periodic_surface_path_inertia(uv_points:[[3.5,0.25],[0.5,0.25],[0.5,0.75],[3.5,0.75],[3.5,0.25]],max_work:1000000)
+show measurement7.tessellate(8,4)

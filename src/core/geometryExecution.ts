@@ -1,3 +1,17 @@
+import { RUNTIME_GEOMETRY_EVIDENCE_V26 } from './runtimeGeometryEvidenceV26'
+import { RUNTIME_GEOMETRY_EVIDENCE_V25 } from './runtimeGeometryEvidenceV25'
+import { RUNTIME_GEOMETRY_EVIDENCE_V24 } from './runtimeGeometryEvidenceV24'
+import { RUNTIME_GEOMETRY_EVIDENCE_V23 } from './runtimeGeometryEvidenceV23'
+import { RUNTIME_GEOMETRY_EVIDENCE_V22 } from './runtimeGeometryEvidenceV22'
+import { RUNTIME_GEOMETRY_EVIDENCE_V21 } from './runtimeGeometryEvidenceV21'
+import { RUNTIME_GEOMETRY_EVIDENCE_V20 } from './runtimeGeometryEvidenceV20'
+import { RUNTIME_GEOMETRY_EVIDENCE_V19 } from './runtimeGeometryEvidenceV19'
+import { RUNTIME_GEOMETRY_EVIDENCE_V18 } from './runtimeGeometryEvidenceV18'
+import { RUNTIME_GEOMETRY_EVIDENCE_V17 } from './runtimeGeometryEvidenceV17'
+import { RUNTIME_GEOMETRY_EVIDENCE_V16 } from './runtimeGeometryEvidenceV16'
+import { RUNTIME_GEOMETRY_EVIDENCE_V15 } from './runtimeGeometryEvidenceV15'
+import { RUNTIME_GEOMETRY_EVIDENCE_V14 } from './runtimeGeometryEvidenceV14'
+import { RUNTIME_GEOMETRY_EVIDENCE_V13 } from './runtimeGeometryEvidenceV13'
 import { RUNTIME_GEOMETRY_EVIDENCE_V5 } from './runtimeGeometryEvidenceV5'
 import { RUNTIME_GEOMETRY_EVIDENCE_V6 } from './runtimeGeometryEvidenceV6'
 import { RUNTIME_GEOMETRY_EVIDENCE_V7 } from './runtimeGeometryEvidenceV7'
@@ -536,16 +550,196 @@ const ownRustCadRuntimeV15 = bindCurrentRuntime(
   ownRustCadManifestV1,
   'own-rust-node-v15',
   'own-rust-cad-v15',
-  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+  RUNTIME_GEOMETRY_EVIDENCE_V15,
 )
 const brepClosedRuntimeV15 = bindCurrentRuntime(
   brepClosedManifestV1,
   'brep-closed-v15',
   'rust-brep-closed-v15',
+  RUNTIME_GEOMETRY_EVIDENCE_V15,
+)
+
+const ownRustCadRuntimeV16 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v16',
+  'own-rust-cad-v16',
+  RUNTIME_GEOMETRY_EVIDENCE_V16,
+)
+const brepClosedRuntimeV16 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v16',
+  'rust-brep-closed-v16',
+  RUNTIME_GEOMETRY_EVIDENCE_V16,
+)
+
+const ownRustCadRuntimeV17 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v17',
+  'own-rust-cad-v17',
+  RUNTIME_GEOMETRY_EVIDENCE_V17,
+)
+const brepClosedRuntimeV17 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v17',
+  'rust-brep-closed-v17',
+  RUNTIME_GEOMETRY_EVIDENCE_V17,
+)
+
+const ownRustCadRuntimeV18 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v18',
+  'own-rust-cad-v18',
+  RUNTIME_GEOMETRY_EVIDENCE_V18,
+)
+const brepClosedRuntimeV18 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v18',
+  'rust-brep-closed-v18',
+  RUNTIME_GEOMETRY_EVIDENCE_V18,
+)
+
+const ownRustCadRuntimeV19 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v19',
+  'own-rust-cad-v19',
+  RUNTIME_GEOMETRY_EVIDENCE_V19,
+)
+const brepClosedRuntimeV19 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v19',
+  'rust-brep-closed-v19',
+  RUNTIME_GEOMETRY_EVIDENCE_V19,
+)
+
+const ownRustCadRuntimeV20 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v20',
+  'own-rust-cad-v20',
+  RUNTIME_GEOMETRY_EVIDENCE_V20,
+)
+const brepClosedRuntimeV20 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v20',
+  'rust-brep-closed-v20',
+  RUNTIME_GEOMETRY_EVIDENCE_V20,
+)
+
+const ownRustCadRuntimeV21 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v21',
+  'own-rust-cad-v21',
+  RUNTIME_GEOMETRY_EVIDENCE_V21,
+)
+const brepClosedRuntimeV21 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v21',
+  'rust-brep-closed-v21',
+  RUNTIME_GEOMETRY_EVIDENCE_V21,
+)
+
+const ownRustCadRuntimeV22 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v22',
+  'own-rust-cad-v22',
+  RUNTIME_GEOMETRY_EVIDENCE_V22,
+)
+const brepClosedRuntimeV22 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v22',
+  'rust-brep-closed-v22',
+  RUNTIME_GEOMETRY_EVIDENCE_V22,
+)
+
+const ownRustCadRuntimeV23 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v23',
+  'own-rust-cad-v23',
+  RUNTIME_GEOMETRY_EVIDENCE_V23,
+)
+const brepClosedRuntimeV23 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v23',
+  'rust-brep-closed-v23',
+  RUNTIME_GEOMETRY_EVIDENCE_V23,
+)
+
+const ownRustCadRuntimeV24 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v24',
+  'own-rust-cad-v24',
+  RUNTIME_GEOMETRY_EVIDENCE_V24,
+)
+const brepClosedRuntimeV24 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v24',
+  'rust-brep-closed-v24',
+  RUNTIME_GEOMETRY_EVIDENCE_V24,
+)
+
+const ownRustCadRuntimeV25 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v25',
+  'own-rust-cad-v25',
+  RUNTIME_GEOMETRY_EVIDENCE_V25,
+)
+const brepClosedRuntimeV25 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v25',
+  'rust-brep-closed-v25',
+  RUNTIME_GEOMETRY_EVIDENCE_V25,
+)
+
+const ownRustCadRuntimeV26 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v26',
+  'own-rust-cad-v26',
+  RUNTIME_GEOMETRY_EVIDENCE_V26,
+)
+const brepClosedRuntimeV26 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v26',
+  'rust-brep-closed-v26',
+  RUNTIME_GEOMETRY_EVIDENCE_V26,
+)
+
+const ownRustCadRuntimeV27 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v27',
+  'own-rust-cad-v27',
+  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+)
+const brepClosedRuntimeV27 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v27',
+  'rust-brep-closed-v27',
   CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
 )
 
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v27': ownRustCadRuntimeV27,
+  'brep-closed-v27': brepClosedRuntimeV27,
+  'own-rust-node-v26': ownRustCadRuntimeV26,
+  'brep-closed-v26': brepClosedRuntimeV26,
+  'own-rust-node-v25': ownRustCadRuntimeV25,
+  'brep-closed-v25': brepClosedRuntimeV25,
+  'own-rust-node-v24': ownRustCadRuntimeV24,
+  'brep-closed-v24': brepClosedRuntimeV24,
+  'own-rust-node-v23': ownRustCadRuntimeV23,
+  'brep-closed-v23': brepClosedRuntimeV23,
+  'own-rust-node-v22': ownRustCadRuntimeV22,
+  'brep-closed-v22': brepClosedRuntimeV22,
+  'own-rust-node-v21': ownRustCadRuntimeV21,
+  'brep-closed-v21': brepClosedRuntimeV21,
+  'own-rust-node-v20': ownRustCadRuntimeV20,
+  'brep-closed-v20': brepClosedRuntimeV20,
+  'own-rust-node-v19': ownRustCadRuntimeV19,
+  'brep-closed-v19': brepClosedRuntimeV19,
+  'own-rust-node-v18': ownRustCadRuntimeV18,
+  'brep-closed-v18': brepClosedRuntimeV18,
+  'own-rust-node-v17': ownRustCadRuntimeV17,
+  'brep-closed-v17': brepClosedRuntimeV17,
+  'own-rust-node-v16': ownRustCadRuntimeV16,
+  'brep-closed-v16': brepClosedRuntimeV16,
   'own-rust-node-v15': ownRustCadRuntimeV15,
   'brep-closed-v15': brepClosedRuntimeV15,
   'own-rust-node-v14': ownRustCadRuntimeV14,
@@ -632,8 +826,8 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v15',
-  brep: 'brep-closed-v15',
+  mesh: 'own-rust-node-v27',
+  brep: 'brep-closed-v27',
 } as const)
 
 export type GeometryProviderAdmissionMode = 'legacy-grandfathered' | 'qualified' | 'denied'

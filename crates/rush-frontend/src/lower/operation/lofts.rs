@@ -10,7 +10,7 @@ impl Compiler {
         match name {
             "boundary_fill" => self.lower_boundary_fill(name, input, args),
             "gordon_surface" => self.lower_gordon_surface(name, input, args),
-            "loft_match_surface" | "brep_natural_loft" | "brep_capped_loft" => {
+            "loft_match_surface" | "brep_rational_loft" | "brep_natural_loft" | "brep_capped_loft" => {
                 self.lower_brep_loft_family(name, input, args)
             }
             "loft_embedding_limits" => Self::lower_loft_embedding_limits(input, args),
@@ -104,7 +104,7 @@ impl Compiler {
         for (key, value) in args {
             let key = key.ok_or_else(|| crate::error("Loft options must be named"))?;
             let depth = match (name, key.as_str()) {
-                ("brep_natural_loft", "sections") => Some(3),
+                ("brep_rational_loft" | "brep_natural_loft", "sections") => Some(3),
                 ("brep_capped_loft", "start" | "end" | "sides") => Some(2),
                 ("brep_capped_loft", "cap_surfaces") => Some(1),
                 ("brep_capped_loft", "cap_trims") => Some(3),

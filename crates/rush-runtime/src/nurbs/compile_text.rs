@@ -156,6 +156,8 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "sphere_surface", "cylinder_surface", "cone_surface",
             "plane_patch", "bilinear_patch", "bezier_surface",
             "bezier_curve", "curve_compose", "round_polyline_curve", "transition_polyline_curve", "brep_miter_sweep","brep_progressive_miter_sweep",
+            "rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile",
+            "exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region",
             "line_curve", "polyline_curve", "circle_curve", "circle_arc",
             "hyperboloid_one_sheet", "hyperboloid_two_sheet", "polynomial_graph",
             "polynomial_curve", "polynomial_surface", "rational_polynomial_curve", "rational_polynomial_surface",
@@ -174,7 +176,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "surface_loft",
             "ruled_surface",
             "coons_patch",
-            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "formula_surface",
+            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_rational_loft","brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "formula_surface",
             "extrude",
             "revolve",
             "triangle_mesh",
@@ -214,7 +216,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
             "curve",
-            "curve_edit", "surface_edit", "iso_curve", "curve_split", "curve_bezier_span",
+            "curve_edit", "curve_edit_weights", "curve_relocate_seam", "surface_edit_weights", "surface_relocate_seam", "curve_exact_insert_knot", "curve_exact_remove_knot", "curve_exact_reduce_degree", "surface_exact_insert_knot", "surface_exact_remove_knot", "surface_exact_reduce_degree", "curve_normalize_weights", "curve_cancel_factor", "surface_cancel_factor", "curve_exact_split", "curve_exact_restrict", "curve_exact_partition", "curve_exact_elevate", "assemble_exact_periodic_surface_axis", "assemble_periodic_surface_axis_with_exact_weight_scaling", "assemble_periodic_surface_axis_with_exact_knot_union", "assemble_periodic_surface_axis_with_exact_basis_matching", "assemble_periodic_surface_axis_with_exact_degree_matching", "assemble_exact_doubly_periodic_surface", "assemble_doubly_periodic_surface_with_exact_weight_scaling", "rotate_periodic_surface_at_exact_knot", "insert_and_rotate_periodic_surface_seam", "open_exact_periodic_surface_axis", "restrict_exact_periodic_surface_axis", "restrict_exact_periodic_surface_over_turns", "restrict_exact_doubly_periodic_surface", "restrict_exact_doubly_periodic_surface_over_turns", "partition_exact_periodic_surface_axis", "partition_exact_periodic_surface_over_turns", "partition_exact_doubly_periodic_surface", "partition_exact_doubly_periodic_surface_over_turns", "remove_exact_periodic_surface_knot", "simplify_exact_periodic_surface_axis", "remove_exact_periodic_surface_seam_knot", "simplify_exact_doubly_periodic_surface", "reduce_exact_periodic_surface_period", "repeat_exact_periodic_surface_period", "curve_axis_motion_partition_speed", "curve_axis_motion_partition_motion", "curve_axis_motion_partition_axes", "curve_axis_motion_limits", "curve_axis_motion_slowdown", "curve_axis_motion_multi_slowdown", "curve_axis_motion_duration", "curve_axis_motion_deadline", "curve_directional_travel_full", "curve_directional_travel_signed", "curve_check_backtracking", "surface_trim_contour_audit", "surface_trim_contour_station", "surface_trim_contour_station_box", "surface_trim_contour_divide", "surface_trim_patch_area_vector", "surface_trim_patch_projected_area", "surface_trim_range_length", "evaluate_exact_wrapped_surface_point", "evaluate_exact_wrapped_surface_points", "lift_exact_periodic_surface_path", "exact_periodic_surface_path_winding", "exact_periodic_surface_path_signed_area", "exact_periodic_surface_path_centroid", "exact_periodic_surface_path_inertia", "classify_exact_periodic_surface_path_point", "classify_exact_periodic_surface_path_points", "classify_exact_periodic_surface_region_points", "certify_exact_periodic_surface_path_simplicity", "check_exact_periodic_surface_path_contact", "relate_exact_periodic_surface_paths", "exact_periodic_surface_contour_forest", "exact_periodic_surface_region_area", "exact_periodic_surface_region_component_centroids", "exact_periodic_surface_region_component_inertia", "measure_input_contour_length", "measure_input_segment_length", "measure_input_segment_range_length", "locate_input_segment_at_length", "measure_input_contour_prefix_lengths", "locate_input_contour_at_lengths", "divide_input_contour_by_length", "exact_input_contour_projected_area", "exact_input_contour_polynomial_projected_area", "bound_input_contour_projected_area", "bound_input_patch_max_projected_area", "bound_input_patch_max_projection_direction", "surface_trim_area", "surface_trim_mass_properties", "surface_trim_window_properties", "surface_trim_set_properties", "surface_measure_trimmed_mass", "curve_axial_derivative_peak", "curve_measure_directional_travel", "curve_measure_directional_travel_batch", "curve_reparameterize", "surface_edit", "surface_split", "surface_transpose", "surface_bezier_patch", "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild", "iso_curve", "curve_split", "curve_bezier_span",
             "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",
@@ -232,7 +234,11 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             ));
         }
         let progressive_sweep=["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
-        let iso_curve = s(&node, "op") == "iso_curve";
+        let needs_direction = matches!(s(&node, "op"), "iso_curve" | "surface_exact_insert_knot" | "surface_exact_remove_knot" | "surface_exact_reduce_degree" | "surface_cancel_factor" | "rotate_periodic_surface_at_exact_knot" | "insert_and_rotate_periodic_surface_seam" | "open_exact_periodic_surface_axis" | "restrict_exact_periodic_surface_axis" | "restrict_exact_periodic_surface_over_turns" | "partition_exact_periodic_surface_axis" | "partition_exact_periodic_surface_over_turns" | "remove_exact_periodic_surface_knot" | "simplify_exact_periodic_surface_axis" | "remove_exact_periodic_surface_seam_knot" | "reduce_exact_periodic_surface_period" | "repeat_exact_periodic_surface_period" | "assemble_exact_periodic_surface_axis" | "assemble_periodic_surface_axis_with_exact_weight_scaling" | "assemble_periodic_surface_axis_with_exact_knot_union" | "assemble_periodic_surface_axis_with_exact_basis_matching" | "assemble_periodic_surface_axis_with_exact_degree_matching" | "surface_relocate_seam" | "surface_split" | "surface_remove_knot" | "surface_reduce_degree" | "surface_rebuild");
+        let engineering_profile = ["rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile"].contains(&s(&node, "op"));
+        let exact_primitive = ["exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region"].contains(&s(&node,"op"));
+        let exact_ellipsoid = s(&node,"op") == "exact_ellipsoid";
+        let exact_frustum = s(&node,"op") == "exact_frustum_side";
         let line_coordinates=s(&node,"op")=="line_curve";
         let scaled_sweep=["scaled_sweep","profile_sweep","progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
         let catenary=s(&node,"op")=="catenary_curve";
@@ -242,12 +248,18 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let catenoid=["catenoid_surface","catenoid_patches"].contains(&s(&node,"op"));
         let clothoid=s(&node,"op")=="clothoid_curve";
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
-        let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
+        let loft_refs=["loft_match_surface","brep_rational_loft","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
-            if iso_curve && key == "direction" {
+            if exact_primitive && key == "axes" && exact_frustum {
+                for (i, axis) in value.as_array_mut().ok_or_else(|| text_error(key,"Expected three axes"))?.iter_mut().enumerate() {
+                    *axis = field(axis, if i == 2 { LENGTH } else { SCALAR }, &params, key)?;
+                }
+                continue;
+            }
+            if needs_direction && key == "direction" {
                 let axis = value.as_str().or_else(|| value.get("text").and_then(J::as_str));
                 if !matches!(axis, Some("u" | "v")) {
-                    return Err(text_error(key, "Expected iso_curve direction u or v"));
+                    return Err(text_error(key, "Expected parameter direction u or v"));
                 }
                 *value = json!(axis);
                 continue;
@@ -266,7 +278,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 continue;
             }
             if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
-            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "lower", "closed", "periodic", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
+            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
                 continue;
             }
             if key=="section_mappings" {
@@ -365,7 +377,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     *entry=field(entry,SCALAR,&params,&format!("scale/{component}"))?;
                 }
             } else {
-                let dimension = if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
+                let dimension = if exact_primitive { match key.as_str() { "max_work" => SCALAR, "axes" if !exact_ellipsoid => SCALAR, _ => LENGTH } } else if engineering_profile { match key.as_str() { "normal" | "teeth" | "ribs" => SCALAR, "gap_degrees" | "start_degrees" | "sweep_degrees" => ANGLE, _ => LENGTH } } else if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
                     "height",
                     "width",
                     "z_min",
@@ -376,7 +388,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "path",
                     "tangent_u", "tangent_v", "twist", "points", "tangents", "start_tangent", "end_tangent", "start_tangents", "end_tangents",
                     "corners",
-                    "wall_tolerance", "quantum", "max_deviation", "budget", "error_budget", "cap_correction_tolerance", "cap_correction_quantum", "circle_correction_tolerance", "circle_correction_quantum",
+                    "distances_mm", "distance_mm", "probe_point", "balance_tolerance", "plane_offsets", "weight_radii", "plane_point", "axis_point", "reference_point", "tolerance_mm", "reverse_limit", "wall_tolerance", "quantum", "max_deviation", "budget", "error_budget", "cap_correction_tolerance", "cap_correction_quantum", "circle_correction_tolerance", "circle_correction_quantum",
                     "vertices",
                     "axis_u", "axis_v", "radii", "radial_radius", "axial_radius",
                     "radius_x", "radius_y", "bounds",

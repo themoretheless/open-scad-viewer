@@ -187,6 +187,116 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // Engineering profiles: raw WASM 19015858, packed geometry 6775441, distribution assets 12851095.
+  '9d18af4d9b9cd8f8eec0cf45cbbc595c4c51946c8208d082ad41c55d4998305a':Object.freeze({
+    version:23,geometryChunkBytes:6777000,totalAssetBytes:12857000,rawGeometryBytes:19016000,
+    namedJsChunkBytes:Object.freeze({index:256600,DirectModeler:511200,geometryBuildEngine:335200,wasmStreaming:196700}),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // Sweep proof kernel with the same size caps as v22.
+  'ae4656234ee9522506e958287cd019e8adc881947d742bc787fb72d404a20b30':Object.freeze({
+    version:24,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // Surface split, transpose and Bezier decomposition: 18,734,435 raw bytes, retaining the v24 limits.
+  '1c2649097862e2cf909d41b3962701d76aed6d098df4c1f6666a021102eae53f':Object.freeze({
+    version:25,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // Verified periodic seam relocation and editable weights: 18,760,944 raw bytes, retaining the v25 limits.
+  '18d8435331735d1613dccfaabbb4932e023b8667778a5ea056861c4bcd48ec37':Object.freeze({
+    version:26,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // Exact curve and surface edits: 18,792,232 raw bytes, retaining the v26 limits.
+  '816b475eeb5eed74abe3fe32a5c2ebdf8bf032218e3c6cfa6977ebf5f006bf95':Object.freeze({
+    version:27,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
+  // Rational factors and exact restrictions: 18,813,732 raw bytes, unchanged aggregate limits. Geometry worker dependency measured at 100,060 bytes.
+  '2d6c6814ec68669abef73f2d9e73ba3906c0f5cec7ca04082e7a8e89660c9d3e':Object.freeze({
+    version:28,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BG1iAHJS.js':100_100}),
+  }),
+  // Exact periodic surface edits: 18,845,473 raw bytes, 6,732,643 packed bytes and 12,837,450 asset bytes.
+  'e352c3dd3de504df52741ab341fab44db6ca85be7713306d35c72375d4417326':Object.freeze({
+    version:29,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CzWQW3wi.js':101_100}),
+  }),
+  // Periodic strip and grid assembly: 18,861,337 raw bytes, 6,738,481 packed bytes and 12,850,901 asset bytes with editor measurement reports.
+  '83867cf774759f75cb5ab73a12ba2edef0af998989d45fc7c0cb16d06e2a682d':Object.freeze({
+    version:30,geometryChunkBytes:6_760_000,totalAssetBytes:12_860_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/Bo28C-Kr.js':102_100}),
+  }),
+  // Axial derivative peaks and their parameter locations: 18,879,542 raw bytes, 6,743,640 packed bytes and 12,859,443 asset bytes.
+  '62464fd2457d45bf5a76469b76081029d81e0b841fb02ea60444bf9b2247ab59':Object.freeze({
+    version:31,geometryChunkBytes:6_760_000,totalAssetBytes:12_860_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/glh_OBZk.js':102_500}),
+  }),
+  // Axial motion limits, duration and slowdown: 18,894,516 raw bytes, 6,747,112 packed bytes and 12,867,338 asset bytes.
+  '6e5130767022c223c9e5612d878b51315f6a0d899c72cb718d13e50c483e053c':Object.freeze({
+    version:32,geometryChunkBytes:6_760_000,totalAssetBytes:12_870_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/Xy2E_Dxs.js':103_000}),
+  }),
+  // Motion interval partitions and full-domain travel: 18,921,391 raw bytes, 6,754,287 packed bytes and 12,893,707 asset bytes with exact rational trim ranges.
+  'd443112ced2ec682c03930fe6eec4e101efd86c34e71c970b1a9efb62c0af10b':Object.freeze({
+    version:33,geometryChunkBytes:6_760_000,totalAssetBytes:12_900_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CQuDnQJd.js':108_600}),
+  }),
+  // Exact periodic UV path measurements: 18,953,072 raw bytes, 6,765,284 packed bytes and 12,908,847 asset bytes.
+  'a7946f7571dc256d52f9ed122a15c295716be7e3a318daded61bca3dd738a797':Object.freeze({
+    version:34,geometryChunkBytes:6_770_000,totalAssetBytes:12_910_000,rawGeometryBytes:18_960_000,
+    namedJsChunkBytes:Object.freeze({
+      index:257_200,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CLGKAjgu.js':109_000}),
+  }),
+  // Exact periodic region classification and moments: 18,991,115 raw bytes, 6,776,652 packed bytes and 12,924,817 asset bytes.
+  '135414b46f669329bdf777a21b8b5be985cddff64227eac73f182134e6c3cf65':Object.freeze({
+    version:35,geometryChunkBytes:6_780_000,totalAssetBytes:12_930_000,rawGeometryBytes:19_000_000,
+    namedJsChunkBytes:Object.freeze({
+      index:258_400,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BFHbW7Ps.js':109_700}),
+  }),
+  // Trim contour distance and projection reports: 19,014,081 raw bytes, 6,783,057 packed bytes and 12,936,557 asset bytes.
+  'c6190d70c800ea78c41fa6d94bd94e8775b773b601911167a4d8b3137dfc24f2':Object.freeze({
+    version:36,geometryChunkBytes:6_790_000,totalAssetBytes:12_940_000,rawGeometryBytes:19_020_000,
+    namedJsChunkBytes:Object.freeze({
+      index:259_700,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BN9Hwdok.js':110_300}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

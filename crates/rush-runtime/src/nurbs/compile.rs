@@ -164,7 +164,12 @@ pub(super) fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Resu
         }
         "string" => {
             let text = v.as_str().ok_or_else(|| err(path, "Expected string."))?;
-            if schema.get("pattern").is_some() && !valid_id(text) {
+            if schema["pattern"].as_str() == Some(r"^[0-9]{1,1234}\/[0-9]{1,1234}$") {
+                let digits = |s: &str| (1..=1234).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit());
+                if !text.split_once('/').is_some_and(|(n,d)| digits(n) && digits(d)) {
+                    return Err(err(path, "Expected a rational parameter as unsigned numerator/denominator text."));
+                }
+            } else if schema.get("pattern").is_some() && !valid_id(text) {
                 return Err(err(path, "Invalid identifier."));
             }
         }
@@ -300,7 +305,7 @@ pub fn compile(mut document: J) -> Result<J> {
             }
             if let Some(xs)=node["guides"].as_array(){refs.extend(xs.iter().filter_map(J::as_str));}
         }
-        if ["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(node,"op")) {
+        if ["loft_match_surface","brep_rational_loft","brep_natural_loft","brep_capped_loft"].contains(&s(node,"op")) {
             fn collect<'a>(value:&'a J,refs:&mut Vec<&'a str>){
                 if let Some(id)=value.as_str(){refs.push(id);}
                 else if let Some(items)=value.as_array(){for item in items{collect(item,refs);}}

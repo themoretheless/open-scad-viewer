@@ -12,4 +12,5 @@ if (process.versions.node.startsWith('20.') && process.arch === 'arm64') {
 // preload runs outside the main thread. Register the TypeScript loader inside
 // this disposable realm before importing its real entrypoint.
 register()
+await import('./registerRawSourceImports.mjs')
 await import('./directGeometry.worker.ts')

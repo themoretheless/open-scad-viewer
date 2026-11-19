@@ -2,8 +2,15 @@ use super::*;
 
 const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
     "iso_curve",
+    "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild",
+    "surface_split",
+    "surface_transpose",
+    "surface_bezier_patch",
+    "curve_edit_weights", "curve_relocate_seam", "surface_edit_weights", "surface_relocate_seam", "curve_exact_insert_knot", "curve_exact_remove_knot", "curve_exact_reduce_degree", "surface_exact_insert_knot", "surface_exact_remove_knot", "surface_exact_reduce_degree", "curve_normalize_weights", "curve_cancel_factor", "surface_cancel_factor", "curve_exact_split", "curve_exact_restrict", "curve_exact_partition", "curve_exact_elevate", "rotate_periodic_surface_at_exact_knot", "insert_and_rotate_periodic_surface_seam", "open_exact_periodic_surface_axis", "restrict_exact_periodic_surface_axis", "restrict_exact_periodic_surface_over_turns", "restrict_exact_doubly_periodic_surface", "restrict_exact_doubly_periodic_surface_over_turns", "partition_exact_periodic_surface_axis", "partition_exact_periodic_surface_over_turns", "partition_exact_doubly_periodic_surface", "partition_exact_doubly_periodic_surface_over_turns", "remove_exact_periodic_surface_knot", "simplify_exact_periodic_surface_axis", "remove_exact_periodic_surface_seam_knot", "simplify_exact_doubly_periodic_surface", "reduce_exact_periodic_surface_period", "repeat_exact_periodic_surface_period", "curve_reparameterize",
     "curve_split",
     "curve_bezier_span",
+    "rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile",
+    "exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region",
     "helix_curve",
     "ribbon_surface",
     "variable_pipe_surface",
@@ -35,6 +42,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
 ];
 
 const MODIFIER_OPS: &[&str] = &[
+    "curve_axis_motion_partition_speed", "curve_axis_motion_partition_motion", "curve_axis_motion_partition_axes", "curve_axis_motion_limits", "curve_axis_motion_slowdown", "curve_axis_motion_multi_slowdown", "curve_axis_motion_duration", "curve_axis_motion_deadline", "curve_directional_travel_full", "curve_directional_travel_signed", "curve_check_backtracking", "surface_trim_contour_audit", "surface_trim_contour_station", "surface_trim_contour_station_box", "surface_trim_contour_divide", "surface_trim_patch_area_vector", "surface_trim_patch_projected_area", "surface_trim_range_length", "evaluate_exact_wrapped_surface_point", "evaluate_exact_wrapped_surface_points", "lift_exact_periodic_surface_path", "exact_periodic_surface_path_winding", "exact_periodic_surface_path_signed_area", "exact_periodic_surface_path_centroid", "exact_periodic_surface_path_inertia", "classify_exact_periodic_surface_path_point", "classify_exact_periodic_surface_path_points", "classify_exact_periodic_surface_region_points", "certify_exact_periodic_surface_path_simplicity", "check_exact_periodic_surface_path_contact", "relate_exact_periodic_surface_paths", "exact_periodic_surface_contour_forest", "exact_periodic_surface_region_area", "exact_periodic_surface_region_component_centroids", "exact_periodic_surface_region_component_inertia", "measure_input_contour_length", "measure_input_segment_length", "measure_input_segment_range_length", "locate_input_segment_at_length", "measure_input_contour_prefix_lengths", "locate_input_contour_at_lengths", "divide_input_contour_by_length", "exact_input_contour_projected_area", "exact_input_contour_polynomial_projected_area", "bound_input_contour_projected_area", "bound_input_patch_max_projected_area", "bound_input_patch_max_projection_direction", "surface_trim_area", "surface_trim_mass_properties", "surface_trim_window_properties", "surface_trim_set_properties", "surface_measure_trimmed_mass", "curve_axial_derivative_peak", "curve_measure_directional_travel", "curve_measure_directional_travel_batch",
     "polygon_extrude",
     "polygon_sweep",
     "mesh_to_nurbs_brep",
@@ -61,6 +69,11 @@ const MODIFIER_OPS: &[&str] = &[
     "screw_surface",
     "surface_extrude_patches",
     "iso_curve",
+    "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild",
+    "surface_split",
+    "surface_transpose",
+    "surface_bezier_patch",
+    "curve_edit_weights", "curve_relocate_seam", "surface_edit_weights", "surface_relocate_seam", "curve_exact_insert_knot", "curve_exact_remove_knot", "curve_exact_reduce_degree", "surface_exact_insert_knot", "surface_exact_remove_knot", "surface_exact_reduce_degree", "curve_normalize_weights", "curve_cancel_factor", "surface_cancel_factor", "curve_exact_split", "curve_exact_restrict", "curve_exact_partition", "curve_exact_elevate", "rotate_periodic_surface_at_exact_knot", "insert_and_rotate_periodic_surface_seam", "open_exact_periodic_surface_axis", "restrict_exact_periodic_surface_axis", "restrict_exact_periodic_surface_over_turns", "restrict_exact_doubly_periodic_surface", "restrict_exact_doubly_periodic_surface_over_turns", "partition_exact_periodic_surface_axis", "partition_exact_periodic_surface_over_turns", "partition_exact_doubly_periodic_surface", "partition_exact_doubly_periodic_surface_over_turns", "remove_exact_periodic_surface_knot", "simplify_exact_periodic_surface_axis", "remove_exact_periodic_surface_seam_knot", "simplify_exact_doubly_periodic_surface", "reduce_exact_periodic_surface_period", "repeat_exact_periodic_surface_period", "curve_reparameterize",
     "curve_split",
     "curve_bezier_span",
     "curve_edit",
@@ -121,6 +134,12 @@ impl Compiler {
     }
 
     fn lower_signature_argument(&mut self, name: &str, key: &str, v: V) -> R<J> {
+        if name == "surface_trim_range_length" && matches!(key, "range_start" | "range_end") {
+            let value = raw(v)?;
+            let ratio = value.as_str().or_else(|| value.get("text").and_then(J::as_str))
+                .ok_or_else(|| crate::error("Expected a rational parameter as numerator/denominator text"))?;
+            return Ok(J::String(ratio.to_owned()));
+        }
         if (name == "ribbon_surface" && key == "width_law")
             || (name == "variable_pipe_surface" && key == "radius_law")
         {
@@ -132,10 +151,16 @@ impl Compiler {
         if [
             "herringbone",
             "internal",
+            "principal_axes",
+            "static_unbalance",
+            "couple_unbalance",
+            "radius_of_gyration",
             "left_handed",
             "lower",
             "closed",
             "periodic",
+            "periodic_u",
+            "periodic_v",
             "reverse",
             "reverse_u",
             "reverse_v",

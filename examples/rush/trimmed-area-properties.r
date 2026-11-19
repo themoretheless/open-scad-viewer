@@ -1,0 +1,8 @@
+// @rush/1
+profile = nurbs_curve(degree:1,knots:[-1,0,1,2,3,4,5],control_points:[[0,0,0],[1mm,0,0],[1mm,1mm,0],[0,1mm,0],[0,0,0]],weights:[1,1,1,1,1],periodic:true)
+chart = profile.surface_extrude(vector:[0,0,2mm])
+area = chart.surface_trim_area(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],tolerance_mm2:0.05,tolerance_uv:0.0000000001,max_work:1000000,max_surface_cells:20000,max_trim_cells:1000000,outer_contour:0)
+props = area.surface_trim_mass_properties(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],tolerance_mm2:0.005,tolerance_uv:0.0000000001,max_work:1000000,max_surface_cells:20000,max_trim_cells:1000000,outer_contour:0,moment_tolerance:0.00000001)
+window = props.surface_trim_window_properties(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],tolerance_mm2:0.001,tolerance_uv:0.0000000001,max_work:1000000,max_surface_cells:20000,max_trim_cells:1000000,outer_contour:0,moment_tolerance:0.00000001,uv_window:[[3.75,4.25],[0.375,0.625]])
+assembly = window.surface_trim_set_properties(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]],[[0.1875,0.375],[0.3125,0.375],[0.3125,0.625],[0.1875,0.625],[0.1875,0.375]]],tolerance_mm2:0.05,tolerance_uv:0.0000000001,max_work:1000000,max_surface_cells:20000,max_trim_cells:1000000,moment_tolerance:10,axis_point:[1,0,5],axis_vector:[0,0,-2],reference_point:[1,0,0],radius_of_gyration:true)
+show assembly.tessellate(8,4)

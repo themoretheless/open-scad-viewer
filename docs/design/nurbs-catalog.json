@@ -3382,13 +3382,15 @@
     {
       "id": "NURBS-0094",
       "name": "корпус по сечениям",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::rational_section_loft",
       "evidence": [
         "crates/brep-core/src/parts/analytic/rational_loft.rs",
         "crates/cad-step/tests/rational_section_loft.rs",
         "docs/design/nurbs-body-by-sections.md",
-        "docs/qualification/nurbs-body-sections-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-body-sections-2026-10-15/native-tests.json",
+        "examples/rush/rational-loft-tube.r",
+        "tests/rushRationalSectionLoft.test.ts"
       ],
       "remainingQualification": [
         "Global embedding, self-intersection, outwardness and solid geometry remain separate audits",
@@ -4046,7 +4048,7 @@
     {
       "id": "NURBS-0114",
       "name": "скруглённый прямоугольный профиль",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4056,13 +4058,17 @@
       "nativeApi": "nurbs_core::engineering_profiles::rounded_rectangle",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
-        "crates/nurbs-core/examples/engineering_profiles.rs"
+        "crates/nurbs-core/examples/engineering_profiles.rs",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0115",
       "name": "капсульный профиль",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4072,13 +4078,17 @@
       "nativeApi": "nurbs_core::engineering_profiles::capsule",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
-        "crates/nurbs-core/examples/engineering_profiles.rs"
+        "crates/nurbs-core/examples/engineering_profiles.rs",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0116",
       "name": "плоский кольцевой сектор",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4088,13 +4098,17 @@
       "nativeApi": "nurbs_core::engineering_profiles::annular_sector",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
-        "crates/nurbs-core/examples/engineering_profiles.rs"
+        "crates/nurbs-core/examples/engineering_profiles.rs",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0117",
       "name": "профиль шпоночного паза",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4106,13 +4120,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0118",
       "name": "профиль Т-образного паза",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4124,13 +4142,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0119",
       "name": "профиль ласточкин хвост",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4142,13 +4164,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0120",
       "name": "профиль поликлинового ремня",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4160,13 +4186,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0121",
       "name": "профиль зубчатого ремня",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4178,13 +4208,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0122",
       "name": "профиль O-ring канавки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4196,13 +4230,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/o_ring_groove.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0123",
       "name": "профиль стопорного кольца",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4213,13 +4251,17 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0124",
       "name": "профиль шестигранного крепежа",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4230,13 +4272,17 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0125",
       "name": "профиль квадратного крепежа",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4247,7 +4293,11 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
@@ -4383,7 +4433,7 @@
     {
       "id": "NURBS-0132",
       "name": "удаление узла кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4394,13 +4444,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/knot_removal.rs",
-        "docs/design/nurbs-knot-removal.md"
+        "docs/design/nurbs-knot-removal.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0133",
       "name": "понижение степени кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4413,13 +4465,15 @@
         "crates/nurbs-core/tests/degree_reduction.rs",
         "docs/design/nurbs-degree-reduction.md",
         "crates/nurbs-geometry/src/curve_identity.rs",
-        "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json"
+        "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0134",
       "name": "rebuild кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4429,13 +4483,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/curve_rebuild.rs",
-        "docs/design/nurbs-curve-rebuild.md"
+        "docs/design/nurbs-curve-rebuild.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0135",
       "name": "перенос шва периодической кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4449,14 +4505,16 @@
         "crates/nurbs-core/tests/periodic_seam.rs",
         "docs/design/nurbs-periodic-seam.md",
         "crates/nurbs-core/tests/periodic_seam_candidates.rs",
-        "docs/design/nurbs-periodic-seam-verification.md"
+        "docs/design/nurbs-periodic-seam-verification.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ],
       "nativeApi": "nurbs_core::periodic_seam::curve_report"
     },
     {
       "id": "NURBS-0136",
       "name": "линейная перепараметризация кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4467,13 +4525,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/exact_edits.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "tests/rushAffineDomain.test.ts",
+        "examples/rush/affine-profile-domain.r"
       ]
     },
     {
       "id": "NURBS-0137",
       "name": "локальное изменение весов кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4483,7 +4543,9 @@
       "evidence": [
         "crates/nurbs-core/src/editing/weight_edit.rs",
         "crates/nurbs-core/tests/weight_edit.rs",
-        "docs/design/nurbs-weight-edit.md"
+        "docs/design/nurbs-weight-edit.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ]
     },
     {
@@ -4535,7 +4597,7 @@
     {
       "id": "NURBS-0140",
       "name": "разбиение поверхности по изолинии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4547,7 +4609,9 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "tests/rushSurfacePatchEdits.test.ts",
+        "examples/rush/split-bezier-panel.r"
       ]
     },
     {
@@ -4575,7 +4639,7 @@
     {
       "id": "NURBS-0142",
       "name": "перестановка U и V поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4588,7 +4652,9 @@
         "crates/nurbs-geometry/src/surface_transpose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "tests/rushSurfacePatchEdits.test.ts",
+        "examples/rush/split-bezier-panel.r"
       ]
     },
     {
@@ -4617,7 +4683,7 @@
     {
       "id": "NURBS-0144",
       "name": "разложение поверхности на рациональные патчи Безье",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4630,13 +4696,15 @@
         "crates/nurbs-geometry/src/surface_decompose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "tests/rushSurfacePatchEdits.test.ts",
+        "examples/rush/split-bezier-panel.r"
       ]
     },
     {
       "id": "NURBS-0145",
       "name": "удаление узлов поверхности с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4647,13 +4715,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/surface_simplification.rs",
-        "docs/design/nurbs-surface-simplification.md"
+        "docs/design/nurbs-surface-simplification.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0146",
       "name": "понижение степени поверхности с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4664,13 +4734,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/surface_simplification.rs",
-        "docs/design/nurbs-surface-simplification.md"
+        "docs/design/nurbs-surface-simplification.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0147",
       "name": "rebuild поверхности с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4680,13 +4752,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/surface_rebuild.rs",
-        "docs/design/nurbs-surface-rebuild.md"
+        "docs/design/nurbs-surface-rebuild.md",
+        "tests/rushApproximateEdits.test.ts",
+        "examples/rush/simplify-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0148",
       "name": "перенос шва периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4701,14 +4775,16 @@
         "docs/design/nurbs-periodic-seam.md",
         "crates/nurbs-core/tests/periodic_seam_candidates.rs",
         "crates/nurbs-core/tests/periodic_surface_verification.rs",
-        "docs/design/nurbs-periodic-surface-verification.md"
+        "docs/design/nurbs-periodic-surface-verification.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ],
       "nativeApi": "nurbs_core::periodic_seam::surface_report"
     },
     {
       "id": "NURBS-0149",
       "name": "локальное изменение весов поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4718,7 +4794,9 @@
       "evidence": [
         "crates/nurbs-core/src/editing/weight_edit.rs",
         "crates/nurbs-core/tests/weight_edit.rs",
-        "docs/design/nurbs-weight-edit.md"
+        "docs/design/nurbs-weight-edit.md",
+        "examples/rush/periodic-weighted-strip.r",
+        "tests/rushPeriodicEdits.test.ts"
       ]
     },
     {
@@ -6205,7 +6283,7 @@
     {
       "id": "NURBS-0224",
       "name": "точное удаление узла NURBS с сохранением исходной параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_knot_removal::remove",
@@ -6215,7 +6293,9 @@
         "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
         "docs/design/nurbs-exact-knot-removal.md",
         "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "one verified proposal, not exhaustive representability search; nonperiodic clamped degree1..25, shared work refusal allowed; nominal geometry only, no machine-bit evaluation or B-rep authority",
@@ -6246,7 +6326,7 @@
     {
       "id": "NURBS-0226",
       "name": "точное удаление узла тензорной NURBS-поверхности с сохранением UV",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::remove",
@@ -6260,7 +6340,9 @@
         "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json",
         "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
         "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
@@ -6270,7 +6352,7 @@
     {
       "id": "NURBS-0227",
       "name": "точное понижение степени составной рациональной кривой Безье с сохранением параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_degree_reduction::reduce",
@@ -6284,7 +6366,9 @@
         "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py",
         "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
         "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority",
@@ -6294,7 +6378,7 @@
     {
       "id": "NURBS-0228",
       "name": "точное понижение степени NURBS-поверхности по U/V с сохранением UV и знаменателей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_degree_reduction::reduce",
@@ -6308,7 +6392,9 @@
         "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact_oracle.py",
         "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
         "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority; tensor row denominator identity also required",
@@ -6360,7 +6446,7 @@
     {
       "id": "NURBS-0231",
       "name": "Точная общая нормализация рациональных весов кривых и поверхностей степенью двойки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное рациональное представление",
       "nativeApi": "nurbs_core::editing::rational_gauge::normalize_curve",
@@ -6370,7 +6456,9 @@
         "crates/nurbs-core/tests/rational_gauge_contracts.rs",
         "docs/design/nurbs-rational-gauge.md",
         "docs/qualification/nurbs-rational-gauge-native-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-rational-gauge-native-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-rational-gauge-native-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-factor-curve.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Native representation operation only; unchanged existing limits. No evaluator bit identity or downstream source-bound certificate reuse.",
@@ -6380,7 +6468,7 @@
     {
       "id": "NURBS-0232",
       "name": "Точное сокращение общих полиномиальных множителей рационального сегмента Безье с сохранением параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::rational_factor::cancel",
@@ -6393,7 +6481,9 @@
         "crates/nurbs-core/tests/rational_factor_contracts.rs",
         "docs/design/nurbs-rational-factor.md",
         "docs/qualification/nurbs-rational-factor-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-rational-factor-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-rational-factor-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-factor-curve.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "One validated nonperiodic clamped Bezier segment only; exact binary64 positive-weight output or atomic refusal under original1m work and declared4096-bit proposal cap. No evaluator-bit or old source/topology certificate reuse.",
@@ -6403,7 +6493,7 @@
     {
       "id": "NURBS-0233",
       "name": "Точная пакетная вставка внутренних узлов рациональной B-spline-кривой с сохранением всей параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::insert",
@@ -6413,7 +6503,9 @@
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/design/nurbs-exact-knot-insertion.md",
         "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "Validated nonperiodic curves and strictly internal knots only; exact binary64 output or atomic refusal; unchanged degree, multiplicity, 256-pole, 1m-work and 4096-bit proposal bounds. No floating-evaluator bit identity or downstream certificate reuse.",
@@ -6423,7 +6515,7 @@
     {
       "id": "NURBS-0234",
       "name": "Точная пакетная вставка внутренних узлов рациональной тензорной поверхности по U/V с сохранением всей параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::insert",
@@ -6435,7 +6527,9 @@
         "docs/design/nurbs-exact-surface-knot-insertion.md",
         "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/receipt.json",
         "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py",
-        "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json",
+        "examples/rush/exact-compact-strip.r",
+        "tests/rushExactCompactEdits.test.ts"
       ],
       "remainingQualification": [
         "Selected axis nonperiodic, strictly internal knots only. Untouched periodic axis preserved. Global tensor weight gauge plus complete row geometry and proportional denominator proofs; atomic refusal under unchanged limits.",
@@ -6445,7 +6539,7 @@
     {
       "id": "NURBS-0235",
       "name": "Точное сокращение общего полиномиального множителя тензорной рациональной поверхности с сохранением полной UV-параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::rational_surface_factor::cancel",
@@ -6455,7 +6549,9 @@
         "crates/nurbs-core/tests/rational_surface_factor_contracts.rs",
         "docs/design/nurbs-rational-surface-factor.md",
         "docs/qualification/nurbs-rational-surface-factor-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py",
+        "examples/rush/exact-factor-panel.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "One selected nonperiodic clamped Bezier axis; untouched basis may be multispan/periodic. Exact positive binary64 storage or unchanged-source refusal under existing degree1..25,256-pole,4096-bit and shared1m-work caps. No evaluator-bit identity or old source/topology certificate reuse.",
@@ -6465,7 +6561,7 @@
     {
       "id": "NURBS-0236",
       "name": "Точный полный аффинный эллипс с рациональными весами и доказательством всей ориентированной геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-construction",
       "category": "Точное построение",
       "nativeApi": "nurbs_core::primitives::exact_conics::ellipse",
@@ -6485,7 +6581,9 @@
         "docs/qualification/nurbs-exact-primitive-transport-2026-11-03/exact_wire_oracle.py",
         "scripts/check-exact-primitives-wasm.mts",
         "docs/design/nurbs-wasm-delivery.md",
-        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json"
+        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushExactPrimitives.test.ts"
       ],
       "remainingQualification": [
         "Finite exactly independent authored axes; whole closed ellipse, variable rational angular clock, positive binary64 rational weights and exact pole storage or atomic refusal under unchanged1m-work/4096-bit limits. No legacy-clock/evaluator-bit identity.",
@@ -6496,7 +6594,7 @@
     {
       "id": "NURBS-0237",
       "name": "Точный полный аффинный эллипсоид с рациональными весами, доказательством покрытия, полюсов и шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-construction",
       "category": "Точное построение",
       "nativeApi": "nurbs_core::primitives::exact_quadrics::ellipsoid",
@@ -6518,7 +6616,9 @@
         "docs/qualification/nurbs-exact-primitive-transport-2026-11-03/exact_wire_oracle.py",
         "scripts/check-exact-primitives-wasm.mts",
         "docs/design/nurbs-wasm-delivery.md",
-        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json"
+        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushExactPrimitives.test.ts"
       ],
       "remainingQualification": [
         "Three finite exactly independent authored axes, including oblique/reflected frames. Entire 9x5 quadratic surface with variable rational clocks, nonperiodic clamped storage, intentional collapsed poles and longitude seam. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
@@ -6529,7 +6629,7 @@
     {
       "id": "NURBS-0238",
       "name": "Точный полный аффинный кольцевой тор с рациональными весами, доказательством покрытия, швов и отсутствия самопересечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-construction",
       "category": "Точное построение",
       "nativeApi": "nurbs_core::primitives::exact_tori::ring",
@@ -6551,7 +6651,9 @@
         "docs/qualification/nurbs-exact-primitive-transport-2026-11-03/exact_wire_oracle.py",
         "scripts/check-exact-primitives-wasm.mts",
         "docs/design/nurbs-wasm-delivery.md",
-        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json"
+        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushExactPrimitives.test.ts"
       ],
       "remainingQualification": [
         "Three finite exactly independent authored axes, R>r>0. Entire 9x9 quadratic tensor with two full variable rational clocks, exact repeated seams, nonperiodic clamped storage. Embedded ring geometry modulo seams; horn/spindle/zero-tube domains rejected. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
@@ -6562,7 +6664,7 @@
     {
       "id": "NURBS-0239",
       "name": "Точные аффинные цилиндрические и конические боковые поверхности с доказательством полной параметризации и явной вырожденной вершиной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-construction",
       "category": "Точное построение",
       "nativeApi": "nurbs_core::primitives::exact_frusta::side",
@@ -6584,7 +6686,9 @@
         "docs/qualification/nurbs-exact-primitive-transport-2026-11-03/exact_wire_oracle.py",
         "scripts/check-exact-primitives-wasm.mts",
         "docs/design/nurbs-wasm-delivery.md",
-        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json"
+        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushExactPrimitives.test.ts"
       ],
       "remainingQualification": [
         "Three finite exactly independent authored axes and nonnegative finite end radii, not both zero. One 9x2 degree2x1 family includes cylinder/frustum/one-apex cones, full canonical angular and linear-height clocks, seam and explicit intrinsically nonsmooth collapsed endpoint. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
@@ -6595,7 +6699,7 @@
     {
       "id": "NURBS-0240",
       "name": "Точные полные аффинные плоские диски и кольца с доказательством покрытия и регулярного центра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-construction",
       "category": "Точное построение",
       "nativeApi": "nurbs_core::primitives::exact_planar_regions::radial",
@@ -6616,7 +6720,9 @@
         "docs/qualification/nurbs-exact-primitive-transport-2026-11-03/exact_wire_oracle.py",
         "scripts/check-exact-primitives-wasm.mts",
         "docs/design/nurbs-wasm-delivery.md",
-        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json"
+        "docs/qualification/nurbs-wasm-delivery-2026-11-03/receipt.json",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushExactPrimitives.test.ts"
       ],
       "remainingQualification": [
         "Two finite exactly independent authored axes, 0<=inner<outer. Whole9x2 degree2x1 filled-disk/annulus family with canonical angular/linear radial clocks, repeated seam, real inner boundary or collapsed parameter center with regular plane image. Exact nonzero2x2 minor and full plane equation, exact positive binary64 storage or atomic refusal under unchanged shared1m-work/4096-bit guards.",
@@ -12809,7 +12915,7 @@
     {
       "id": "NURBS-0489",
       "name": "Точное разделение рациональной NURBS-кривой с сохранением исходного параметра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::split",
@@ -12818,7 +12924,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-489-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-489-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-489-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Split an original nonperiodic NURBS curve into two exact restrictions with the original absolute parameter.",
@@ -12829,7 +12937,7 @@
     {
       "id": "NURBS-0490",
       "name": "Точное выделение подынтервала рациональной NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::restrict",
@@ -12838,7 +12946,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-490-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-490-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-490-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Restrict the original NURBS parameter law to a closed interval without rounding the geometry.",
@@ -12849,7 +12959,7 @@
     {
       "id": "NURBS-0491",
       "name": "Атомарное точное разбиение рациональной NURBS-кривой по нескольким параметрам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::partition",
@@ -12858,7 +12968,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-491-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-491-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-491-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Partition the original NURBS curve at several absolute parameters under one exact work budget.",
@@ -12909,7 +13021,7 @@
     {
       "id": "NURBS-0494",
       "name": "Точное повышение степени рациональной NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::elevate_exact",
@@ -12918,7 +13030,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-494-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-494-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-494-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Elevate clamped NURBS curves with exact homogeneous Bézier arithmetic and full definition proof.",
@@ -13295,7 +13409,7 @@
     {
       "id": "NURBS-0513",
       "name": "Точный перенос шва периодической NURBS-поверхности по U или V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::rotate_periodic_surface_at_exact_knot",
@@ -13305,7 +13419,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-513-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-513-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-513-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Rotate an existing periodic surface knot and the complete rational control net without rounding.",
@@ -13316,7 +13432,7 @@
     {
       "id": "NURBS-0514",
       "name": "Точный перенос шва NURBS-поверхности внутрь участка по U или V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::insert_and_rotate_periodic_surface_seam",
@@ -13326,7 +13442,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-514-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-514-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-514-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Insert a periodic seam in exact homogeneous arithmetic with one common tensor weight gauge.",
@@ -13337,7 +13455,7 @@
     {
       "id": "NURBS-0515",
       "name": "Точное раскрытие периода NURBS-поверхности по U или V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::open_exact_periodic_surface_axis",
@@ -13347,7 +13465,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-515-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-515-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-515-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Clamp one periodic surface axis in exact homogeneous arithmetic with a single tensor-wide weight gauge.",
@@ -13358,7 +13478,7 @@
     {
       "id": "NURBS-0516",
       "name": "Точное извлечение полосы NURBS-поверхности через периодический шов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_periodic_surface_axis",
@@ -13368,7 +13488,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-516-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-516-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-516-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped strip through the periodic seam in either axis on the lifted tensor clock.",
@@ -13379,7 +13501,7 @@
     {
       "id": "NURBS-0517",
       "name": "Точное извлечение прямоугольника NURBS-поверхности через оба периодических шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_doubly_periodic_surface",
@@ -13389,7 +13511,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-517-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-517-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-517-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped tensor rectangle in the lifted U and V clocks with atomic refusal.",
@@ -13400,7 +13524,7 @@
     {
       "id": "NURBS-0518",
       "name": "Точное разбиение периода NURBS-поверхности на полосы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_periodic_surface_axis",
@@ -13410,7 +13534,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-518-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-518-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-518-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Partition one shifted period into exact tensor strips with atomic refusal.",
@@ -13421,7 +13547,7 @@
     {
       "id": "NURBS-0519",
       "name": "Точное разбиение дважды периодической NURBS-поверхности на сетку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface",
@@ -13431,7 +13557,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-519-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-519-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-519-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Tile one complete turn on each axis with exact clamped tensor patches.",
@@ -13442,7 +13570,7 @@
     {
       "id": "NURBS-0520",
       "name": "Точная сборка полос NURBS-поверхности в периодическое представление",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_exact_periodic_surface_axis",
@@ -13452,7 +13580,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-520-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-520-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-520-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Assemble compatible strips, prove exact seam control and weight identity, and store one periodic surface axis.",
@@ -13463,7 +13593,7 @@
     {
       "id": "NURBS-0521",
       "name": "Точная сборка сетки NURBS-патчей в дважды периодическую поверхность",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_exact_doubly_periodic_surface",
@@ -13473,7 +13603,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-521-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-521-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-521-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Assemble an ordered grid of compatible patches with exact C0 wraps in both axes.",
@@ -13484,7 +13616,7 @@
     {
       "id": "NURBS-0522",
       "name": "Сборка периодических NURBS-полос с точным согласованием весов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_weight_scaling",
@@ -13494,7 +13626,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-522-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-522-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-522-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Reconcile proportional boundary weights using one exact scale per strip before periodic assembly.",
@@ -13505,7 +13639,7 @@
     {
       "id": "NURBS-0523",
       "name": "Сборка дважды периодической NURBS-сетки с точным согласованием весов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_doubly_periodic_surface_with_exact_weight_scaling",
@@ -13515,7 +13649,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-523-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-523-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-523-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Align proportional rational weights across both periodic surface axes while preserving every patch law.",
@@ -13526,7 +13662,7 @@
     {
       "id": "NURBS-0524",
       "name": "Сборка периодических NURBS-полос с точным объединением поперечных узлов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_knot_union",
@@ -13536,7 +13672,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-524-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-524-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-524-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Refine clamped transverse bases to their exact multiplicity union before periodic strip assembly.",
@@ -13547,7 +13685,7 @@
     {
       "id": "NURBS-0525",
       "name": "Точное согласование поперечных степеней при сборке периодических NURBS-полос",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_basis_matching",
@@ -13557,7 +13695,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-525-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-525-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-525-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Elevate clamped transverse axes in exact homogeneous arithmetic and assemble the common knot basis.",
@@ -13568,7 +13708,7 @@
     {
       "id": "NURBS-0526",
       "name": "Точное согласование степеней вдоль оси сборки периодических NURBS-полос",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_degree_matching",
@@ -13578,7 +13718,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-526-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-526-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-526-2026-11-17/native.log.gz",
+        "examples/rush/exact-periodic-strip-assembly.r",
+        "tests/rushPeriodicAssembly.test.ts"
       ],
       "remainingQualification": [
         "Elevate mixed assembly-axis degrees, match transverse bases, and preserve the full UV laws.",
@@ -13589,7 +13731,7 @@
     {
       "id": "NURBS-0527",
       "name": "Точное удаление лишнего узла периодической NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::remove_exact_periodic_surface_knot",
@@ -13599,7 +13741,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-527-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-527-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-527-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Remove an interior knot under an exact tensor proof and restore cyclic storage with fewer controls.",
@@ -13610,7 +13754,7 @@
     {
       "id": "NURBS-0528",
       "name": "Точное пакетное упрощение периодической оси NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::simplify_exact_periodic_surface_axis",
@@ -13620,7 +13764,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-528-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-528-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-528-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Prove and remove redundant interior knots in one cyclic-axis pass with exact reclosure.",
@@ -13631,7 +13777,7 @@
     {
       "id": "NURBS-0529",
       "name": "Точное удаление узла на периодическом шве NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::remove_exact_periodic_surface_seam_knot",
@@ -13641,7 +13787,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-529-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-529-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-529-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Move a periodic seam to an existing interior anchor and remove an exact redundant copy of the old seam.",
@@ -13652,7 +13800,7 @@
     {
       "id": "NURBS-0530",
       "name": "Точное упрощение NURBS-поверхности по двум периодическим осям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::simplify_exact_doubly_periodic_surface",
@@ -13662,7 +13810,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-530-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-530-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-530-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Reduce redundant knots on both periodic axes and retain both parameter domains atomically.",
@@ -13673,7 +13823,7 @@
     {
       "id": "NURBS-0531",
       "name": "Точное сокращение повторяющихся оборотов периодической NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::reduce_exact_periodic_surface_period",
@@ -13683,7 +13833,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-531-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-531-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-531-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Prove literal cyclic repeat periods in the full weighted tensor and retain the shortest supported cycle.",
@@ -13694,7 +13846,7 @@
     {
       "id": "NURBS-0532",
       "name": "Точное повторение периода NURBS-поверхности по выбранной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::repeat_exact_periodic_surface_period",
@@ -13704,7 +13856,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-532-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-532-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-532-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extend one surface axis to an exact integer number of turns with unchanged parameter units.",
@@ -13715,7 +13869,7 @@
     {
       "id": "NURBS-0533",
       "name": "Точное извлечение полосы NURBS-поверхности через несколько периодов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_periodic_surface_over_turns",
@@ -13725,7 +13879,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-533-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-533-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-533-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped surface strip over full and partial turns while preserving absolute UV.",
@@ -13736,7 +13892,7 @@
     {
       "id": "NURBS-0534",
       "name": "Точное извлечение прямоугольника NURBS-поверхности через несколько периодов по U и V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_doubly_periodic_surface_over_turns",
@@ -13746,7 +13902,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-534-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-534-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-534-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Extract a clamped rectangular tensor patch over multiple complete or partial turns on both axes.",
@@ -13757,7 +13915,7 @@
     {
       "id": "NURBS-0535",
       "name": "Точное разбиение многовитковой полосы NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_periodic_surface_over_turns",
@@ -13767,7 +13925,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-535-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-535-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-535-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Partition full and partial surface turns at ordered absolute cuts under one work budget.",
@@ -13778,7 +13938,7 @@
     {
       "id": "NURBS-0536",
       "name": "Точное разбиение многовитковой NURBS-поверхности на сетку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface_over_turns",
@@ -13788,7 +13948,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-536-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-536-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-536-2026-11-17/native.log.gz",
+        "tests/rushExactPeriodicCharts.test.ts",
+        "examples/rush/exact-periodic-window.r"
       ],
       "remainingQualification": [
         "Partition a lifted multi-turn rectangle into exact patches at absolute U and V cuts.",
@@ -13799,7 +13961,7 @@
     {
       "id": "NURBS-0537",
       "name": "Вычисление точки периодической NURBS-поверхности с точным приведением U и V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::evaluate_exact_wrapped_surface_point",
@@ -13809,7 +13971,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-537-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-537-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-537-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Reduce lifted parameters exactly modulo certified periods before standard point evaluation.",
@@ -13820,7 +13984,7 @@
     {
       "id": "NURBS-0538",
       "name": "Пакетное вычисление точек периодической NURBS-поверхности с точным приведением UV",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::evaluate_exact_wrapped_surface_points",
@@ -13830,7 +13994,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-538-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-538-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-538-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Evaluate ordered batches after exact periodic parameter reduction with one validated evaluator.",
@@ -13841,7 +14007,7 @@
     {
       "id": "NURBS-0539",
       "name": "Точное разворачивание дискретной UV-траектории через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::lift_exact_periodic_surface_path",
@@ -13851,7 +14017,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-539-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-539-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-539-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Lift native UV samples by the unique shortest signed step on each periodic axis.",
@@ -13862,7 +14030,7 @@
     {
       "id": "NURBS-0540",
       "name": "Точный подсчёт оборотов замкнутой дискретной UV-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_winding",
@@ -13872,7 +14040,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-540-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-540-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-540-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Count signed windings using exact shortest steps on a closed sequence of native UV samples.",
@@ -13883,7 +14053,7 @@
     {
       "id": "NURBS-0541",
       "name": "Точная знаковая площадь замкнутой дискретной UV-траектории через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_signed_area",
@@ -13893,7 +14063,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-541-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-541-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-541-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Integrate the algebraic UV area of a representable closed shortest-step lift.",
@@ -13904,7 +14076,7 @@
     {
       "id": "NURBS-0542",
       "name": "Точный UV-центроид замкнутого контура через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_centroid",
@@ -13914,7 +14086,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-542-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-542-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-542-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Compute exact rational area and centroid moments of a closed lifted UV polygon.",
@@ -13925,7 +14099,7 @@
     {
       "id": "NURBS-0543",
       "name": "Точные вторые центральные моменты замкнутого UV-контура через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_inertia",
@@ -13935,7 +14109,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-543-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-543-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-543-2026-11-17/native.log.gz",
+        "examples/rush/periodic-chart-measurements.r",
+        "tests/rushPeriodicChartMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Compute the signed rational central second moments of a closed lifted UV polygon.",
@@ -13946,7 +14122,7 @@
     {
       "id": "NURBS-0544",
       "name": "Точная классификация UV-точки относительно периодического дискретного контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_point",
@@ -13956,7 +14132,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-544-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-544-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-544-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Classify native UV points against periodic copies of a closed polygon lift using exact edge predicates.",
@@ -13967,7 +14145,7 @@
     {
       "id": "NURBS-0545",
       "name": "Точная пакетная классификация UV-точек относительно периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_points",
@@ -13977,7 +14155,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-545-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-545-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-545-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Prepare one lifted periodic polygon and classify an ordered batch of native queries with one budget.",
@@ -13988,7 +14168,7 @@
     {
       "id": "NURBS-0546",
       "name": "Точная классификация UV-точек в периодической области с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_region_points",
@@ -13998,7 +14178,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-546-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-546-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-546-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Classify native queries by even-odd membership across a family of lifted periodic contours.",
@@ -14009,7 +14191,7 @@
     {
       "id": "NURBS-0547",
       "name": "Точная проверка простоты дискретного UV-контура на периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::certify_exact_periodic_surface_path_simplicity",
@@ -14019,7 +14201,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-547-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-547-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-547-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Detect exact segment contacts in a closed UV lift and with its overlapping periodic copies.",
@@ -14030,7 +14214,7 @@
     {
       "id": "NURBS-0548",
       "name": "Точная проверка контакта двух UV-контуров через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::check_exact_periodic_surface_path_contact",
@@ -14040,7 +14224,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-548-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-548-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-548-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Check disjointness of two lifted UV boundaries across all overlapping periodic translates.",
@@ -14051,7 +14237,7 @@
     {
       "id": "NURBS-0549",
       "name": "Точная проверка вложенности простых UV-контуров на периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::relate_exact_periodic_surface_paths",
@@ -14061,7 +14247,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-549-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-549-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-549-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Distinguish nesting, separation and boundary contact after exact periodic simplicity checks.",
@@ -14072,7 +14260,7 @@
     {
       "id": "NURBS-0550",
       "name": "Дерево вложенности простых UV-контуров на периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_contour_forest",
@@ -14082,7 +14270,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-550-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-550-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-550-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Build an exact containment forest for simple, mutually disjoint periodic UV polygons.",
@@ -14093,7 +14283,7 @@
     {
       "id": "NURBS-0551",
       "name": "Точная площадь периодической UV-области с отверстиями и островами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_area",
@@ -14103,7 +14293,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-551-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-551-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-551-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Measure UV area by exact contour nesting parity and rational polygon integration.",
@@ -14114,7 +14306,7 @@
     {
       "id": "NURBS-0552",
       "name": "Точные центроиды компонент периодической UV-области с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_centroids",
@@ -14124,7 +14316,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-552-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-552-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-552-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Compute each filled periodic component centroid after aligning its holes to the same lift.",
@@ -14135,7 +14329,7 @@
     {
       "id": "NURBS-0553",
       "name": "Точные вторые моменты компонент периодической UV-области с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_inertia",
@@ -14145,7 +14339,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-553-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-553-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-553-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Compute exact central second moments per periodic UV component with aligned holes.",
@@ -14629,7 +14825,7 @@
     {
       "id": "NURBS-0578",
       "name": "Полный точный аудит стыков замкнутого контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::audit_input_contour_joins",
@@ -14637,7 +14833,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-578-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-578-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-578-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Audit all original vertices and generated splits in original contour order under a shared work limit.",
@@ -14648,7 +14846,7 @@
     {
       "id": "NURBS-0579",
       "name": "Точный аудит стыков периодического контура через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_audit_request",
@@ -14658,7 +14856,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-579-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-579-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-579-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose complete exact joins and rational split parameters through the binary ABI.",
@@ -14669,7 +14869,7 @@
     {
       "id": "NURBS-0580",
       "name": "Гарантированные границы пространственной длины контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_contour_length",
@@ -14677,7 +14877,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-580-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-580-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-580-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose complete 3D contour length under one cell limit while keeping outer and hole lengths separate.",
@@ -14688,7 +14890,7 @@
     {
       "id": "NURBS-0581",
       "name": "Гарантированные границы 3D-длины исходного сегмента периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_segment_length",
@@ -14696,7 +14898,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-581-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-581-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-581-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose an original segment length across all seam pieces and verify full source interval coverage.",
@@ -14707,7 +14911,7 @@
     {
       "id": "NURBS-0582",
       "name": "Гарантированные границы длины выбранного диапазона периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_segment_range_length",
@@ -14716,7 +14920,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "docs/qualification/nurbs-curvature-field-582-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-582-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-582-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose clipped 3D lengths across the seam using exact clock mapping and one cell budget.",
@@ -14727,7 +14933,7 @@
     {
       "id": "NURBS-0583",
       "name": "Гарантированные границы длины для рациональных диапазонов периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_rational_input_segment_range_length",
@@ -14735,7 +14941,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-583-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-583-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-583-2026-11-17/native.log.gz",
+        "examples/rush/rational-trim-range-length.r",
+        "tests/rushRationalTrimRange.test.ts"
       ],
       "remainingQualification": [
         "Enclose length when exact rational edge cuts cannot be stored as binary64.",
@@ -14746,7 +14954,7 @@
     {
       "id": "NURBS-0584",
       "name": "Измерение длины рационального диапазона периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_range_length_request",
@@ -14756,7 +14964,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-584-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-584-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-584-2026-11-17/native.log.gz",
+        "examples/rush/rational-trim-range-length.r",
+        "tests/rushRationalTrimRange.test.ts"
       ],
       "remainingQualification": [
         "Expose certified rational range length and both resource limits through the geometry ABI.",
@@ -14767,7 +14977,7 @@
     {
       "id": "NURBS-0585",
       "name": "Гарантированный обратный поиск параметра исходного сегмента по 3D-длине",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_segment_at_length",
@@ -14775,7 +14985,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-585-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-585-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-585-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Find a certified original parameter bracket for a target prefix length through seam splits.",
@@ -14786,7 +14998,7 @@
     {
       "id": "NURBS-0586",
       "name": "Таблица гарантированных накопленных длин в исходных вершинах периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_contour_prefix_lengths",
@@ -14794,7 +15006,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-586-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-586-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-586-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose all original vertex stations in contour order under one shared cell budget.",
@@ -14805,7 +15019,7 @@
     {
       "id": "NURBS-0587",
       "name": "Гарантированный поиск по накопленной длине всего контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_contour_at_length",
@@ -14813,7 +15027,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-587-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-587-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-587-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Invert certified contour prefix length across original vertices and seam subdivisions.",
@@ -14824,7 +15040,7 @@
     {
       "id": "NURBS-0588",
       "name": "Поиск по накопленной длине замкнутого периодического контура через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_station_request",
@@ -14834,7 +15050,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-588-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-588-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-588-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose certified arc-length stations and resource-limit status through the binary ABI.",
@@ -14845,7 +15063,7 @@
     {
       "id": "NURBS-0589",
       "name": "Гарантированный 3D-бокс точки по накопленной длине периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::enclose_input_contour_station",
@@ -14853,7 +15071,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-589-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-589-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-589-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Enclose the world point across every edge spanned by the certified contour station bracket.",
@@ -14864,7 +15084,7 @@
     {
       "id": "NURBS-0590",
       "name": "Гарантированный 3D-бокс точки периодического контура по длине через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_station_bounds_request",
@@ -14874,7 +15094,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-590-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-590-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-590-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose certified world-space station bounds without changing the existing parameter-only operation.",
@@ -14885,7 +15107,7 @@
     {
       "id": "NURBS-0591",
       "name": "Пакетный поиск точек по длине замкнутого периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_contour_at_lengths",
@@ -14893,7 +15115,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-591-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-591-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-591-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Reuse one certified contour length table and one cell budget across multiple station queries.",
@@ -14904,7 +15128,7 @@
     {
       "id": "NURBS-0592",
       "name": "Гарантированное деление замкнутого периодического контура на равные доли 3D-длины",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::divide_input_contour_by_length",
@@ -14912,7 +15136,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-592-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-592-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-592-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose stations of normalized arc length using exact rational fractions and bounded total length.",
@@ -14923,7 +15149,7 @@
     {
       "id": "NURBS-0593",
       "name": "Гарантированные 3D-боксы точек равномерного деления периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::enclose_input_contour_divisions",
@@ -14931,7 +15157,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-593-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-593-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-593-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Return certified world boxes for equal-length contour stations and closing endpoints.",
@@ -14942,7 +15170,7 @@
     {
       "id": "NURBS-0594",
       "name": "Равномерная разметка периодического контура с гарантированными 3D-боксами через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_division_request",
@@ -14952,7 +15180,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-594-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-594-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-594-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose equal-length divisions with ordered station brackets and world boxes through the binary ABI.",
@@ -14963,7 +15193,7 @@
     {
       "id": "NURBS-0595",
       "name": "Точная ориентированная площадь проекций замкнутого периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::exact_input_contour_projected_area",
@@ -14971,7 +15201,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-595-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-595-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-595-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Calculate signed projected areas of closed contours with straight spatial edges in original input direction.",
@@ -14982,7 +15214,7 @@
     {
       "id": "NURBS-0596",
       "name": "Точные площади проекций периодического контура с полиномиальными рёбрами Безье",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::exact_input_contour_polynomial_projected_area",
@@ -14990,7 +15222,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-596-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-596-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-596-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Integrate the Bernstein cross product exactly for polynomial Bézier trim edges.",
@@ -15001,7 +15235,7 @@
     {
       "id": "NURBS-0597",
       "name": "Гарантированные площади проекций замкнутых периодических контуров с рациональными весами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_contour_projected_area",
@@ -15009,7 +15243,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-597-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-597-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-597-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose signed projected areas of positive-weight rational trim curves with interval quadrature.",
@@ -15020,7 +15256,7 @@
     {
       "id": "NURBS-0598",
       "name": "Гарантированные площади проекций обрезанной периодической грани с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_projected_area",
@@ -15028,7 +15264,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-598-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-598-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-598-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Sum consistently oriented outer and inner wire integrals for one periodic patch under one cell budget.",
@@ -15039,7 +15277,7 @@
     {
       "id": "NURBS-0599",
       "name": "Гарантированные площади проекций периодической грани с отверстиями через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_area_request",
@@ -15049,7 +15287,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-599-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-599-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-599-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose signed YZ, ZX and XY area bounds with hole subtraction and cell diagnostics.",
@@ -15060,7 +15300,7 @@
     {
       "id": "NURBS-0600",
       "name": "Гарантированная площадь проекции периодической грани на плоскость произвольного направления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_area_along_normal",
@@ -15068,7 +15308,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-600-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-600-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-600-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Enclose the signed area projection along a finite nonzero normal with exact scale reduction.",
@@ -15079,7 +15321,7 @@
     {
       "id": "NURBS-0601",
       "name": "Гарантированная площадь наклонной проекции периодической грани через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_directional_area_request",
@@ -15089,7 +15331,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-601-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-601-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-601-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose signed projected area along an arbitrary normal through the binary ABI.",
@@ -15100,7 +15344,7 @@
     {
       "id": "NURBS-0602",
       "name": "Гарантированные границы максимальной ориентированной проекции периодической грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_max_projected_area",
@@ -15108,7 +15352,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-602-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-602-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-602-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose maximum signed projected area over all unit normals via the oriented area vector.",
@@ -15119,7 +15365,7 @@
     {
       "id": "NURBS-0603",
       "name": "Гарантированные границы оптимального направления проекции периодической грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_max_projection_direction",
@@ -15127,7 +15373,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-603-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-603-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-603-2026-11-17/native.log.gz",
+        "examples/rush/trim-lengths-and-projections.r",
+        "tests/rushTrimContourQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose the maximizing unit normal when the projected area vector is separated from zero.",
@@ -15138,7 +15386,7 @@
     {
       "id": "NURBS-0604",
       "name": "Гарантированные границы площади самой периодически обрезанной NURBS-грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_area",
@@ -15147,7 +15395,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-604-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-604-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-604-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Integrate the surface area density over a certified trim chart, retaining conservative boundary-cell bounds.",
@@ -15158,7 +15408,7 @@
     {
       "id": "NURBS-0605",
       "name": "Измерение площади самой обрезанной периодической NURBS-грани через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_area_request",
@@ -15168,7 +15418,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-605-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-605-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-605-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose retained surface area bounds and independent integration and trim classification budgets.",
@@ -15179,7 +15431,7 @@
     {
       "id": "NURBS-0606",
       "name": "Интегрирование площади с переиспользованием доказанной классификации обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_area",
@@ -15188,7 +15440,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-606-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-606-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-606-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Reuse prepared trim domains and transfer exact inside or outside classifications to descendants.",
@@ -15259,7 +15513,7 @@
     {
       "id": "NURBS-0610",
       "name": "Гарантированный центральный тензор инерции обрезанной NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_central_inertia",
@@ -15268,7 +15522,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-610-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-610-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-610-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the centroid and centroid-relative inertia of a uniformly dense trimmed surface on one partition.",
@@ -15279,7 +15535,7 @@
     {
       "id": "NURBS-0611",
       "name": "Гарантированные границы главных моментов инерции обрезанной NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::TrimmedCentralInertiaReport::bound_principal_moments",
@@ -15288,7 +15544,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-611-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-611-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-611-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Bound sorted principal inertia moments using interval LDL congruence and conservative bracketing.",
@@ -15299,7 +15557,7 @@
     {
       "id": "NURBS-0612",
       "name": "Гарантированные центр площади, центральный тензор и главные моменты обрезанной грани через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_mass_properties_request",
@@ -15309,7 +15567,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-612-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-612-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-612-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose certified retained area, centroid, central inertia and ordered principal moments through one bridge operation.",
@@ -15320,7 +15580,7 @@
     {
       "id": "NURBS-0613",
       "name": "Гарантированные центр площади и центральный тензор инерции внутри UV-окна",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_central_inertia_in_window",
@@ -15329,7 +15589,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-613-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-613-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-613-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose area centroid and central inertia for a clipped UV subregion of a trimmed surface.",
@@ -15340,7 +15602,7 @@
     {
       "id": "NURBS-0614",
       "name": "Гарантированные массовые характеристики обрезанной грани внутри UV-окна через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_window_mass_request",
@@ -15350,7 +15612,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-614-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-614-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-614-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose area, centroid and central inertia within a selected unwrapped UV window through WASM.",
@@ -15401,7 +15665,7 @@
     {
       "id": "NURBS-0617",
       "name": "Гарантированный общий центральный тензор инерции компонент периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia",
@@ -15410,7 +15674,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-617-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-617-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-617-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the inertia of all retained components about their shared centroid on one set of integration cells.",
@@ -15421,7 +15687,7 @@
     {
       "id": "NURBS-0618",
       "name": "Суммарные массовые характеристики всех компонент периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15431,7 +15697,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-618-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-618-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-618-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose total and component area, common centroid and central inertia through one WASM operation.",
@@ -15442,7 +15710,7 @@
     {
       "id": "NURBS-0619",
       "name": "Гарантированные главные моменты инерции всех компонент периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::TrimmedPatchSetCentralInertiaReport::bound_principal_moments",
@@ -15450,7 +15718,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-619-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-619-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-619-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the ordered eigenvalues of the complete patch-set central inertia tensor.",
@@ -15461,7 +15731,7 @@
     {
       "id": "NURBS-0620",
       "name": "Главные моменты инерции всех компонент периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15471,7 +15741,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-620-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-620-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-620-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose sorted principal moment bounds and tolerance status for the common inertia tensor via an opt-in request field.",
@@ -15520,7 +15792,7 @@
     {
       "id": "NURBS-0623",
       "name": "Гарантированный перенос центрального тензора инерции в заданную точку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_inertia_about_point",
@@ -15528,7 +15800,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-623-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-623-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-623-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Translate a common central inertia tensor with bounded mass and centroid using the interval parallel-axis theorem.",
@@ -15539,7 +15813,7 @@
     {
       "id": "NURBS-0624",
       "name": "Гарантированный момент инерции вокруг произвольной пространственной прямой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_inertia_about_line",
@@ -15547,7 +15821,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-624-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-624-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-624-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the moment about an offset line using perpendicular distance bounds from the common centroid.",
@@ -15558,7 +15834,7 @@
     {
       "id": "NURBS-0625",
       "name": "Момент инерции периодической обрезки вокруг заданной оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15568,7 +15844,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-625-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-625-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-625-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose an optional fixed spatial axis in the complete patch-set mass request.",
@@ -15579,7 +15857,7 @@
     {
       "id": "NURBS-0626",
       "name": "Тензор инерции периодической обрезки относительно заданной точки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15589,7 +15867,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-626-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-626-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-626-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose the complete inertia tensor at an optional fixed reference point alongside the centroidal tensor and offset-axis moment.",
@@ -15600,7 +15880,7 @@
     {
       "id": "NURBS-0627",
       "name": "Гарантированный радиус инерции NURBS-поверхности вокруг заданной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_radius_of_gyration",
@@ -15608,7 +15888,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-627-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-627-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-627-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Enclose the square root of the polar moment divided by positive mass, including the whole periodic trim set at unit areal density.",
@@ -15619,7 +15901,7 @@
     {
       "id": "NURBS-0628",
       "name": "Радиус инерции периодической обрезки вокруг заданной оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_mass_request",
@@ -15629,7 +15911,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-628-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-628-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-628-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-area-properties.r",
+        "tests/rushTrimmedAreaProperties.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in bounds on the radius of gyration from the existing patch-set moment and positive area.",
@@ -15678,7 +15962,7 @@
     {
       "id": "NURBS-0631",
       "name": "Прямое измерение массы периодически обрезанных NURBS-граней с разной плотностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density",
@@ -15686,7 +15970,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-631-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-631-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-631-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Measure and combine density-weighted periodic patches under one pair of integration budgets.",
@@ -15697,7 +15983,7 @@
     {
       "id": "NURBS-0632",
       "name": "Масса периодически обрезанных NURBS-граней с различной плотностью через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15707,7 +15993,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-632-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-632-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-632-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose density-weighted patch-set mass, centroid and inertia via outer-contour assignments.",
@@ -15718,7 +16006,7 @@
     {
       "id": "NURBS-0633",
       "name": "Масса каждой компоненты периодической обрезки в Rust и WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15730,7 +16018,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-633-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-633-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-633-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Return component mass bounds and sum them independently of centroidal inertia availability.",
@@ -15741,7 +16031,7 @@
     {
       "id": "NURBS-0634",
       "name": "Гарантированные доли массы отдельных граней периодической NURBS-обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_component_mass_fractions",
@@ -15749,7 +16039,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-634-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-634-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-634-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose each mass fraction using monotonic dependence on its own mass and the sum of the other component masses.",
@@ -15760,7 +16052,7 @@
     {
       "id": "NURBS-0635",
       "name": "Доли массы отдельных NURBS-граней в ответе WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15770,7 +16062,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-635-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-635-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-635-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Attach interval mass fractions to each outer-contour component in WASM.",
@@ -15800,7 +16094,7 @@
     {
       "id": "NURBS-0637",
       "name": "Гарантированное знаковое расстояние центра масс NURBS-сборки до плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_mass_weighted_centroid_plane_distance",
@@ -15808,7 +16102,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-637-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-637-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-637-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Project piece centers before weighted extremization to preserve cancellation across Cartesian axes.",
@@ -15819,7 +16115,7 @@
     {
       "id": "NURBS-0638",
       "name": "Знаковое расстояние центра масс периодической обрезки до заданной плоскости через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15830,7 +16126,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-638-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-638-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-638-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in signed plane distance computed from per-component mass and centroid enclosures.",
@@ -15841,7 +16139,7 @@
     {
       "id": "NURBS-0639",
       "name": "Гарантированный момент инерции разноплотной NURBS-сборки вокруг общей оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_inertia_about_line",
@@ -15849,7 +16147,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-639-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-639-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-639-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Sum density-weighted component moments about one fixed axis without propagating uncertainty through the aggregate centroid.",
@@ -15860,7 +16160,7 @@
     {
       "id": "NURBS-0640",
       "name": "Момент инерции разноплотных NURBS-граней вокруг общей оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15870,7 +16170,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-640-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-640-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-640-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in density-weighted moment about a fixed spatial axis through the existing request.",
@@ -15881,7 +16183,7 @@
     {
       "id": "NURBS-0641",
       "name": "Полный тензор инерции разноплотной NURBS-сборки относительно заданной точки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_inertia_about_point",
@@ -15889,7 +16191,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-641-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-641-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-641-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Translate each component tensor to the same fixed world point and add its contribution with outward rounding.",
@@ -15900,7 +16204,7 @@
     {
       "id": "NURBS-0642",
       "name": "Тензор инерции разноплотной NURBS-сборки относительно заданной точки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15910,7 +16214,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-642-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-642-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-642-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose optional density-weighted inertia at a fixed reference point through the WASM mass request.",
@@ -15921,7 +16227,7 @@
     {
       "id": "NURBS-0643",
       "name": "Главные моменты инерции разноплотной NURBS-сборки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15932,7 +16238,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-643-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-643-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-643-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Expose ordered enclosures for the eigenvalues of the density-weighted central tensor and report whether the requested tolerance was met.",
@@ -15943,7 +16251,7 @@
     {
       "id": "NURBS-0644",
       "name": "Радиус инерции разноплотной NURBS-сборки вокруг заданной оси через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15953,7 +16261,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-644-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-644-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-644-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Return an opt-in radius of gyration interval using the weighted mass and fixed-axis moment.",
@@ -15964,7 +16274,7 @@
     {
       "id": "NURBS-0645",
       "name": "Гарантированный первый момент массы разноплотной NURBS-сборки относительно плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_first_mass_moment_about_plane",
@@ -15972,7 +16282,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-645-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-645-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-645-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Add signed component first mass moments about an oriented world plane before normalization.",
@@ -15983,7 +16295,7 @@
     {
       "id": "NURBS-0646",
       "name": "Первый момент массы NURBS-сборки относительно плоскости через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -15993,7 +16305,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-646-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-646-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-646-2026-11-17/native.log.gz",
+        "examples/rush/trimmed-surface-mass.r",
+        "tests/rushTrimmedSurfaceMass.test.ts"
       ],
       "remainingQualification": [
         "Return the signed first mass moment about the query plane alongside the center distance.",
@@ -16081,7 +16395,7 @@
     {
       "id": "NURBS-0651",
       "name": "Сертифицированные главные оси инерции разноплотной NURBS-сборки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16092,7 +16406,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-651-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-651-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-651-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in principal directions and angular certificates, preserving unavailable axes explicitly.",
@@ -16122,7 +16438,7 @@
     {
       "id": "NURBS-0653",
       "name": "Гарантированное расстояние от точки до главной оси инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_distance_to_principal_axis",
@@ -16130,7 +16446,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-653-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-653-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-653-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Enclose point-to-axis distance from an interval anchor and a principal-direction certificate.",
@@ -16141,7 +16459,7 @@
     {
       "id": "NURBS-0654",
       "name": "Измерение расстояния до главной оси инерции через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16151,7 +16469,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-654-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-654-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-654-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Attach certified distance bounds for a world-space probe to each available principal axis.",
@@ -16162,7 +16482,7 @@
     {
       "id": "NURBS-0655",
       "name": "Гарантированный угол между заданным направлением и главной осью инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_axis_angle_sine",
@@ -16170,7 +16490,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-655-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-655-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-655-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Enclose the sine of the acute angle to a certified principal axis.",
@@ -16181,7 +16503,7 @@
     {
       "id": "NURBS-0656",
       "name": "Проверка угла к главной оси инерции через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16191,7 +16513,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-656-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-656-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-656-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Attach certified acute-angle sine bounds for a fixed probe direction to each available principal axis.",
@@ -16202,7 +16526,7 @@
     {
       "id": "NURBS-0657",
       "name": "Гарантированная проверка эксцентриситета центра масс относительно оси балансировки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_balance_about_line",
@@ -16210,7 +16534,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-657-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-657-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-657-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Project components before density-weighted extremization and classify eccentricity against a fixed tolerance.",
@@ -16221,7 +16547,7 @@
     {
       "id": "NURBS-0658",
       "name": "Контроль эксцентриситета центра масс относительно оси балансировки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16231,7 +16557,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-658-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-658-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-658-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Expose certified eccentricity and the tolerance classification for a requested rotation axis.",
@@ -16242,7 +16570,7 @@
     {
       "id": "NURBS-0659",
       "name": "Гарантированный вектор статического дисбаланса NURBS-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_static_unbalance",
@@ -16250,7 +16578,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-659-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-659-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-659-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Enclose the static unbalance vector and magnitude by adding signed mass-weighted component offsets about an axis.",
@@ -16261,7 +16591,7 @@
     {
       "id": "NURBS-0660",
       "name": "Вектор и величина статического дисбаланса NURBS-сборки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16271,7 +16601,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-660-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-660-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-660-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Return opt-in static unbalance vector and magnitude intervals referenced to the supplied rotation axis.",
@@ -16282,7 +16614,7 @@
     {
       "id": "NURBS-0661",
       "name": "Гарантированный моментный дисбаланс NURBS-сборки относительно оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_couple_unbalance",
@@ -16290,7 +16622,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-661-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-661-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-661-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Enclose the vector and magnitude of couple unbalance from an inertia tensor about a fixed axial reference point.",
@@ -16301,7 +16635,7 @@
     {
       "id": "NURBS-0662",
       "name": "Вектор и величина моментного дисбаланса NURBS-сборки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16311,7 +16645,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-662-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-662-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-662-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Return opt-in couple unbalance about the requested axis and axial reference point.",
@@ -16322,7 +16658,7 @@
     {
       "id": "NURBS-0663",
       "name": "Гарантированное разложение дисбаланса NURBS-сборки по двум плоскостям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_two_plane_unbalance",
@@ -16330,7 +16666,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-663-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-663-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-663-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Enclose two equivalent radial vectors preserving static and axial first moments.",
@@ -16341,7 +16679,7 @@
     {
       "id": "NURBS-0664",
       "name": "Разложение дисбаланса NURBS-сборки по двум плоскостям через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16352,7 +16690,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-664-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-664-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-664-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Expose equivalent radial vectors at two user-supplied axial offsets through the density request.",
@@ -16363,7 +16703,7 @@
     {
       "id": "NURBS-0665",
       "name": "Гарантированная проверка допусков дисбаланса в двух плоскостях",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::classify_two_plane_unbalance",
@@ -16371,7 +16711,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-665-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-665-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-665-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Classify interval unbalance against separate limits in two correction planes and report the assembly status.",
@@ -16382,7 +16724,7 @@
     {
       "id": "NURBS-0666",
       "name": "Контроль отдельных допусков балансировки в двух плоскостях через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16392,7 +16734,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-666-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-666-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-666-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Expose independent plane magnitude bounds and statuses with an overall tolerance classification.",
@@ -16403,7 +16747,7 @@
     {
       "id": "NURBS-0667",
       "name": "Интервальные массы и положения противовесов в двух плоскостях",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_two_plane_counterweights",
@@ -16411,7 +16755,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-667-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-667-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-667-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Convert equivalent unbalance vectors into opposing masses and radial placement bounds at fixed radii.",
@@ -16422,7 +16768,7 @@
     {
       "id": "NURBS-0668",
       "name": "Массы и положения противовесов на заданных радиусах через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16432,7 +16778,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-668-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-668-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-668-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in plane counterweight masses and opposing radial placement bounds at prescribed radii.",
@@ -16443,7 +16791,7 @@
     {
       "id": "NURBS-0669",
       "name": "Проверка остаточного дисбаланса после установки противовесов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_two_plane_residual_unbalance",
@@ -16451,7 +16799,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-669-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-669-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-669-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Enclose the remaining unbalance and classify plane tolerances after adding installed counterweights with uncertain masses and offsets.",
@@ -16462,7 +16812,7 @@
     {
       "id": "NURBS-0670",
       "name": "Остаточный дисбаланс после установки противовесов через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16472,7 +16822,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-670-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-670-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-670-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Expose interval residual unbalance and tolerance classification after installing correction weights.",
@@ -16483,7 +16835,7 @@
     {
       "id": "NURBS-0671",
       "name": "Проверка допустимой массы и минимального радиуса противовеса",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_two_plane_counterweight_capacity",
@@ -16491,7 +16843,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-671-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-671-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-671-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Enclose minimum mounting radii under per-plane mass limits and classify feasibility at the supplied radii.",
@@ -16502,7 +16856,7 @@
     {
       "id": "NURBS-0672",
       "name": "Проверка минимального радиуса установки противовесов через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16512,7 +16866,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-672-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-672-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-672-2026-11-17/native.log.gz",
+        "examples/rush/two-plane-rotor-balance.r",
+        "tests/rushRotorBalance.test.ts"
       ],
       "remainingQualification": [
         "Expose minimum mounting radii and plane feasibility against positive mass limits.",
@@ -16523,7 +16879,7 @@
     {
       "id": "NURBS-0673",
       "name": "Гарантированный суммарный ход NURBS-кривой вдоль заданной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel",
@@ -16531,7 +16887,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-673-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-673-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-673-2026-11-17/native.log.gz",
+        "examples/rush/full-directional-travel.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Integrate the absolute projected velocity of a rational curve, including reversals, under a shared work limit.",
@@ -16542,7 +16900,7 @@
     {
       "id": "NURBS-0674",
       "name": "Гарантированные прямой и обратный ходы NURBS-кривой вдоль оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_by_sign",
@@ -16550,7 +16908,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-674-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-674-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-674-2026-11-17/native.log.gz",
+        "examples/rush/full-directional-travel.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Decompose certified projected travel into positive and negative axial motion using signed span displacements.",
@@ -16561,7 +16921,7 @@
     {
       "id": "NURBS-0675",
       "name": "Гарантированное измерение осевого хода на участке NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_interval",
@@ -16569,7 +16929,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-675-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-675-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-675-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Measure absolute and signed axial motion in an original-parameter window, clipping every intersected knot span.",
@@ -16580,7 +16942,7 @@
     {
       "id": "NURBS-0676",
       "name": "Гарантированная проверка допуска обратного хода NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_backtracking",
@@ -16588,7 +16950,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-676-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-676-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-676-2026-11-17/native.log.gz",
+        "examples/rush/full-directional-travel.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Classify reverse axial travel against a limit independently of measurement convergence.",
@@ -16599,7 +16963,7 @@
     {
       "id": "NURBS-0677",
       "name": "Измерение осевого хода NURBS-кривой и проверка обратного движения через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_interval",
@@ -16609,7 +16973,9 @@
         "crates/geometry-bridge/tests/curve_directional_travel_contracts.rs",
         "scripts/check-curve-directional-travel-wasm.mts",
         "docs/qualification/nurbs-curvature-field-677-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-677-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-677-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Expose signed and absolute axial travel on the original parameter interval with optional reverse-limit classification.",
@@ -16620,7 +16986,7 @@
     {
       "id": "NURBS-0678",
       "name": "Пакетное измерение осевого хода NURBS-кривой с общим лимитом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_intervals",
@@ -16628,7 +16994,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-678-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-678-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-678-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Measure ordered and overlapping original-parameter windows under a shared cell limit with reserved initial span coverage.",
@@ -16639,7 +17007,7 @@
     {
       "id": "NURBS-0679",
       "name": "Пакетное измерение осевого хода NURBS-кривой через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_intervals",
@@ -16649,7 +17017,9 @@
         "crates/geometry-bridge/tests/curve_directional_travel_contracts.rs",
         "scripts/check-curve-directional-travel-wasm.mts",
         "docs/qualification/nurbs-curvature-field-679-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-679-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-679-2026-11-17/native.log.gz",
+        "examples/rush/directional-travel.r",
+        "tests/rushDirectionalTravel.test.ts"
       ],
       "remainingQualification": [
         "Expose ordered window reports, a shared axial travel budget and optional reverse-limit checks per window.",
@@ -16660,7 +17030,7 @@
     {
       "id": "NURBS-0680",
       "name": "Гарантированная оценка пиковой осевой скорости NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_speed",
@@ -16668,7 +17038,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-680-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-680-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-680-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose the supremum of absolute projected source-parameter velocity on a selected window.",
@@ -16679,7 +17051,7 @@
     {
       "id": "NURBS-0681",
       "name": "Локализация всех возможных пиков осевой скорости NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_speed",
@@ -16687,7 +17059,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-681-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-681-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-681-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Return the union of original parameter intervals that can still contain a global axial speed maximum.",
@@ -16698,7 +17072,7 @@
     {
       "id": "NURBS-0682",
       "name": "Гарантированная оценка пикового осевого ускорения NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_acceleration",
@@ -16706,7 +17080,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-682-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-682-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-682-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose the maximum absolute axial second derivative on the original curve clock.",
@@ -16717,7 +17093,7 @@
     {
       "id": "NURBS-0683",
       "name": "Гарантированная оценка пикового осевого рывка NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_jerk",
@@ -16725,7 +17101,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-683-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-683-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-683-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose the maximum absolute axial third derivative on the original parameter interval.",
@@ -16736,7 +17114,7 @@
     {
       "id": "NURBS-0684",
       "name": "Локализация пикового осевого ускорения NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration",
@@ -16744,7 +17122,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-684-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-684-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-684-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose every possible source parameter that attains the peak absolute axial acceleration.",
@@ -16755,7 +17135,7 @@
     {
       "id": "NURBS-0685",
       "name": "Локализация пикового осевого рывка NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_jerk",
@@ -16763,7 +17143,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-685-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-685-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-685-2026-11-17/native.log.gz",
+        "examples/rush/axial-derivative-peaks.r",
+        "tests/rushAxialPeaks.test.ts"
       ],
       "remainingQualification": [
         "Enclose every possible source parameter that attains the peak absolute axial jerk.",
@@ -16774,7 +17156,7 @@
     {
       "id": "NURBS-0686",
       "name": "Сертифицированная проверка осевых ограничений движения NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_motion_limits",
@@ -16782,7 +17164,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-686-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-686-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-686-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Compare peak absolute speed, acceleration and jerk with inclusive limits in the original parameter clock.",
@@ -16793,7 +17177,7 @@
     {
       "id": "NURBS-0687",
       "name": "Сертифицированный коэффициент замедления NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::directional_motion_slowdown_bounds",
@@ -16801,7 +17185,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-687-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-687-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-687-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Enclose minimum uniform parameter dilation under speed, acceleration and jerk limits.",
@@ -16812,7 +17198,7 @@
     {
       "id": "NURBS-0688",
       "name": "Сертифицированное замедление NURBS-траектории для нескольких осей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_slowdown_bounds",
@@ -16820,7 +17206,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-688-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-688-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-688-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Enclose the common slowdown for all axes under one span coverage and refinement budget.",
@@ -16831,7 +17219,7 @@
     {
       "id": "NURBS-0689",
       "name": "Сертифицированная длительность прохода NURBS-траектории по нескольким осям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_duration_bounds",
@@ -16839,7 +17227,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-689-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-689-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-689-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Enclose the minimum uniform-clock traversal time under simultaneous axis limits.",
@@ -16850,7 +17240,7 @@
     {
       "id": "NURBS-0690",
       "name": "Сертифицированная проверка срока прохода NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_multi_axis_motion_deadline",
@@ -16858,7 +17248,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-690-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-690-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-690-2026-11-17/native.log.gz",
+        "examples/rush/axis-motion.r",
+        "tests/rushAxisMotion.test.ts"
       ],
       "remainingQualification": [
         "Classify uniform-clock traversal at an inclusive deadline for all motion axes.",
@@ -16869,7 +17261,7 @@
     {
       "id": "NURBS-0691",
       "name": "Сертифицированное разбиение NURBS-траектории по лимиту осевой скорости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_speed_limit",
@@ -16877,7 +17269,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-691-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-691-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-691-2026-11-17/native.log.gz",
+        "examples/rush/motion-partition.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Partition the original curve window into within-limit, exceeding and unresolved axial speed intervals.",
@@ -16888,7 +17282,7 @@
     {
       "id": "NURBS-0692",
       "name": "Совместное разбиение NURBS-траектории по осевым лимитам движения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_motion_limits",
@@ -16896,7 +17290,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-692-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-692-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-692-2026-11-17/native.log.gz",
+        "examples/rush/motion-partition.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Classify axial speed, acceleration and jerk on one shared certified subdivision.",
@@ -16907,7 +17303,7 @@
     {
       "id": "NURBS-0693",
       "name": "Совместное разбиение NURBS-траектории по ограничениям нескольких осей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_multi_axis_motion_limits",
@@ -16915,7 +17311,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-693-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-693-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-693-2026-11-17/native.log.gz",
+        "examples/rush/motion-partition.r",
+        "tests/rushMotionPartition.test.ts"
       ],
       "remainingQualification": [
         "Classify speed, acceleration and jerk on one subdivision for every axis under a shared axis-cell budget.",

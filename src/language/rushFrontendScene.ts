@@ -1,3 +1,5 @@
+import { MAX_NATIVE_GEOMETRY_CHARACTERS } from '../core/nativeGeometry'
+import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler'
 import { transformNurbsSurfacePatches } from '../kernel/nurbsSurface'
 import type { ProgressiveSweepPreview } from '../kernel/nurbsConstructors'
@@ -16,6 +18,7 @@ export async function buildTextNurbsScene(
   control: OwnNurbsBuildControl = {},
 ): Promise<GeometryEvaluationResult> {
   const start = performance.now()
+  if (typeof window !== 'undefined') await warmGeometryKernel()
   const scenePreview = control.onSweepPreview ? progressiveScenePreviewMapper(document) : null
   // GPU prefetch: eligible SDF grids are sampled by WebGPU before the
   // synchronous build — all grids in one session (one pipeline, one submit);
@@ -54,8 +57,20 @@ export async function buildTextNurbsScene(
   const nativeGeometry = 'nativeGeometry' in result ? result.nativeGeometry : undefined
   const entityId = `entity:native/${nativeGeometry?.nodeId ?? result.report.root}` as const
   const { mesh: output, surfaceArea } = ownNurbsDisplayMesh(mesh, entityId, nativeGeometry)
+  let reportCharacters = 0
+  const measurements = Object.entries(result.report.construction ?? {}).flatMap(([node, entry]) => {
+    if (!('measurement' in entry)) return []
+    const { operation, report } = entry.measurement as { operation: string; report: object }
+    const serialized = JSON.stringify(report)
+    reportCharacters += serialized.length
+    if (reportCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) {
+      throw new Error('Measurement reports exceed the editor output limit. Reduce the work budget or parameter range.')
+    }
+    return [{ node, operation, report: serialized }]
+  })
   return {
     meshes: mesh.indices.length ? [output] : [],
+    ...(measurements.length ? { measurements } : {}),
     warnings: mesh.report.closed || !mesh.indices.length ? [] : ['Open surface: enclosed volume is undefined.'],
     volume: mesh.report.closed ? Math.abs(mesh.report.signedVolumeMm3) : 0,
     surfaceArea,
