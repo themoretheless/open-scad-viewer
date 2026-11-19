@@ -425,4 +425,30 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn oblique_caps_with_a_curvature_jump_keep_only_first_order_contact() {
+        let mut patches = [cap(false), cap(true)];
+        // Moving the last transverse row changes the second derivative at u=0
+        // without changing either boundary position or the first derivative.
+        for pole in &mut patches[1].control_points[2] {
+            pole[2] += 0.25;
+        }
+        for patch in &mut patches {
+            for pole in patch.control_points.iter_mut().flatten() {
+                let (x, y, z) = (pole[0], pole[1], pole[2]);
+                pole.copy_from_slice(&[x + y, y + z, x + z]);
+            }
+        }
+        for order in [1, 2] {
+            let seam = ProjectiveSeam {
+                patches: [0, 1],
+                boundaries: ["uMax".into(), "uMin".into()],
+                order,
+                normal_scale: 1.,
+            };
+            let report = qualify(&patches, &[seam], 1_000_000).unwrap();
+            assert_eq!(report.certified, order == 1, "{}", report.seams[0].reason);
+        }
+    }
 }

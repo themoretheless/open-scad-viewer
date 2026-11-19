@@ -3,7 +3,7 @@ use nurbs_core::{
     planar_toolpath::{self, Limits, Spec, Stop},
 };
 fn square(reverse: bool) -> Vec<Curve> {
-    let mut p = vec![[0., 0.], [10., 0.], [10., 10.], [0., 10.]];
+    let mut p = [[0., 0.], [10., 0.], [10., 10.], [0., 10.]];
     if reverse {
         p.reverse();
     }

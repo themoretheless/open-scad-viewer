@@ -13,8 +13,6 @@ import {
   workspaceDocumentsEqual,
   type WorkspaceDocumentSnapshot,
   type WorkspaceRecoveryBase,
-  type WorkspaceRecoveryRecord,
-  type WorkspaceStorage,
 } from './workspaceDocument'
 import {
   WorkspaceIndexedDbConflictError,
@@ -29,38 +27,10 @@ import {
   recoveryCanReplay,
 } from './workspacePersistence/recoveryCanReplay'
 
-export interface RemovableWorkspaceStorage extends WorkspaceStorage {
-  removeItem(key: string): void
-  keys(): string[]
-}
-
-export type WorkspacePersistenceBackend = 'indexeddb' | 'localstorage'
-
-export interface WorkspaceBootstrapOptions {
-  fallbackSource: string
-  importedSource?: string | null
-  importedFileName?: string
-}
-
-export interface WorkspaceBootstrapResult {
-  document: WorkspaceDocumentSnapshot
-  backend: WorkspacePersistenceBackend
-  durable: boolean
-  imported: boolean
-}
-
-export interface WorkspaceRetryResult {
-  saved: boolean
-  /** A previously unreadable IndexedDB head recovered by an explicit retry. */
-  restoredDocument?: WorkspaceDocumentSnapshot
-}
+import type { RemovableWorkspaceStorage, WorkspacePersistenceBackend, WorkspaceBootstrapOptions, WorkspaceBootstrapResult, WorkspaceRetryResult, StoredRecovery } from './workspacePersistence/types'
+export type { RemovableWorkspaceStorage, WorkspacePersistenceBackend, WorkspaceBootstrapOptions, WorkspaceBootstrapResult, WorkspaceRetryResult, StoredRecovery } from './workspacePersistence/types'
 
 type IndexedDbState = 'ready' | 'unavailable' | 'invalid'
-
-export interface StoredRecovery {
-  key: string
-  record: WorkspaceRecoveryRecord
-}
 
 /**
  * Coordinates primary IndexedDB persistence with a synchronous localStorage

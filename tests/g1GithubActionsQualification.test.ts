@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v132.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v133.json')
 type Sha256Binding = { value: string; byteLength: number }
 type PlanEnvironment = {
   id: string
@@ -37,7 +37,7 @@ const runtimeFreeze = JSON.parse(
   readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'), 'utf8'),
 )
 const githubFreeze = JSON.parse(
-  readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-github-actions-v42.json'), 'utf8'),
+  readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-github-actions-v43.json'), 'utf8'),
 )
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -205,7 +205,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v132',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v133',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -248,8 +248,9 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('accepts the exact runner identities recorded during qualification and discovery', () => {
     const { artifacts } = fixture()
     for (const [environmentId, image, version] of [
+      ['ubuntu-node20', 'ubuntu24', '20261116.133.1'],
       ['ubuntu-node22', 'ubuntu24', '20261116.376.1'],
-      ['macos-node20', 'macos15', '20261104.0514.1'],
+      ['macos-node20', 'macos15', '20261118.0550.1'],
       ['windows-node20', 'win25-vs2026', '20261103.298.1'],
     ]) {
       const row = plan.matrix.find(item => item.executionEnvironmentIds.includes(environmentId))!
