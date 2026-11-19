@@ -14791,7 +14791,7 @@
     {
       "id": "NURBS-0578",
       "name": "Полный точный аудит стыков замкнутого контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::audit_input_contour_joins",
@@ -14799,7 +14799,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-578-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-578-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-578-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Audit all original vertices and generated splits in original contour order under a shared work limit.",
@@ -14810,7 +14812,7 @@
     {
       "id": "NURBS-0579",
       "name": "Точный аудит стыков периодического контура через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_audit_request",
@@ -14820,7 +14822,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-579-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-579-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-579-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose complete exact joins and rational split parameters through the binary ABI.",
@@ -14967,7 +14971,7 @@
     {
       "id": "NURBS-0587",
       "name": "Гарантированный поиск по накопленной длине всего контура периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_contour_at_length",
@@ -14975,7 +14979,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-587-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-587-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-587-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Invert certified contour prefix length across original vertices and seam subdivisions.",
@@ -14986,7 +14992,7 @@
     {
       "id": "NURBS-0588",
       "name": "Поиск по накопленной длине замкнутого периодического контура через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_station_request",
@@ -14996,7 +15002,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-588-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-588-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-588-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose certified arc-length stations and resource-limit status through the binary ABI.",
@@ -15007,7 +15015,7 @@
     {
       "id": "NURBS-0589",
       "name": "Гарантированный 3D-бокс точки по накопленной длине периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::enclose_input_contour_station",
@@ -15015,7 +15023,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-589-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-589-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-589-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Enclose the world point across every edge spanned by the certified contour station bracket.",
@@ -15026,7 +15036,7 @@
     {
       "id": "NURBS-0590",
       "name": "Гарантированный 3D-бокс точки периодического контура по длине через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_station_bounds_request",
@@ -15036,7 +15046,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-590-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-590-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-590-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose certified world-space station bounds without changing the existing parameter-only operation.",
@@ -15085,7 +15097,7 @@
     {
       "id": "NURBS-0593",
       "name": "Гарантированные 3D-боксы точек равномерного деления периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::enclose_input_contour_divisions",
@@ -15093,7 +15105,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-593-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-593-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-593-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Return certified world boxes for equal-length contour stations and closing endpoints.",
@@ -15104,7 +15118,7 @@
     {
       "id": "NURBS-0594",
       "name": "Равномерная разметка периодического контура с гарантированными 3D-боксами через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_contour_division_request",
@@ -15114,7 +15128,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-594-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-594-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-594-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose equal-length divisions with ordered station brackets and world boxes through the binary ABI.",
@@ -15182,7 +15198,7 @@
     {
       "id": "NURBS-0598",
       "name": "Гарантированные площади проекций обрезанной периодической грани с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_projected_area",
@@ -15190,7 +15206,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-598-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-598-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-598-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Sum consistently oriented outer and inner wire integrals for one periodic patch under one cell budget.",
@@ -15201,7 +15219,7 @@
     {
       "id": "NURBS-0599",
       "name": "Гарантированные площади проекций периодической грани с отверстиями через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_area_request",
@@ -15211,7 +15229,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-599-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-599-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-599-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose signed YZ, ZX and XY area bounds with hole subtraction and cell diagnostics.",
@@ -15222,7 +15242,7 @@
     {
       "id": "NURBS-0600",
       "name": "Гарантированная площадь проекции периодической грани на плоскость произвольного направления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_area_along_normal",
@@ -15230,7 +15250,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-600-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-600-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-600-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Enclose the signed area projection along a finite nonzero normal with exact scale reduction.",
@@ -15241,7 +15263,7 @@
     {
       "id": "NURBS-0601",
       "name": "Гарантированная площадь наклонной проекции периодической грани через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_directional_area_request",
@@ -15251,7 +15273,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-601-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-601-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-601-2026-11-17/native.log.gz",
+        "examples/rush/trim-contour-measurements.r",
+        "tests/rushTrimContourMeasurements.test.ts"
       ],
       "remainingQualification": [
         "Expose signed projected area along an arbitrary normal through the binary ABI.",

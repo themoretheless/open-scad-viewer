@@ -1,0 +1,10 @@
+// @rush/1
+profile = nurbs_curve(degree:1,knots:[-1,0,1,2,3,4,5],control_points:[[0,0,0],[1mm,0,0],[1mm,1mm,0],[0,1mm,0],[0,0,0]],weights:[1,1,1,1,1],periodic:true)
+chart = profile.surface_extrude(vector:[0,0,2mm])
+contour_audit = chart.surface_trim_contour_audit(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],max_work:1000000,contour:0)
+contour_station = contour_audit.surface_trim_contour_station(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],max_work:1000000,contour:0,distance_mm:0.5mm,tolerance_mm:0.00000001mm,parameter_tolerance:0.000001,max_cells:1024)
+contour_station_box = contour_station.surface_trim_contour_station_box(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],max_work:1000000,contour:0,distance_mm:0.5mm,tolerance_mm:0.00000001mm,parameter_tolerance:0.000001,max_cells:1024)
+contour_divide = contour_station_box.surface_trim_contour_divide(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],max_work:1000000,contour:0,divisions:5,tolerance_mm:0.00000001mm,parameter_tolerance:0.000001,max_cells:2048)
+patch_area_vector = contour_divide.surface_trim_patch_area_vector(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],max_work:1000000,outer_contour:0,tolerance_mm2:0.00000001,max_cells:100)
+patch_projected_area = patch_area_vector.surface_trim_patch_projected_area(contours:[[[3.5,0.125],[0.5,0.125],[0.5,0.875],[3.5,0.875],[3.5,0.125]],[[0.125,0.25],[0.375,0.25],[0.375,0.75],[0.125,0.75],[0.125,0.25]]],max_work:1000000,outer_contour:0,normal:[1,1,0],tolerance_mm2:0.00000001,max_cells:100)
+show patch_projected_area.tessellate(8,4)

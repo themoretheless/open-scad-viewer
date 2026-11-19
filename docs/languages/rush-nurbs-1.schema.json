@@ -39111,6 +39111,923 @@
               },
               "op": {
                 "type": "string",
+                "const": "surface_trim_contour_audit"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "max_work",
+              "contour"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "surface_trim_contour_station"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "distance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "tolerance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "max_work",
+              "contour",
+              "distance_mm",
+              "tolerance_mm",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "surface_trim_contour_station_box"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "distance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "tolerance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "max_work",
+              "contour",
+              "distance_mm",
+              "tolerance_mm",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "surface_trim_contour_divide"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "divisions": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tolerance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "max_work",
+              "contour",
+              "divisions",
+              "tolerance_mm",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "surface_trim_patch_area_vector"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outer_contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tolerance_mm2": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "max_work",
+              "outer_contour",
+              "tolerance_mm2",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "surface_trim_patch_projected_area"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outer_contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "normal": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "tolerance_mm2": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "max_work",
+              "outer_contour",
+              "normal",
+              "tolerance_mm2",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "surface_trim_area"
               },
               "input": {

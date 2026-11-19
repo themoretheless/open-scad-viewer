@@ -407,6 +407,37 @@ export function createOwnNurbsResolver(
             result = { kind:'curve',data:curve }
             break
           }
+          case 'surface_trim_contour_audit':
+          case 'surface_trim_contour_station':
+          case 'surface_trim_contour_station_box':
+          case 'surface_trim_contour_divide':
+          case 'surface_trim_patch_area_vector':
+          case 'surface_trim_patch_projected_area': {
+            const surface = needSurface(n.input)
+            const operation = {
+              surface_trim_contour_audit:'brep_audit_exact_periodic_trim_contour',
+              surface_trim_contour_station:'brep_locate_exact_periodic_trim_contour_station',
+              surface_trim_contour_station_box:'brep_enclose_exact_periodic_trim_contour_station',
+              surface_trim_contour_divide:'brep_divide_exact_periodic_trim_contour_by_length',
+              surface_trim_patch_area_vector:'brep_bound_exact_periodic_trim_patch_area',
+              surface_trim_patch_projected_area:'brep_bound_exact_periodic_trim_directional_area',
+            }[n.op]
+            const report = callGeometryRust<object>(operation, {
+              surface,contours:n.contours,maxWork:n.max_work,
+              ...('contour' in n ? {contour:n.contour} : {}),
+              ...('outer_contour' in n ? {outerContour:n.outer_contour} : {}),
+              ...('distance_mm' in n ? {distanceMm:n.distance_mm} : {}),
+              ...('divisions' in n ? {divisions:n.divisions} : {}),
+              ...('tolerance_mm' in n ? {toleranceMm:n.tolerance_mm} : {}),
+              ...('parameter_tolerance' in n ? {parameterTolerance:n.parameter_tolerance} : {}),
+              ...('max_cells' in n ? {maxCells:n.max_cells} : {}),
+              ...('tolerance_mm2' in n ? {toleranceMm2:n.tolerance_mm2} : {}),
+              ...('normal' in n ? {normal:n.normal} : {}),
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_trim_area':
           case 'surface_trim_mass_properties':
           case 'surface_trim_window_properties':
