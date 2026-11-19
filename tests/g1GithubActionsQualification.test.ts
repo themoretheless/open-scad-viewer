@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v130.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v131.json')
 type Sha256Binding = { value: string; byteLength: number }
 type PlanEnvironment = {
   id: string
@@ -37,7 +37,7 @@ const runtimeFreeze = JSON.parse(
   readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'), 'utf8'),
 )
 const githubFreeze = JSON.parse(
-  readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-github-actions-v40.json'), 'utf8'),
+  readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-github-actions-v41.json'), 'utf8'),
 )
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -205,7 +205,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v130',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v131',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -245,17 +245,23 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     })
   })
 
-  it('accepts an observed exact image variant and preserves its recorded identity', () => {
-    const { artifacts, first } = fixture()
-    const fragment = JSON.parse(readFileSync(resolve(first, 'fragment.json'), 'utf8'))
-    const preflight = JSON.parse(readFileSync(resolve(first, 'preflight.json'), 'utf8'))
-    const environment = plan.environments.find(item => item.id === fragment.environmentId)!
-    const variant = githubFreeze.runnerImages[runnerKey(environment)].observedVariants[0]
-    for (const value of [fragment, preflight]) {
-      value.host.runnerImage = variant.imageOS
-      value.host.runnerImageVersion = variant.imageVersion
+  it('accepts the three exact runner identities reported by the November discovery jobs', () => {
+    const { artifacts } = fixture()
+    for (const [environmentId, image, version] of [
+      ['ubuntu-node22', 'ubuntu24', '20261111.127.1'],
+      ['macos-node20', 'macos15', '20261104.0514.1'],
+      ['windows-node20', 'win25-vs2026', '20261116.315.1'],
+    ]) {
+      const row = plan.matrix.find(item => item.executionEnvironmentIds.includes(environmentId))!
+      const directory = resolve(artifacts, `${row.id}--${environmentId}--run-1`)
+      const fragment = JSON.parse(readFileSync(resolve(directory, 'fragment.json'), 'utf8'))
+      const preflight = JSON.parse(readFileSync(resolve(directory, 'preflight.json'), 'utf8'))
+      for (const value of [fragment, preflight]) {
+        value.host.runnerImage = image
+        value.host.runnerImageVersion = version
+      }
+      writeEvidence(directory, fragment, preflight)
     }
-    writeEvidence(first, fragment, preflight)
     const result = aggregate(artifacts, 'observed-image')
     expect(result.process.status, result.process.stderr).toBe(0)
     expect(JSON.parse(readFileSync(result.output, 'utf8')).completedWorkUnits).toBe(4740)
