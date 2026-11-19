@@ -1,0 +1,31 @@
+{
+  "schema": "runtime-provider-qualification/1",
+  "state": "complete",
+  "qualified": true,
+  "recordId": "docs/qualification/runtime-provider-ae4656234ee9-2026-11-19.json",
+  "scope": "Finite exact-artifact direct API baseline: 115 Node tests and 40 Chromium main/40 independent-worker embedded checks. No complete frontend, application worker protocol, global geometry, Linux or hosted CI qualification.",
+  "artifact": {
+    "wasmSha256": "ae4656234ee9522506e958287cd019e8adc881947d742bc787fb72d404a20b30",
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "lockfileSha256": "5ec2184363daf18800f0bd0eb9ee1bf5997fabbb7b72fbf052799f144a9edf08",
+    "rustLockfileSha256": "7725127410b7d544a975b5f1ca1d21479313053e1a8d05657700a90d7891c930",
+    "recordId": "docs/qualification/runtime-provider-ae4656234ee9-2026-11-19.json",
+    "corpusVersion": "runtime-direct-api-ae4656234ee9-2026-11-19"
+  },
+  "qualificationDirectory": "docs/qualification/runtime-direct-api-ae4656-2026-11-19",
+  "qualificationSha256": "297ee8cfbe7ea2c09d18456e37c72b5436152fc4dd8ef1031ca135f0336c4d2c",
+  "verificationReceipt": "docs/qualification/runtime-direct-api-ae4656-2026-11-19/runtime-api-baseline.json",
+  "deliveryState": "local-direct-api-qualified",
+  "claimBoundary": {
+    "G0G1QualificationClaim": "none",
+    "completedCleanWorkUnits": 0,
+    "plannedCleanWorkUnits": 4740,
+    "universalCadCoverage": false,
+    "fullFrontendQualification": false,
+    "applicationWorkerProtocolQualification": false,
+    "productionPackagingQualification": false,
+    "linuxQualification": false,
+    "hostedCiQualification": false,
+    "mainPushed": false
+  }
+}

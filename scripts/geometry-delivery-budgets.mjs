@@ -142,6 +142,14 @@ const profiles=Object.freeze({
     namedJsChunkBytes:Object.freeze({index:256600,DirectModeler:511200,geometryBuildEngine:335200,wasmStreaming:196700}),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // Sweep proof kernel with the same size caps as v22.
+  'ae4656234ee9522506e958287cd019e8adc881947d742bc787fb72d404a20b30':Object.freeze({
+    version:24,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
