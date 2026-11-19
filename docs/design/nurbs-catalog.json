@@ -14122,7 +14122,7 @@
     {
       "id": "NURBS-0544",
       "name": "Точная классификация UV-точки относительно периодического дискретного контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_point",
@@ -14132,7 +14132,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-544-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-544-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-544-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Classify native UV points against periodic copies of a closed polygon lift using exact edge predicates.",
@@ -14143,7 +14145,7 @@
     {
       "id": "NURBS-0545",
       "name": "Точная пакетная классификация UV-точек относительно периодического контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_points",
@@ -14153,7 +14155,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-545-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-545-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-545-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Prepare one lifted periodic polygon and classify an ordered batch of native queries with one budget.",
@@ -14164,7 +14168,7 @@
     {
       "id": "NURBS-0546",
       "name": "Точная классификация UV-точек в периодической области с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_region_points",
@@ -14174,7 +14178,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-546-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-546-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-546-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Classify native queries by even-odd membership across a family of lifted periodic contours.",
@@ -14185,7 +14191,7 @@
     {
       "id": "NURBS-0547",
       "name": "Точная проверка простоты дискретного UV-контура на периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::certify_exact_periodic_surface_path_simplicity",
@@ -14195,7 +14201,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-547-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-547-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-547-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Detect exact segment contacts in a closed UV lift and with its overlapping periodic copies.",
@@ -14206,7 +14214,7 @@
     {
       "id": "NURBS-0548",
       "name": "Точная проверка контакта двух UV-контуров через периодические швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::check_exact_periodic_surface_path_contact",
@@ -14216,7 +14224,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-548-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-548-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-548-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Check disjointness of two lifted UV boundaries across all overlapping periodic translates.",
@@ -14227,7 +14237,7 @@
     {
       "id": "NURBS-0549",
       "name": "Точная проверка вложенности простых UV-контуров на периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::relate_exact_periodic_surface_paths",
@@ -14237,7 +14247,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-549-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-549-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-549-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Distinguish nesting, separation and boundary contact after exact periodic simplicity checks.",
@@ -14248,7 +14260,7 @@
     {
       "id": "NURBS-0550",
       "name": "Дерево вложенности простых UV-контуров на периодической поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_contour_forest",
@@ -14258,7 +14270,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-550-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-550-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-550-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Build an exact containment forest for simple, mutually disjoint periodic UV polygons.",
@@ -14269,7 +14283,7 @@
     {
       "id": "NURBS-0551",
       "name": "Точная площадь периодической UV-области с отверстиями и островами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_area",
@@ -14279,7 +14293,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-551-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-551-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-551-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Measure UV area by exact contour nesting parity and rational polygon integration.",
@@ -14290,7 +14306,7 @@
     {
       "id": "NURBS-0552",
       "name": "Точные центроиды компонент периодической UV-области с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_centroids",
@@ -14300,7 +14316,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-552-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-552-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-552-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Compute each filled periodic component centroid after aligning its holes to the same lift.",
@@ -14311,7 +14329,7 @@
     {
       "id": "NURBS-0553",
       "name": "Точные вторые моменты компонент периодической UV-области с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_inertia",
@@ -14321,7 +14339,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "docs/qualification/nurbs-curvature-field-553-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-553-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-553-2026-11-17/native.log.gz",
+        "examples/rush/periodic-contour-regions.r",
+        "tests/rushPeriodicContourRegions.test.ts"
       ],
       "remainingQualification": [
         "Compute exact central second moments per periodic UV component with aligned holes.",

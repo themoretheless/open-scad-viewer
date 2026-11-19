@@ -230,6 +230,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CLGKAjgu.js':109_000}),
   }),
+  // Exact periodic region classification and moments: 18,991,115 raw bytes, 6,776,652 packed bytes and 12,924,817 asset bytes.
+  '135414b46f669329bdf777a21b8b5be985cddff64227eac73f182134e6c3cf65':Object.freeze({
+    version:35,geometryChunkBytes:6_780_000,totalAssetBytes:12_930_000,rawGeometryBytes:19_000_000,
+    namedJsChunkBytes:Object.freeze({
+      index:258_400,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BFHbW7Ps.js':109_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

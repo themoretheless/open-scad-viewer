@@ -1,4 +1,5 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
+  if (operation.includes('periodic_surface_region') || operation.includes('periodic_surface_contour_forest') || operation.includes('periodic_surface_paths')) return russian ? 'Область на периодической поверхности' : 'Periodic chart region'
   if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) return russian ? 'Измерение в периодических координатах' : 'Periodic chart measurement'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
@@ -33,6 +34,17 @@ export function directionalTravelSummary(operation: string, report: string, russ
   const format = (value: number) => value.toLocaleString(russian ? 'ru' : 'en', { maximumSignificantDigits: 17 })
   const bounds = (pair: number[]) => pair[0] === pair[1] ? format(pair[0]!) : pair.map(format).join(' … ')
   const pair = (value: unknown): value is number[] => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
+  if (operation.includes('periodic_surface_region') || operation.includes('periodic_surface_contour_forest') || operation.includes('periodic_surface_path')) {
+    if (parsed?.location) return [String(parsed.location)]
+    if (Array.isArray(parsed?.locations)) return [parsed.locations.join(', ')]
+    if (typeof parsed?.simple === 'boolean') return [russian ? (parsed.simple ? 'Простой контур' : 'Контур с самоконтактом') : (parsed.simple ? 'Simple contour' : 'Self-contacting contour')]
+    if (typeof parsed?.disjoint === 'boolean') return [russian ? (parsed.disjoint ? 'Границы раздельны' : 'Границы соприкасаются') : (parsed.disjoint ? 'Disjoint boundaries' : 'Boundary contact')]
+    if (parsed?.relation?.kind) return [parsed.relation.kind]
+    if (Array.isArray(parsed?.nodes)) return [(russian ? 'Контуры · ' : 'Contours · ') + parsed.nodes.length]
+    if (parsed?.area) return [(russian ? 'Площадь UV · ' : 'UV area · ') + parsed.area.numerator + '/' + parsed.area.denominator]
+    if (Array.isArray(parsed?.components)) return [(russian ? 'Компоненты · ' : 'Components · ') + parsed.components.length]
+    if (parsed?.refusal) return [String(parsed.refusal)]
+  }
   if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) {
     if (parsed?.refusal) return [String(parsed.refusal)]
     if (parsed?.signedArea) return [(russian ? 'Ориентированная площадь UV' : 'Signed UV area') + ' · ' + parsed.signedArea.numerator + '/' + parsed.signedArea.denominator]

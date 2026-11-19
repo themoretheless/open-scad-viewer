@@ -467,6 +467,23 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'classify_exact_periodic_surface_path_point':
+          case 'classify_exact_periodic_surface_path_points':
+          case 'classify_exact_periodic_surface_region_points':
+          case 'certify_exact_periodic_surface_path_simplicity':
+          case 'check_exact_periodic_surface_path_contact':
+          case 'relate_exact_periodic_surface_paths':
+          case 'exact_periodic_surface_contour_forest':
+          case 'exact_periodic_surface_region_area':
+          case 'exact_periodic_surface_region_component_centroids':
+          case 'exact_periodic_surface_region_component_inertia': {
+            const {id:_id,op,input,...parameters}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_trim_area':
           case 'surface_trim_mass_properties':
           case 'surface_trim_window_properties':
