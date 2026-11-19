@@ -503,6 +503,22 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'surface_trim_sheet':
+          case 'surface_trim_sheet_edge_bindings':
+          case 'surface_trim_sheet_input_bindings': {
+            const operation = {
+              surface_trim_sheet:'brep_build_exact_periodic_trim_sheet',
+              surface_trim_sheet_edge_bindings:'brep_build_exact_periodic_trim_sheet_with_bindings',
+              surface_trim_sheet_input_bindings:'brep_build_exact_periodic_trim_sheet_with_input_bindings',
+            }[n.op]
+            const {model,...report}=callGeometryRust<{model:NurbsBrep|null;workUsed:number;refusalStage:string|null;edgeBindings?:unknown[]}>(operation,{
+              surface:needSurface(n.input),contours:n.contours,toleranceMm:n.tolerance_mm,maxWork:n.max_work,
+            })
+            if(!model) throw new Error('Trimmed sheet construction refused at ' + report.refusalStage + ' after ' + report.workUsed + ' work units.')
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'surface_trim_area':
           case 'surface_trim_mass_properties':
           case 'surface_trim_window_properties':

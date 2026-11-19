@@ -289,13 +289,13 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BFHbW7Ps.js':109_700}),
   }),
-  // Trim contour distance and projection reports: 19,014,081 raw bytes, 6,783,057 packed bytes and 12,936,557 asset bytes.
+  // Trim contour distance and projection reports: 19,014,081 raw bytes, 6,783,057 packed bytes and 12,938,282 asset bytes with trimmed-sheet editor controls.
   'c6190d70c800ea78c41fa6d94bd94e8775b773b601911167a4d8b3137dfc24f2':Object.freeze({
     version:36,geometryChunkBytes:6_790_000,totalAssetBytes:12_940_000,rawGeometryBytes:19_020_000,
     namedJsChunkBytes:Object.freeze({
-      index:259_700,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+      index:260_000,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
     }),
-    exactJsChunkBytes:Object.freeze({'assets/BN9Hwdok.js':110_300}),
+    exactJsChunkBytes:Object.freeze({'assets/do38haOu.js':110_900}),
   }),
 })
 
