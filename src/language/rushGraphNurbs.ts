@@ -1547,6 +1547,7 @@ export const rushGraphNurbsSchema = z
             plane_point:z.tuple([scalar,scalar,scalar]).optional(), plane_normal:z.tuple([scalar,scalar,scalar]).optional(),
             axis_point:z.tuple([scalar,scalar,scalar]).optional(), axis_vector:z.tuple([scalar,scalar,scalar]).optional(),
             reference_point:z.tuple([scalar,scalar,scalar]).optional(), moment_tolerance:scalar.optional(), radius_of_gyration:z.boolean().optional(),
+            principal_axes:z.boolean().optional(), probe_point:z.tuple([scalar,scalar,scalar]).optional(), probe_direction:z.tuple([scalar,scalar,scalar]).optional(),
             balance_tolerance:scalar.optional(), static_unbalance:z.boolean().optional(), couple_unbalance:z.boolean().optional(),
             plane_offsets:z.tuple([scalar,scalar]).optional(),plane_tolerances:z.tuple([scalar,scalar]).optional(),
             weight_radii:z.tuple([scalar,scalar]).optional(),weight_mass_limits:z.tuple([scalar,scalar]).optional(),

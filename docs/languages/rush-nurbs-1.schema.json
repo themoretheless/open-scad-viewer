@@ -39692,6 +39692,157 @@
               "radius_of_gyration": {
                 "type": "boolean"
               },
+              "principal_axes": {
+                "type": "boolean"
+              },
+              "probe_point": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "probe_direction": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              },
               "balance_tolerance": {
                 "anyOf": [
                   {

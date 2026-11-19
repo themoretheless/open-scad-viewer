@@ -16273,7 +16273,7 @@
     {
       "id": "NURBS-0651",
       "name": "Сертифицированные главные оси инерции разноплотной NURBS-сборки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16284,7 +16284,9 @@
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-651-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-651-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-651-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Expose opt-in principal directions and angular certificates, preserving unavailable axes explicitly.",
@@ -16314,7 +16316,7 @@
     {
       "id": "NURBS-0653",
       "name": "Гарантированное расстояние от точки до главной оси инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_distance_to_principal_axis",
@@ -16322,7 +16324,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-653-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-653-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-653-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Enclose point-to-axis distance from an interval anchor and a principal-direction certificate.",
@@ -16333,7 +16337,7 @@
     {
       "id": "NURBS-0654",
       "name": "Измерение расстояния до главной оси инерции через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16343,7 +16347,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-654-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-654-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-654-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Attach certified distance bounds for a world-space probe to each available principal axis.",
@@ -16354,7 +16360,7 @@
     {
       "id": "NURBS-0655",
       "name": "Гарантированный угол между заданным направлением и главной осью инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_axis_angle_sine",
@@ -16362,7 +16368,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-655-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-655-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-655-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Enclose the sine of the acute angle to a certified principal axis.",
@@ -16373,7 +16381,7 @@
     {
       "id": "NURBS-0656",
       "name": "Проверка угла к главной оси инерции через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
@@ -16383,7 +16391,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-656-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-656-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-656-2026-11-17/native.log.gz",
+        "examples/rush/principal-axis-probes.r",
+        "tests/rushPrincipalAxisProbes.test.ts"
       ],
       "remainingQualification": [
         "Attach certified acute-angle sine bounds for a fixed probe direction to each available principal axis.",

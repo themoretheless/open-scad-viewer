@@ -33,7 +33,17 @@ export function directionalTravelSummary(operation: string, report: string, russ
     const verdict = status === 'within' ? (russian ? 'Балансировка в допуске' : 'Balance within tolerance')
       : status === 'outside' ? (russian ? 'Дисбаланс превышает допуск' : 'Unbalance exceeds tolerance')
       : status === 'undetermined' ? (russian ? 'Балансировка неопределённа' : 'Balance undetermined') : ''
-    return [...(verdict ? [verdict] : []), (russian ? 'Общая масса · ' : 'Total mass · ') + bounds(parsed.massBoundsKg) + (russian ? ' кг' : ' kg')]
+    const axisLines: string[] = []
+    if (Array.isArray(parsed.principalAxes)) {
+      parsed.principalAxes.forEach((axis: {direction:number[];distanceBoundsMm?:number[];angleSineBounds?:number[]}|null,index:number) => {
+        if (!axis || !Array.isArray(axis.direction) || axis.direction.length !== 3 || !axis.direction.every(Number.isFinite)) return
+        const label = (russian ? 'Главная ось ' : 'Principal axis ') + (index + 1)
+        axisLines.push(label + ' · [' + axis.direction.map(format).join(', ') + ']')
+        if (pair(axis.distanceBoundsMm)) axisLines.push((russian ? 'Расстояние · ' : 'Distance · ') + bounds(axis.distanceBoundsMm) + ' ' + unit)
+        if (pair(axis.angleSineBounds)) axisLines.push('sin θ · ' + bounds(axis.angleSineBounds))
+      })
+    }
+    return [...axisLines,...(verdict ? [verdict] : []), (russian ? 'Общая масса · ' : 'Total mass · ') + bounds(parsed.massBoundsKg) + (russian ? ' кг' : ' kg')]
   }
   if (operation.startsWith('curve_axis_motion_') && parsed) {
     const status = (key: unknown) => key === 'within' ? (russian ? 'В пределах лимита' : 'Within limit')

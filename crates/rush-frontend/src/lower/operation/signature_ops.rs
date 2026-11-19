@@ -145,6 +145,7 @@ impl Compiler {
         if [
             "herringbone",
             "internal",
+            "principal_axes",
             "static_unbalance",
             "couple_unbalance",
             "radius_of_gyration",

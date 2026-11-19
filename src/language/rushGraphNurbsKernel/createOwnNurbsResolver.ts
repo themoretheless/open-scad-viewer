@@ -413,6 +413,9 @@ export function createOwnNurbsResolver(
               throw new Error('A measurement plane or axis needs both its point and its direction.')
             }
             const report = callGeometryRust<object>('brep_measure_exact_periodic_trim_patch_set_density', {
+              ...(n.principal_axes === undefined ? {} : {includePrincipalAxes:n.principal_axes}),
+              ...(n.probe_point ? {principalAxisProbePointMm:n.probe_point} : {}),
+              ...(n.probe_direction ? {principalAxisProbeDirection:n.probe_direction} : {}),
               ...(n.balance_tolerance === undefined ? {} : {axisBalanceToleranceMm:n.balance_tolerance}),
               ...(n.static_unbalance === undefined ? {} : {includeStaticUnbalance:n.static_unbalance}),
               ...(n.couple_unbalance === undefined ? {} : {includeCoupleUnbalance:n.couple_unbalance}),
