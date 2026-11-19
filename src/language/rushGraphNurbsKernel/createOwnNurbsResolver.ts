@@ -438,6 +438,20 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'surface_trim_range_length': {
+            const surface=needSurface(n.input)
+            const range=[n.range_start,n.range_end].map(pair=>{
+              const [numerator,denominator]=pair.split('/')
+              return {numerator,denominator}
+            })
+            const report=callGeometryRust<object>('brep_measure_exact_periodic_trim_range',{
+              surface,contours:n.contours,contour:n.contour,segment:n.segment,range,
+              toleranceMm:n.tolerance_mm,maxWork:n.max_work,maxCells:n.max_cells,
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_trim_area':
           case 'surface_trim_mass_properties':
           case 'surface_trim_window_properties':

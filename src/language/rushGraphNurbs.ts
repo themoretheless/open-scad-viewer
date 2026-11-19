@@ -6,6 +6,7 @@ const scalar = z.union([number, z.object({ param: id }).strict()])
 const vector = z.tuple([scalar, scalar, scalar]),
   uv = z.tuple([scalar, scalar]),
   interval = z.tuple([scalar, scalar])
+const exactUnsignedRatio = z.string().regex(/^[0-9]{1,1234}\/[0-9]{1,1234}$/)
 const finiteVector = z.tuple([z.number(), z.number(), z.number()])
 /** Edge query evaluated against the input B-rep: every given filter must match. */
 const brepFaceQuery = z
@@ -1544,6 +1545,11 @@ export const rushGraphNurbsSchema = z
           z.object({ id, op:z.literal('surface_trim_contour_divide'), input:id, contours:z.array(z.array(uv).min(3)).min(1), max_work:z.number().int().positive(), contour:z.number().int().nonnegative(), divisions:z.number().int().positive(), tolerance_mm:scalar, parameter_tolerance:scalar, max_cells:z.number().int().positive() }).strict(),
           z.object({ id, op:z.literal('surface_trim_patch_area_vector'), input:id, contours:z.array(z.array(uv).min(3)).min(1), max_work:z.number().int().positive(), outer_contour:z.number().int().nonnegative(), tolerance_mm2:scalar, max_cells:z.number().int().positive() }).strict(),
           z.object({ id, op:z.literal('surface_trim_patch_projected_area'), input:id, contours:z.array(z.array(uv).min(3)).min(1), max_work:z.number().int().positive(), outer_contour:z.number().int().nonnegative(), normal:vector, tolerance_mm2:scalar, max_cells:z.number().int().positive() }).strict(),
+          z.object({
+            id,op:z.literal('surface_trim_range_length'),input:id,contours:z.array(z.array(uv).min(3)).min(1),
+            contour:z.number().int().nonnegative(),segment:z.number().int().nonnegative(),range_start:exactUnsignedRatio,
+            range_end:exactUnsignedRatio,tolerance_mm:scalar,max_work:z.number().int().positive(),max_cells:z.number().int().min(1).max(100000),
+          }).strict(),
           z.object({
             id, op: z.literal('surface_trim_area'), input:id,contours:z.array(z.array(z.tuple([scalar,scalar])).min(3)).min(1),
             tolerance_mm2:scalar, tolerance_uv:scalar, max_work:z.number().int().positive(),

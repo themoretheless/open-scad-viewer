@@ -196,6 +196,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_trim_contour_divide" => &["contours", "max_work", "contour", "divisions", "tolerance_mm", "parameter_tolerance", "max_cells"],
         "surface_trim_patch_area_vector" => &["contours", "max_work", "outer_contour", "tolerance_mm2", "max_cells"],
         "surface_trim_patch_projected_area" => &["contours", "max_work", "outer_contour", "normal", "tolerance_mm2", "max_cells"],
+        "surface_trim_range_length" => &["contours","contour","segment","range_start","range_end","tolerance_mm","max_work","max_cells"],
         "surface_trim_area" => &["contours", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "outer_contour"],
         "surface_trim_mass_properties" => &["contours", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "outer_contour", "moment_tolerance"],
         "surface_trim_window_properties" => &["contours", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "outer_contour", "moment_tolerance", "uv_window"],

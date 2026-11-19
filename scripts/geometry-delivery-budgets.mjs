@@ -214,13 +214,13 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/Xy2E_Dxs.js':103_000}),
   }),
-  // Motion interval partitions and full-domain travel: 18,921,391 raw bytes, 6,754,287 packed bytes and 12,891,955 asset bytes with contour station and projection reports.
+  // Motion interval partitions and full-domain travel: 18,921,391 raw bytes, 6,754,287 packed bytes and 12,893,707 asset bytes with exact rational trim ranges.
   'd443112ced2ec682c03930fe6eec4e101efd86c34e71c970b1a9efb62c0af10b':Object.freeze({
     version:33,geometryChunkBytes:6_760_000,totalAssetBytes:12_900_000,rawGeometryBytes:18_940_000,
     namedJsChunkBytes:Object.freeze({
       index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
     }),
-    exactJsChunkBytes:Object.freeze({'assets/UpbJSA39.js':108_200}),
+    exactJsChunkBytes:Object.freeze({'assets/CQuDnQJd.js':108_600}),
   }),
 })
 

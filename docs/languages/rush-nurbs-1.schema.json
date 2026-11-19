@@ -40028,6 +40028,147 @@
               },
               "op": {
                 "type": "string",
+                "const": "surface_trim_range_length"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "contours": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "minItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": -1000000,
+                            "maximum": 1000000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "param": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "param"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                }
+              },
+              "contour": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "segment": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "range_start": {
+                "type": "string",
+                "pattern": "^[0-9]{1,1234}\\/[0-9]{1,1234}$"
+              },
+              "range_end": {
+                "type": "string",
+                "pattern": "^[0-9]{1,1234}\\/[0-9]{1,1234}$"
+              },
+              "tolerance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "contours",
+              "contour",
+              "segment",
+              "range_start",
+              "range_end",
+              "tolerance_mm",
+              "max_work",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "surface_trim_area"
               },
               "input": {

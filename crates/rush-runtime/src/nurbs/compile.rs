@@ -164,7 +164,12 @@ pub(super) fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Resu
         }
         "string" => {
             let text = v.as_str().ok_or_else(|| err(path, "Expected string."))?;
-            if schema.get("pattern").is_some() && !valid_id(text) {
+            if schema["pattern"].as_str() == Some(r"^[0-9]{1,1234}\/[0-9]{1,1234}$") {
+                let digits = |s: &str| (1..=1234).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit());
+                if !text.split_once('/').is_some_and(|(n,d)| digits(n) && digits(d)) {
+                    return Err(err(path, "Expected a rational parameter as unsigned numerator/denominator text."));
+                }
+            } else if schema.get("pattern").is_some() && !valid_id(text) {
                 return Err(err(path, "Invalid identifier."));
             }
         }

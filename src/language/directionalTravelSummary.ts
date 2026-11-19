@@ -1,4 +1,5 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
+  if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
   if (operation === 'surface_trim_patch_area_vector') return russian ? 'Вектор площади' : 'Area vector'
   if (operation === 'surface_trim_patch_projected_area') return russian ? 'Площадь проекции' : 'Projected area'
@@ -31,6 +32,9 @@ export function directionalTravelSummary(operation: string, report: string, russ
   const format = (value: number) => value.toLocaleString(russian ? 'ru' : 'en', { maximumSignificantDigits: 17 })
   const bounds = (pair: number[]) => pair[0] === pair[1] ? format(pair[0]!) : pair.map(format).join(' … ')
   const pair = (value: unknown): value is number[] => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
+  if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
+    ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]
+    : [russian ? 'Длина неопределённа' : 'Length unresolved']
   if (operation.startsWith('surface_trim_contour_')) {
     if (Array.isArray(parsed?.joins)) return [(russian ? 'Число стыков · ' : 'Joins · ') + parsed.joins.length]
     if (Array.isArray(parsed?.stations)) return [(russian ? 'Число точек деления · ' : 'Division points · ') + parsed.stations.length]

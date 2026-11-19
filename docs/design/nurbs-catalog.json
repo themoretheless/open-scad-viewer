@@ -14893,7 +14893,7 @@
     {
       "id": "NURBS-0583",
       "name": "Гарантированные границы длины для рациональных диапазонов периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_rational_input_segment_range_length",
@@ -14901,7 +14901,9 @@
         "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-583-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-583-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-583-2026-11-17/native.log.gz",
+        "examples/rush/rational-trim-range-length.r",
+        "tests/rushRationalTrimRange.test.ts"
       ],
       "remainingQualification": [
         "Enclose length when exact rational edge cuts cannot be stored as binary64.",
@@ -14912,7 +14914,7 @@
     {
       "id": "NURBS-0584",
       "name": "Измерение длины рационального диапазона периодической обрезки через WASM",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "geometry_bridge::brep::exact_periodic_trim_range_length_request",
@@ -14922,7 +14924,9 @@
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "scripts/check-exact-periodic-trim-sheet-abi.mts",
         "docs/qualification/nurbs-curvature-field-584-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-584-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-584-2026-11-17/native.log.gz",
+        "examples/rush/rational-trim-range-length.r",
+        "tests/rushRationalTrimRange.test.ts"
       ],
       "remainingQualification": [
         "Expose certified rational range length and both resource limits through the geometry ABI.",
