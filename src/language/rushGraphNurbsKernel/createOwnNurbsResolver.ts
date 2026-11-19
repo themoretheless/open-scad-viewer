@@ -33,6 +33,7 @@ import {
   createCappedBrepLoftSurfaces,
   createCappedBrepLoftWithCaps,
   createNaturalBrepSectionLoft,
+  createRationalBrepSectionLoft,
   createProgressiveBrepProfileBody,
   createProgressiveMiterBrepProfileBody,
   extrudeBrepCurves,
@@ -967,6 +968,10 @@ export function createOwnNurbsResolver(
             result = { kind: 'brep', data: body.model }
             break
           }
+          case 'brep_rational_loft':
+            result = { kind: 'brep', data: createRationalBrepSectionLoft(n.sections.map(section =>
+              section.map(loop => loop.map(needCurve)))) }
+            break
           case 'brep_natural_loft':
             result = {
               kind: 'brep',
