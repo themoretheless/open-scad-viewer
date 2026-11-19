@@ -4512,7 +4512,7 @@
     {
       "id": "NURBS-0136",
       "name": "линейная перепараметризация кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4523,7 +4523,9 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/exact_edits.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "tests/rushAffineDomain.test.ts",
+        "examples/rush/affine-profile-domain.r"
       ]
     },
     {

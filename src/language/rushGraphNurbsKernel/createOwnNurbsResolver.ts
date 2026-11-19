@@ -1,3 +1,4 @@
+import { reparameterizeNurbsCurveExact } from '../../kernel/nurbsFoundation'
 import { approximateCurveEdit, approximateSurfaceEdit } from './approximateEdits'
 import { callGeometryRust } from '../../kernel/geometry/kernel'
 import { prepareExactFullRoundDisplay } from '../../kernel/geometry/brepExactDisplay'
@@ -268,6 +269,9 @@ export function createOwnNurbsResolver(
             result = { kind: 'surface', data: patch }
             break
           }
+          case 'curve_reparameterize':
+            result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }
+            break
           case 'curve_split':
             result = { kind: 'curve', data: splitNurbsCurve(needCurve(n.input), n.parameter)[n.part] }
             break

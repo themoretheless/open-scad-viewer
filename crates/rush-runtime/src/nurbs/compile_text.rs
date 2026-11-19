@@ -216,7 +216,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
             "curve",
-            "curve_edit", "surface_edit", "surface_split", "surface_transpose", "surface_bezier_patch", "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild", "iso_curve", "curve_split", "curve_bezier_span",
+            "curve_edit", "curve_reparameterize", "surface_edit", "surface_split", "surface_transpose", "surface_bezier_patch", "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild", "iso_curve", "curve_split", "curve_bezier_span",
             "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",

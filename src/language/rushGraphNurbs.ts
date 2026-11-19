@@ -1486,6 +1486,7 @@ export const rushGraphNurbsSchema = z
           z.object({ id, op: z.literal('surface_split'), input: id, direction: z.enum(['u', 'v']), parameter: scalar, part: z.literal([0, 1]) }).strict(),
           z.object({ id, op: z.literal('surface_bezier_patch'), input: id, index: z.number().int().nonnegative() }).strict(),
           z.object({ id, op: z.literal('surface_transpose'), input: id }).strict(),
+          z.object({ id, op: z.literal('curve_reparameterize'), input: id, domain: interval }).strict(),
           z.object({ id, op: z.literal('curve_split'), input: id, parameter: scalar, part: z.literal([0, 1]) }).strict(),
           z.object({ id, op: z.literal('curve_bezier_span'), input: id, index: z.number().int().nonnegative() }).strict(),
           z

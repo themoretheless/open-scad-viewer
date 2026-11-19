@@ -143,6 +143,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_split" => &["direction", "parameter", "part"],
         "surface_transpose" => &[],
         "surface_bezier_patch" => &["index"],
+        "curve_reparameterize" => &["domain"],
         "curve_split" => &["parameter", "part"],
         "curve_bezier_span" => &["index"],
         "curve_edit" => &["insert_knots", "degree", "trim", "reverse"],
