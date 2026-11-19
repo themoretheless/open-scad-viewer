@@ -59,6 +59,12 @@ import {
   curveExactInsertKnot,
   curveExactRemoveKnot,
   curveExactReduceDegree,
+  curveNormalizeWeights,
+  curveCancelFactor,
+  curveExactSplit,
+  curveExactRestrict,
+  curveExactPartition,
+  curveExactElevate,
   reverseNurbsCurve,
   transformNurbsCurve,
   trimNurbsCurve,
@@ -74,6 +80,7 @@ import {
   surfaceExactInsertKnot,
   surfaceExactRemoveKnot,
   surfaceExactReduceDegree,
+  surfaceCancelFactor,
   reverseNurbsSurface,
   splitNurbsSurface,
   transposeNurbsSurface,
@@ -308,6 +315,27 @@ export function createOwnNurbsResolver(
             break
           case 'surface_exact_reduce_degree':
             result = { kind: 'surface', data: surfaceExactReduceDegree(needSurface(n.input), n.direction, n.max_work) }
+            break
+          case 'curve_normalize_weights':
+            result = { kind: 'curve', data: curveNormalizeWeights(needCurve(n.input)) }
+            break
+          case 'curve_cancel_factor':
+            result = { kind: 'curve', data: curveCancelFactor(needCurve(n.input), n.max_work) }
+            break
+          case 'surface_cancel_factor':
+            result = { kind: 'surface', data: surfaceCancelFactor(needSurface(n.input), n.direction, n.max_work) }
+            break
+          case 'curve_exact_split':
+            result = { kind: 'curve', data: curveExactSplit(needCurve(n.input), n.parameter, n.part, n.max_work) }
+            break
+          case 'curve_exact_restrict':
+            result = { kind: 'curve', data: curveExactRestrict(needCurve(n.input), n.domain, n.max_work) }
+            break
+          case 'curve_exact_partition':
+            result = { kind: 'curve', data: curveExactPartition(needCurve(n.input), n.cuts, n.part, n.max_work) }
+            break
+          case 'curve_exact_elevate':
+            result = { kind: 'curve', data: curveExactElevate(needCurve(n.input), n.degree, n.max_work) }
             break
           case 'curve_reparameterize':
             result = { kind: 'curve', data: reparameterizeNurbsCurveExact(needCurve(n.input), n.domain).curve }

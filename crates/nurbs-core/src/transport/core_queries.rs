@@ -38,6 +38,48 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
                 }
                 encode(report.curve)
             }
+            "curve_normalize_weights" => {
+                let report = crate::editing::rational_gauge::normalize_curve(&c)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.geometry.ok_or_else(|| input("Missing exact edit output"))?)
+            }
+            "curve_cancel_factor" => {
+                let report = crate::editing::rational_factor::cancel(&c, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve)
+            }
+            "curve_exact_split" => {
+                let report = crate::editing::exact_knot_insertion::split(&c, field(&v, "parameter")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.pieces.ok_or_else(|| input("Missing exact edit output"))?.get(field::<usize>(&v, "part")?).ok_or_else(|| input("Piece index outside partition"))?)
+            }
+            "curve_exact_restrict" => {
+                let report = crate::editing::exact_knot_insertion::restrict(&c, field(&v, "domain")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve.ok_or_else(|| input("Missing exact edit output"))?)
+            }
+            "curve_exact_partition" => {
+                let report = crate::editing::exact_knot_insertion::partition(&c, &field::<Vec<f64>>(&v, "cuts")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.pieces.ok_or_else(|| input("Missing exact edit output"))?.get(field::<usize>(&v, "part")?).ok_or_else(|| input("Piece index outside partition"))?)
+            }
+            "curve_exact_elevate" => {
+                let report = crate::editing::exact_knot_insertion::elevate_exact(&c, field(&v, "degree")?, field(&v, "max_work")?)?;
+                if let Some(reason) = report.refusal {
+                    return Err(input(format!("Exact edit refused: {reason:?}")));
+                }
+                encode(report.curve.ok_or_else(|| input("Missing exact edit output"))?)
+            }
             "curve_validate" => {
                 c.validate()?;
                 Ok(Value::Null)
@@ -113,6 +155,13 @@ pub(super) fn dispatch(v: Value, op: &str) -> Result<Value> {
         }
         "surface_exact_reduce_degree" => {
             let report = crate::editing::exact_surface_degree_reduction::reduce(&s, field(&v, "axis")?, field(&v, "max_work")?)?;
+            if let Some(reason) = report.refusal {
+                return Err(input(format!("Exact edit refused: {reason:?}")));
+            }
+            encode(report.surface)
+        }
+        "surface_cancel_factor" => {
+            let report = crate::editing::rational_surface_factor::cancel(&s, field(&v, "axis")?, field(&v, "max_work")?)?;
             if let Some(reason) = report.refusal {
                 return Err(input(format!("Exact edit refused: {reason:?}")));
             }

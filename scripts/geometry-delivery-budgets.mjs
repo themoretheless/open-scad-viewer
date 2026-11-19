@@ -174,6 +174,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // Rational factors and exact restrictions: 18,813,732 raw bytes, unchanged aggregate limits. Geometry worker dependency measured at 100,060 bytes.
+  '2d6c6814ec68669abef73f2d9e73ba3906c0f5cec7ca04082e7a8e89660c9d3e':Object.freeze({
+    version:28,geometryChunkBytes:6_760_000,totalAssetBytes:12_840_000,rawGeometryBytes:18_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BG1iAHJS.js':100_100}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

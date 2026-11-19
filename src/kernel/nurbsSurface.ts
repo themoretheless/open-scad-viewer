@@ -483,3 +483,7 @@ export function surfaceExactRemoveKnot(surface: NurbsSurface, direction: NurbsSu
 export function surfaceExactReduceDegree(surface: NurbsSurface, direction: NurbsSurfaceAxis, max_work: number): NurbsSurface {
   return callNurbsRust('surface_exact_reduce_degree', { surface, axis: direction, max_work })
 }
+
+export function surfaceCancelFactor(surface: NurbsSurface, direction: NurbsSurfaceAxis, max_work: number): NurbsSurface {
+  return callNurbsRust('surface_cancel_factor', { surface, axis: direction, max_work })
+}

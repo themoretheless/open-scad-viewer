@@ -216,7 +216,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
             "curve",
-            "curve_edit", "curve_edit_weights", "curve_relocate_seam", "surface_edit_weights", "surface_relocate_seam", "curve_exact_insert_knot", "curve_exact_remove_knot", "curve_exact_reduce_degree", "surface_exact_insert_knot", "surface_exact_remove_knot", "surface_exact_reduce_degree", "curve_reparameterize", "surface_edit", "surface_split", "surface_transpose", "surface_bezier_patch", "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild", "iso_curve", "curve_split", "curve_bezier_span",
+            "curve_edit", "curve_edit_weights", "curve_relocate_seam", "surface_edit_weights", "surface_relocate_seam", "curve_exact_insert_knot", "curve_exact_remove_knot", "curve_exact_reduce_degree", "surface_exact_insert_knot", "surface_exact_remove_knot", "surface_exact_reduce_degree", "curve_normalize_weights", "curve_cancel_factor", "surface_cancel_factor", "curve_exact_split", "curve_exact_restrict", "curve_exact_partition", "curve_exact_elevate", "curve_reparameterize", "surface_edit", "surface_split", "surface_transpose", "surface_bezier_patch", "curve_remove_knot", "curve_reduce_degree", "curve_rebuild", "surface_remove_knot", "surface_reduce_degree", "surface_rebuild", "iso_curve", "curve_split", "curve_bezier_span",
             "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",
@@ -234,7 +234,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             ));
         }
         let progressive_sweep=["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
-        let needs_direction = matches!(s(&node, "op"), "iso_curve" | "surface_exact_insert_knot" | "surface_exact_remove_knot" | "surface_exact_reduce_degree" | "surface_relocate_seam" | "surface_split" | "surface_remove_knot" | "surface_reduce_degree" | "surface_rebuild");
+        let needs_direction = matches!(s(&node, "op"), "iso_curve" | "surface_exact_insert_knot" | "surface_exact_remove_knot" | "surface_exact_reduce_degree" | "surface_cancel_factor" | "surface_relocate_seam" | "surface_split" | "surface_remove_knot" | "surface_reduce_degree" | "surface_rebuild");
         let engineering_profile = ["rounded_rectangle_profile", "capsule_profile", "annular_sector_surface", "keyway_profile", "t_slot_profile", "dovetail_profile", "poly_v_belt_profile", "toothed_belt_profile", "o_ring_groove_profile", "retaining_ring_profile", "hex_fastener_profile", "square_fastener_profile"].contains(&s(&node, "op"));
         let exact_primitive = ["exact_ellipse", "exact_ellipsoid", "exact_ring_torus", "exact_frustum_side", "exact_planar_region"].contains(&s(&node,"op"));
         let exact_ellipsoid = s(&node,"op") == "exact_ellipsoid";

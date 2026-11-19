@@ -6446,7 +6446,7 @@
     {
       "id": "NURBS-0231",
       "name": "Точная общая нормализация рациональных весов кривых и поверхностей степенью двойки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное рациональное представление",
       "nativeApi": "nurbs_core::editing::rational_gauge::normalize_curve",
@@ -6456,7 +6456,9 @@
         "crates/nurbs-core/tests/rational_gauge_contracts.rs",
         "docs/design/nurbs-rational-gauge.md",
         "docs/qualification/nurbs-rational-gauge-native-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-rational-gauge-native-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-rational-gauge-native-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-factor-curve.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Native representation operation only; unchanged existing limits. No evaluator bit identity or downstream source-bound certificate reuse.",
@@ -6466,7 +6468,7 @@
     {
       "id": "NURBS-0232",
       "name": "Точное сокращение общих полиномиальных множителей рационального сегмента Безье с сохранением параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::rational_factor::cancel",
@@ -6479,7 +6481,9 @@
         "crates/nurbs-core/tests/rational_factor_contracts.rs",
         "docs/design/nurbs-rational-factor.md",
         "docs/qualification/nurbs-rational-factor-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-rational-factor-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-rational-factor-2026-11-02/exact_oracle.py",
+        "examples/rush/exact-factor-curve.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "One validated nonperiodic clamped Bezier segment only; exact binary64 positive-weight output or atomic refusal under original1m work and declared4096-bit proposal cap. No evaluator-bit or old source/topology certificate reuse.",
@@ -6535,7 +6539,7 @@
     {
       "id": "NURBS-0235",
       "name": "Точное сокращение общего полиномиального множителя тензорной рациональной поверхности с сохранением полной UV-параметризации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::rational_surface_factor::cancel",
@@ -6545,7 +6549,9 @@
         "crates/nurbs-core/tests/rational_surface_factor_contracts.rs",
         "docs/design/nurbs-rational-surface-factor.md",
         "docs/qualification/nurbs-rational-surface-factor-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py",
+        "examples/rush/exact-factor-panel.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "One selected nonperiodic clamped Bezier axis; untouched basis may be multispan/periodic. Exact positive binary64 storage or unchanged-source refusal under existing degree1..25,256-pole,4096-bit and shared1m-work caps. No evaluator-bit identity or old source/topology certificate reuse.",
@@ -12909,7 +12915,7 @@
     {
       "id": "NURBS-0489",
       "name": "Точное разделение рациональной NURBS-кривой с сохранением исходного параметра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::split",
@@ -12918,7 +12924,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-489-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-489-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-489-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Split an original nonperiodic NURBS curve into two exact restrictions with the original absolute parameter.",
@@ -12929,7 +12937,7 @@
     {
       "id": "NURBS-0490",
       "name": "Точное выделение подынтервала рациональной NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::restrict",
@@ -12938,7 +12946,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-490-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-490-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-490-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Restrict the original NURBS parameter law to a closed interval without rounding the geometry.",
@@ -12949,7 +12959,7 @@
     {
       "id": "NURBS-0491",
       "name": "Атомарное точное разбиение рациональной NURBS-кривой по нескольким параметрам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::partition",
@@ -12958,7 +12968,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-491-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-491-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-491-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Partition the original NURBS curve at several absolute parameters under one exact work budget.",
@@ -13009,7 +13021,7 @@
     {
       "id": "NURBS-0494",
       "name": "Точное повышение степени рациональной NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_knot_insertion::elevate_exact",
@@ -13018,7 +13030,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge.rs",
         "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
         "docs/qualification/nurbs-curvature-field-494-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-494-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-494-2026-11-17/native.log.gz",
+        "examples/rush/exact-curve-restriction.r",
+        "tests/rushExactRestrictions.test.ts"
       ],
       "remainingQualification": [
         "Elevate clamped NURBS curves with exact homogeneous Bézier arithmetic and full definition proof.",
