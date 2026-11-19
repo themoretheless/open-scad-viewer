@@ -136,6 +136,12 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // Engineering profiles: raw WASM 19015858, packed geometry 6775441, distribution assets 12851095.
+  '9d18af4d9b9cd8f8eec0cf45cbbc595c4c51946c8208d082ad41c55d4998305a':Object.freeze({
+    version:23,geometryChunkBytes:6777000,totalAssetBytes:12857000,rawGeometryBytes:19016000,
+    namedJsChunkBytes:Object.freeze({index:256600,DirectModeler:511200,geometryBuildEngine:335200,wasmStreaming:196700}),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

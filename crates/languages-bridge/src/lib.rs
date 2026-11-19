@@ -81,6 +81,18 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
         })?;
         let own = node_list.iter().any(|n| {
             [
+                "rounded_rectangle_profile",
+                "capsule_profile",
+                "annular_sector_surface",
+                "keyway_profile",
+                "t_slot_profile",
+                "dovetail_profile",
+                "poly_v_belt_profile",
+                "toothed_belt_profile",
+                "o_ring_groove_profile",
+                "retaining_ring_profile",
+                "hex_fastener_profile",
+                "square_fastener_profile",
                 "polygon_profile",
                 "polygon_loft",
                 "triangle_mesh",

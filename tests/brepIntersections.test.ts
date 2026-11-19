@@ -4002,7 +4002,7 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
     ]),
   )
   expect(near.unresolved.map(u => u.reason)).toEqual(['near_coincidence'])
-  // Clearly off-axis: the general quartic is unsupported, no fallback.
+  // The lateral shift preserves both Z ranges: [-1,1] and [2,4] are disjoint.
   const off = intersectTorusTorus(
     first,
     transformNurbsBrep(at(3), [
@@ -4012,7 +4012,10 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
       [0, 0, 0, 1],
     ]),
   )
-  expect(off.unresolved.map(u => u.reason)).toEqual(['unsupported_surface'])
+  expect(off.coverage).toBe('numerically_resolved')
+  expect(off.components).toHaveLength(0)
+  expect(off.unresolved).toHaveLength(0)
+  expect(off.permitsTopologyChange).toBe(false)
   // Non-canonical operands on either side: explicit unsupported_surface.
   for (const [a, b] of [
     [createBrepSphere(2), first],
@@ -4027,5 +4030,5 @@ it('keeps torus/torus tangencies, coincidence and refusals explicit through WASM
   }
   // JSON roundtrip preserves the regions.
   const round = JSON.parse(JSON.stringify(off)) as typeof off
-  expect(round.unresolved.map(u => u.reason)).toEqual(['unsupported_surface'])
+  expect(round).toEqual(off)
 })

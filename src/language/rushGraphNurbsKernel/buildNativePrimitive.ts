@@ -1,3 +1,6 @@
+import { callNurbsRust } from '../../kernel/geometry/nurbs'
+import type { NurbsCurve } from '../../kernel/nurbsCurve'
+import type { NurbsSurface } from '../../kernel/nurbsSurface'
 import type { Value } from '../rushGraphNurbsKernel'
 import {
   bezierNurbsCurve,
@@ -38,6 +41,25 @@ import { compileRushGraphNurbs } from '../rushGraphNurbsCompiler'
 type NativeNode = ReturnType<typeof compileRushGraphNurbs>['resolved_document']['nodes'][number]
 export function buildNativePrimitive(n: NativeNode): Value | undefined {
   switch (n.op) {
+    case 'rounded_rectangle_profile':
+    case 'capsule_profile':
+    case 'keyway_profile':
+    case 't_slot_profile':
+    case 'dovetail_profile':
+    case 'poly_v_belt_profile':
+    case 'toothed_belt_profile':
+    case 'o_ring_groove_profile':
+    case 'retaining_ring_profile':
+    case 'hex_fastener_profile':
+    case 'square_fastener_profile':
+    {
+      const { op, id: _id, ...parameters } = n
+      return { kind: 'curve', data: callNurbsRust<NurbsCurve>(op, parameters) }
+    }
+    case 'annular_sector_surface': {
+      const { op, id: _id, ...parameters } = n
+      return { kind: 'surface', data: callNurbsRust<NurbsSurface>(op, parameters) }
+    }
     case 'parabola_curve':
       return { kind: 'curve', data: parabolaNurbsCurve(n.center, n.axis_u, n.axis_v, n.start, n.end) }
     case 'hyperbola_curve':

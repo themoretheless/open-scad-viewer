@@ -558,6 +558,18 @@ export const rushGraphNurbsSchema = z
             })
             .strict(),
           z.object({ id, op: z.literal('curve_compose'), inputs: z.array(id).min(2).max(32) }).strict(),
+          z.object({ id, op: z.literal('rounded_rectangle_profile'), center: vector, width: scalar, height: scalar, radius: scalar }).strict(),
+          z.object({ id, op: z.literal('capsule_profile'), center: vector, straight: scalar, radius: scalar }).strict(),
+          z.object({ id, op: z.literal('annular_sector_surface'), center: vector, normal: vector, inner_radius: scalar, outer_radius: scalar, start_degrees: scalar, sweep_degrees: scalar }).strict(),
+          z.object({ id, op: z.literal('keyway_profile'), mouth: vector, width: scalar, depth: scalar }).strict(),
+          z.object({ id, op: z.literal('t_slot_profile'), mouth: vector, neck_width: scalar, flange_width: scalar, neck_depth: scalar, total_depth: scalar }).strict(),
+          z.object({ id, op: z.literal('dovetail_profile'), mouth: vector, mouth_width: scalar, base_width: scalar, depth: scalar }).strict(),
+          z.object({ id, op: z.literal('poly_v_belt_profile'), center: vector, ribs: scalar, pitch: scalar, back_thickness: scalar, rib_height: scalar }).strict(),
+          z.object({ id, op: z.literal('toothed_belt_profile'), center: vector, teeth: scalar, pitch: scalar, base_width: scalar, tip_width: scalar, back_thickness: scalar, tooth_height: scalar }).strict(),
+          z.object({ id, op: z.literal('o_ring_groove_profile'), mouth: vector, width: scalar, depth: scalar, radius: scalar }).strict(),
+          z.object({ id, op: z.literal('retaining_ring_profile'), center: vector, inner_radius: scalar, outer_radius: scalar, gap_degrees: scalar }).strict(),
+          z.object({ id, op: z.literal('hex_fastener_profile'), center: vector, across_flats: scalar }).strict(),
+          z.object({ id, op: z.literal('square_fastener_profile'), center: vector, across_flats: scalar }).strict(),
           z.object({ id, op: z.literal('line_curve'), start: vector, end: vector }).strict(),
           z
             .object({

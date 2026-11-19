@@ -4046,7 +4046,7 @@
     {
       "id": "NURBS-0114",
       "name": "скруглённый прямоугольный профиль",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4056,13 +4056,17 @@
       "nativeApi": "nurbs_core::engineering_profiles::rounded_rectangle",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
-        "crates/nurbs-core/examples/engineering_profiles.rs"
+        "crates/nurbs-core/examples/engineering_profiles.rs",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0115",
       "name": "капсульный профиль",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4072,13 +4076,17 @@
       "nativeApi": "nurbs_core::engineering_profiles::capsule",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
-        "crates/nurbs-core/examples/engineering_profiles.rs"
+        "crates/nurbs-core/examples/engineering_profiles.rs",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0116",
       "name": "плоский кольцевой сектор",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4088,13 +4096,17 @@
       "nativeApi": "nurbs_core::engineering_profiles::annular_sector",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
-        "crates/nurbs-core/examples/engineering_profiles.rs"
+        "crates/nurbs-core/examples/engineering_profiles.rs",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0117",
       "name": "профиль шпоночного паза",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4106,13 +4118,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0118",
       "name": "профиль Т-образного паза",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4124,13 +4140,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0119",
       "name": "профиль ласточкин хвост",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4142,13 +4162,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0120",
       "name": "профиль поликлинового ремня",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4160,13 +4184,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0121",
       "name": "профиль зубчатого ремня",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4178,13 +4206,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0122",
       "name": "профиль O-ring канавки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4196,13 +4228,17 @@
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/o_ring_groove.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0123",
       "name": "профиль стопорного кольца",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4213,13 +4249,17 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0124",
       "name": "профиль шестигранного крепежа",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4230,13 +4270,17 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
       "id": "NURBS-0125",
       "name": "профиль квадратного крепежа",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Профили деталей",
       "remainingQualification": [
@@ -4247,7 +4291,11 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
-        "docs/design/nurbs-machining-profiles.md"
+        "docs/design/nurbs-machining-profiles.md",
+        "crates/nurbs-core/src/transport/parametric_primitives.rs",
+        "src/language/rushGraphNurbsKernel/buildNativePrimitive.ts",
+        "tests/rushEngineeringProfiles.test.ts",
+        "docs/qualification/runtime-direct-api-9d18af-2026-11-19/engineering-profile-editor.json"
       ]
     },
     {
