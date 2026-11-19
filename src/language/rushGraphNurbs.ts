@@ -1368,6 +1368,7 @@ export const rushGraphNurbsSchema = z
               rim_width: scalar.default(2),
               clearance: scalar.default(0.25),
               backlash: scalar.default(0),
+              verified_profile: z.boolean().optional(),
             })
             .strict(),
           z.object({ id, op: z.literal('brep_cylinder'), radius: scalar, height: scalar }).strict(),

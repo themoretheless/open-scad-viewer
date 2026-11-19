@@ -38,6 +38,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
             "rim_width",
             "clearance",
             "backlash",
+            "verified_profile",
         ],
         "brep_revolve" => &["angle"],
         "brep_extrude" => &["height"],

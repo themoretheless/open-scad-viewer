@@ -1674,10 +1674,8 @@ export function createOwnNurbsResolver(
           case 'brep_sphere':
             result = { kind: 'brep', data: createBrepSphere(n.radius) }
             break
-          case 'brep_gear':
-            result = {
-              kind: 'brep',
-              data: createBrepGear({
+          case 'brep_gear': {
+            const spec = {
                 module: n.module,
                 teeth: n.teeth,
                 height: n.height,
@@ -1689,9 +1687,14 @@ export function createOwnNurbsResolver(
                 rimWidth: n.rim_width,
                 clearance: n.clearance,
                 backlash: n.backlash,
-              }),
             }
+            if (n.verified_profile) {
+              const {model,...report}=callGeometryRust<{model:NurbsBrep;profileErrorUpperMm:number;idealWallErrorUpperMm:number;profileWinding:number[];solidGeometryCertified:boolean}>('brep_nurbs_verified_gear',spec)
+              result={kind:'brep',data:model}
+              constructionReports[key]={measurement:{operation:'brep_nurbs_verified_gear',report}}
+            } else result={kind:'brep',data:createBrepGear(spec)}
             break
+          }
           case 'brep_torus':
             result = { kind: 'brep', data: createBrepTorus(n.major_radius, n.minor_radius) }
             break

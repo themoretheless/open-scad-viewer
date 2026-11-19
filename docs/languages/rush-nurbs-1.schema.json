@@ -32181,6 +32181,9 @@
                     "additionalProperties": false
                   }
                 ]
+              },
+              "verified_profile": {
+                "type": "boolean"
               }
             },
             "required": [

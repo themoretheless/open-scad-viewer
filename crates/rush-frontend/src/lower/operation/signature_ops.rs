@@ -150,6 +150,7 @@ impl Compiler {
         }
         if [
             "herringbone",
+            "verified_profile",
             "use_pcurve",
             "internal",
             "principal_axes",

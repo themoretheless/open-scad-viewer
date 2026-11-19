@@ -18,6 +18,7 @@ pub(super) const OPS: &[&str] = &[
     "brep_implicit_sphere_source_audit",
     "brep_implicit_affine_sphere_source_audit",
     "brep_nurbs_gear",
+    "brep_nurbs_verified_gear",
     "brep_nurbs_torus",
     "brep_nurbs_cylinder",
     "brep_nurbs_frustum",
@@ -84,7 +85,7 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "brep_implicit_sphere_source_construct" => cad_implicit_body::sphere(v, false),
         "brep_implicit_sphere_source_audit" => cad_implicit_body::sphere(v, true),
         "brep_implicit_affine_sphere_source_audit" => cad_implicit_body::affine_sphere(v),
-        "brep_nurbs_gear" => handle_gear(&v),
+        "brep_nurbs_gear" | "brep_nurbs_verified_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,
             field(&v, "minorRadius")?,
@@ -214,5 +215,13 @@ fn handle_gear(v: &Value) -> Result<Value> {
         clearance: number("clearance", 0.25),
         backlash: number("backlash", 0.),
     };
+    if v["op"].as_str() == Some("brep_nurbs_verified_gear") {
+        let gear = brep_core::gear::gear_with_verified_profile(&spec, Default::default())?;
+        return Ok(value_codec::json!({
+            "model":gear.model(), "profileErrorUpperMm":gear.geometry().profile_error_upper,
+            "idealWallErrorUpperMm":gear.geometry().ideal_wall_error_upper,
+            "profileWinding":gear.profile().winding(), "solidGeometryCertified":gear.solid_geometry_certified(),
+        }));
+    }
     encode(brep_core::gear(&spec)?)
 }

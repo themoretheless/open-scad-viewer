@@ -321,6 +321,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/mainSolid.worker-DIwXa-UR.js':178_300,'assets/DlBCRQE0.js':113_000}),
   }),
+  // Verified gear profile and nominal wall bounds: 19,229,741 raw bytes, 6,865,524 packed bytes and 13,031,988 asset bytes.
+  '13d92c870844e7c7f5d64b0a870c9a2ce8321d3c52b472f3a80aa21506cabe5e':Object.freeze({
+    version:40,geometryChunkBytes:6_870_000,totalAssetBytes:13_040_000,rawGeometryBytes:19_230_000,
+    namedJsChunkBytes:Object.freeze({
+      index:267_800,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/m51LYVn7.js':113_200,'assets/mainSolid.worker-dP66mhXS.js':178_900}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

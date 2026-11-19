@@ -11,6 +11,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'trimmed_surface_area_in_window') return russian ? 'Площадь внутри окна UV' : 'Area inside the UV window'
   if (operation === 'trimmed_surface_centroid') return russian ? 'Центр площади' : 'Area centroid'
   if (operation === 'trimmed_surface_area_inertia') return russian ? 'Тензор инерции площади' : 'Area inertia tensor'
+  if (operation === 'brep_nurbs_verified_gear') return russian ? 'Точность зубчатого профиля' : 'Gear profile accuracy'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_sheet')) return russian ? 'Обрезанная оболочка' : 'Trimmed sheet'
   if (operation.startsWith('surface_trim_contour_')) return russian ? 'Измерение контура' : 'Contour measurement'
@@ -104,6 +105,10 @@ export function directionalTravelSummary(operation: string, report: string, russ
     if (parsed?.inertiaBoundsMm4) return parsed.inertiaBoundsMm4.map((row:number[][],i:number) => 'XYZ'[i] + ' · ' + row.map(b=>b.join(' … ')).join(' / '))
     return parsed?.measure?.area ? [parsed.measure.area.boundsMm2.join(' … ') + ' ' + unit + '²'] : [russian ? 'Граница не получена' : 'Bound unavailable']
   }
+  if (operation === 'brep_nurbs_verified_gear') return [
+    (russian ? 'Профиль ≤ ' : 'Profile ≤ ') + format(parsed.profileErrorUpperMm) + ' ' + unit,
+    (russian ? 'Боковая поверхность ≤ ' : 'Flank surface ≤ ') + format(parsed.idealWallErrorUpperMm) + ' ' + unit,
+  ]
   if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
     ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]
     : [russian ? 'Длина неопределённа' : 'Length unresolved']
