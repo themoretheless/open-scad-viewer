@@ -140,6 +140,28 @@ pub(super) fn representation_occurrences(
     Ok(out)
 }
 
+/// A retained product can contain several exact part definitions. Require every
+/// selected representation to belong to one explicit parent-to-child assembly.
+pub(super) fn single_product_assembly(entities: &BTreeMap<usize, Entity>, selected: &[usize]) -> Result<bool> {
+    let edges = collect_product_assembly(entities)?;
+    if edges.is_empty() { return Ok(false); }
+    let children: BTreeSet<_> = edges.values().map(|&(_, child)| child).collect();
+    let roots: Vec<_> = selected.iter().copied().filter(|rep| !children.contains(rep)).collect();
+    let [root] = roots.as_slice() else { return Ok(false); };
+    let mut outgoing = BTreeMap::<usize, Vec<usize>>::new();
+    for &(parent, child) in edges.values() {
+        outgoing.entry(parent).or_default().push(child);
+    }
+    let mut visited = BTreeSet::new();
+    let mut pending = vec![*root];
+    while let Some(rep) = pending.pop() {
+        if visited.insert(rep) && let Some(children) = outgoing.get(&rep) {
+            pending.extend(children);
+        }
+    }
+    Ok(selected.iter().all(|rep| visited.contains(rep)) && outgoing.keys().all(|rep| visited.contains(rep)))
+}
+
 fn collect_product_assembly(
     entities: &BTreeMap<usize, Entity>,
 ) -> Result<BTreeMap<usize, (usize, usize)>> {
@@ -202,6 +224,7 @@ fn validate_shape_representation_container(
     outgoing: &BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
     rep: usize,
     args: &[Value],
+    is_child: bool,
 ) -> Result<()> {
     let items = list(&args[1], "assembly placement items")?;
     let has_direct_body = items.iter().any(|item| {
@@ -210,7 +233,10 @@ fn validate_shape_representation_container(
                 .is_ok_and(|(ty, _)| matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS"))
         })
     });
-    if !outgoing.contains_key(&rep) && !has_direct_body {
+    // A nested, frame-only product represents an empty group.
+    let empty_group = is_child && matches!(items, [Value::Ref(frame)]
+        if call(entities, *frame).is_ok_and(|(ty, _)| ty == "AXIS2_PLACEMENT_3D"));
+    if !outgoing.contains_key(&rep) && !has_direct_body && !empty_group {
         return Err(refuse("Empty product assembly container"));
     }
     for item in items {
@@ -324,7 +350,7 @@ fn walk(
         return Err(refuse("Shape representation argument count mismatch"));
     }
     if ty == "SHAPE_REPRESENTATION" {
-        validate_shape_representation_container(entities, outgoing, rep, args)?;
+        validate_shape_representation_container(entities, outgoing, rep, args, depth > 0)?;
     }
     let linked = reachable(entities, &[rep])?;
     let scale = length_scale(entities, &linked, false)?;

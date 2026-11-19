@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0910",
+  "testedBase": "6a4eb57cc4c2e3713c9c27906b2a543da05a9387",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "surface_distance_queries",
+    "--test",
+    "curve_surface_distance"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 469,
+  "scope": [
+    "Weighted line crosses the center of a square hole. Verify bounds enclose the analytic minimum to within tolerance, an interior curve parameter, admitted face witness and invalid tolerance."
+  ],
+  "logSha256": "345648b7756e65c89d80bb53202c09c9564b48e47e445010085ed9160d42c4fa",
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/trimmed_surface_distance.rs": "442cfbcf1af7b9927e6a45a8fef39e6f867d6a74bc3c81da45e6d840116eb7ab",
+    "crates/nurbs-core/tests/curve_surface_distance.rs": "6fa6f26d2ecf5140aa696536501b01b65d686da94f6fbe8fa3371d6175a20caa"
+  }
+}

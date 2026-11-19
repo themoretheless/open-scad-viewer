@@ -1681,3 +1681,117 @@ pub fn partition_exact_periodic_curve(
         refusal: None,
     })
 }
+
+/// Join an ordered mixed-degree chain on its original parameter intervals,
+/// then remove provably redundant knots and degrees from the complete profile.
+/// Only a completed result is emitted. Every intermediate representation must
+/// fit the storage limits and the same shared proof budget.
+pub fn compress_mixed_degree_chain(sources: &[Curve], max_work: u64) -> Result<GaugeMergeReport> {
+    crate::check((2..=256).contains(&sources.len()), "Expected 2..=256 curve segments")?;
+    crate::check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Invalid chain compression work limit")?;
+    for source in sources { source.validate()?; }
+    let exhausted = |work_used| GaugeMergeReport {
+        curve: None, work_used, refusal: Some(GaugeMergeRefusal::Exact(super::rational_factor::Refusal::ResourceLimit)),
+    };
+    let mut current = sources[0].clone();
+    let mut used = 0;
+    for next in &sources[1..] {
+        if used == max_work { return Ok(exhausted(used)); }
+        let mut join = merge_with_exact_degree_elevation(&current, next, max_work - used)?;
+        used += join.work_used;
+        let Some(curve) = join.curve.take() else { join.work_used = used; return Ok(join); };
+        current = curve;
+    }
+    if used == max_work { return Ok(exhausted(used)); }
+    let compressed = super::exact_knot_removal::compress_curve(&current, max_work - used)?;
+    used += compressed.work_used;
+    if !compressed.completed { return Ok(exhausted(used)); }
+    Ok(GaugeMergeReport { curve: Some(compressed.curve), work_used: used, refusal: None })
+}
+
+/// Keep the first segment's orientation and the supplied segment order.
+/// Orient each subsequent open segment by its unique matching endpoint,
+/// reflecting its absolute knot interval exactly when necessary. Refuses
+/// ambiguous joins and reflected knots that cannot be stored in binary64.
+pub fn orient_and_compress_chain(sources: &[Curve], max_work: u64) -> Result<GaugeMergeReport> {
+    use super::{rational_edit::Work, rational_factor::Refusal as Exact};
+    crate::check((2..=256).contains(&sources.len()), "Expected 2..=256 curve segments")?;
+    crate::check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Invalid orientation work limit")?;
+    for curve in sources { curve.validate()?; }
+    let mut work = Work { used: 0, limit: max_work };
+    let mut oriented = vec![sources[0].clone()];
+    for next in &sources[1..] {
+        let end = oriented.last().unwrap().control_points.last();
+        let forward = next.control_points.first() == end;
+        let backward = next.control_points.last() == end;
+        crate::check(!(forward && backward), "Both endpoints match; segment orientation is ambiguous")?;
+        if !forward && !backward {
+            return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch)) });
+        }
+        let mut curve = next.clone();
+        if backward {
+            if let Err(reason) = reflect_segment(&mut curve, &mut work) {
+                return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(reason)) });
+            }
+        }
+        oriented.push(curve);
+    }
+    if work.used == max_work {
+        return Ok(GaugeMergeReport {curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(Exact::ResourceLimit))});
+    }
+    let mut report = compress_mixed_degree_chain(&oriented, max_work-work.used)?;
+    report.work_used += work.used;
+    Ok(report)
+}
+
+fn reflect_segment(curve: &mut Curve, work: &mut super::rational_edit::Work)
+    -> std::result::Result<(), super::rational_factor::Refusal> {
+                let [a,b] = curve.domain();
+                let left = work.lift(a)?;
+                let right = work.lift(b)?;
+                let sum = work.op(&left,&right,|x,y| x+y)?;
+                for knot in &mut curve.knots {
+                    let old = work.lift(*knot)?;
+                    let new = work.op(&sum,&old,|x,y| x-y)?;
+                    *knot = work.float(&new)?;
+                }
+    curve.knots.reverse();
+    curve.weights.reverse();
+    curve.control_points.reverse();
+    Ok(())
+}
+
+/// Recover a chain from unordered records with contiguous absolute domains.
+/// Infer the first orientation from the next segment's endpoints. Ambiguous
+/// initial joins, including a two-piece loop sharing both ends, need an anchor.
+pub fn assemble_parameter_partition(sources: &[Curve], max_work: u64) -> Result<GaugeMergeReport> {
+    crate::check((2..=256).contains(&sources.len()), "Expected 2..=256 partition segments")?;
+    crate::check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Invalid partition work limit")?;
+    for source in sources { source.validate()?; }
+    let mut ordered = sources.to_vec();
+    ordered.sort_by(|a,b| a.domain()[0].total_cmp(&b.domain()[0]));
+    if ordered.windows(2).any(|p| p[0].domain()[1] != p[1].domain()[0]) {
+        return Ok(GaugeMergeReport {curve: None, work_used: 0, refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))});
+    }
+    let peer = &ordered[1].control_points;
+    let matches = |point| peer.first() == point || peer.last() == point;
+    let first = &ordered[0].control_points;
+    let forward = matches(first.last());
+    let backward = matches(first.first());
+    crate::check(!(forward && backward), "Ambiguous partition orientation")?;
+    let mut work = super::rational_edit::Work { used: 0, limit: max_work };
+    if backward {
+        if let Err(reason) = reflect_segment(&mut ordered[0], &mut work) {
+            return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(reason)) });
+        }
+    }
+    if work.used == max_work {
+        return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(super::rational_factor::Refusal::ResourceLimit)) });
+    }
+    let mut result = orient_and_compress_chain(&ordered, max_work-work.used)?;
+    result.work_used += work.used;
+    Ok(result)
+}
+
+mod endpoint_chain;
+pub use endpoint_chain::{assemble_closed_endpoint_chain, assemble_open_endpoint_chain, assemble_simple_planar_loop, assemble_wound_planar_loop, assemble_simple_spatial_loop, assemble_oblique_simple_loop, assemble_pairwise_simple_spatial_loop};

@@ -1,0 +1,20 @@
+{
+  "id": "NURBS-0976",
+  "testedBase": "39029b1967962c2f4ef248d661abe05af6effa8c",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "a8200d879c39b9b53fdb5476cd71e387229c0513fa529560b8970d964e1539ff",
+    "crates/cad-step/src/step_v3_export.rs": "2b53e037d8cdf63dd496d76f4614551c0727fb085364ba0875ed7ff3435a99c6",
+    "crates/cad-step/tests/shared_face_compression.rs": "25f21ada78c06827811d463493ce0200926b409bb8f04865a47a253175cfee9b",
+    "crates/brep-core/src/model/face_compression.rs": "1d00c6c0affb933ed04ea6d67f7d839c7d560acce34093b5798b840cc50ce3ea"
+  },
+  "fixtureSha256": {
+    "compressed.step": "e87185a2f42a72ef33671409426888eb73d844487563dfc557495e186b4882d5",
+    "original.step": "d1258412c7f806d186159289e3d357d857c479b55eed039e7a52665ecc389f2f"
+  },
+  "bytesBefore": 29088,
+  "bytesAfter": 28863,
+  "commands": [
+    "CAD_SHARED_COMPRESSION_FIXTURES=/tmp/osv976-fixtures cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test shared_face_compression -- --nocapture",
+    "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib --test edited_gear_step"
+  ]
+}

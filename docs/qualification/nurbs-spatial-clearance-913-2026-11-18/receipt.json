@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0913",
+  "testedBase": "aa5dd24911ff1d624ba4386196f5f64f79cf839f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "curve_pair_distance",
+    "--test",
+    "curve_surface_distance"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 469,
+  "scope": [
+    "Three unequal tubes: the nearest centerline pair differs from the limiting tube pair. Verify signed enclosure, witness indices, shared cell accounting, incomplete budget and invalid radius."
+  ],
+  "logSha256": "4e0b6d6bce42681be4a643b7c28503631e3532f0bf6f559ee6ee5aefa1808ca7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "cf576aff288b1e16ced84579cf5465d5ee8d8b22f124698a1d941c9e918f3c75",
+    "crates/nurbs-core/tests/curve_pair_distance.rs": "3837c3afe0f156fef93af0a903a33860cc598759d2ad55925966c9064cb4a104"
+  }
+}

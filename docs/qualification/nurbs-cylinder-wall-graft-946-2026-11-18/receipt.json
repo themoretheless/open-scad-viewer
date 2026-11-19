@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0946",
+  "testedBase": "f5d72379a2c33e45c068c3d11cd2eb1b82cc40f9",
+  "testTargets": [
+    "brep-core --test gear_profile --test spinner_bore_boolean",
+    "cad-step --test edited_gear_step exchanged_spinner_cylindrical_replacement_is_a_closed_single_body"
+  ],
+  "independentOcctVolume": {
+    "valid": true,
+    "original": 4145.355114907374,
+    "sewn": 2794.4703309483602,
+    "reference": 2794.470257479367,
+    "removed": 1350.8847839590135,
+    "difference": 7.346899337790092e-05,
+    "nominal": 1350.884841043611
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/through_wall_cylinder.rs": "b5de7a422cc63b0c9d3fd9049534872f56e60855b99a2f7a5a2f791beae41e6e",
+    "crates/brep-core/src/body_analysis.rs": "4b7bac19018e3ad0227257808e200151864130a4c5a0492e2a36a934b03728a4",
+    "crates/brep-core/src/features/direct_edit.rs": "704840f82536a76baaaf4b6b5eaa86826d44dea0b8b7da99285492609836eff8",
+    "crates/brep-core/src/features/direct_edit/suppression.rs": "3bcd24d3978893df970cba4bb8f4bf26efc3f0a4ab474d6c2230c681799fad1a",
+    "crates/brep-core/tests/spinner_bore_boolean.rs": "267ebc3e6035e95a0578d94b63e818737ee49a9c3e1308a8a83b3240ebf9e081",
+    "crates/cad-step/tests/edited_gear_step.rs": "8562dcf97e118f165643c9c9d5cec44300738d0d6df970609674c242ac71b153"
+  },
+  "logSha256": "18715317002a84e62066d18995d3c9c831fe0e75fae887cf9e3cef9a0bde0dc9"
+}

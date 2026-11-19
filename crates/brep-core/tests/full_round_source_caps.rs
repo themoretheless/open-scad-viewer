@@ -136,3 +136,18 @@ fn folded_chart_and_nonzero_tolerance_disguised_as_exact_are_refused() {
     proof.reverify().unwrap();
     assert!(plane::qualify(&surface(), &uv, &world, 0.).is_err());
 }
+
+#[test]
+fn spatial_trim_on_reflected_affine_cap_preserves_native_parameter_domain() {
+    let mut cap = surface();
+    cap.control_points.reverse();
+    cap.knots_u = vec![2.,2.,4.,4.];
+    let mut edge = curve(vec![vec![0.25,0.5,0.], vec![0.75,0.75,0.]]);
+    edge.knots = vec![3.,3.,7.,7.];
+    let proof = plane::pullback::stored_affine_trim(&cap, &edge, 0.).unwrap();
+    assert!(proof.exact());
+    assert_eq!(proof.pcurve().control_points, [vec![3.5,0.5],vec![2.5,0.75]]);
+    assert_eq!(proof.pcurve().knots, edge.knots);
+    edge.control_points[1][2] = 1.;
+    assert!(plane::pullback::stored_affine_trim(&cap, &edge, 1e-7).is_err());
+}

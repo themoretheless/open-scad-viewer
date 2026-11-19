@@ -9,6 +9,8 @@ use crate::{
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
+mod affine_projection;
+pub use affine_projection::rational_affine_coordinate_pair;
 mod content;
 mod curvature;
 mod curvature_gap;

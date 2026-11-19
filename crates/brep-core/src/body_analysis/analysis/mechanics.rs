@@ -30,16 +30,9 @@ pub fn inertia_about_axis(
             "Axis, point and nonnegative density must be finite",
         ));
     }
-    let n = dot(axis, axis);
-    if n <= 1e-28 {
-        return Err(indeterminate("Inertia axis is numerically zero"));
-    }
-    let a = axis.map(|v| v / n.sqrt());
-    let d: [f64; 3] = std::array::from_fn(|i| p.centroid[i] - point[i]);
-    let d2 = dot(d, d) - dot(d, a).powi(2);
-    let central = dot(a, std::array::from_fn(|i| dot(p.inertia_mm5[i], a)));
     let mass = p.signed_volume_mm3 * density;
-    let moment = (central + p.signed_volume_mm3 * d2) * density;
+    let moment =
+        axial_moment(p.centroid, p.inertia_mm5, p.signed_volume_mm3, point, axis)? * density;
     if !moment.is_finite() {
         return Err(indeterminate("Non-finite axial inertia"));
     }
@@ -124,6 +117,343 @@ pub struct AssemblyMass {
     pub centroid: [f64; 3],
     pub inertia: [[f64; 3]; 3],
 }
+impl AssemblyMass {
+    /// Place previously measured properties under a proper rigid motion.
+    /// Rotates the central inertia tensor and maps the centre to world space.
+    pub fn rigidly_placed(&self, matrix: [[f64; 4]; 4]) -> Result<Self> {
+        if !crate::transform::is_proper_rigid_placement(matrix)
+            || !self.mass.is_finite()
+            || self.mass <= 0.
+        {
+            return Err(indeterminate(
+                "Expected positive mass and a proper rigid placement",
+            ));
+        }
+        let rotation: [[f64; 3]; 3] =
+            std::array::from_fn(|i| std::array::from_fn(|j| matrix[i][j]));
+        let centroid = std::array::from_fn(|i| dot(rotation[i], self.centroid) + matrix[i][3]);
+        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+            std::array::from_fn(|j| dot(rotation[i], self.inertia.map(|row| dot(row, rotation[j]))))
+        });
+        if centroid
+            .iter()
+            .chain(inertia.iter().flatten())
+            .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Non-finite placed mass properties"));
+        }
+        Ok(Self {
+            mass: self.mass,
+            centroid,
+            inertia,
+        })
+    }
+
+    /// Transform a measured mass distribution at unchanged material density.
+    /// The affine map may include shear, reflection and nonuniform scale.
+    pub fn affine_at_constant_density(&self, matrix: [[f64; 4]; 4]) -> Result<Self> {
+        if matrix[3] != [0., 0., 0., 1.] || matrix.iter().flatten().any(|v| !v.is_finite()) {
+            return Err(indeterminate("Expected finite affine placement"));
+        }
+        let j = std::array::from_fn(|i| std::array::from_fn(|k| matrix[i][k]));
+        let scale = dot(j[0], cross(j[1], j[2])).abs();
+        let mass = self.mass * scale;
+        let centroid = std::array::from_fn(|i| matrix[i][3] + dot(j[i], self.centroid));
+        let inertia = affine_inertia(self.inertia, j, scale);
+        if mass <= 0.
+            || !mass.is_finite()
+            || centroid
+                .iter()
+                .chain(inertia.iter().flatten())
+                .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate(
+                "Affine mass properties singular or outside finite range",
+            ));
+        }
+        Ok(Self {
+            mass,
+            centroid,
+            inertia,
+        })
+    }
+
+    /// Combine the assembly with a point mass at a world-space location.
+    /// Intrinsic inertia of the added weight is assumed negligible.
+    pub fn with_point_mass(&self, position: [f64; 3], added_mass: f64) -> Result<Self> {
+        if !self.mass.is_finite()
+            || self.mass <= 0.
+            || !added_mass.is_finite()
+            || added_mass < 0.
+            || position
+                .iter()
+                .chain(&self.centroid)
+                .chain(self.inertia.iter().flatten())
+                .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Invalid assembly or point mass"));
+        }
+        if added_mass == 0. {
+            return Ok(self.clone());
+        }
+        let mass = self.mass + added_mass;
+        let delta: [f64; 3] = std::array::from_fn(|i| position[i] - self.centroid[i]);
+        let centroid =
+            std::array::from_fn(|i| (added_mass / mass).mul_add(delta[i], self.centroid[i]));
+        let reduced = self.mass.min(added_mass) * (self.mass.max(added_mass) / mass);
+        let scaled = delta.map(|v| v * reduced.sqrt());
+        let inertia = std::array::from_fn(|i| {
+            std::array::from_fn(|j| {
+                let shift = if i == j {
+                    scaled[(i + 1) % 3].powi(2) + scaled[(i + 2) % 3].powi(2)
+                } else {
+                    -scaled[i] * scaled[j]
+                };
+                self.inertia[i][j] + shift
+            })
+        });
+        if !mass.is_finite()
+            || centroid
+                .iter()
+                .chain(inertia.iter().flatten())
+                .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Non-finite point mass combination"));
+        }
+        Ok(Self {
+            mass,
+            centroid,
+            inertia,
+        })
+    }
+
+    /// Combine two extended bodies or subassemblies in the same world frame.
+    /// Both inertia tensors are central and expressed along the world axes.
+    pub fn combined_with(&self, other: &Self) -> Result<Self> {
+        if other.mass <= 0. {
+            return Err(indeterminate("Expected positive mass for the added body"));
+        }
+        let mut combined = self.with_point_mass(other.centroid, other.mass)?;
+        for (row, addition) in combined.inertia.iter_mut().zip(other.inertia) {
+            for (value, term) in row.iter_mut().zip(addition) {
+                *value += term;
+                if !value.is_finite() {
+                    return Err(indeterminate("Non-finite composite inertia"));
+                }
+            }
+        }
+        Ok(combined)
+    }
+
+    /// Remove a known component expressed in the same world frame. The caller
+    /// supplies component membership. Checks the physical principal-moment
+    /// inequalities of the residual up to floating-point roundoff.
+    pub fn without_component(&self, removed: &Self) -> Result<Self> {
+        let mass = self.mass - removed.mass;
+        if !mass.is_finite() || mass <= 0. || !removed.mass.is_finite() || removed.mass <= 0. {
+            return Err(indeterminate(
+                "Removal requires positive component and residual mass",
+            ));
+        }
+        let ratio = removed.mass / mass;
+        let delta: [f64; 3] = std::array::from_fn(|i| self.centroid[i] - removed.centroid[i]);
+        let centroid = std::array::from_fn(|i| ratio.mul_add(delta[i], self.centroid[i]));
+        // The two parallel-axis shifts reduce to M*m/(M-m) times
+        // the squared offset from the original centre to the removed centre.
+        let scaled = delta.map(|v| (v * removed.mass.sqrt()) * (self.mass / mass).sqrt());
+        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+            std::array::from_fn(|j| {
+                let shift = if i == j {
+                    scaled[(i + 1) % 3].powi(2) + scaled[(i + 2) % 3].powi(2)
+                } else {
+                    -scaled[i] * scaled[j]
+                };
+                (self.inertia[i][j] - removed.inertia[i][j]) - shift
+            })
+        });
+        if centroid
+            .iter()
+            .chain(inertia.iter().flatten())
+            .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Non-finite residual mass properties"));
+        }
+        let scale = inertia.iter().flatten().map(|x| x.abs()).fold(0., f64::max);
+        if scale > 0. {
+            let normalized = inertia.map(|row| row.map(|x| x / scale));
+            let tol = 128. * f64::EPSILON;
+            for i in 0..3 {
+                for j in 0..i {
+                    if (normalized[i][j] - normalized[j][i]).abs() > tol {
+                        return Err(indeterminate("Asymmetric residual inertia"));
+                    }
+                }
+            }
+            let [a, b, c] = principal_inertia(normalized)?.moments_mm5;
+            if c < -tol || a > b + c + tol {
+                return Err(indeterminate("Nonphysical residual inertia"));
+            }
+        }
+        Ok(Self {
+            mass,
+            centroid,
+            inertia,
+        })
+    }
+
+    /// Mass moment in kg mm² for a world-space axis when mass is in kg
+    /// and positions are in mm. Axis direction need not be normalized.
+    pub fn moment_about_axis(&self, point: [f64; 3], direction: [f64; 3]) -> Result<f64> {
+        axial_moment(self.centroid, self.inertia, self.mass, point, direction)
+    }
+
+    /// Radial first mass moment in world coordinates, pointing toward the
+    /// heavy side. With kg and mm inputs, components are in kg mm.
+    pub fn static_unbalance(&self, point: [f64; 3], direction: [f64; 3]) -> Result<[f64; 3]> {
+        let unit = unit_axis(point, direction)?;
+        if !self.mass.is_finite() || self.mass <= 0. {
+            return Err(indeterminate("Expected positive finite assembly mass"));
+        }
+        let offset = std::array::from_fn(|i| self.centroid[i] - point[i]);
+        let radial = cross(unit, cross(offset, unit));
+        let unbalance = radial.map(|v| v * self.mass);
+        if unbalance.iter().any(|v| !v.is_finite()) {
+            return Err(indeterminate("Non-finite static unbalance"));
+        }
+        Ok(unbalance)
+    }
+
+    /// Added mass-radius vectors (kg mm) at the two ordered planes normal to
+    /// the axis. Plane offsets in mm are signed along the axis from point.
+    pub fn two_plane_balance_corrections(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        planes: [f64; 2],
+    ) -> Result<[[f64; 3]; 2]> {
+        let span = planes[1] - planes[0];
+        if !span.is_finite() || span <= 0. {
+            return Err(indeterminate(
+                "Expected distinct increasing finite balance plane offsets",
+            ));
+        }
+        let unit = unit_axis(point, direction)?;
+        let unbalance = self.static_unbalance(point, direction)?;
+        let axial_offset = dot(std::array::from_fn(|i| self.centroid[i] - point[i]), unit);
+        // The transverse part of I*u is minus the central axial-radial mass product.
+        let transverse = cross(unit, cross(self.inertia.map(|row| dot(row, unit)), unit));
+        let first: [f64; 3] = std::array::from_fn(|i| {
+            ((axial_offset - planes[1]).mul_add(unbalance[i], -transverse[i])) / span
+        });
+        let second = std::array::from_fn(|i| -unbalance[i] - first[i]);
+        if first.iter().chain(&second).any(|v| !v.is_finite()) {
+            return Err(indeterminate("Non-finite balance correction"));
+        }
+        Ok([first, second])
+    }
+
+    /// Added masses in kg for two fixed sites on each correction plane.
+    /// Each site is a radial offset in mm from the axis in world coordinates.
+    /// Rejects unresolved, non-transverse or negative-mass solutions.
+    pub fn balance_at_fixed_sites(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        planes: [f64; 2],
+        sites: [[[f64; 3]; 2]; 2],
+    ) -> Result<[[f64; 2]; 2]> {
+        let axis = unit_axis(point, direction)?;
+        let corrections = self.two_plane_balance_corrections(point, direction, planes)?;
+        let mut masses = [[0.; 2]; 2];
+        for ((sites, correction), result) in sites.into_iter().zip(corrections).zip(&mut masses) {
+            let radii = sites.map(|r| r[0].hypot(r[1]).hypot(r[2]));
+            if radii.iter().any(|v| !v.is_finite() || *v == 0.) {
+                return Err(indeterminate("Invalid balance site radius"));
+            }
+            let [a, b] = std::array::from_fn(|i| sites[i].map(|v| v / radii[i]));
+            let angular_tol = 64. * f64::EPSILON;
+            let determinant = dot(axis, cross(a, b));
+            if dot(axis, a).abs() > angular_tol
+                || dot(axis, b).abs() > angular_tol
+                || determinant.abs() <= angular_tol
+            {
+                return Err(indeterminate(
+                    "Balance sites require two independent transverse directions",
+                ));
+            }
+            *result = [
+                dot(axis, cross(correction, b)) / determinant / radii[0],
+                dot(axis, cross(a, correction)) / determinant / radii[1],
+            ];
+            if result.iter().any(|v| !v.is_finite() || *v < 0.) {
+                return Err(indeterminate(
+                    "Balance sites cannot supply the requested correction with positive masses",
+                ));
+            }
+        }
+        Ok(masses)
+    }
+}
+
+fn unit_axis(point: [f64; 3], axis: [f64; 3]) -> Result<[f64; 3]> {
+    if axis.iter().chain(&point).any(|v| !v.is_finite()) {
+        return Err(indeterminate("Non-finite inertia axis"));
+    }
+    let scale = axis.iter().map(|v| v.abs()).fold(0., f64::max);
+    if scale == 0. {
+        return Err(indeterminate("Zero inertia axis"));
+    }
+    let scaled = axis.map(|v| v / scale);
+    let norm = dot(scaled, scaled).sqrt();
+    Ok(scaled.map(|v| v / norm))
+}
+
+fn axial_moment(
+    center: [f64; 3],
+    tensor: [[f64; 3]; 3],
+    mass: f64,
+    point: [f64; 3],
+    axis: [f64; 3],
+) -> Result<f64> {
+    let unit = unit_axis(point, axis)?;
+    let offset = std::array::from_fn(|i| center[i] - point[i]);
+    let perpendicular = cross(offset, unit);
+    let moment =
+        dot(unit, tensor.map(|row| dot(row, unit))) + mass * dot(perpendicular, perpendicular);
+    if !moment.is_finite() {
+        return Err(indeterminate("Non-finite axial inertia"));
+    }
+    Ok(moment)
+}
+
+fn affine_inertia(local: [[f64; 3]; 3], j: [[f64; 3]; 3], density_scale: f64) -> [[f64; 3]; 3] {
+    // Second moments transform by J C Jᵀ. Convert to and from the
+    // inertia tensor I = trace(C) Id - C around the affine map.
+    let half_trace = (local[0][0] + local[1][1] + local[2][2]) * 0.5;
+    let second: [[f64; 3]; 3] = std::array::from_fn(|i| {
+        std::array::from_fn(|k| {
+            let mut value = 0.;
+            for p in 0..3 {
+                for q in 0..3 {
+                    let entry = (if p == q { half_trace } else { 0. }) - local[p][q];
+                    value += j[i][p] * entry * j[k][q];
+                }
+            }
+            density_scale * value
+        })
+    });
+    let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+        std::array::from_fn(|k| {
+            if i == k {
+                second[(i + 1) % 3][(i + 1) % 3] + second[(i + 2) % 3][(i + 2) % 3]
+            } else {
+                -second[i][k]
+            }
+        })
+    });
+    inertia
+}
+
 /// Composite properties of instances under nonsingular affine maps.
 pub fn assembly_mass(components: &[AssemblyComponent<'_>]) -> Result<AssemblyMass> {
     if components.is_empty() || components.len() > 4096 {
@@ -154,17 +484,7 @@ pub fn assembly_mass(components: &[AssemblyComponent<'_>]) -> Result<AssemblyMas
         let m = c.properties.signed_volume_mm3 * scale * c.density;
         let center: [f64; 3] =
             std::array::from_fn(|i| c.transform[i][3] + dot(j[i], c.properties.centroid));
-        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
-            std::array::from_fn(|k| {
-                let mut value = 0.;
-                for p in 0..3 {
-                    for q in 0..3 {
-                        value += j[i][p] * c.properties.inertia_mm5[p][q] * j[k][q];
-                    }
-                }
-                scale * c.density * value
-            })
-        });
+        let inertia = affine_inertia(c.properties.inertia_mm5, j, scale * c.density);
         mass += m;
         for k in 0..3 {
             first[k] += m * center[k];
@@ -203,6 +523,27 @@ mod tests {
     fn box_properties() -> MassProperties {
         mass_properties(&cuboid([0.; 3], [2., 4., 6.]).unwrap(), 1e-8, 200000).unwrap()
     }
+    #[test]
+    fn reflected_scaled_box_matches_axial_moment_of_world_box() {
+        let properties = box_properties();
+        let assembly = assembly_mass(&[AssemblyComponent {
+            properties: &properties,
+            density: 0.5,
+            transform: [[0., -3., 0., 0.], [2., 0., 0., 0.], [0., 0., -1., 0.]],
+        }])
+        .unwrap();
+        let expected = 144. * (144. + 16.) / 12. + 144. * 25.;
+        for dir in [1e-300, -1e300] {
+            near(
+                assembly
+                    .moment_about_axis([-3., 6., 1e15], [0., 0., dir])
+                    .unwrap(),
+                expected,
+            );
+        }
+        assert!(assembly.moment_about_axis([0.; 3], [0.; 3]).is_err());
+    }
+
     #[test]
     fn central_box_tensor_matches_independent_dimensions_formula() {
         let m = box_properties();

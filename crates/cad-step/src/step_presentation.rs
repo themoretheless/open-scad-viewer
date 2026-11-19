@@ -188,7 +188,7 @@ fn transparency(entities: &BTreeMap<usize, Entity>, id: usize, depth: usize) -> 
     if depth > 16 {
         return Err(super::refuse("STEP presentation style chain exceeds 16 links"));
     }
-    if matches!(entities[&id].value, Value::List(_)) {
+    if matches!(entities.get(&id).map(|e| &e.value), Some(Value::List(_))) {
         for (kind, args) in components(entities, id)? {
             if let ("SURFACE_STYLE_USAGE", [_, style]) | ("PRESENTATION_STYLE_BY_CONTEXT", [style, ..]) =
                 (kind, args)
@@ -241,11 +241,11 @@ fn predefined_colour(name: &str) -> Option<StepColour> {
     Some(StepColour { red: rgb[0], green: rgb[1], blue: rgb[2] })
 }
 
-fn colour(entities: &BTreeMap<usize, Entity>, id: usize, depth: usize) -> Result<Option<StepColour>> {
+pub(super) fn colour(entities: &BTreeMap<usize, Entity>, id: usize, depth: usize) -> Result<Option<StepColour>> {
     if depth > 16 {
         return Err(super::refuse("STEP presentation style chain exceeds 16 links"));
     }
-    let (kind, args): (&str, &[Value]) = if matches!(entities[&id].value, Value::List(_)) {
+    let (kind, args): (&str, &[Value]) = if matches!(entities.get(&id).map(|e| &e.value), Some(Value::List(_))) {
         ("COMPLEX", &[])
     } else {
         call(entities, id)?

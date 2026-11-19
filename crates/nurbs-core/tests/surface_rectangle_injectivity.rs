@@ -96,3 +96,50 @@ fn refinement_proves_one_common_original_domain_and_never_combines_independent_l
     assert!(r.spans > 1);
     assert!(r.contraction_upper.unwrap() < 1.);
 }
+
+#[test]
+fn multi_cell_affine_projection_uses_every_greville_coefficient() {
+    use nurbs_core::surface_injectivity::certify_affine_coordinate_pair;
+    // Greville values for [2,2,2,3,3,6,6,6] and [-1,-1,1,3,3].
+    let us = [2., 2.5, 3., 4.5, 6.];
+    let vs = [-1., 1., 3.];
+    let mut patch = Surface {
+        degree_u: 2, degree_v: 1,
+        knots_u: vec![2.,2.,2.,3.,3.,6.,6.,6.],
+        knots_v: vec![-1.,-1.,1.,3.,3.],
+        control_points: us.iter().enumerate().map(|(i,u)| {
+            vs.iter().enumerate().map(|(j,v)| vec![
+                if i == 2 && j == 1 { 5. } else { 0. }, 2.*u-v, u+v
+            ]).collect()
+        }).collect(),
+        weights: vec![vec![2.;3];5],
+        periodic_u: false, periodic_v: false,
+    };
+    assert_eq!(certify_affine_coordinate_pair(&patch), Some([1,2]));
+    patch.control_points[1][1][2] += 0.000_000_001;
+    assert_eq!(certify_affine_coordinate_pair(&patch), None);
+}
+
+#[test]
+fn rational_projection_checks_all_cells_with_a_shared_limit() {
+    use nurbs_core::editing::exact_surface_derivative::rational_affine_coordinate_pair;
+    // Simple interior U knot, quadratic in both directions. Multiplying
+    // the affine V clock by W(v)=1+2v yields V poles [0,1/4,1].
+    let mut patch = Surface {
+        degree_u: 2, degree_v: 2,
+        knots_u: vec![0.,0.,0.,0.5,1.,1.,1.], knots_v: vec![0.,0.,0.,1.,1.,1.],
+        control_points: [0.,0.25,0.75,1.].iter().enumerate().map(|(i,u)| {
+            [0.,0.25,1.].iter().enumerate().map(|(j,v)| vec![
+                if i == 2 && j == 1 { 1. } else { 0. }, u+v, 2.*u-v
+            ]).collect()
+        }).collect(),
+        weights: vec![vec![1.,2.,3.];4],
+        periodic_u: false, periodic_v: false,
+    };
+    let (axes, work) = rational_affine_coordinate_pair(&patch, 1_000_000).unwrap();
+    assert_eq!(axes, Some([1,2]));
+    assert!(work > 1);
+    assert_eq!(rational_affine_coordinate_pair(&patch, 1).unwrap().0, None);
+    patch.control_points[2][1][2] += 1e-10;
+    assert_eq!(rational_affine_coordinate_pair(&patch, 1_000_000).unwrap().0, None);
+}

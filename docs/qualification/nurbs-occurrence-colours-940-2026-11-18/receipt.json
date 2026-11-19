@@ -1,0 +1,14 @@
+{
+  "id": "NURBS-0940",
+  "testedBase": "928c2bdeef0f61162c3e8fdd81fe9dbd366c911c",
+  "fixtureEnv": "CAD_STEP_OCCURRENCE_COLOUR_FIXTURE",
+  "fixtureSha256": "f4c646afbaefed4bf54478cf32296e4a4c5520a45918aeefdd68314caed842a8",
+  "nativeTestsPassed": 234,
+  "occtOutput": "[(0.0, True, (0.0, 0.0, 1.0)), (5.0, True, (1.0, 0.0, 0.0))]",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "3240bce759ca7e52ac65bb72269ac42d0b7ef01c893850b1d3c7b5ee77fd5bd6",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "1e64664f4e9737731ce81843b0559bda8e6312ac9964ef1ae99f2b416d69874c",
+    "crates/cad-step/src/lib.rs": "98c1b361e1bb4ae6a367c342a982f59fd403ef9fe3c96492e2df1e0dac5702ad",
+    "crates/cad-step/tests/edited_gear_step.rs": "088cbe31ce4bcaf6bc0e13f51fc608626cf0f68070ff2b6cad3421e495d8602e"
+  }
+}

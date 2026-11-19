@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0926",
+  "testedBase": "46443d31cfec2ac4a124d316e15bb267e4e7c7b4",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 489,
+  "scope": [
+    "Accept simple wire edits around a hole; reject a self-crossing polygon and a wire cutting its companion hole, preserving the last accepted state."
+  ],
+  "logSha256": "22d8abf56036efb98e2873643739387f4bf9012b6725c09be9eaf51880e9a9c6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "f3160953ecec103c4060a8c26751c73fffb2524047f4de6ff0146027bd3d1a35",
+    "crates/brep-core/src/profile/profile_certificate/compressed_edit.rs": "47ab87c989a8049a20c590ef9cccbd172a759cc9f3df8d1823065b11808f00d9",
+    "crates/brep-core/src/profile/profile_certificate.rs": "f1ea61cece5b48e8064134f228aff8b384ccd50d7608b1466c28d165734d68e7",
+    "crates/brep-core/tests/gear_profile.rs": "6a6a130745ee44f4c9440094da5f499cccd7ef14a26b5ec0c4d809607ce7af59"
+  }
+}

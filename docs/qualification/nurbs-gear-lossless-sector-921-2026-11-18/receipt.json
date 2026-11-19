@@ -1,0 +1,43 @@
+{
+  "id": "NURBS-0921",
+  "testedBase": "25ff018d0339d30edeeea4e41436dcc65e24dcf9",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 484,
+  "scope": [
+    "Round-trip the generated 32-tooth sun profile bit by bit including knots, weights and poles. Compare residual byte count against repeated numeric array payload."
+  ],
+  "logSha256": "ea6550d2f5b5afeedf872342ef98b9fbb890a60bdceb2c7cf68f2dcd0a8cd433",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "35120a246c7a0dad3afe9efcd3a41fe2496885fd87064d49a1ec2b6e0cf0de38",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2dcd0c05fed7322a0c9696d88eeb384a72c5c40808ba0f1885e3879ee0502535",
+    "crates/brep-core/tests/gear_profile.rs": "314298e8e6dbbc5fefe321f7aba11e49b1c3a65644d964c3290d2fb0ee1b1b7d"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "NURBS-0932",
+  "testedBase": "6d3bd2927266c4048bded929ef154191be38f92c",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 14,
+  "scope": [
+    "Reverse the complete DATA record order, import labels and verify placement-to-part names for mixed definition order and repeated occurrences."
+  ],
+  "logSha256": "3ac3840b83fd42d9c2c502e9e3bbdf93bc866f15165a5777f075410d45080110",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "9d28c45704fb90281db92af6402b407e677b0564862efe755aa9f16fccd53723",
+    "crates/cad-step/src/step_xde.rs": "74c9a6c0979ca9ad7c07a7bc493ebd552582484dd9665acdb77dfb464ba6182a",
+    "crates/cad-step/src/step_interchange_v3.rs": "af68ed8f746b445ca66d386787e6c4ffd1812e337083ef39ac43910c56153573",
+    "crates/cad-step/src/lib.rs": "1734e9a5b8b0d23aaa17c84c60b009f4fbff57057906025ffee44977fdf5a6a2",
+    "crates/cad-step/tests/edited_gear_step.rs": "fbf979328917044c7cf25f3314130767a116249eaa018debcbc6edadd9c4172a"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 867,
-  "unallocatedCount": 133,
+  "specifiedCount": 1000,
+  "unallocatedCount": 0,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -2605,7 +2605,7 @@
     {
       "id": "NURBS-0067",
       "name": "closed sweep",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::analytic::progressive_profile_body_with_rmf_policy",
       "evidence": [
         "crates/brep-core/src/parts/analytic/rational_loft.rs",
@@ -2613,7 +2613,12 @@
         "crates/cad-step/tests/rational_section_loft.rs",
         "docs/design/nurbs-closed-sweep-native.md",
         "crates/nurbs-core/src/sweeps/framed_sweep.rs",
-        "docs/qualification/nurbs-closed-sweep-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-closed-sweep-2026-10-15/native-tests.json",
+        "crates/geometry-bridge/src/dispatch/nurbs/lofts_and_sweeps.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/profileSolidRush.test.ts",
+        "examples/rush/closed-profile-planar-10.r",
+        "examples/rush/closed-profile-spatial-6.r"
       ],
       "remainingQualification": [
         "G1/G2 seam, global embedding and solid certification",
@@ -4248,7 +4253,7 @@
     {
       "id": "NURBS-0126",
       "name": "вставка узлов кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4259,13 +4264,18 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0127",
       "name": "поднятие степени кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4276,7 +4286,12 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4299,7 +4314,7 @@
     {
       "id": "NURBS-0129",
       "name": "обрезка кривой по интервалу",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4310,13 +4325,18 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0130",
       "name": "смена направления кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование кривых",
       "remainingQualification": [
@@ -4327,7 +4347,12 @@
       "evidence": [
         "crates/nurbs-geometry/src/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4456,7 +4481,7 @@
     {
       "id": "NURBS-0138",
       "name": "вставка узлов поверхности по U/V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4468,13 +4493,18 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
       "id": "NURBS-0139",
       "name": "поднятие степени поверхности по U/V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4486,7 +4516,12 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4510,7 +4545,7 @@
     {
       "id": "NURBS-0141",
       "name": "обрезка прямоугольного параметрического домена",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4521,7 +4556,12 @@
       "evidence": [
         "crates/nurbs-geometry/src/surface.rs",
         "crates/nurbs-core/tests/native_edits.rs",
-        "docs/design/nurbs-native-edits.md"
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -4546,7 +4586,7 @@
     {
       "id": "NURBS-0143",
       "name": "смена направления параметров поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Редактирование поверхностей",
       "remainingQualification": [
@@ -4558,7 +4598,12 @@
         "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
-        "crates/nurbs-core/examples/native_edits.rs"
+        "crates/nurbs-core/examples/native_edits.rs",
+        "crates/nurbs-core/src/transport/core_queries.rs",
+        "crates/rush-runtime/src/nurbs/compile_text.rs",
+        "src/language/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
+        "tests/rushTextNurbsEdits.test.ts",
+        "examples/rush/edited-nurbs-strip.r"
       ]
     },
     {
@@ -20183,6 +20228,2500 @@
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0868",
+      "name": "Проверка взаимных проникновений между двумя узлами сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::interferences_between",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0869",
+      "name": "Проверка монтажного зазора между двумя группами деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::clearances_between",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-interface-clearance-869-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-interface-clearance-869-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. A distance interval straddling the threshold is unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0870",
+      "name": "Поиск наименьшего зазора между двумя узлами сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::minimum_clearance_between",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-interface-minimum-870-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-interface-minimum-870-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. A partial search may yield only a lower bound."
+      ]
+    },
+    {
+      "id": "NURBS-0871",
+      "name": "Совместный поворот и перенос выбранных экземпляров STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::move_occurrences",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-group-move-871-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-group-move-871-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. Applied motion must be proper rigid; existing orthogonal scaling and reflection are retained."
+      ]
+    },
+    {
+      "id": "NURBS-0872",
+      "name": "Связанное копирование группы размещений в STEP-сборке",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::copy_occurrences",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-group-copy-872-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-group-copy-872-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. Applied motion must be proper rigid; existing orthogonal scaling and reflection are retained."
+      ]
+    },
+    {
+      "id": "NURBS-0873",
+      "name": "Общий вариант геометрии для выбранных экземпляров одного прототипа",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::replace_variant",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-shared-variant-873-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-shared-variant-873-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. Selected occurrences must share one source definition."
+      ]
+    },
+    {
+      "id": "NURBS-0874",
+      "name": "Интервальная оценка коэффициента торцового перекрытия внешней прямозубой пары",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::external_spur_contact_ratio_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-874-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-874-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0875",
+      "name": "Интервальная оценка коэффициента торцового перекрытия внутренней прямозубой пары",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::internal_spur_contact_ratio_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-875-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-875-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0876",
+      "name": "Интервальная оценка коэффициента торцового перекрытия при заданном межосевом расстоянии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounted_spur_contact_ratio_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-876-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-876-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal active involutes only, specified centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0877",
+      "name": "Радиальные зазоры между вершинами и впадинами зубьев установленной пары",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_tip_root_clearance_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-877-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-877-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal radial clearance along the line of centres. Flank and fillet interference require separate checks."
+      ]
+    },
+    {
+      "id": "NURBS-0878",
+      "name": "Измерение толщины зуба по хорде и глубины установки зубомера",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_tooth_chord_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-878-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-878-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External standard spur involutes only. The measurement circle must be certified within the active flank."
+      ]
+    },
+    {
+      "id": "NURBS-0879",
+      "name": "Оценка утонения зуба по диапазону измеренных хорд",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_tooth_thinning_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-879-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-879-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External standard spur involutes only. The measurement circle must be certified within the active flank."
+      ]
+    },
+    {
+      "id": "NURBS-0880",
+      "name": "Окружной боковой зазор пары на рабочих делительных окружностях",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounted_spur_backlash_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-880-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-880-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External spur pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0881",
+      "name": "Окружной боковой зазор сателлита и внутреннего венца",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounted_internal_spur_backlash_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-881-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-881-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Internal spur ring pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0882",
+      "name": "Границы бокового зазора во всём допуске на межосевое расстояние",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_backlash_over_mounting_range",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-882-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-882-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External and internal spur pairs. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0883",
+      "name": "Коэффициент торцового перекрытия во всём допуске на межосевое расстояние",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_contact_ratio_over_mounting_range",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-883-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-883-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0884",
+      "name": "Диапазон межосевых расстояний по требуемому коэффициенту перекрытия",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounting_window_for_contact_ratio",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-884-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-884-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0885",
+      "name": "Зазор между окружностями вершин сателлитов с допусками установки осей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::planet_tip_gap_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-885-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-885-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External planet tip envelopes only. Overlapping envelopes need a tooth-phase check."
+      ]
+    },
+    {
+      "id": "NURBS-0886",
+      "name": "Подбор числа равноотстоящих сателлитов по фазе сборки и зазору",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::planetary_layout_counts",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-886-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-886-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal concentric unshifted spur layout only. Flank interference and manufacturing tolerances require separate checks."
+      ]
+    },
+    {
+      "id": "NURBS-0887",
+      "name": "Совместное точное сжатие узлов и степени параметрической NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_knot_removal::compress_curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-887-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-887-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0888",
+      "name": "Атомарное точное сжатие набора параметрических NURBS-кривых",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_knot_removal::compress_curve_batch",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-888-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-888-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0889",
+      "name": "Точное объединение и сжатие цепочки кривых разных степеней",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::compress_mixed_degree_chain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-889-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-889-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0890",
+      "name": "Ориентация и точное объединение разнонаправленных сегментов профиля",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::orient_and_compress_chain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-890-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-890-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0891",
+      "name": "Восстановление профиля из неупорядоченного разбиения параметрического интервала",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_parameter_partition",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-891-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-891-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0892",
+      "name": "Сборка открытой NURBS-цепочки по графу концов с независимыми параметрами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_open_endpoint_chain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-892-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-892-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0893",
+      "name": "Сборка замкнутого профиля по графу концов с заданным швом и обходом",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_closed_endpoint_chain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-893-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-893-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0894",
+      "name": "Восстановление и сжатие плоской границы с доказательством простоты контура",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_simple_planar_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-894-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-894-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0895",
+      "name": "Сборка простой плоской границы с заданным направлением обхода и фиксированным швом",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_wound_planar_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-895-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-895-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0896",
+      "name": "Сборка пространственного контура с доказательством простоты через координатную проекцию",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_simple_spatial_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-896-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-896-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0897",
+      "name": "Доказательство простоты пространственного контура в точной наклонной проекции",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_oblique_simple_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-897-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-897-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0898",
+      "name": "Доказательство простоты пространственного контура по стыкам и расстояниям между сегментами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-898-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-898-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0899",
+      "name": "Проверка простоты пространственного контура с многопролётными NURBS-рёбрами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-899-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-899-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0900",
+      "name": "Минимальное пространственное расстояние между наборами замкнутых NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_spatial_contour_sets_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-900-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-900-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0901",
+      "name": "Поиск ближайшей пары в наборе замкнутых пространственных NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::closest_spatial_contour_pair",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-901-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-901-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0902",
+      "name": "Попарная проверка пространственных контуров по минимальному монтажному зазору",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-902-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-902-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0903",
+      "name": "Точное подтверждение граничного зазора по пространственным оболочкам контрольных точек",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0904",
+      "name": "Точное доказательство нарушения зазора по паре точек пространственных контуров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0905",
+      "name": "Доказательство зазора пространственных контуров по наклонным опорным плоскостям",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::prove_spatial_contour_clearance_along",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0906",
+      "name": "Автоматический подбор разделяющей нормали для проверки зазоров NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0907",
+      "name": "Проверка монтажного зазора между пространственной кривой и полным NURBS-патчем",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_curve_surface_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Full untrimmed tensor patch and spatial curve. Unproved threshold decisions remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0908",
+      "name": "Проверка монтажного зазора между двумя полными NURBS-поверхностями",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_surface_surface_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/surface_distance_queries.rs",
+        "docs/qualification/nurbs-spatial-clearance-908-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-908-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Two full untrimmed positive-weight tensor surfaces. Unproved threshold decisions remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0909",
+      "name": "Проверка монтажного зазора между обрезанными NURBS-гранями с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_trimmed_surface_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/surface_distance_queries.rs",
+        "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Trimmed positive-weight tensor surfaces with oriented UV loops. An admitted witness is required on each face. Unproved threshold decisions remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0910",
+      "name": "Границы расстояния от пространственной NURBS-кривой до обрезанной поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::trimmed_surface_distance::curve_distance",
+      "evidence": [
+        "crates/nurbs-core/src/trim/trimmed_surface_distance.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Spatial curve and positive-weight tensor surface with oriented UV loops. Upper bound requires an admitted witness. Work limits can leave a wider interval."
+      ]
+    },
+    {
+      "id": "NURBS-0911",
+      "name": "Монтажный запас сферического инструмента на криволинейной траектории у обрезанной грани",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::trimmed_surface_distance::swept_ball_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/trim/trimmed_surface_distance.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Constant radius ball swept along the full curve, including end caps. Signed margin refers to the retained surface image. Work limits can leave its sign unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0912",
+      "name": "Монтажный зазор двух трубок вдоль независимых пространственных NURBS-траекторий",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::tube_pair_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_pair_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Two independent full spatial curves with constant radii and spherical caps. Work limits can leave the sign unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0913",
+      "name": "Поиск минимального монтажного зазора в пучке трубок разных диаметров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::tube_bundle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_pair_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Independent full spatial curves with constant radii and spherical caps. Witness pair attains the upper bound. Overlapping intervals can leave the closest pair nonunique."
+      ]
+    },
+    {
+      "id": "NURBS-0914",
+      "name": "Толщина перемычки и предельный диаметр смещённого отверстия внешней шестерни",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::external_gear_bore_stock",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-bore-stock-914-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-bore-stock-914-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal external root circle and parallel circular bore. Does not measure a manufactured fillet or certify material strength."
+      ]
+    },
+    {
+      "id": "NURBS-0915",
+      "name": "Перемычки крепёжных отверстий на окружности внутренней шестерни",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::ring_gear_bolt_stock",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal concentric root and outer circles with equally spaced cylindrical holes of equal diameter. Actual fillets and strength are outside the calculation."
+      ]
+    },
+    {
+      "id": "NURBS-0916",
+      "name": "Допустимый диапазон радиуса окружности крепежа кольцевой шестерни",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::ring_gear_bolt_radius_window",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-bolt-window-916-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-bolt-window-916-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certified inner window on the nominal concentric ring with equally spaced equal holes. Boundary overlap can remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0917",
+      "name": "Компактный круговой массив сегмента NURBS-профиля с границей ошибки поворота",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::CircularProfilePattern::instance",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One seed segment rotated about the origin Z axis. Error bound covers rotation of the stored curve. Seed fitting and B-rep stitching are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0918",
+      "name": "Свёртка развёрнутых круговых NURBS-сегментов с контролем погрешности восстановления",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::CircularProfilePattern::compress",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered equally spaced copies about Z with a shared rational basis. Conservative pole bound controls actual reconstruction at equal parameters. No automatic face ordering or B-rep rewriting."
+      ]
+    },
+    {
+      "id": "NURBS-0919",
+      "name": "Свёртка повторяющихся многосегментных секторов NURBS-профиля",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::CircularSectorPattern::compress",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-sector-compression-919-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-sector-compression-919-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Sector-major input with known piece count and equal spacing about Z. Each corresponding piece has a shared rational basis. Reconstruction bound is pointwise; joins and solid topology are not certified."
+      ]
+    },
+    {
+      "id": "NURBS-0920",
+      "name": "Автоматическое распознавание кратчайшего повторяющегося сектора NURBS-профиля",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::CircularSectorPattern::discover",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-sector-discovery-920-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-sector-discovery-920-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered segments around the Z axis. Tests up to 65536 repeats sharing the corresponding rational basis. No automatic ordering or axis fitting."
+      ]
+    },
+    {
+      "id": "NURBS-0921",
+      "name": "Побитовое восстановление NURBS-профиля шестерни из сектора и упакованных поправок",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::encode",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
+      ]
+    },
+    {
+      "id": "NURBS-0922",
+      "name": "Адаптивное двунаправленное сжатие круговых секторов внутреннего венца",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::encode_bidirectional",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
+      ]
+    },
+    {
+      "id": "NURBS-0923",
+      "name": "Локальное редактирование зуба в сжатом круговом NURBS-профиле",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-edit-sector-923-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-edit-sector-923-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Replacement preserves the piece and knot layouts. This edits in-memory curves; join continuity and validity of a rebuilt solid require separate checks."
+      ]
+    },
+    {
+      "id": "NURBS-0924",
+      "name": "Редактирование зуба с точной проверкой внутренних стыков и циклического шва",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector_with_closed_joins",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact positional joins at clamped ends incident to edited sector. Global simplicity, tangency and solid validity require separate checks."
+      ]
+    },
+    {
+      "id": "NURBS-0925",
+      "name": "Сохранение касательности G1 при правке сжатого составного профиля",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector_preserving_g1",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-g1-edit-925-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-g1-edit-925-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Preserves originally regular exactly G1 clamped joins, with exact rational tests on stored poles. Approximate tangency, curvature and self-intersection are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0926",
+      "name": "Проверка простоты и вложенности контуров при редактировании сжатого NURBS-сектора",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::profile_certificate::replace_certified_profile_sector",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/brep-core/src/profile/profile_certificate/compressed_edit.rs",
+        "crates/brep-core/src/profile/profile_certificate.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-certified-sector-edit-926-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-certified-sector-edit-926-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Planar material-left loops within existing profile certificate limits. Does not certify a three-dimensional body or continuity above G0."
+      ]
+    },
+    {
+      "id": "NURBS-0927",
+      "name": "Проверка правки зуба полного сжатого контура с доказательством разделения групп",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::gear::replace_verified_gear_sector",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/brep-core/src/parts/gear_profile_embedding.rs",
+        "crates/brep-core/src/parts/gear/mod.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Grouped planar teeth with four or six pieces, optional bore or required outer rim, subject to local certificates and far-hull proof budgets."
+      ]
+    },
+    {
+      "id": "NURBS-0928",
+      "name": "Построение шевронного тела из проверенного изменённого профиля с передачей в STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::gear::gear_from_verified_profile",
+      "evidence": [
+        "crates/brep-core/src/parts/gear/gear_with_report.rs",
+        "crates/brep-core/src/parts/gear_profile_embedding.rs",
+        "crates/brep-core/src/parts/gear/mod.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-edited-gear-body-step-928-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-edited-gear-body-step-928-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Validated model topology and edited base profile; no global solid intersection or original involute fit claim."
+      ]
+    },
+    {
+      "id": "NURBS-0929",
+      "name": "Компактный STEP AP242 для отдельного NURBS-тела с общими декартовыми точками",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_step_v9_shared_points",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Qualified on the full spinner sun with bore using the native AP242 v9 importer. Size savings depend on shared coordinates."
+      ]
+    },
+    {
+      "id": "NURBS-0930",
+      "name": "Компактный обмен STEP AP242 с материалом изделия и оформлением граней",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_interchange_v3::export_step_v9_with_metadata_shared_points",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native AP242 metadata round trip on a single attributed gear body. External CAD interoperability not measured."
+      ]
+    },
+    {
+      "id": "NURBS-0931",
+      "name": "Именованные сборки STEP с повторным использованием NURBS-деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_named_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One name per part definition. Names are written to PRODUCT records; the native shared geometry reader returns definitions and placements."
+      ]
+    },
+    {
+      "id": "NURBS-0932",
+      "name": "Импорт имён сборки STEP и общих определений деталей по связям геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::import_named_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_xde.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single selected assembly root with unambiguous product links. Imports root and part definition labels, not occurrence-specific labels."
+      ]
+    },
+    {
+      "id": "NURBS-0933",
+      "name": "Количественная спецификация деталей импортированной STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::parts_list",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat occurrence quantities by shared definition identity. Placement transforms do not split rows."
+      ]
+    },
+    {
+      "id": "NURBS-0934",
+      "name": "Экспорт выбранных позиций спецификации в именованную STEP-подсборку",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::export_selected_parts",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Selection of whole definitions from a flat named STEP assembly; all corresponding occurrences retain their world placements."
+      ]
+    },
+    {
+      "id": "NURBS-0935",
+      "name": "Именованные варианты геометрии выбранных экземпляров STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::replace_named_variant",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One closed solid revision for selected occurrences of a single definition, specified in part-local coordinates."
+      ]
+    },
+    {
+      "id": "NURBS-0936",
+      "name": "Объединение именованных STEP-сборок с переносом позиций спецификации",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::append_named_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flattened assembly with proper rigid source placements. Destination name retained. Nested product hierarchy not retained."
+      ]
+    },
+    {
+      "id": "NURBS-0937",
+      "name": "Устранение дубликатов определений STEP-деталей по имени и индексированной геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::consolidate_named_parts",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Indexed B-rep equality includes model tolerance. First matching topology identifiers retained. Geometrically equivalent reordered nets are outside scope."
+      ]
+    },
+    {
+      "id": "NURBS-0938",
+      "name": "Сравнение количественных спецификаций версий STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::parts_list_changes",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat definition quantities grouped by name and equal indexed B-rep including tolerance. Does not compare instance transforms or recognize reordered control nets."
+      ]
+    },
+    {
+      "id": "NURBS-0939",
+      "name": "Общие определения деталей STEP в группах сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_grouped_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "crates/geometry-bridge/src/dispatch/interchange.rs",
+        "crates/geometry-bridge/tests/shared_step_export.rs",
+        "docs/qualification/nurbs-grouped-step-939-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-grouped-step-939-2026-11-18/native.log.gz",
+        "src/kernel/solidStepAssembly.ts",
+        "tests/exactSolidsFromSource.test.ts",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
+      ],
+      "remainingQualification": [
+        "Flat groups and rigid RGB occurrences checked through Solid export on raw WASM and independently reopened in OCCT. Packaged WASM verified on grouped and styled round trips."
+      ]
+    },
+    {
+      "id": "NURBS-0940",
+      "name": "Цвет поверхности отдельного экземпляра общего тела в STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_styled_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_occt.py",
+        "src/kernel/solidStepAssembly.ts",
+        "tests/exactSolidsFromSource.test.ts",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
+      ],
+      "remainingQualification": [
+        "RGB appearance on rigid placements. Physical materials, and native occurrence-style editing remain open. Packaged WASM verified."
+      ]
+    },
+    {
+      "id": "NURBS-0941",
+      "name": "Чтение контекстного цвета экземпляра общей детали STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::import_step_occurrence_colours",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_presentation.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-read-occurrence-colours-941-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-read-occurrence-colours-941-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Explicit solid occurrence colours keyed by product placement and solid, in flattened assembly order. Face overrides, inherited colours and per-face editing are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0942",
+      "name": "Радиальный диапазон составной NURBS-поверхности относительно координатной оси",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::radial_bounds::piecewise_axis_radius_bounds",
+      "evidence": [
+        "crates/nurbs-foundation/src/distance/radial_bounds.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped positive rational Bezier spans, degrees 1–8, internal knot multiplicity equal to degree, within the supplied patch budget. Bounds concern entire carriers. Trim construction and Boolean sewing remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0943",
+      "name": "Поиск стенки сквозного отверстия между двумя контурами B-rep",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::body_analysis::through_wall::between_holes",
+      "evidence": [
+        "crates/brep-core/src/body_analysis.rs",
+        "crates/brep-core/src/body_analysis/through_wall.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-through-wall-943-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-through-wall-943-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Closed shell; proves wall-face connectivity and exact rim-edge membership for two selected cap holes. Geometry, radial clearance and Boolean sewing are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0944",
+      "name": "Построение проверенной UV-кривой пространственного ребра на аффинном торце",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::profile_certificate::original_restriction::plane::pullback::stored_affine_trim",
+      "evidence": [
+        "crates/brep-core/src/profile/profile_certificate/original_restriction/plane/pullback.rs",
+        "crates/brep-core/tests/full_round_source_caps.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Horizontal injective affine caps. Returns stored UV knots and weights with a continuous world-space agreement certificate. Loop sewing and the Boolean operation remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0945",
+      "name": "Перенос ориентированного контура между плоскими торцами с сохранением общих рёбер",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::profile_certificate::original_restriction::plane::pullback::stored_affine_loop",
+      "evidence": [
+        "crates/brep-core/src/profile/profile_certificate/original_restriction/plane/pullback.rs",
+        "crates/brep-core/tests/full_round_source_caps.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Whole nondegenerate clamped edges on a horizontal affine target. Checks indexed closure and stored UV endpoints, supports both traversals. Does not certify nesting or solid material."
+      ]
+    },
+    {
+      "id": "NURBS-0946",
+      "name": "Сшивка цилиндрической замены стенки сквозного отверстия",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::body_analysis::through_wall_cylinder::replace",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/body_analysis.rs",
+        "crates/brep-core/src/features/direct_edit.rs",
+        "crates/brep-core/src/features/direct_edit/suppression.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
+      ],
+      "remainingQualification": [
+        "Single closed shell with selected horizontal affine end caps and separated walls. Explicit wall replacement; automatic Boolean dispatch and general embedding proof remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0947",
+      "name": "Увеличение сквозного отверстия шестерни штатным вычитанием цилиндра",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-spinner-standard-difference-947-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-standard-difference-947-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
+      ],
+      "remainingQualification": [
+        "Single closed shell with selected horizontal affine end caps and separated walls. Canonical coaxial cylinder starts at the lower cap and reaches or exceeds the upper cap. Other cutter representations and general embedding remain outside this qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0948",
+      "name": "Общие определения одинаковых UV-сплайнов при экспорте STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен STEP",
+      "nativeApi": "cad_step::export_step_v9",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Direct STEP v9 B-rep writer. Each PCURVE keeps its surface and each coedge retains its own use. Curves with different stored spline data remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0949",
+      "name": "Пересечение цилиндра со стенкой сквозного отверстия шестерни",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "docs/qualification/nurbs-spinner-intersection-949-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-intersection-949-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single isolated through bore with two horizontal cap charts and radial separation. Both operand orders. General non-coaxial cuts remain outside this domain."
+      ]
+    },
+    {
+      "id": "NURBS-0950",
+      "name": "Объединение шестерни с цилиндрической вставкой до заполнения сквозного отверстия",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, both operand orders. General non-coaxial cuts remain outside this domain."
+      ]
+    },
+    {
+      "id": "NURBS-0951",
+      "name": "Извлечение тела сквозного канала обратным вычитанием из цилиндра",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "docs/qualification/nurbs-spinner-bore-core-951-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-bore-core-951-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, cylinder minus stock. General non-coaxial cuts remain outside this domain."
+      ]
+    },
+    {
+      "id": "NURBS-0952",
+      "name": "Симметрическая разность шестерни и вставки с раздельными телами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::boolean",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/through_wall_cylinder.rs",
+        "crates/brep-core/src/boolean/operations/boolean.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "docs/qualification/nurbs-spinner-exclusive-regions-952-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spinner-exclusive-regions-952-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, symmetric difference with two radially separated components. General non-coaxial cuts remain outside this domain."
+      ]
+    },
+    {
+      "id": "NURBS-0953",
+      "name": "Импорт составных рациональных NURBS-кромок IGES 102/126",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/composite_join.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/verify_step.py"
+      ],
+      "remainingQualification": [
+        "Bounded ordered continuous splines with unambiguous endpoint orientation. Each concatenated interval must pass agreement against its source. Type 100 arcs are qualified under NURBS-0954. Ambiguous or unproven joins remain unsupported."
+      ]
+    },
+    {
+      "id": "NURBS-0954",
+      "name": "Импорт круговой дуги IGES 100 как рациональной NURBS-кромки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/circular_arc.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/circular_arcs.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "Local XY circular arc, form 0; scaled world coordinates or zero-elevation UV coordinates. Direct and composite edge dispatch. Rigid curve placements are qualified under NURBS-0955."
+      ]
+    },
+    {
+      "id": "NURBS-0955",
+      "name": "Импорт размещённых кривых IGES с матрицей типа 124",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "One proper rigid form-zero matrix per type 100, 110 or 126 member. Translation follows the declared length units. Mapped UV controls must lie in the parameter plane. Chained matrices and reflections remain unsupported."
+      ]
+    },
+    {
+      "id": "NURBS-0956",
+      "name": "Жёсткое размещение рациональной поверхности IGES 128 с сохранением UV-сетки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/cad-step/tests/fixtures/iges/legacy-spinner-rim.igs",
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "One proper rigid form-zero matrix on an IGES 128 surface. U-fast pole/weight exchange and reader compatibility for legacy OpenSCAD Viewer files. Independent check covers the placed IGES surface and the restored STEP solid."
+      ]
+    },
+    {
+      "id": "NURBS-0957",
+      "name": "Прямой экспорт замкнутого рационального тела IGES для переноса в OCCT",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::export_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/verify.py",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/cylinder.igs"
+      ],
+      "remainingQualification": [
+        "Direct OCCT transfer qualified on a single closed six-face rational cylinder. Cavities, assemblies and edited solids require separate coverage."
+      ]
+    },
+    {
+      "id": "NURBS-0958",
+      "name": "Композиция вложенных жёстких размещений IGES при импорте кривых и NURBS-поверхностей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/receipt.json"
+      ],
+      "remainingQualification": [
+        "Up to 32 proper rigid form-zero matrices. Native cylinder edge and surface placement verified."
+      ]
+    },
+    {
+      "id": "NURBS-0959",
+      "name": "Импорт размещённых составных IGES-кривых в пространственных рёбрах и UV-контурах",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/receipt.json"
+      ],
+      "remainingQualification": [
+        "Rigid form-zero placements on type 102. Tested in a nested circular edge of a closed cylinder and on a rotated two-segment UV profile."
+      ]
+    },
+    {
+      "id": "NURBS-0960",
+      "name": "Обмен периодическими рациональными и открытыми полиномиальными кривыми IGES 126",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "Standard type-126 closed, polynomial and periodic flags. Legacy IGES2 and IGES2.1 sender layout accepted. Independent check covers the exported flags."
+      ]
+    },
+    {
+      "id": "NURBS-0961",
+      "name": "Независимая периодичность U и V при обмене NURBS-поверхностями IGES 128",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "OCCT verified U-periodic rational and V-periodic polynomial surfaces, all poles and weights. Rust also distinguishes clamped closed edges from periodic seams."
+      ]
+    },
+    {
+      "id": "NURBS-0962",
+      "name": "Импорт участка рациональной кривой IGES 126 по заданному интервалу",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Single ordered subinterval within the active knot domain; OCCT compared the imported and re-exported rational segment at 129 parameters."
+      ]
+    },
+    {
+      "id": "NURBS-0963",
+      "name": "Импорт прямоугольного участка поверхности IGES 128 с сохранением полного периодического направления",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Ordered U and V subintervals within active knot domains. OCCT independently evaluated both surfaces. Raw bounds checked against IGES 5.3 section 4.24 because installed OCCT interchanges the middle fields when reporting limits."
+      ]
+    },
+    {
+      "id": "NURBS-0964",
+      "name": "Восстановление естественного внешнего контура грани IGES 144 по изопараметрическим кривым",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Natural rectangular boundary without an explicit outer pointer. Reuses exactly matching edge definitions in either orientation. Pole support is qualified in NURBS-0965. Ambiguous matches remain unsupported."
+      ]
+    },
+    {
+      "id": "NURBS-0965",
+      "name": "Сшивка естественных границ IGES 144 с вырожденными рёбрами в полюсах",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Requires an exactly constant Euclidean control polygon for the boundary isocurve. Nonconstant closed isocurves retain ordinary edge semantics."
+      ]
+    },
+    {
+      "id": "NURBS-0966",
+      "name": "Импорт замкнутого контура IGES 142 по паре UV-кривой и пространственного ребра",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Both representations required. Single closed spline boundary qualified on an offset planar face with direct and pre-existing edge-list geometry; correspondence uses the existing finite sampling gate."
+      ]
+    },
+    {
+      "id": "NURBS-0967",
+      "name": "Восстановление пространственных рёбер IGES 142 из UV-контура на NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Uses the bounded exact rational pcurve lift. Internal crossings and stored spatial pieces must be certifiable. Covers a planar offset face and a saddle with a rational trim and a multi-cell crossing."
+      ]
+    },
+    {
+      "id": "NURBS-0968",
+      "name": "Восстановление UV-контура IGES 142 по пространственной кривой на аффинной грани",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Requires a certified single-span affine chart and a storable UV candidate with proven exact full-domain agreement. Tested on an offset plane and a tilted chart with a weighted quadratic."
+      ]
+    },
+    {
+      "id": "NURBS-0969",
+      "name": "Восстановление UV-контура IGES на криволинейной поверхности с аффинной координатной проекцией",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/nurbs-core/src/analysis/surface_injectivity.rs",
+        "crates/nurbs-core/src/analysis/surface_injectivity/exact_affine_xy.rs",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/projection.log.gz",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Single clamped tensor span with a certified nonsingular affine coordinate pair. Every recovered trim must agree in all three spatial coordinates over its full domain."
+      ]
+    },
+    {
+      "id": "NURBS-0970",
+      "name": "Восстановление пространственного контура IGES в UV многопролётной полиномиальной поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/nurbs-core/src/analysis/surface_injectivity.rs",
+        "crates/nurbs-core/src/analysis/surface_injectivity/exact_affine_xy.rs",
+        "crates/nurbs-core/tests/surface_rectangle_injectivity.rs",
+        "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/projection.log.gz",
+        "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Clamped polynomial tensor surfaces with exact full-grid affine coordinate projection. Rational curves are checked along their entire domain and cell crossings must be certifiable. Nonuniform unequal surface weights on multi-cell charts remain outside this proof."
+      ]
+    },
+    {
+      "id": "NURBS-0971",
+      "name": "Восстановление UV-контура IGES на многопролётной рациональной поверхности с переменными весами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/affine_projection.rs",
+        "crates/nurbs-core/tests/surface_rectangle_injectivity.rs",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/projection.log.gz",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/verify.py"
+      ],
+      "remainingQualification": [
+        "Clamped rational tensor surfaces with two Cartesian coordinates globally affine in UV. A bounded homogeneous polynomial identity is checked on every nonempty knot cell; both the coordinate projection and the complete edge trace must be certified."
+      ]
+    },
+    {
+      "id": "NURBS-0972",
+      "name": "Компактные направления размещения повторяющихся деталей при экспорте STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_planetary_gear_set_step",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/receipt.json"
+      ],
+      "remainingQualification": [
+        "Bit-identical normalized placement direction triples in a shared STEP assembly. Placement operators, scales and occurrence identity remain independent."
+      ]
+    },
+    {
+      "id": "NURBS-0973",
+      "name": "Оценка повторения граней и контрольных точек NURBS по деталям STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::surface_usage",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/integration.log.gz",
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/receipt.json"
+      ],
+      "remainingQualification": [
+        "Counts face carrier grids per referenced definition and per placement. Excludes edge and trim curves. Counts are structural, not serialized bytes."
+      ]
+    },
+    {
+      "id": "NURBS-0974",
+      "name": "Точное сжатие выбранных обрезанных граней тела с сохранением параметризации и топологии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Упрощение геометрии",
+      "nativeApi": "brep_core::Model::compress_face_surfaces",
+      "evidence": [
+        "crates/brep-core/src/model.rs",
+        "crates/brep-core/src/model/face_compression.rs",
+        "crates/brep-core/tests/face_compression.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/contracts.log.gz",
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic tensor carriers. Only redundant knots and degrees accepted by the exact homogeneous proofs are removed. Existing face count and trimming topology are preserved."
+      ]
+    },
+    {
+      "id": "NURBS-0975",
+      "name": "Точное сжатие пространственного ребра и его параметрических кривых на смежных гранях",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Упрощение геометрии",
+      "nativeApi": "brep_core::Model::compress_edge_with_trims",
+      "evidence": [
+        "crates/brep-core/src/model.rs",
+        "crates/brep-core/src/model/edge_compression.rs",
+        "crates/brep-core/tests/edge_compression.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/contracts.log.gz",
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped curves. Preserves each spatial and UV parameter law independently; existing incidence, orientation and explicit trim intervals are retained."
+      ]
+    },
+    {
+      "id": "NURBS-0976",
+      "name": "Точное упрощение общего определения детали в импортированной STEP-сборке",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Упрощение геометрии",
+      "nativeApi": "cad_step::StepSharedAssembly::compress_definition_faces",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/tests/shared_face_compression.rs",
+        "crates/brep-core/src/model/face_compression.rs",
+        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/verify.py",
+        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/occt.log",
+        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/edited-gear.log.gz"
+      ],
+      "remainingQualification": [
+        "Selected clamped nonperiodic carriers of one shared local definition; all occurrences inherit the same representation. Named flat assembly STEP round trip."
+      ]
+    },
+    {
+      "id": "NURBS-0977",
+      "name": "Передача орбит и ориентации спутников планетарной передачи в Open CASCADE через STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_planetary_gear_set_step",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "crates/brep-core/src/parts/gear/gear_with_report.rs",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/verify.py",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/occt.log",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Rigid proper placements in a flat procedural gear assembly. OCCT verifies all 18 local-to-world planet frames. External nonuniform and reflected placement qualification is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0978",
+      "name": "Экспорт неравномерно масштабированных и зеркальных деталей через общие NURBS-определения STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::StepSharedAssembly::export_step_with_baked_scales",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "crates/brep-core/src/model/transform.rs",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/shared.log.gz",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/verify.py",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/occt.log",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat orthogonal placements. Distinct linear maps become local definitions, with shared geometry for translation-only differences. OCCT checks reflected rational elliptic cylinder volume and three placed box variants."
+      ]
+    },
+    {
+      "id": "NURBS-0979",
+      "name": "Цвета отдельных экземпляров зеркальных и масштабированных NURBS-деталей в STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_styled_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/verify.py",
+        "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/occt.log",
+        "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Occurrence-level surface colours for orthogonal scaled and reflected placements. OCCT checks colours, volume and centroids of shared mirrored elliptic cylinders. Grouped mixed styled and unstyled occurrences checked in Rust."
+      ]
+    },
+    {
+      "id": "NURBS-0980",
+      "name": "Сохранение имён и количества вариантов деталей при переносе масштаба и отражения в NURBS-геометрию STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::export_step_with_baked_scales",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/verify.py",
+        "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/occt.log",
+        "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat named shared assemblies. Each baked variant inherits its source product label. Quantities remain scoped to definition identity even when labels match."
+      ]
+    },
+    {
+      "id": "NURBS-0981",
+      "name": "Совместная передача имён изделий, групп и цветов экземпляров NURBS-сборки STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_named_styled_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/verify.py",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/occt.log",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One group level and direct occurrences. OCCT verifies shared product identity, names, positions and individual colours of two reflected scaled cylinders."
+      ]
+    },
+    {
+      "id": "NURBS-0982",
+      "name": "Чтение пути изделия для каждого размещения общей NURBS-детали в STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::import_step_product_paths",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One named root and named representations along each selected occurrence path. Direct and nested placements of one definition checked with reversed STEP record order and compared with OCCT XDE."
+      ]
+    },
+    {
+      "id": "NURBS-0983",
+      "name": "Экспорт ветви именованной STEP-сборки с сохранением размещений и цветов экземпляров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_step_product_subassembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Product-name prefix selects all matching leaves in world coordinates. Flat result preserves shared geometry, definition labels and explicit solid occurrence colours."
+      ]
+    },
+    {
+      "id": "NURBS-0984",
+      "name": "Замена геометрии по пути изделия в STEP-сборке с сохранением соседних экземпляров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::replace_step_product_at_path",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact label path selects occurrences of one definition; local-space replacement. Root plus one group level, world-space placements, explicit occurrence colours. Group frames are rebased to identity."
+      ]
+    },
+    {
+      "id": "NURBS-0985",
+      "name": "Поворот и перенос выбранной ветви STEP-сборки с сохранением общих NURBS-деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::move_step_product_branch",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Assembly-space rigid motion by named path prefix. Exports one group level with identity group frames. XDE confirms shared product identity, three volumes, world centroids, colours and group membership."
+      ]
+    },
+    {
+      "id": "NURBS-0986",
+      "name": "Спецификация ветви STEP с учётом общих деталей внутри и за пределами подсборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_branch_parts_list",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Named path prefix. Quantities grouped by definition identity. Includes coincident placements; verifies inside and outside counts independently with XDE."
+      ]
+    },
+    {
+      "id": "NURBS-0987",
+      "name": "Консервативный габаритный параллелепипед ветви NURBS-сборки STEP в мировых координатах",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_branch_bounds",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "World-axis enclosure from control hulls with outward rounded placement arithmetic. Open CASCADE independently checks the actual branch and root extents of the rotated cuboid fixture. General trimmed carriers may yield a loose enclosure."
+      ]
+    },
+    {
+      "id": "NURBS-0988",
+      "name": "Масса, центр масс и тензор инерции ветви STEP с плотностью по экземплярам",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_branch_mass_properties",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Named path prefix; additive mass of independent occurrences, including overlaps. Positive densities in kg/mm3. Independent OCCT mass properties on rotated translated two-density bracket pair."
+      ]
+    },
+    {
+      "id": "NURBS-0989",
+      "name": "Массовый момент инерции NURBS-сборки относительно смещённой оси вращения",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::moment_about_axis",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/mechanics.log.gz",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Derived from additive component mass properties. Verified offset bearing by OCCT, nonuniformly scaled mirrored component by analytic box dimensions, and axis magnitude invariance."
+      ]
+    },
+    {
+      "id": "NURBS-0990",
+      "name": "Вектор статического дисбаланса NURBS-сборки относительно оси подшипника",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::static_unbalance",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Static radial first mass moment, in kg mm. Qualified offset, tilted, reversed and centred axes; reference computed from OCCT mass properties with an independent counterweight check."
+      ]
+    },
+    {
+      "id": "NURBS-0991",
+      "name": "Расчёт двухплоскостной балансировки NURBS-сборки по тензору инерции",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::two_plane_balance_corrections",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Rigid body with two distinct signed axial planes. Addition vectors in kg mm. OCCT independently adds the corresponding point masses and verifies static and couple cancellation for offset and tilted central axes."
+      ]
+    },
+    {
+      "id": "NURBS-0992",
+      "name": "Расчёт масс противовесов для четырёх фиксированных посадочных мест NURBS-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::balance_at_fixed_sites",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/verify.py",
+        "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/occt.log",
+        "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Two independent transverse sites on each of two planes. Nonnegative additive weights only. OCCT confirms the four fixed point masses cancel static and couple unbalance."
+      ]
+    },
+    {
+      "id": "NURBS-0993",
+      "name": "Пересчёт масс-инерционных характеристик NURBS-сборки с установленными точечными противовесами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::with_point_mass",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Point weights with negligible intrinsic inertia in world coordinates. Exact and rounded correction masses checked against OCCT aggregate mass properties and residual corrections."
+      ]
+    },
+    {
+      "id": "NURBS-0994",
+      "name": "Объединение масс и центральных тензоров NURBS-подсборок с учётом собственной инерции деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::combined_with",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Positive finite masses with central tensors in a common world frame. Independent OCCT bearing moment and complete assembly tensor checked for offset finite-size bodies."
+      ]
+    },
+    {
+      "id": "NURBS-0995",
+      "name": "Перенос измеренных масс-инерционных характеристик NURBS-подсборки в новую систему размещения",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::rigidly_placed",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "crates/brep-core/src/model/transform.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Proper rigid motions with translation. Full rotated central tensor compared against remeasurement of moved STEP geometry and OCCT. Nonuniform scale refused."
+      ]
+    },
+    {
+      "id": "NURBS-0996",
+      "name": "Аффинный пересчёт инерции измеренной NURBS-подсборки при постоянной плотности",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::affine_at_constant_density",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Constant-density nonsingular affine map. Direct reintegration includes shear, nonuniform scaling and reflection; independent OCCT checks the reflected elliptic cylinder tensor."
+      ]
+    },
+    {
+      "id": "NURBS-0997",
+      "name": "Восстановление массы, центра и тензора инерции остатка после снятия известной NURBS-детали",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::without_component",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Known component in the same frame. Both complementary residuals checked against separate branch integrations. Rejects nonpositive mass and infeasible inertia. Membership must be known by the caller."
+      ]
+    },
+    {
+      "id": "NURBS-0998",
+      "name": "Интервальная длина общей нормали наружной шестерни",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::external_spur_span",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs",
+        "crates/nurbs-core/tests/gear_span.rs",
+        "docs/qualification/nurbs-spur-span-998-1000/receipt.json",
+        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal external unshifted spur gears, ideal symmetric involute contacts. Actual jaw interference and inspection uncertainty beyond the supplied measurement interval require separate qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0999",
+      "name": "Подбор измеримых охватов зубьев по активным эвольвентам",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::measurable_spur_spans",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs",
+        "crates/nurbs-core/tests/gear_span.rs",
+        "docs/qualification/nurbs-spur-span-998-1000/receipt.json",
+        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal external unshifted spur gears, ideal symmetric involute contacts. Actual jaw interference and inspection uncertainty beyond the supplied measurement interval require separate qualification."
+      ]
+    },
+    {
+      "id": "NURBS-1000",
+      "name": "Восстановление утонения зуба по допуску измеренной общей нормали",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::tooth_thinning_from_span",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs",
+        "crates/nurbs-core/tests/gear_span.rs",
+        "docs/qualification/nurbs-spur-span-998-1000/receipt.json",
+        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal external unshifted spur gears, ideal symmetric involute contacts. Actual jaw interference and inspection uncertainty beyond the supplied measurement interval require separate qualification."
       ]
     }
   ],

@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0872",
+  "testedBase": "de1bab810403555dbb09b1c21edff84b338decfa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 219,
+  "scope": [
+    "Copy selected assembly occurrences under one world-space motion and retain their definition links.",
+    "Round-trip four placements of one definition, confirming original coordinates and selection-ordered copies. Invalid indices, duplicate selection and occurrence overflow do not append partial copies."
+  ],
+  "logSha256": "5a695b20b0b8a74188dbd9e6aeac69499f8b925bb599a22ec56ffb12d2c4f0d7",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "9aa5c91f58533d1d5d52a4fd52c40c2e486842e08d4f254167d2b1a4639883d1",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "97c71194c688abf474e8424de740f6ed94a98c8935d8400eaf3364a2c965bf82"
+  }
+}

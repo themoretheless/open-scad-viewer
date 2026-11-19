@@ -36,6 +36,7 @@ pub struct VerifiedGearProfile {
     winding: Vec<i32>,
     radial_ranges: Vec<[f64; 2]>,
     teeth: usize,
+    internal: bool,
 }
 impl VerifiedGearProfile {
     pub fn profile(&self) -> &[Vec<Curve>] {
@@ -47,6 +48,7 @@ impl VerifiedGearProfile {
     pub fn radial_ranges(&self) -> &[[f64; 2]] {
         &self.radial_ranges
     }
+    pub(super) fn is_internal(&self) -> bool { self.internal }
     pub fn teeth(&self) -> usize {
         self.teeth
     }
@@ -433,6 +435,7 @@ pub fn verify_profile_embedding(
         winding: winding_values,
         radial_ranges: ranges,
         teeth: c.teeth,
+        internal: c.tooth_wire == 1,
     })
 }
 
@@ -512,4 +515,33 @@ pub fn gear_with_verified_profile(
         geometry,
         profile,
     })
+}
+
+/// Verify an edited compressed tooth wire before committing its replacement.
+/// For a ring gear the companion is its outer rim; for an external gear an
+/// optional companion is its bore. The returned profile owns the verified source.
+pub fn replace_verified_gear_sector(
+    pattern: &mut nurbs_core::involute::LosslessSectorPattern,
+    index: usize, replacement: &[Curve], internal: bool, companion: Option<&[Curve]>,
+    tolerance: f64, limits: ProfileEmbeddingLimits,
+) -> Result<VerifiedGearProfile> {
+    let teeth = pattern.sector_count();
+    let width = replacement.len();
+    if !(3..=256).contains(&teeth) || ![4,6].contains(&width) || index >= teeth ||
+        internal && companion.is_none() || companion.is_some_and(|c| c.is_empty() || c.len() > 128) {
+        return Err(refuse("Invalid grouped gear replacement or companion"));
+    }
+    if pattern.sector(0)?.len() != width { return Err(refuse("Replacement tooth layout differs")); }
+    let mut outline = Vec::with_capacity(teeth * width);
+    for tooth in 0..teeth {
+        if tooth == index { outline.extend_from_slice(replacement); }
+        else { outline.extend(pattern.sector(tooth)?); }
+    }
+    let mut wires = vec![outline];
+    if let Some(circle) = companion { wires.insert(usize::from(!internal), circle.to_vec()); }
+    let (_, verified) = certify_grouped_profile_embedding(
+        &wires, teeth, width, usize::from(internal), tolerance, limits,
+    )?;
+    pattern.replace_sector_with_closed_joins(index, replacement)?;
+    Ok(verified)
 }

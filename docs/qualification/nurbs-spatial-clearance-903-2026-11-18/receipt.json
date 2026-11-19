@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0903",
+  "testedBase": "cf6a8c14debe92b41ef118180366b944086927d0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 469,
+  "scope": [
+    "Use exact squared separation of Cartesian control boxes to certify an inclusive clearance. Verify axial and diagonal equality and reject an inflated threshold."
+  ],
+  "logSha256": "e65f75447c8d90686544fe434c8e6282f1db9d40b3dc2755144c44199389d57d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "4822ff780b92e3f2acae5a1d9f78253d5b037cf2a74a455360ac3dbdf3a5ddf2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e44a1fd5c3d0183560a5461400d95ca84943084f783e8e3445a543c3028ffc0c"
+  }
+}

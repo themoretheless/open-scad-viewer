@@ -93,3 +93,66 @@ fn rational_quadratic_minimum_requires_subdivision() {
     assert!(!limited.converged);
     assert!(limited.distance_interval[0] <= expected && expected <= limited.distance_interval[1]);
 }
+
+#[test]
+fn clearance_inspection_uses_interior_uv_witness_and_whole_patch_support() {
+    use nurbs_core::analysis::curve_measure::{inspect_curve_surface_clearance as inspect, ClearanceDecision::*};
+    let c=line([2.,2.,3.],[2.,2.,3.]);
+    let s=panel();
+    let (decision,r)=inspect(&c,&s,3.,1e-6,1000).unwrap();
+    assert_eq!(decision,MeetsMinimum);
+    assert!(r.surface_parameters[0]>2. && r.surface_parameters[0]<7.);
+    assert!(r.surface_parameters[1]>-3. && r.surface_parameters[1]<1.);
+    assert_eq!(inspect(&c,&s,3.1,1e-6,1000).unwrap().0,BelowMinimum);
+    assert!(inspect(&c,&s,-1.,1e-6,1000).is_err());
+}
+
+#[test]
+fn crossing_curve_measures_to_retained_hole_wall() {
+    use nurbs_core::{trim_domain::TrimDomain, trimmed_surface_distance::curve_distance};
+    let rect = |u: [f64;2], v: [f64;2]| Curve::from_polyline(vec![
+        vec![u[0],v[0]], vec![u[1],v[0]], vec![u[1],v[1]], vec![u[0],v[1]], vec![u[0],v[0]]
+    ]).unwrap();
+    let outer = rect([1.,8.],[-4.,2.]);
+    let hole = rect([3.25,5.75],[-2.,0.]).reverse().unwrap();
+    let region = TrimDomain::new(&[vec![outer],vec![hole]],1e-8).unwrap();
+    let mut c = line([2.,2.,-1.],[2.,2.,1.]);
+    c.weights = vec![1.,2.];
+    let report = curve_distance(&c,&panel(),&region,0.05,20000,1000000).unwrap();
+    let upper = report.upper_bound_mm.unwrap();
+    assert!(report.lower_bound_mm <= 1. && upper >= 1. && upper - report.lower_bound_mm <= 0.05, "{report:?}");
+    let [[t,_],[u,v]] = report.parameters.unwrap();
+    assert!(-2. < t && t < 5.);
+    assert!(!(3.25..5.75).contains(&u) || !(-2.0..0.).contains(&v));
+    for (radius, fits) in [(0.8, true), (1.2, false)] {
+        let sweep = nurbs_core::trimmed_surface_distance::swept_ball_clearance(
+            &c, radius, &panel(), &region, 0.05, 20000, 1000000,
+        ).unwrap();
+        let [lo, hi] = sweep.signed_margin_mm.unwrap();
+        assert!(if fits { lo > 0. } else { hi < 0. });
+    }
+    assert!(curve_distance(&c,&panel(),&region,0.,100,1000).is_err());
+}
+
+#[test]
+fn curved_ball_sweep_reports_standoff_and_intrusion() {
+    use nurbs_core::{trim_domain::TrimDomain, trimmed_surface_distance::swept_ball_clearance};
+    let region = |lo, hi| TrimDomain::new(&[vec![Curve::from_polyline(vec![
+        vec![lo,lo], vec![hi,lo], vec![hi,hi], vec![lo,hi], vec![lo,lo],
+    ]).unwrap()]], 1e-8).unwrap();
+    let path = Curve {
+        degree: 2, knots: vec![0.,0.,0.,1.,1.,1.],
+        control_points: vec![vec![0.,2.,3.],vec![2.,2.,1.],vec![4.,2.,3.]],
+        weights: vec![1.;3], periodic: false,
+    };
+    let face = panel();
+    let full = region(-4.,8.);
+    let query = |r, trim| swept_ball_clearance(&path,r,&face,trim,0.02,20000,500000);
+    // z(t) = 2 + (2t - 1)^2; closest approach is at the interior midpoint.
+    for (radius, expected) in [(1.5,0.5), (2.5,-0.5), (2.,0.)] {
+        let [lo,hi] = query(radius,&full).unwrap().signed_margin_mm.unwrap();
+        assert!(lo <= expected && expected <= hi && hi-lo < 0.021);
+    }
+    assert!(query(-1.,&full).is_err());
+    assert!(query(1.,&region(20.,30.)).unwrap().signed_margin_mm.is_none());
+}

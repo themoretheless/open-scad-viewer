@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0934",
+  "testedBase": "b09674e79d9e8f09111049f1d0296c998a562be8",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 16,
+  "scope": [
+    "Export two nonconsecutive definition IDs from a three-part assembly with duplicate names. Reimport, check remapped labels and all placements, reject duplicate, empty and invalid selections."
+  ],
+  "logSha256": "51b81588ebb5c2799903a478c57aa106edc1d5910ccb48fba2bc4a37744761f3",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "e670b2c1dc16557975da0ca56a042c9b690c965b2863715ae0e01bde4b16c1c7",
+    "crates/cad-step/src/step_interchange_v3.rs": "7ce4b347ee9924e877883caf3f8350ddf4bd71d2d35cd223cccf02d14118a630",
+    "crates/cad-step/src/lib.rs": "424954bc627e81bf3e7ab962a4eeb8be65ba8af45e212d2b240562fa297411fb",
+    "crates/cad-step/tests/edited_gear_step.rs": "84dc33fb76b560da99627a6a91500f1565e10303e81a6af934e965a74be9720d"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0971",
+  "testedBase": "9c0b96ab518a220ad1c851566fdacef33037435a",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "535618a68b9ac8ec8eb79e02e5416c3da096b6e7ca9906a2fdcc55961a5502b5",
+    "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs": "6a09d77520b0b3dac8578851d2bf788c87a4071975cd38e3f65cac2f4252eb34",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "1083c12ffe498e1fccaf1722c86839edec96af378df24854a0404718d12ecfc6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "5f47bba9534221e8527cb9577f0b38462fb800d0813df51519077376d024b397",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/affine_projection.rs": "8c05297365c0f89f04b778900f6df6f6d7cee86ce29317f6c28ece45403707ef",
+    "crates/nurbs-core/tests/surface_rectangle_injectivity.rs": "cee4e0c187299459e30aadce338fb93eb9d19d60eb92aad1a78ad731187fe41c"
+  },
+  "occt": {
+    "valid": true,
+    "area": 10.246314202187241,
+    "referenceArea": 10.246314202187238,
+    "boundarySamples": 193,
+    "boundaryTolerance": 1e-12
+  },
+  "fixtureSha256": "14234b06a808b9591a67d184adc617a0415de2b30b86e765e9c5c8acc25b9daa",
+  "fixtureEnvironment": "CAD_IGES_WEIGHTED_GRID_FIXTURE=/tmp/osv971-weighted.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Weighted four-cell saddle with a repeated internal knot and a model-only boundary",
+    "Two affine coordinates certified across a simple interior knot with nonconstant denominator",
+    "Interior perturbation and insufficient work budget refused"
+  ]
+}

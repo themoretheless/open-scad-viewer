@@ -253,9 +253,10 @@ fn append_entity(
         "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{status}",
         ty, p_start, 0, 0, 0, 0, 0, 0
     );
+    let records = parameter_records(ty, &values(de));
     let b = format!(
         "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:<8}{:>8}",
-        ty, 0, 0, 0, form, 0, 0, "", 0
+        ty, 0, 0, records.len(), form, 0, 0, "", 0
     );
     let d_first = lines
         .iter()
@@ -268,11 +269,9 @@ fn append_entity(
             pad_record(&b, 'D', de + 1, 72).unwrap(),
         ],
     );
-    let parameter = format!("{};", values(de).join(","));
     let mut p_count = 0;
-    for chunk in parameter.as_bytes().chunks(64) {
+    for payload in records {
         let sequence = old_p + p_count + 1;
-        let payload = std::str::from_utf8(chunk).unwrap();
         lines.push(format!("{payload:<64}{de:>8}P{sequence:>7}",));
         p_count += 1;
     }
@@ -292,11 +291,9 @@ fn replace_parameters(text: &str, de: usize, values: Vec<String>) -> String {
         })
         .map(|(index, _)| index)
         .collect::<Vec<_>>();
-    let parameter = format!("{};", values.join(","));
-    let chunks = parameter.as_bytes().chunks(64).collect::<Vec<_>>();
+    let chunks = parameter_records(values[0].parse().unwrap(), &values);
     assert_eq!(chunks.len(), rows.len());
-    for (row, chunk) in rows.into_iter().zip(chunks) {
-        let payload = std::str::from_utf8(chunk).unwrap();
+    for (row, payload) in rows.into_iter().zip(chunks) {
         lines[row].replace_range(..64, &format!("{payload:<64}"));
     }
     lines.join("\n") + "\n"
@@ -342,7 +339,7 @@ fn append_line(text: &str, a: Vec<f64>, b: Vec<f64>, bspline: bool) -> (String, 
     if bspline {
         let curve = Curve::from_polyline(vec![a, b]).unwrap();
         let dim = curve.control_points[0].len();
-        append_entity(text, 126, 0, "00000000", |_| curve_values(&curve, dim))
+        append_entity(text, 126, 0, "00000000", |_| curve_values(&curve, dim).unwrap())
     } else {
         let mut values = vec!["110".into()];
         for point in [a, b] {
@@ -891,7 +888,7 @@ fn trimmed_144_classifies_explicit_inner_loop_and_normalizes_direction() {
 }
 
 #[test]
-fn trimmed_3d_only_and_natural_outer_are_typed_refusals_with_ids() {
+fn trimmed_3d_only_is_refused_and_natural_outer_reuses_cuboid_edges() {
     let (text, trimmed, outer) = trimmed_outer_fixture();
     let (entities, _, _) = parse(&text).unwrap();
     let mut boundary = entities[&outer].values.clone();
@@ -903,9 +900,16 @@ fn trimmed_3d_only_and_natural_outer_are_typed_refusals_with_ids() {
     let mut trimmed_values = entities[&trimmed].values.clone();
     trimmed_values[2] = "0".into();
     trimmed_values[4] = "0".into();
-    let error = import_iges_v2(&replace_parameters(&text, trimmed, trimmed_values)).unwrap_err();
-    assert_eq!(error.code, "BREP_IGES_V2_TRIMMED_UNSUPPORTED");
-    assert!(error.message.contains(&format!("DE {trimmed}")));
+    let text = set_status(&text, outer, "01000000");
+    let text = replace_parameters(&text, trimmed, trimmed_values);
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!((model.faces.len(), model.edges.len()), (6,12));
+    assert!(loop_uv_area(&model, model.faces.last().unwrap().outer) > 0.);
+    if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_BOUNDARY_STEP") {
+        std::fs::write(path, crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+
 }
 
 #[test]
@@ -1150,24 +1154,54 @@ fn composite_2d_pcurve_and_3d_edge_pass_face_correspondence() {
 }
 
 #[test]
-fn composite_arc_and_general_rational_join_are_explicitly_unsupported() {
+fn malformed_arc_in_composite_is_refused() {
     let (text, arc) = append_entity(&base_text(), 100, 0, "00000000", |_| vec!["100".into()]);
     let (text, composite) = append_composite(&text, &[arc]);
     let (edge_list, _) = first_edge_curve(&text);
     let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
     assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
 
-    let curve = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]])
-        .unwrap()
-        .elevate(2)
-        .unwrap();
-    let (text, spline) = append_entity(&base_text(), 126, 0, "00000000", |_| {
-        curve_values(&curve, 3)
-    });
-    let (text, composite) = append_composite(&text, &[spline]);
-    let (edge_list, _) = first_edge_curve(&text);
-    let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
-    assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
+}
+
+#[test]
+fn imported_composite_retains_a_split_rational_cylinder_edge() {
+    let cylinder = brep_core::cylinder(3., 5.).unwrap();
+    let mut text = export_iges_v2(&cylinder).unwrap().0;
+    let (entities, _, _) = parse(&text).unwrap();
+    let edge_list = directory_entity(&text, 504, 0);
+    let values = &entities[&edge_list].values;
+    let (at, original) = (2..values.len()).step_by(5).find_map(|at| {
+        let de = u(values, at, "edge curve").unwrap();
+        let curve = curve126(&entities, de, 3, 1.).unwrap();
+        curve.weights.iter().any(|&w| w != 1.).then_some((at, curve))
+    }).unwrap();
+    let [a,b] = original.domain();
+    let mid = (a+b)*0.5;
+    let mut members = Vec::new();
+    for piece in [original.trim(a,mid).unwrap().reverse().unwrap(), original.trim(mid,b).unwrap()] {
+        let (updated, de) = append_entity(&text, 126, 0, "00000000", |_| curve_values(&piece, 3).unwrap());
+        text = updated;
+        members.push(de);
+    }
+    let (text, composite) = append_composite(&text, &members);
+    let text = rewire_reference(&text, edge_list, at, composite);
+    let model = import_iges_v2(&text).unwrap().0;
+    if let Some(dir) = std::env::var_os("CAD_IGES_COMPOSITE_FIXTURE") {
+        let dir = std::path::Path::new(&dir);
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("composite.igs"), text).unwrap();
+        std::fs::write(dir.join("restored.step"), crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    let actual = &model.edges[(at-2)/5].curve;
+    assert!(actual.weights.iter().any(|&w| w != 1.));
+    let [lo,hi] = actual.domain();
+    for i in 0..=32 {
+        let t = i as f64 / 32.;
+        let p = original.evaluate(a+(b-a)*t).unwrap().point;
+        let q = actual.evaluate(lo+(hi-lo)*t).unwrap().point;
+        assert!(p.iter().zip(q).all(|(x,y)| (x-y).abs() < 1e-9));
+    }
 }
 
 #[test]
@@ -1248,5 +1282,285 @@ fn rational_sphere_and_torus_round_trip_through_126_and_128() {
                 }
             }
         }
+    }
+}
+
+mod circular_arcs;
+mod placements;
+
+#[test]
+fn natural_boundary_with_explicit_hole_keeps_opposite_windings() {
+    let (text, trimmed) = trimmed_hole_fixture();
+    let (entities, _, _) = parse(&text).unwrap();
+    let mut data = entities[&trimmed].values.clone();
+    let outer = data[4].parse().unwrap();
+    data[2] = "0".into();
+    data[4] = "0".into();
+    let text = replace_parameters(&set_status(&text, outer, "01000000"), trimmed, data);
+    let model = import_iges_v2(&text).unwrap().0;
+    let face = model.faces.last().unwrap();
+    assert_eq!(face.holes.len(), 1);
+    assert!(loop_uv_area(&model, face.outer) > 0.);
+    assert!(loop_uv_area(&model, face.holes[0]) < 0.);
+}
+
+#[test]
+fn natural_rational_patch_builds_four_edges_without_a_boundary_entity() {
+    let cylinder = brep_core::cylinder(3., 5.).unwrap();
+    let patch = &cylinder.faces.iter().find(|face| {
+        face.surface.weights.iter().flatten().any(|w| *w != 1.)
+    }).unwrap().surface;
+    let mut writer = Writer::new();
+    let surface = writer.emit(128, surface_values(patch).unwrap());
+    let face = writer.emit(144, vec!["144".into(), surface.to_string(), "0".into(), "0".into(), "0".into()]);
+    let shell = writer.emit(514, vec!["514".into(), "1".into(), face.to_string(), "1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    assert_eq!((model.vertices.len(), model.edges.len(), model.faces.len()), (4,4,1));
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 4);
+    assert_eq!(model.faces[0].surface, *patch);
+    assert_eq!(model.edges.iter().filter(|e| e.curve.weights.iter().any(|w| *w != 1.)).count(), 2);
+}
+
+#[test]
+fn natural_pole_faces_sew_into_a_closed_tetrahedron() {
+    let corners = [[0.,0.,0.], [2.,0.,0.], [0.,3.,0.], [0.,0.,4.]];
+    let mut writer = Writer::new();
+    let mut uses = Vec::new();
+    for [a,b,c] in [[0,2,1], [0,1,3], [0,3,2], [1,2,3]] {
+        let surface = Surface {
+            degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+            control_points: vec![vec![corners[a].to_vec(),corners[c].to_vec()],vec![corners[b].to_vec(),corners[c].to_vec()]],
+            weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+        };
+        let geometry = writer.emit(128, surface_values(&surface).unwrap());
+        let face = writer.emit(144, vec!["144".into(),geometry.to_string(),"0".into(),"0".into(),"0".into()]);
+        uses.extend([face.to_string(), "1".into()]);
+    }
+    let mut shell_data = vec!["514".into(), "4".into()];
+    shell_data.extend(uses);
+    let shell = writer.emit(514, shell_data);
+    writer.entities[(shell-1)/2].form = 2;
+    writer.emit(186, vec!["186".into(), shell.to_string(), "1".into(), "0".into()]);
+    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(model.vertices.len(), 4);
+    assert_eq!(model.edges.iter().filter(|edge| !edge.degenerate).count(), 6);
+    for face in &model.faces {
+        let poles: Vec<_> = model.loops[face.outer].coedges.iter()
+            .filter(|coedge| model.edges[coedge.edge].degenerate).collect();
+        assert_eq!(poles.len(), 1);
+        let pole = &model.edges[poles[0].edge];
+        assert_eq!(pole.vertices[0], pole.vertices[1]);
+        let (a,b) = CurveDispatcher::endpoints(&poles[0].pcurve).unwrap();
+        assert_ne!(a,b);
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_POLE_STEP") {
+        std::fs::write(path, crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+}
+
+#[test]
+fn natural_rational_cone_retains_apex_and_circular_rim() {
+    let mut patch = brep_core::cylinder(3., 5.).unwrap().faces.iter()
+        .map(|face| &face.surface)
+        .find(|s| s.weights.iter().flatten().any(|w| *w != 1.)).unwrap().clone();
+    let apex = vec![0., 0., 5.];
+    for point in patch.control_points.iter_mut().flatten() {
+        if point[2] == 5. { point.clone_from(&apex); }
+    }
+    let mut writer = Writer::new();
+    let surface = writer.emit(128, surface_values(&patch).unwrap());
+    let face = writer.emit(144, vec!["144".into(),surface.to_string(),"0".into(),"0".into(),"0".into()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 3);
+    assert_eq!(model.vertices.len(), 3);
+    let poles: Vec<_> = model.edges.iter().filter(|edge| edge.degenerate).collect();
+    assert_eq!(poles.len(), 1);
+    assert!(poles[0].curve.control_points.iter().all(|point| *point == apex));
+    assert!(poles[0].curve.weights.iter().any(|w| *w != 1.));
+    assert!(model.edges.iter().any(|edge| !edge.degenerate && edge.curve.weights.iter().any(|w| *w != 1.)));
+}
+
+#[test]
+fn standard_curve_on_surface_keeps_a_single_closed_trim_edge() {
+    let plane = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+        control_points: vec![vec![vec![10.,0.,7.],vec![10.,4.,7.]],vec![vec![18.,0.,7.],vec![18.,4.,7.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let uv = Curve::from_polyline(vec![vec![0.25,0.25],vec![0.75,0.25],vec![0.75,0.75],vec![0.25,0.75],vec![0.25,0.25]]).unwrap();
+    let xyz = Curve::from_polyline(uv.control_points.iter().map(|p| plane.evaluate(p[0],p[1]).unwrap().point.to_vec()).collect()).unwrap();
+    let mut writer = Writer::new();
+    let surface = writer.emit(128, surface_values(&plane).unwrap());
+    let parameter = writer.emit(126, curve_values(&uv, 2).unwrap());
+    let spatial = writer.emit(126, curve_values(&xyz, 3).unwrap());
+    let boundary = writer.emit(142, vec!["142".into(),"0".into(),surface.to_string(),parameter.to_string(),spatial.to_string(),"1".into()]);
+    let face = writer.emit(144, vec!["144".into(),surface.to_string(),"1".into(),"0".into(),boundary.to_string()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let text = render(writer).unwrap();
+    for preference in 0..=3 {
+        let test = rewire_reference(&text, boundary, 5, preference);
+        let model = import_iges_v2(&test).unwrap().0;
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+        assert_eq!(model.edges.len(), 1);
+        assert!(!model.edges[0].degenerate);
+        assert_eq!(model.edges[0].curve, xyz);
+        assert_eq!(model.loops[0].coedges[0].pcurve, uv);
+    }
+    assert!(import_iges_v2(&rewire_reference(&text, boundary, 3, spatial)).is_err());
+    let (listed, vertex) = append_entity(&text, 502, 1, "00000000", |_| {
+        ["502","1","12","1","7"].map(str::to_owned).to_vec()
+    });
+    let (listed, _) = append_entity(&listed, 504, 1, "00000000", |_| {
+        vec!["504".into(),"1".into(),spatial.to_string(),vertex.to_string(),"1".into(),vertex.to_string(),"1".into()]
+    });
+    let model = import_iges_v2(&listed).unwrap().0;
+    assert_eq!(model.edges.len(), 1);
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+    let uv_only = rewire_reference(&text, boundary, 4, 0);
+    let lifted = import_iges_v2(&uv_only).unwrap().0;
+    assert_eq!(lifted.validate().unwrap().boundary_edge_count, 4);
+    for coedge in &lifted.loops[0].coedges {
+        verify_correspondence(&lifted.edges[coedge.edge], &coedge.pcurve, &plane, coedge.reversed).unwrap();
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_UV_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, uv_only).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&lifted).unwrap().0).unwrap();
+    }
+    let model_only = rewire_reference(&rewire_reference(&text, boundary, 3, 0), boundary, 5, 2);
+    let recovered = import_iges_v2(&model_only).unwrap().0;
+    assert_eq!(recovered.loops[0].coedges[0].pcurve, uv);
+    assert_eq!(recovered.validate().unwrap().boundary_edge_count, 1);
+    if let Some(path) = std::env::var_os("CAD_IGES_MODEL_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, model_only).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&recovered).unwrap().0).unwrap();
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_BOUNDARY_PAIR_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}
+
+#[test]
+fn uv_only_boundary_lifts_diagonals_to_curved_spatial_edges() {
+    let saddle = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+        control_points: vec![vec![vec![0.,0.,0.],vec![0.,4.,0.]],vec![vec![4.,0.,0.],vec![4.,4.,4.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let mut uv = Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.],vec![1.,1.],vec![0.,0.]]).unwrap();
+    uv.weights = vec![1.,2.,1.,1.];
+    let mut writer = Writer::new();
+    let support = writer.emit(128, surface_values(&saddle).unwrap());
+    let parameter = writer.emit(126, curve_values(&uv, 2).unwrap());
+    let pair = writer.emit(142, vec!["142".into(),"1".into(),support.to_string(),parameter.to_string(),"0".into(),"1".into()]);
+    let face = writer.emit(144, vec!["144".into(),support.to_string(),"1".into(),"0".into(),pair.to_string()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let text = render(writer).unwrap();
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 3);
+    let diagonal = model.loops[0].coedges.last().unwrap();
+    let curve = &model.edges[diagonal.edge].curve;
+    let [a,b] = curve.domain();
+    assert_eq!(curve.evaluate((a+b)/2.).unwrap().point, [2.,2.,1.]);
+    // A knot on the rational bottom edge at t=1/2 maps to U=2/3.
+    // Use unit weights for a second input with exactly representable crossings.
+    let divided = saddle.edit_axis(Axis::U, |c| c.insert(0.5, 1)).unwrap();
+    let (multi, surface_de) = append_entity(&text, 128, 0, "00000000", |_| surface_values(&divided).unwrap());
+    let multi = rewire_reference(&rewire_reference(&multi, pair, 2, surface_de), face, 1, surface_de);
+    let mut linear_uv = uv.clone();
+    linear_uv.weights.fill(1.);
+    let multi = replace_parameters(&multi, parameter, curve_values(&linear_uv, 2).unwrap());
+    let cut = import_iges_v2(&multi).unwrap().0;
+    assert_eq!(cut.validate().unwrap().boundary_edge_count, 5);
+    assert_eq!(cut.loops[0].coedges.len(), 5);
+    let mut outside = uv.clone();
+    outside.control_points[1][0] = 2.;
+    let invalid = replace_parameters(&text, parameter, curve_values(&outside, 2).unwrap());
+    assert!(import_iges_v2(&invalid).is_err());
+}
+
+#[test]
+fn model_only_trim_recovers_a_nonplanar_saddle_loop() {
+    // The XY projection is (4u,4v). The Z component is 4uv.
+    let saddle = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+        control_points: vec![vec![vec![0.,0.,0.],vec![0.,4.,0.]],vec![vec![4.,0.,0.],vec![4.,4.,4.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let edge = Curve {
+        degree: 2, periodic: false, knots: vec![0.,0.,0.,1.,1.,2.,2.,3.,3.,3.],
+        control_points: [[0.,0.,0.],[2.,0.,0.],[4.,0.,0.],[4.,2.,2.],[4.,4.,4.],[2.,2.,0.],[0.,0.,0.]]
+            .map(|point| point.to_vec()).to_vec(), weights: vec![1.;7],
+    };
+    let mut writer = Writer::new();
+    let support = writer.emit(128, surface_values(&saddle).unwrap());
+    let spatial = writer.emit(126, curve_values(&edge,3).unwrap());
+    let pair = writer.emit(142, vec!["142".into(),"0".into(),support.to_string(),"0".into(),spatial.to_string(),"2".into()]);
+    let face = writer.emit(144, vec!["144".into(),support.to_string(),"1".into(),"0".into(),pair.to_string()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let text = render(writer).unwrap();
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+    let uv = &model.loops[0].coedges[0].pcurve;
+    assert_eq!(uv.evaluate(2.5).unwrap().point, [0.5,0.5]);
+    assert_eq!(edge.evaluate(2.5).unwrap().point, [2.,2.,1.]);
+    // Rotate XYZ so the affine coordinate pair becomes YZ.
+    let mut rotated = saddle.clone();
+    for point in rotated.control_points.iter_mut().flatten() {
+        point.rotate_right(1);
+    }
+    let mut spatial = edge.clone();
+    for point in &mut spatial.control_points {
+        point.rotate_right(1);
+    }
+    assert_eq!(affine_boundary::recover(pair, &rotated, &spatial, &mut 0).unwrap(), *uv);
+    let mut wrong = edge.clone();
+    wrong.control_points[5][2] += 0.001;
+    assert!(affine_boundary::recover(pair, &saddle, &wrong, &mut 0).is_err());
+    let grid = saddle.edit_axis(Axis::U, |curve| curve.insert(0.5, 1)).unwrap()
+        .edit_axis(Axis::V, |curve| curve.insert(0.25, 1)).unwrap();
+    let (multi, support_de) = append_entity(&text, 128, 0, "00000000", |_| surface_values(&grid).unwrap());
+    let multi = rewire_reference(&rewire_reference(&multi, pair, 2, support_de), face, 1, support_de);
+    let restored = import_iges_v2(&multi).unwrap().0;
+    assert_eq!(restored.faces[0].surface, grid);
+    assert_eq!(restored.loops[0].coedges[0].pcurve, *uv);
+    // A piecewise-linear weight function (1 -> 3 -> 1) times the
+    // saddle gives a quadratic homogeneous net with dyadic stored poles.
+    let rational = Surface {
+        degree_u: 2, degree_v: 1,
+        knots_u: vec![0.,0.,0.,0.5,0.5,1.,1.,1.], knots_v: vec![0.,0.,0.25,1.,1.],
+        control_points: [0.,0.5,2.,3.5,4.].map(|x| {
+            [0.,1.,4.].map(|y| vec![x,y,x*y/4.]).to_vec()
+        }).to_vec(),
+        weights: [1.,2.,3.,2.,1.].map(|w| vec![w;3]).to_vec(),
+        periodic_u: false, periodic_v: false,
+    };
+    let (weighted, support_de) = append_entity(&text, 128, 0, "00000000", |_| surface_values(&rational).unwrap());
+    let weighted = rewire_reference(&rewire_reference(&weighted, pair, 2, support_de), face, 1, support_de);
+    let rational_model = import_iges_v2(&weighted).unwrap().0;
+    assert_eq!(rational_model.faces[0].surface, rational);
+    assert_eq!(rational_model.loops[0].coedges[0].pcurve, *uv);
+    if let Some(path) = std::env::var_os("CAD_IGES_WEIGHTED_GRID_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, weighted).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&rational_model).unwrap().0).unwrap();
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_GRID_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, multi).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&restored).unwrap().0).unwrap();
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_GRAPH_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, text).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&model).unwrap().0).unwrap();
     }
 }

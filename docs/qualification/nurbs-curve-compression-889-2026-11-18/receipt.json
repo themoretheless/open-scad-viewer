@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0889",
+  "testedBase": "a8e6c68cf9b6e46f79e75d51d983d1adbda5d86f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 455,
+  "scope": [
+    "Mixed-degree and mixed-weight chain with exact original domains, joint seam removal, shared proof budget and late mismatch refusal."
+  ],
+  "logSha256": "0f835059d9745704aab8496c369d3627ff81e7583cb1a3a2b2fff5d12e41a95b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "7c594ceec1381a7bcd57760425c62e66abc2d24523ffa3fc0e89dcb56fa6e144",
+    "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs": "2288c8504eacb909dc0b724a13afa48c2cabf8415c72ca55551e41ba76a17f48",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9176d5d148e9150fce42a5b6468bc576d2854884e14069a8088d581d88b30701"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "NURBS-0981",
+  "testedBase": "59f5b0f6486e3e030b274fd262b88912c5421bcc",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "790a90d5108824ec54769e268384d337f8ef7d116d31aaa5fc637dde1090f655",
+    "crates/cad-step/src/lib.rs": "7072daec5d878f80e7d95cac0caad1c50727a6ad371c0b05c61bee243cd54b24",
+    "crates/cad-step/tests/baked_step_scales.rs": "8b7028af11cf789a79ae749a6356ec90cce3c9ced8ce8cbe30ec08d527b38f17"
+  },
+  "fixtureSha256": "2f905c701392e7189033454fac830b48c665bf25b4772b2a6ef918239a78c647",
+  "command": "CAD_NAMED_STYLED_FIXTURE=/tmp/osv981.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Drive/Feed/Roller red at x=0 and Drive/Roller blue at x=20 share one product"
+}

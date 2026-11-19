@@ -50,7 +50,7 @@ mod profile_embedding;
 pub use profile_embedding::{
     ProfileEmbeddingCertificate, ProfileEmbeddingLimits, ProfileVerifiedGear, VerifiedGearProfile,
     certify_grouped_profile_embedding, certify_profile_embedding, gear_with_verified_profile,
-    verify_profile_embedding,
+    verify_profile_embedding, replace_verified_gear_sector,
 };
 
 #[path = "../bevel_profile.rs"]

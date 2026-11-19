@@ -221,12 +221,12 @@ mod quintic_certificate;
 pub use quintic_certificate::{QuinticCertificate, certify_quintic, certify_quintic_placed};
 
 mod gear_parameters;
-pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds};
+pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds, external_spur_contact_ratio_bounds, internal_spur_contact_ratio_bounds, mounted_spur_contact_ratio_bounds, spur_tip_root_clearance_bounds, spur_tooth_chord_bounds, spur_tooth_thinning_bounds, mounted_spur_backlash_bounds, mounted_internal_spur_backlash_bounds, spur_backlash_over_mounting_range, spur_contact_ratio_over_mounting_range, mounting_window_for_contact_ratio, planet_tip_gap_bounds, planetary_layout_counts, ToothChordBounds, SpurMesh};
 pub use quintic_certificate::certify_quintic_parameter_box;
 
 pub(crate) use quintic_certificate::trig as certified_trig;
 
-pub use gear_parameters::derive_gear_twist_bounds;
+pub use gear_parameters::{derive_gear_twist_bounds, external_gear_bore_stock, GearBoreStock, ring_gear_bolt_stock, RingGearBoltStock, ring_gear_bolt_radius_window, BoltRadiusWindow};
 
 pub(crate) use gear_parameters::pi as certified_pi;
 
@@ -252,3 +252,9 @@ pub use spherical::{
 pub use spherical::{StraightBevelFlankCertificate, certify_straight_bevel_flank};
 
 pub(crate) use gear_parameters::atan_positive as certified_atan_positive;
+
+mod circular_pattern;
+pub use circular_pattern::{CircularProfilePattern, CircularSectorPattern, LosslessSectorPattern};
+
+mod span_measurement;
+pub use span_measurement::{external_spur_span, measurable_spur_spans, tooth_thinning_from_span};

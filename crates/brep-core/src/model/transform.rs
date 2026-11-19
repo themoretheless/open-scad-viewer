@@ -1,6 +1,28 @@
 //! Authoritative affine placement of retained B-rep geometry.
 use crate::{Model, Result, invalid};
 
+/// Whether a homogeneous transform has a finite translation and a proper orthonormal frame.
+pub fn is_proper_rigid_placement(matrix: [[f64; 4]; 4]) -> bool {
+    if matrix[3] != [0., 0., 0., 1.] || !matrix.iter().flatten().all(|value| value.is_finite()) {
+        return false;
+    }
+    let [x, y, z] =
+        [0, 1, 2].map(|column| [matrix[0][column], matrix[1][column], matrix[2][column]]);
+    let dot = |a: [f64; 3], b: [f64; 3]| a.into_iter().zip(b).map(|(a, b)| a * b).sum::<f64>();
+    let cross = [
+        x[1] * y[2] - x[2] * y[1],
+        x[2] * y[0] - x[0] * y[2],
+        x[0] * y[1] - x[1] * y[0],
+    ];
+    [x, y, z]
+        .into_iter()
+        .all(|axis| (dot(axis, axis) - 1.).abs() <= 1e-12)
+        && [dot(x, y), dot(x, z), dot(y, z)]
+            .into_iter()
+            .all(|value| value.abs() <= 1e-12)
+        && (dot(cross, z) - 1.).abs() <= 1e-12
+}
+
 pub fn affine(model: &Model, matrix: [[f64; 4]; 4]) -> Result<Model> {
     model.validate()?;
     affine_validated(model, matrix)

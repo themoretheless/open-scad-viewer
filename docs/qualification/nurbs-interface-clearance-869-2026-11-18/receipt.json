@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0869",
+  "testedBase": "b8341734215a6d620a8bf6f653996d4b397f3bb8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 216,
+  "scope": [
+    "Measure cross-group assembly clearances with interval-based classification and pair-specific diagnostics.",
+    "Validate a 2 mm gap against a 2.5 mm minimum, retain oriented indices, cull at 1.5 mm and refuse invalid threshold or insufficient candidate budget."
+  ],
+  "logSha256": "7617adb52e63a472fb899de33c6baabd88c226eacbf5991ce66d0cd6fa9a10ba",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "33d5d325302d00628ab89a7b343b055552866e9a136a3c63e8ff3be4b021a0ac",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "1230b76bc38b608e119d25c144a786fac8e7bb54f77119a1c738e9574d55a045"
+  }
+}

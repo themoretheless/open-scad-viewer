@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0967",
+  "testedBase": "713897c84847b886ec929658eedae87ab83407b8",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "8d62865d860d506eecabebe4cd83f6a5eb459c9171f924786817259188dc2475",
+    "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs": "4388ef2153513145fbe3316f07de14b2b2f85a1a722e62d99cc6d8e9ab6d36d2",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "7f4396db4231039eae8469fd4ac9b24602209ca04292fa567163d8300e56df96"
+  },
+  "occt": {
+    "valid": true,
+    "igsArea": 8.0,
+    "restoredStepArea": 8.0,
+    "centroid": [
+      14.0,
+      2.0,
+      7.0
+    ]
+  },
+  "fixtureSha256": "19423b04fc4a41b77a923f766b844b6f7afae0914f33181204085bfa1ddf172d",
+  "fixtureEnvironment": "CAD_IGES_UV_BOUNDARY_FIXTURE=/tmp/osv967-uv.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "UV-only closed trim on offset plane",
+    "Curved saddle diagonal, rational trim and two crossed knot cells",
+    "Out-of-chart trim refused"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0891",
+  "testedBase": "6ab550846d78d6f3680027c3f857bf13d0be06ca",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 457,
+  "scope": [
+    "Sort absolute intervals and infer initial orientation. Verify shuffled and reversed segments, gaps, overlaps and ambiguous loop refusal."
+  ],
+  "logSha256": "52b957f03d86f6f8cdda7ba55ec39aab91bf2686acb0f39e4a2562021558fb7d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "db3cdfb1f94a795cf6d9c1f25d3ca795f17fe3f66bd67dcca228bb2e686ee311",
+    "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs": "2288c8504eacb909dc0b724a13afa48c2cabf8415c72ca55551e41ba76a17f48",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "cd1a05075825061729b217e9dfc456eec22f3cffbd3a012a482cfcac79f20415"
+  }
+}

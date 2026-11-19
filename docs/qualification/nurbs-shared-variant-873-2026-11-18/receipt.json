@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0873",
+  "testedBase": "ec5ba4d2c89d6b7996fcb297ec06a9eac1c907cb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 220,
+  "scope": [
+    "Create one shared revision for a subset of the occurrences of one definition.",
+    "Round-trip two edited copies and one original, verifying volumes 4, 4 and 1. Revising the whole variant reuses its definition. Mixed and duplicate selections refuse."
+  ],
+  "logSha256": "8a2ecd0441412c9e1df52611727f1011c64681594968d94c8fa24a38a3cc669d",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "2a481c762a4b1e91472ec22d1eab47fd9248b578f27a5a933d582c92cfd1da3f",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "246ac2c7ee316623ce471c506e332e32a223f124e4b33a59aa7c28625677fefa"
+  }
+}

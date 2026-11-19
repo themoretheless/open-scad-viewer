@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0997",
+  "testedBase": "20f7512482f82177a0bc5d044fd80fcb939f4349",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "7e18118d8362b11d780cfd8ba9d98711736724e7b807a788d850784c58251639",
+    "crates/cad-step/tests/baked_step_scales.rs": "f72658cb24ac86efdd19dd72dd0b8aacad840cc488b7df41c848a97c5e1b4305"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv997.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "0.14400000000000002 (8.0, 8.0, 3.0) (0.768, 0.624, 0.528)\nOffset bearing moment: 4.127999999999999\nWith extended body: 0.28800000000000003 (14.499999999999998, 5.0, 3.0) 41.808"
+}

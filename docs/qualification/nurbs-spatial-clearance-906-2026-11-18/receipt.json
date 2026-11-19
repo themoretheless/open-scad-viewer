@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0906",
+  "testedBase": "9282bc84a7fe56739776bfbcfe9bef39095622c3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 472,
+  "scope": [
+    "Candidate normals from seam and witness points checked against full exact support. Verify automatic oblique clearance at equality and strict failure one step above."
+  ],
+  "logSha256": "82b4c2709717b5b3dab21700adba2cfc3a900e6197b49dae90b25729bf78f27f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "dbbe4f3eda008e0b7106d8db7fe6b67d553213fd24d9f5078a38e9f8684a723e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "12f099de6dd986b861f441df58de7b874b6f5cc70f391510886ee9f2627c5d2f"
+  }
+}

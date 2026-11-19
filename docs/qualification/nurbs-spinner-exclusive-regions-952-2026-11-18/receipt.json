@@ -1,0 +1,45 @@
+{
+  "id": "NURBS-0952",
+  "base": "cf5b91b2a23dc4a11455b4dfd08e5cb0441a65a2",
+  "sources": {
+    "crates/brep-core/src/body_analysis/through_wall_cylinder.rs": "9087684965d83af1b1d1f3dd37367aff01037ee9bf8a3ecbbe4c2daa10650b04",
+    "crates/brep-core/src/boolean/operations/boolean.rs": "9d2e35623151ac259258d4cc184973d376c63e720f0de27aed8f02fa225be0ed",
+    "crates/brep-core/tests/spinner_bore_boolean.rs": "cf887cb2dc991cf1701317472ee32f48635615f3292aed48f13165b2f8592299",
+    "crates/cad-step/tests/edited_gear_step.rs": "02ad98cf47a7504eff5bfa507815275ae9b13802171d415d5a609090822f7c83",
+    "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py": "0f420a51fe4a023bf078df2ce5d0cf4627e612982b5844d3cdaebdca2bf3d26f"
+  },
+  "difference": {
+    "valid": true,
+    "original": 4145.355114907374,
+    "sewn": 2794.4703309483602,
+    "reference": 2794.470257479367,
+    "removed": 1350.8847839590135,
+    "difference": 7.346899337790092e-05,
+    "nominal": 1350.884841043611
+  },
+  "intersection": {
+    "sleeve": 1350.8847839590367,
+    "common": 1350.8848574279984,
+    "balance": 2.3646862246096134e-11
+  },
+  "union": {
+    "filled": 17999.77871459079,
+    "reference": 17999.778714590768,
+    "balance": -5.973214501864277e-05
+  },
+  "bore": {
+    "bore": 13854.423599683396,
+    "reference": 13854.4235996834,
+    "balance": -5.973216684651561e-05
+  },
+  "exclusive": {
+    "exclusive": [
+      2794.4703309483602,
+      13854.423599683396
+    ],
+    "reference": [
+      2794.470257479367,
+      13854.4235996834
+    ]
+  }
+}

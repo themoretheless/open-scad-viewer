@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0898",
+  "testedBase": "b8947de9589179a7475099528a13f51b32e79a90",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 464,
+  "scope": [
+    "Prove injective adjacent Bezier contacts in local views and nonadjacent spatial separation with a shared subdivision limit. Verify lifted crossing, true crossing and insufficient pair budget."
+  ],
+  "logSha256": "0923c0fe87299de6f6527be28309d1c4a98ccf1919e4c3cd1d045773e0769443",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "c04c1495baea18ba8dc990e76968cf753d5d95b2e3a3dcd382eda8049c3785a4",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "aec9a26cbaa4d8ce00b1ca755344d23b3b26fa625d2cfb49368631b7e86aa8cf",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "23fdf9d4ec0ce3c6f2ad927e03cd52f89191021548e2eeb45042d1c6ab5c8057"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0938",
+  "testedBase": "aa51e07afacd7113aa1417ae2d6397aa167c37fc",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 20,
+  "scope": [
+    "Compare duplicate and reordered definitions across revisions, additions, removals and quantity changes for different shapes with the same label. Refuse inconsistent labels."
+  ],
+  "logSha256": "a12d1dd1693810162a69090072aa453e62aafb8dc727ed6f22fd6e2953aae349",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "60a8b022c7900dfed5a34e8e23859ca5b5d049da83f348d751a1c5cc7582230d",
+    "crates/cad-step/src/step_interchange_v3.rs": "d2fb25d6ef6c8f61dbae3d4f55ec9f64dc11a28593dda2b1b9a2d306bddec79f",
+    "crates/cad-step/src/lib.rs": "3dba841fe17284ece47251d5f6f927bea0d8dc4fb5f754f2addaca7559a0b103",
+    "crates/cad-step/tests/edited_gear_step.rs": "cd4b9323dd286297358cdd6cf5f1b1c57489c424272e5f1c82c817c657e5e36c"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0881",
+  "testedBase": "64e91fed2cfae9b61e8626ac8924f657d7413fa5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 10,
+  "scope": [
+    "Signed internal ring circular backlash checked against the independent working-angle equation at three centre distances and two thinning settings."
+  ],
+  "logSha256": "056024c49305825ec8f3dfb10042894bb6ec59da17a18fe834d517ba4658da85",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2e4e77d84092f992afa2ff4a83b252b59928ddf86b4167e396914b1c4df72e20",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "ba7879a6d18ddf5b60d55cac1de35350e288fe008f44229548c9d359c96a3b01",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "c62271d7403f26305228fdac2d223d8a2695a3b064ea6cebec18d62f998bda2b"
+  }
+}

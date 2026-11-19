@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0961",
+  "testedBase": "a71f55c6e6c6491cbb9a916a5b9989374b2b381a",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "7e831650fec515e7663dd8485c0758c18026de213d88b23cbd20cc93bce9767a",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "f90e0e1f0bfe54c730831a3f405cb6413d8b4154176b0b9244c9fbb4b1078031"
+  },
+  "occtFlags": {
+    "uPeriodicRational": [
+      true,
+      false,
+      false,
+      true,
+      false
+    ],
+    "vPeriodicPolynomial": [
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "fixtureSha256": "d90429f40008f50368b674f830b06e065f6618c0d28b3f51d102478eaf627c72",
+  "fixtureEnvironment": "CAD_IGES_SURFACE_FLAGS_FIXTURE=/tmp/osv961-surfaces.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "U-periodic rational and V-periodic polynomial surfaces",
+    "Legacy IGES2.2 property layout",
+    "OCCT stored flags, pole and weight grids checked"
+  ]
+}

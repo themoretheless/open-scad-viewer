@@ -71,3 +71,37 @@ it('shares a linked Solid body across named placements and separates a detached 
   const detached = await exportSolidStepAssembly(detachSolidInstances(doc, ['copy']))
   expect(detached.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(2)
 })
+
+it('retains grouped shared placements, empty groups and group identities in STEP', async () => {
+  const { createSolidInstance } = await import('../src/kernel/solidInstances')
+  const { importDirectStepV9 } = await import('../src/kernel/cadNurbsStep')
+  const source = scene().bodies[0]
+  delete source.material
+  const matrix = [[1,0,0,17],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+  const doc = createSolidInstance({ version: 1, sketches: [], bodies: [source] }, source.id, 'copy', matrix)
+  doc.bodies[1].group = "Rotor's"
+  doc.groups = [{name: 'Spare', source: 'test'}]
+  const text = await exportSolidStepAssembly(doc)
+  expect(text.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(1)
+  expect(text.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(5)
+  for (const group of ['Spare', 'Parts', "Rotor''s"]) {
+    expect(text).toContain(`PRODUCT('group:${group}','${group}'`)
+    expect(text).toContain(`NEXT_ASSEMBLY_USAGE_OCCURRENCE('group:${group}','${group}'`)
+  }
+  expect(importDirectStepV9(text).model.bodies).toHaveLength(2)
+})
+
+it('preserves groups when an older shared writer ignores hierarchy fields', async () => {
+  const { createSolidInstance } = await import('../src/kernel/solidInstances')
+  const step = await import('../src/kernel/cadNurbsStep')
+  const writeFlat = step.exportSharedStepAssembly
+  vi.spyOn(step, 'exportSharedStepAssembly').mockImplementation((defs, placements) => writeFlat(defs, placements))
+  const source = scene().bodies[0]
+  delete source.material
+  const matrix = [[1,0,0,17],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+  const doc = createSolidInstance({ version: 1, sketches: [], bodies: [source] }, source.id, 'copy', matrix)
+  const text = await exportSolidStepAssembly(doc)
+  expect(step.exportSharedStepAssembly).toHaveBeenCalledOnce()
+  expect(text).toContain("PRODUCT('group:Parts','Parts'")
+  expect(text.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(2)
+})

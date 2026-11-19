@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0948",
+  "testedBase": "c6ed748644258c96461a34e7f160ce3120df1a17",
+  "before": {
+    "bytes": 3721610,
+    "uses": 1944,
+    "uvSplines": 1944,
+    "sha256": "c7f102dd64a27e546cb3ab60051c7f1debd87228c5b0b97e7d1476aa1bc077d5"
+  },
+  "after": {
+    "bytes": 3268470,
+    "uses": 1944,
+    "uvSplines": 394,
+    "sha256": "64428b0e5de05e7c099bad8b4c2a9a5819153f77f50b05b8a9448f4b72f93a88"
+  },
+  "preflightControlPoints": [
+    17818,
+    16270
+  ],
+  "independentVolume": {
+    "valid": true,
+    "original": 4145.355114907374,
+    "sewn": 2794.4703309483602,
+    "reference": 2794.470257479367,
+    "removed": 1350.8847839590135,
+    "difference": 7.346899337790092e-05,
+    "nominal": 1350.884841043611
+  },
+  "sources": {
+    "crates/cad-step/src/step_v3_export.rs": "4673b7b019131374dcbb552b324e16d4ae39501b9b6cb4d58baba78985e96e9a",
+    "crates/cad-step/tests/edited_gear_step.rs": "dd429a9d7e3867efd074c2ab81afb6c5356c537e1b309a26b776b3662623d340"
+  }
+}

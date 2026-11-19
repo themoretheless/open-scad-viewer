@@ -23,7 +23,7 @@ pub(super) const UNREACHABLE_ALLOWLIST: &[&str] = &[
     "CAMERA_MODEL_D3_MULTI_CLIPPING", "PROPERTY_DEFINITION", "PROPERTY_DEFINITION_REPRESENTATION",
     "DESCRIPTIVE_REPRESENTATION_ITEM", "MEASURE_REPRESENTATION_ITEM", "PLANAR_BOX", "INVISIBILITY",
     "VALUE_REPRESENTATION_ITEM", "CURVE_STYLE", "DRAUGHTING_CALLOUT_RELATIONSHIP",
-    "GENERAL_PROPERTY_ASSOCIATION", "PRESENTATION_STYLE_ASSIGNMENT", "DIMENSIONAL_LOCATION",
+    "GENERAL_PROPERTY_ASSOCIATION", "PRESENTATION_STYLE_BY_CONTEXT", "PRESENTATION_STYLE_ASSIGNMENT", "DIMENSIONAL_LOCATION",
     "SURFACE_PROFILE_TOLERANCE", "LINE", "GENERAL_PROPERTY",
     "FEATURE_FOR_DATUM_TARGET_RELATIONSHIP", "SHAPE_ASPECT", "PRE_DEFINED_MARKER",
     "GEOMETRIC_TOLERANCE", "FLATNESS_TOLERANCE", "ANGULARITY_TOLERANCE", "TRIMMED_CURVE",
@@ -159,22 +159,46 @@ impl DirectImportRoute<'_> {
                 .filter(|id| self.is_type(*id, EXACT_BREP_REPRESENTATION))
                 .collect());
         }
-        let selected = self.shape_definition_selections()?;
+        let selected = self.shape_definition_selections(auxiliary)?;
         if self.capability != STEP_INTERCHANGE_V10_CAPABILITY {
+            self.check_admitted_products(&selected)?;
+            return Ok(selected);
+        }
+        if assembly_occurrences::single_product_assembly(self.entities, &selected)? {
             self.check_admitted_products(&selected)?;
             return Ok(selected);
         }
         self.select_exact_root(selected, auxiliary)
     }
 
-    fn shape_definition_selections(&self) -> Result<Vec<usize>> {
+    fn shape_definition_selections(&self, auxiliary: &mut BTreeSet<usize>) -> Result<Vec<usize>> {
+        let style_contexts: BTreeSet<_> = self.entities.values().filter_map(|entity| {
+            if let Value::Call(kind, args) = &entity.value
+                && kind == "PRESENTATION_STYLE_BY_CONTEXT"
+                && let [_, Value::Ref(context)] = args.as_slice() {
+                return Some(*context);
+            }
+            None
+        }).collect();
         let mut selected = Vec::<usize>::new();
         for entity in self.entities.values() {
             if let Value::Call(name, args) = &entity.value
                 && name == "SHAPE_DEFINITION_REPRESENTATION"
                 && let [_, representation] = args.as_slice()
             {
-                selected.push(one_ref(representation, "selected shape representation")?);
+                let rep = one_ref(representation, "selected shape representation")?;
+                if style_contexts.contains(&rep)
+                    && let ("SHAPE_REPRESENTATION", [_, Value::List(items), _]) = call(self.entities, rep)?
+                    && let [Value::Ref(frame)] = items.as_slice()
+                    && self.is_type(*frame, "AXIS2_PLACEMENT_3D")
+                    && let ("PRODUCT_DEFINITION_SHAPE", [_, _, Value::Ref(usage)]) =
+                        call(self.entities, one_ref(&args[0], "occurrence style shape")?)?
+                    && self.is_type(*usage, "NEXT_ASSEMBLY_USAGE_OCCURRENCE")
+                {
+                    auxiliary.insert(rep);
+                    continue;
+                }
+                selected.push(rep);
             }
         }
         selected.sort_unstable();
@@ -388,7 +412,10 @@ impl DirectImportRoute<'_> {
     fn linked_graph(&self, graph_roots: &[usize], occurrences: &[RepresentationOccurrence]) -> Result<BTreeSet<usize>> {
         let mut linked = reachable(self.entities, graph_roots)?;
         if self.ap242_composition {
-            if self.capability != STEP_INTERCHANGE_V9_CAPABILITY {
+            // Explicit retained assemblies also own their selected container frames and units.
+            let retained_assembly = self.capability == STEP_INTERCHANGE_V10_CAPABILITY
+                && graph_roots.len() > 1 && occurrences.iter().any(|occ| occ.path.len() > 1);
+            if self.capability != STEP_INTERCHANGE_V9_CAPABILITY && !retained_assembly {
                 linked.clear();
             }
             for occurrence in occurrences {
@@ -743,6 +770,19 @@ impl StepSharedAssembly {
         &self.occurrences
     }
 
+    /// Compress selected face carriers once in the local definition. All its
+    /// placements retain their transforms and refer to the same edited solid.
+    /// Returns false on proof-budget exhaustion and leaves the assembly intact.
+    pub fn compress_definition_faces(&mut self, definition: usize, faces: &[usize], max_work: u64) -> Result<bool> {
+        let model = self.definitions.get_mut(definition)
+            .ok_or_else(|| refuse("STEP assembly definition index out of range"))?;
+        let Some(compressed) = model.compress_face_surfaces(faces, max_work)? else {
+            return Ok(false);
+        };
+        *model = compressed;
+        Ok(true)
+    }
+
     /// Replace geometry for every occurrence of this definition.
     pub fn replace_definition(&mut self, index: usize, model: Model) -> Result<()> {
         let definition = self.definitions.get_mut(index)
@@ -755,20 +795,80 @@ impl StepSharedAssembly {
     /// Replace one occurrence using geometry in its local coordinates.
     /// A shared definition is split only when other occurrences still use it.
     pub fn replace_occurrence_geometry(&mut self, index: usize, model: Model) -> Result<()> {
-        let definition = self.occurrences.get(index)
-            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?
-            .definition;
-        let shared = self.occurrences.iter().enumerate().any(|(other, occurrence)| {
-            other != index && occurrence.definition == definition
-        });
-        if !shared {
-            return self.replace_definition(definition, model);
+        self.replace_variant(&[index], model).map(|_| ())
+    }
+
+    /// Give selected occurrences of one prototype a common local-space revision.
+    /// Reuse the definition when all its occurrences are selected.
+    pub fn replace_variant(&mut self, selection: &[usize], model: Model) -> Result<usize> {
+        let first = selection.first().and_then(|&i| self.occurrences.get(i))
+            .ok_or_else(|| refuse("STEP variant requires a valid occurrence selection"))?;
+        let definition = first.definition;
+        let mut seen = vec![false; self.occurrences.len()];
+        for &index in selection {
+            let occurrence = self.occurrences.get(index)
+                .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+            if seen[index] || occurrence.definition != definition {
+                return Err(refuse("STEP variant requires distinct occurrences of one definition"));
+            }
+            seen[index] = true;
+        }
+        if selection.len() == self.occurrences.iter().filter(|o| o.definition == definition).count() {
+            self.replace_definition(definition, model)?;
+            return Ok(definition);
         }
         model.validate()?;
-        let new_definition = self.definitions.len();
+        let variant = self.definitions.len();
         self.definitions.push(model);
-        self.occurrences[index].definition = new_definition;
+        for &index in selection {
+            self.occurrences[index].definition = variant;
+        }
+        Ok(variant)
+    }
+
+    /// Apply one assembly-space rigid motion to selected occurrences, atomically.
+    /// Preserve existing scales and reflections and keep local definitions shared.
+    pub fn move_occurrences(&mut self, selection: &[usize], motion: [[f64; 4]; 4]) -> Result<()> {
+        let moved = self.transformed_selection(selection, motion)?;
+        for (&index, occurrence) in selection.iter().zip(moved) {
+            self.occurrences[index] = occurrence;
+        }
         Ok(())
+    }
+
+    /// Place an additional linked copy of each selected occurrence in selection order.
+    /// Return the contiguous indices of the new occurrences.
+    pub fn copy_occurrences(&mut self, selection: &[usize], motion: [[f64; 4]; 4])
+        -> Result<std::ops::Range<usize>> {
+        let start = self.occurrences.len();
+        if selection.len() > super::MAX_OCCURRENCES - start {
+            return Err(refuse("STEP group copy exceeds the occurrence limit"));
+        }
+        let copies = self.transformed_selection(selection, motion)?;
+        self.occurrences.extend(copies);
+        Ok(start..self.occurrences.len())
+    }
+
+    fn transformed_selection(&self, selection: &[usize], motion: [[f64; 4]; 4])
+        -> Result<Vec<StepAssemblyOccurrence>> {
+        if selection.is_empty() || selection.len() > self.occurrences.len()
+            || !super::is_proper_rigid_placement(motion) {
+            return Err(refuse("STEP group move requires a nonempty selection and a finite rigid motion"));
+        }
+        let mut seen = vec![false; self.occurrences.len()];
+        let mut updates = Vec::with_capacity(selection.len());
+        for &index in selection {
+            let occurrence = self.occurrences.get(index)
+                .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+            if seen[index] { return Err(refuse("STEP group move contains a duplicate occurrence")); }
+            seen[index] = true;
+            let transform = mul(motion, occurrence.transform);
+            if super::orthogonal_placement_scales(transform).is_none() {
+                return Err(refuse("STEP group move produced an invalid placement"));
+            }
+            updates.push(StepAssemblyOccurrence { definition: occurrence.definition, transform });
+        }
+        Ok(updates)
     }
 
     /// Replace an occurrence's local-to-assembly rigid placement in millimetres.
@@ -845,22 +945,29 @@ impl StepSharedAssembly {
     /// The first definition supplies the retained topology identities.
     pub fn deduplicate_definitions(&mut self) -> usize {
         let original_count = self.definitions.len();
-        let mut unique: Vec<Model> = Vec::with_capacity(original_count);
-        let mut remap = Vec::with_capacity(original_count);
-        for model in std::mem::take(&mut self.definitions) {
-            let index = unique.iter().position(|candidate| candidate.0 == model.0)
-                .unwrap_or_else(|| {
-                    let index = unique.len();
-                    unique.push(model);
-                    index
-                });
+        self.deduplicate_matching(|_, _| true);
+        original_count - self.definitions.len()
+    }
+
+    fn deduplicate_matching(&mut self, compatible: impl Fn(usize, usize) -> bool) -> Vec<usize> {
+        let mut unique: Vec<Model> = Vec::with_capacity(self.definitions.len());
+        let mut retained = Vec::new();
+        let mut remap = Vec::with_capacity(self.definitions.len());
+        for (original, model) in std::mem::take(&mut self.definitions).into_iter().enumerate() {
+            let index = unique.iter().enumerate().position(|(i, candidate)|
+                compatible(retained[i], original) && candidate.0 == model.0
+            ).unwrap_or_else(|| {
+                retained.push(original);
+                unique.push(model);
+                unique.len() - 1
+            });
             remap.push(index);
         }
         for occurrence in &mut self.occurrences {
             occurrence.definition = remap[occurrence.definition];
         }
         self.definitions = unique;
-        original_count - self.definitions.len()
+        retained
     }
 
     /// Copy selected occurrences, in the requested order, with only the
@@ -932,29 +1039,7 @@ impl StepSharedAssembly {
     pub fn occurrence_bounds(&self) -> Result<Vec<[[f64; 3]; 2]>> {
         let local: Vec<_> = self.definitions.iter().map(definition_control_bounds).collect();
         self.occurrences.iter().map(|occurrence| {
-            let [min, max] = local[occurrence.definition];
-            let mut placed = [[0.; 3]; 2];
-            for (axis, row) in occurrence.transform[..3].iter().enumerate() {
-                let (mut lower, mut upper) = (row[3], row[3]);
-                for (column, &coefficient) in row[..3].iter().enumerate() {
-                    if coefficient == 0. {
-                        continue;
-                    }
-                    let (lo, hi) = if coefficient > 0. {
-                        (min[column], max[column])
-                    } else {
-                        (max[column], min[column])
-                    };
-                    lower = (lower + (coefficient * lo).next_down()).next_down();
-                    upper = (upper + (coefficient * hi).next_up()).next_up();
-                }
-                if !lower.is_finite() || !upper.is_finite() || lower > upper {
-                    return Err(refuse("STEP occurrence bounds are empty or exceed finite coordinates"));
-                }
-                placed[0][axis] = lower;
-                placed[1][axis] = upper;
-            }
-            Ok(placed)
+            placed_control_bounds(local[occurrence.definition], occurrence)
         }).collect()
     }
 
@@ -1135,6 +1220,26 @@ impl StepSharedAssembly {
         limits: brep_core::solid_distance::Limits,
         max_pairs: usize,
     ) -> Result<Option<StepMinimumClearance>> {
+        self.minimum_clearance_filtered(tolerance_mm, tolerance_uv, limits, max_pairs, |a, b| Some([a, b]))
+    }
+
+    /// Bound the smallest clearance across two disjoint groups, retaining the left/right pair identity.
+    pub fn minimum_clearance_between(&self, left: &[usize], right: &[usize],
+        tolerance_mm: f64, tolerance_uv: f64, limits: brep_core::solid_distance::Limits,
+        max_pairs: usize) -> Result<StepMinimumClearance> {
+        let sides = self.selection_sides(left, right)?;
+        self.minimum_clearance_filtered(tolerance_mm, tolerance_uv, limits, max_pairs, |a, b| {
+            match (sides[a], sides[b]) {
+                (1, 2) => Some([a, b]),
+                (2, 1) => Some([b, a]),
+                _ => None,
+            }
+        })?.ok_or_else(|| refuse("STEP interface requires a cross-group pair"))
+    }
+
+    fn minimum_clearance_filtered(&self, tolerance_mm: f64, tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits, max_pairs: usize,
+        select: impl Fn(usize, usize) -> Option<[usize; 2]>) -> Result<Option<StepMinimumClearance>> {
         if !tolerance_mm.is_finite() || tolerance_mm <= 0.
             || !tolerance_uv.is_finite() || tolerance_uv <= 0.
         {
@@ -1144,8 +1249,9 @@ impl StepSharedAssembly {
         let mut pairs = Vec::new();
         for (first, a) in bounds.iter().enumerate() {
             for (second, b) in bounds.iter().enumerate().skip(first + 1) {
+                let Some(pair) = select(first, second) else { continue; };
                 let lower = box_distance_squared_lower(a, b).sqrt().next_down().max(0.);
-                pairs.push(([first, second], lower));
+                pairs.push((pair, lower));
             }
         }
         if pairs.is_empty() {
@@ -1202,14 +1308,28 @@ impl StepSharedAssembly {
         limits: brep_core::solid_distance::Limits,
         max_pairs: usize,
     ) -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
+        let pairs = self.proximity_candidates(minimum_mm)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly clearance candidate budget exceeded"));
+        }
+        self.measure_clearance_pairs(pairs, minimum_mm, tolerance_mm, tolerance_uv, limits)
+    }
+
+    /// Measure candidate clearances across a selected assembly interface.
+    pub fn clearances_between(&self, left: &[usize], right: &[usize], minimum_mm: f64,
+        tolerance_mm: f64, tolerance_uv: f64, limits: brep_core::solid_distance::Limits, max_pairs: usize)
+        -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
+        let pairs = self.cross_group_candidates(left, right, minimum_mm, max_pairs)?;
+        self.measure_clearance_pairs(pairs, minimum_mm, tolerance_mm, tolerance_uv, limits)
+    }
+
+    fn measure_clearance_pairs(&self, pairs: Vec<[usize; 2]>, minimum_mm: f64,
+        tolerance_mm: f64, tolerance_uv: f64, limits: brep_core::solid_distance::Limits)
+        -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
         if !tolerance_mm.is_finite() || tolerance_mm <= 0.
             || !tolerance_uv.is_finite() || tolerance_uv <= 0.
         {
             return Err(refuse("STEP clearance requires positive finite tolerances"));
-        }
-        let pairs = self.proximity_candidates(minimum_mm)?;
-        if pairs.len() > max_pairs {
-            return Err(refuse("STEP assembly clearance candidate budget exceeded"));
         }
         Ok(pairs.into_iter().map(|pair| {
             let checked = self.occurrence_clearance(pair, tolerance_mm, tolerance_uv, limits)
@@ -1310,6 +1430,50 @@ impl StepSharedAssembly {
             None => Model::empty(self.definitions.iter().map(|model| model.tolerance_mm)
                 .fold(DEFAULT_STEP_TOLERANCE_MM, f64::max)),
         }
+    }
+
+    /// Check only cross-group contacts. Pair indices follow the left/right selection order.
+    /// Return common material for positive overlaps and diagnostics for unresolved pairs.
+    pub fn interferences_between(&self, left: &[usize], right: &[usize], max_pairs: usize)
+        -> Result<Vec<([usize; 2], Result<Model>)>> {
+        let pairs = self.cross_group_candidates(left, right, 0., max_pairs)?;
+        let mut regions = Vec::new();
+        for [a, b] in pairs {
+            let result = self.intersect_occurrences(a, b);
+            if !matches!(&result, Ok(model) if model.bodies.is_empty()) {
+                regions.push(([a, b], result));
+            }
+        }
+        Ok(regions)
+    }
+
+    fn selection_sides(&self, left: &[usize], right: &[usize]) -> Result<Vec<u8>> {
+        let mut side = vec![0; self.occurrences.len()];
+        for (members, label) in [(left, 1), (right, 2)] {
+            if members.is_empty() || members.len() > side.len() {
+                return Err(refuse("STEP groups require nonempty occurrence selections"));
+            }
+            for &index in members {
+                let slot = side.get_mut(index).ok_or_else(|| refuse("STEP group index out of range"))?;
+                if *slot != 0 { return Err(refuse("STEP selections must be distinct and disjoint")); }
+                *slot = label;
+            }
+        }
+        Ok(side)
+    }
+
+    fn cross_group_candidates(&self, left: &[usize], right: &[usize], distance: f64, max_pairs: usize)
+        -> Result<Vec<[usize; 2]>> {
+        let side = self.selection_sides(left, right)?;
+        let pairs: Vec<_> = self.proximity_candidates(distance)?.into_iter().filter_map(|[a, b]| {
+            match (side[a], side[b]) {
+                (1, 2) => Some([a, b]),
+                (2, 1) => Some([b, a]),
+                _ => None,
+            }
+        }).collect();
+        if pairs.len() > max_pairs { return Err(refuse("STEP cross-group candidate budget exceeded")); }
+        Ok(pairs)
     }
 
     fn interference_candidates(&self, max_pairs: usize) -> Result<Vec<[usize; 2]>> {
@@ -1727,6 +1891,47 @@ impl StepSharedAssembly {
         Ok(sections)
     }
 
+    /// Export using rigid assembly placements only. Bake the linear part of
+    /// scaled or reflected placements into local geometry once per distinct
+    /// source definition and linear map. Keep translations on the occurrences.
+    pub fn export_step_with_baked_scales(&self) -> Result<String> {
+        crate::export_step_shared_assembly(&self.with_baked_scales()?.0)
+    }
+
+    pub(crate) fn with_baked_scales(&self) -> Result<(Self, Vec<usize>)> {
+        let identity = [[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]];
+        let mut definitions = Vec::new();
+        let mut occurrences = Vec::new();
+        let mut variants = BTreeMap::new();
+        let mut source_definitions = Vec::new();
+        for occurrence in self.occurrences() {
+            let mut placement = occurrence.transform;
+            let mut linear = identity;
+            if !super::is_proper_rigid_placement(placement) {
+                for row in 0..3 {
+                    linear[row][..3].copy_from_slice(&placement[row][..3]);
+                    placement[row][..3].copy_from_slice(&identity[row][..3]);
+                }
+            }
+            let key = (occurrence.definition, linear.map(|row| row.map(f64::to_bits)));
+            let definition = match variants.entry(key) {
+                std::collections::btree_map::Entry::Occupied(entry) => *entry.get(),
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    let source = &self.definitions[occurrence.definition];
+                    let index = definitions.len();
+                    definitions.push(if linear == identity { source.clone() } else {
+                        brep_core::transform::affine(source, linear)?
+                    });
+                    source_definitions.push(occurrence.definition);
+                    entry.insert(index);
+                    index
+                }
+            };
+            occurrences.push(StepAssemblyOccurrence { definition, transform: placement });
+        }
+        Ok((Self::from_placed_solids(definitions, occurrences)?, source_definitions))
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
@@ -1868,6 +2073,31 @@ fn placed_material_volume(occurrence: &StepAssemblyOccurrence, local_volume: f64
     Ok(volume)
 }
 
+fn placed_control_bounds([min, max]: [[f64; 3]; 2], occurrence: &StepAssemblyOccurrence) -> Result<[[f64; 3]; 2]> {
+    let mut placed = [[0.; 3]; 2];
+    for (axis, row) in occurrence.transform[..3].iter().enumerate() {
+        let (mut lower, mut upper) = (row[3], row[3]);
+        for (column, &coefficient) in row[..3].iter().enumerate() {
+            if coefficient == 0. {
+                continue;
+            }
+            let (lo, hi) = if coefficient > 0. {
+                (min[column], max[column])
+            } else {
+                (max[column], min[column])
+            };
+            lower = (lower + (coefficient * lo).next_down()).next_down();
+            upper = (upper + (coefficient * hi).next_up()).next_up();
+        }
+        if !lower.is_finite() || !upper.is_finite() || lower > upper {
+            return Err(refuse("STEP occurrence bounds are empty or exceed finite coordinates"));
+        }
+        placed[0][axis] = lower;
+        placed[1][axis] = upper;
+    }
+    Ok(placed)
+}
+
 fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
     let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
     let points = model.vertices.iter().map(|vertex| vertex.point.as_slice())
@@ -1885,6 +2115,394 @@ fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
 /// Import an AP242 assembly without expanding all of its placements into
 /// a single B-rep. Each distinct definition is built and validated once.
 pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
+    Ok(read_shared_products(text, false, None, None)?.0)
+}
+
+/// Shared geometry and product labels resolved through the selected STEP graph.
+pub struct NamedStepAssembly {
+    pub assembly: StepSharedAssembly,
+    pub name: String,
+    /// Labels indexed by the definition referenced by each occurrence.
+    pub definition_names: Vec<String>,
+}
+
+/// A part definition and its placed quantity in the flattened assembly.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepPartsListRow<'a> {
+    pub definition: usize,
+    pub name: &'a str,
+    pub quantity: usize,
+}
+
+/// Face-carrier storage per referenced definition, before and after expanding placements.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepPartSurfaceUsage<'a> {
+    pub part: StepPartsListRow<'a>,
+    pub stored_faces: usize,
+    pub placed_faces: usize,
+    pub stored_poles: u64,
+    pub placed_poles: u64,
+}
+
+/// Quantity change for one label and indexed local geometry. The optional
+/// indices identify a representative definition on each side.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepPartQuantityChange {
+    pub name: String,
+    pub before_definition: Option<usize>,
+    pub after_definition: Option<usize>,
+    pub before: usize,
+    pub after: usize,
+}
+
+impl NamedStepAssembly {
+    /// Keep product labels when nonuniform scales and reflections require
+    /// separate local definitions for exchange with rigid-placement readers.
+    pub fn export_step_with_baked_scales(&self) -> Result<String> {
+        if self.definition_names.len() != self.assembly.definitions().len() {
+            return Err(refuse("Expected one product label per source definition"));
+        }
+        let (baked, sources) = self.assembly.with_baked_scales()?;
+        let labels: Vec<_> = sources.iter().map(|&i| self.definition_names[i].as_str()).collect();
+        crate::export_named_step_assembly(&baked, &self.name, &labels)
+    }
+
+    /// Compare flat parts lists across revisions, combining duplicate definitions
+    /// within either revision and ignoring placement order and rigid motion.
+    pub fn parts_list_changes(&self, revised: &Self) -> Result<Vec<StepPartQuantityChange>> {
+        let mut groups: Vec<(&Model, StepPartQuantityChange)> = Vec::new();
+        for (assembly, after) in [(self, false), (revised, true)] {
+            for part in assembly.parts_list()? {
+                let model = &assembly.assembly.definitions()[part.definition];
+                let index = groups.iter().position(|(other, row)| row.name == part.name && other.0 == model.0);
+                let change = match index {
+                    Some(i) => &mut groups[i].1,
+                    None => &mut groups.push_mut((model, StepPartQuantityChange {
+                        name: part.name.to_owned(), before_definition: None, after_definition: None,
+                        before: 0, after: 0,
+                    })).1,
+                };
+                if after {
+                    change.after += part.quantity;
+                    change.after_definition.get_or_insert(part.definition);
+                } else {
+                    change.before += part.quantity;
+                    change.before_definition.get_or_insert(part.definition);
+                }
+            }
+        }
+        Ok(groups.into_iter().map(|(_,row)| row).filter(|row| row.before != row.after).collect())
+    }
+
+    /// Consolidate definitions with equal names and equal indexed local B-reps.
+    /// The first matching part supplies the retained topology identifiers.
+    pub fn consolidate_named_parts(&mut self) -> Result<usize> {
+        let labels = &self.definition_names;
+        if labels.len() != self.assembly.definitions().len() {
+            return Err(refuse("Expected one label per part before consolidation"));
+        }
+        let retained = self.assembly.deduplicate_matching(|a,b| labels[a] == labels[b]);
+        let removed = labels.len() - retained.len();
+        self.definition_names = retained.into_iter().map(|i| labels[i].clone()).collect();
+        Ok(removed)
+    }
+
+    /// Place another named assembly under a rigid transform. The resulting
+    /// flat parts list retains separate definitions even when labels coincide.
+    /// The returned range maps source definition indices into the destination.
+    pub fn append_named_assembly(&mut self, source: Self, placement: [[f64; 4]; 4])
+        -> Result<std::ops::Range<usize>> {
+        for assembly in [&*self, &source] {
+            if assembly.definition_names.len() != assembly.assembly.definitions().len() {
+                return Err(refuse("Expected one label per appended part definition"));
+            }
+        }
+        let start = self.definition_names.len();
+        self.assembly.append_assembly(source.assembly, placement)?;
+        self.definition_names.extend(source.definition_names);
+        Ok(start..self.definition_names.len())
+    }
+
+    /// Apply one named local-space geometry revision to selected occurrences.
+    /// Selecting the whole part revises its existing definition and label in place.
+    pub fn replace_named_variant(&mut self, selection: &[usize], model: Model, name: String) -> Result<usize> {
+        if self.definition_names.len() != self.assembly.definitions().len()
+            || name.is_empty() || name.chars().any(char::is_control) {
+            return Err(refuse("Expected consistent definition labels and a printable variant name"));
+        }
+        if model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed) {
+            return Err(refuse("Named STEP variant requires one closed solid"));
+        }
+        let definition = self.assembly.replace_variant(selection, model)?;
+        if definition == self.definition_names.len() { self.definition_names.push(name); }
+        else { self.definition_names[definition] = name; }
+        Ok(definition)
+    }
+
+    /// Export all occurrences of the selected parts-list definitions in their
+    /// original assembly coordinates. Definition indices, not labels, select parts.
+    pub fn export_selected_parts(&self, definitions: &[usize], assembly_name: &str) -> Result<String> {
+        let count = self.assembly.definitions().len();
+        if self.definition_names.len() != count || definitions.is_empty() || definitions.len() > count {
+            return Err(refuse("Expected a nonempty selection of named assembly definitions"));
+        }
+        let selected: BTreeSet<_> = definitions.iter().copied().collect();
+        if selected.len() != definitions.len() || selected.iter().any(|&index| index >= count) {
+            return Err(refuse("Invalid or duplicate part definition index"));
+        }
+        let indices: Vec<_> = self.assembly.occurrences().iter().enumerate()
+            .filter(|(_, part)| selected.contains(&part.definition)).map(|(index, _)| index).collect();
+        let subset = self.named_subset(&indices, assembly_name)?;
+        let labels: Vec<_> = subset.definition_names.iter().map(String::as_str).collect();
+        crate::export_named_step_assembly(&subset.assembly, &subset.name, &labels)
+    }
+
+    fn named_subset(&self, indices: &[usize], name: &str) -> Result<Self> {
+        let subset = self.assembly.extract_occurrences(indices)?;
+        let mut labels = vec![String::new(); subset.definitions().len()];
+        for (&source, part) in indices.iter().zip(subset.occurrences()) {
+            let original = self.assembly.occurrences()[source].definition;
+            labels[part.definition] = self.definition_names[original].clone();
+        }
+        Ok(Self { assembly: subset, name: name.to_owned(), definition_names: labels })
+    }
+
+    /// Rank parts by the number of surface control points saved by sharing a
+    /// definition. Each face contributes its complete tensor grid once.
+    pub fn surface_usage(&self) -> Result<Vec<StepPartSurfaceUsage<'_>>> {
+        let mut rows = Vec::new();
+        for part in self.parts_list()? {
+            let model = &self.assembly.definitions()[part.definition];
+            let stored_faces = model.faces.len();
+            let stored_poles = model.faces.iter().flat_map(|face| &face.surface.control_points)
+                .map(|row| row.len() as u64).sum::<u64>();
+            let placed_poles = stored_poles.checked_mul(part.quantity as u64)
+                .ok_or_else(|| refuse("Placed surface pole count exceeds capacity"))?;
+            let placed_faces = stored_faces.checked_mul(part.quantity)
+                .ok_or_else(|| refuse("Placed face count exceeds capacity"))?;
+            rows.push(StepPartSurfaceUsage { part, stored_faces, placed_faces, stored_poles, placed_poles });
+        }
+        rows.sort_by_key(|row| std::cmp::Reverse(row.placed_poles - row.stored_poles));
+        Ok(rows)
+    }
+
+    /// Count placements by definition identity, including coincident placements.
+    /// A scale or orientation on a placement does not create a new definition.
+    pub fn parts_list(&self) -> Result<Vec<StepPartsListRow<'_>>> {
+        if self.definition_names.len() != self.assembly.definitions().len() {
+            return Err(refuse("Expected one parts-list label per definition"));
+        }
+        let mut quantities = vec![0; self.definition_names.len()];
+        for occurrence in self.assembly.occurrences() { quantities[occurrence.definition] += 1; }
+        Ok(quantities.into_iter().enumerate().filter(|(_, quantity)| *quantity > 0)
+            .map(|(definition, quantity)| StepPartsListRow {
+                definition, name: &self.definition_names[definition], quantity,
+            }).collect())
+    }
+}
+
+/// Read explicit contextual solid surface colours in shared assembly occurrence order.
+pub fn import_step_occurrence_colours(text: &str) -> Result<Vec<Option<[f64; 3]>>> {
+    validate_exchange_structure(text)?;
+    let entities = parse(data_payload(text)?)?;
+    let route = DirectImportRoute {
+        entities: &entities, capability: STEP_INTERCHANGE_V9_CAPABILITY,
+        analytic_surfaces: true, ap242_composition: true, allow_degenerate: true,
+    };
+    let (placements, _, _, _, _) = inspect_direct_graph(&route)?;
+    let mut shapes = BTreeMap::new();
+    let mut contexts = BTreeMap::new();
+    for entity in entities.values() {
+        if let Value::Call(kind, args) = &entity.value
+            && let [Value::Ref(first), Value::Ref(second)] = args.as_slice() {
+            match kind.as_str() {
+                "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION" => { shapes.insert(*first, *second); }
+                "SHAPE_DEFINITION_REPRESENTATION" => {
+                    if contexts.insert(*second, *first).is_some_and(|other| other != *first) {
+                        return Err(refuse("Ambiguous STEP presentation context"));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut colours = BTreeMap::new();
+    for entity in entities.values() {
+        let Value::Call(kind, args) = &entity.value else { continue };
+        let [_, Value::List(styles), Value::Ref(body)] = args.as_slice() else { continue };
+        if kind != "STYLED_ITEM" || !matches!(call(&entities, *body)?.0, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS") {
+            continue;
+        }
+        for style in styles {
+            let style = one_ref(style, "occurrence style assignment")?;
+            let ("PRESENTATION_STYLE_BY_CONTEXT", [Value::List(items), Value::Ref(context)]) =
+                call(&entities, style)? else { continue };
+            let shape = contexts.get(context).ok_or_else(|| refuse("Missing occurrence style context"))?;
+            for item in items {
+                if let Some(rgb) = step_presentation::colour(&entities, one_ref(item, "contextual style")?, 0)? {
+                    let value = [rgb.red, rgb.green, rgb.blue];
+                    if colours.insert((*shape, *body), value).is_some_and(|other| other != value) {
+                        return Err(refuse("Conflicting colours on the same occurrence"));
+                    }
+                }
+            }
+        }
+    }
+    placements.iter().map(|placement| {
+        let shape = placement.path.iter().rev().nth(1).and_then(|rel| shapes.get(rel));
+        let Some(shape) = shape else { return Ok(None) };
+        let mut values = placement.bodies.iter().map(|body| colours.get(&(*shape, *body)).copied());
+        let value = values.next().flatten();
+        if values.any(|other| other != value) {
+            return Err(refuse("Several body colours on the same occurrence"));
+        }
+        Ok(value)
+    }).collect()
+}
+
+pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
+    let (assembly, labels) = read_shared_products(text, true, None, None)?;
+    let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
+    Ok(NamedStepAssembly { assembly, name, definition_names })
+}
+
+/// Import the shared geometry and the complete product-name path of each
+/// occurrence, in placement order. Paths include the assembly root and leaf.
+pub fn import_step_product_paths(text: &str) -> Result<(NamedStepAssembly, Vec<Vec<String>>)> {
+    let mut paths = Vec::new();
+    let (assembly, labels) = read_shared_products(text, true, Some(&mut paths), None)?;
+    let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
+    Ok((NamedStepAssembly { assembly, name, definition_names }, paths))
+}
+
+/// Quantities of one shared definition inside a branch and elsewhere in the assembly.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepBranchPartQuantity {
+    pub definition: usize,
+    pub name: String,
+    pub inside: usize,
+    pub outside: usize,
+}
+
+/// Report selected definitions in source-definition order. Coincident placements
+/// count separately. Equal product labels do not merge distinct geometry.
+pub fn step_branch_parts_list(text: &str, prefix: &[&str]) -> Result<Vec<StepBranchPartQuantity>> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    if indices.is_empty() { return Err(refuse("No occurrence matches the STEP product path")); }
+    let mut counts = vec![0; scene.definition_names.len()];
+    for i in indices {
+        counts[scene.assembly.occurrences()[i].definition] += 1;
+    }
+    Ok(scene.parts_list()?.into_iter().filter_map(|part| {
+        let inside = counts[part.definition];
+        (inside > 0).then(|| StepBranchPartQuantity {
+            definition: part.definition, name: part.name.to_owned(), inside, outside: part.quantity - inside,
+        })
+    }).collect())
+}
+
+/// Mass (kg), world centre (mm) and central inertia (kg mm²) of placements
+/// below a product path. The caller supplies a density in kg/mm³ for each
+/// selected occurrence. Coincident placements contribute independently.
+pub fn step_branch_mass_properties(
+    text: &str, prefix: &[&str], relative_tolerance: f64, max_evaluations_per_definition: usize,
+    mut density: impl FnMut(&[String], &StepAssemblyOccurrence) -> Result<f64>,
+) -> Result<brep_core::analysis::AssemblyMass> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    let subset = scene.assembly.extract_occurrences(&indices)?;
+    let densities = indices.iter().map(|&i| density(&paths[i], &scene.assembly.occurrences()[i]))
+        .collect::<Result<Vec<_>>>()?;
+    subset.mass_properties_with_densities(&densities, relative_tolerance, max_evaluations_per_definition)
+}
+
+/// Conservative world-axis bounding box (millimetres) of all placements below
+/// a product path. Untrimmed control nets can extend beyond the physical solid.
+pub fn step_branch_bounds(text: &str, prefix: &[&str]) -> Result<[[f64; 3]; 2]> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    if indices.is_empty() { return Err(refuse("No occurrence matches the STEP product path")); }
+    let mut local = BTreeMap::new();
+    let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+    for i in indices {
+        let part = &scene.assembly.occurrences()[i];
+        let cached = local.entry(part.definition).or_insert_with(||
+            definition_control_bounds(&scene.assembly.definitions()[part.definition]));
+        let [lo, hi] = placed_control_bounds(*cached, part)?;
+        for axis in 0..3 {
+            bounds[0][axis] = bounds[0][axis].min(lo[axis]);
+            bounds[1][axis] = bounds[1][axis].max(hi[axis]);
+        }
+    }
+    Ok(bounds)
+}
+
+/// Export all leaves below a product-name prefix as a flat shared assembly.
+/// Matching sibling labels select all matching branches. Placements remain in
+/// the source assembly coordinates and explicit occurrence RGB values survive.
+pub fn export_step_product_subassembly(text: &str, prefix: &[&str]) -> Result<String> {
+    let name = prefix.last().ok_or_else(|| refuse("Expected a nonempty STEP product path"))?;
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    let subset = scene.named_subset(&indices, name)?;
+    let colours = import_step_occurrence_colours(text)?;
+    let styles: Vec<_> = indices.iter().map(|&i| colours[i].map(|rgb|
+        crate::StepOccurrenceColour { name: "", rgb })).collect();
+    crate::export_named_styled_step_assembly(&subset, &[], &vec![None; indices.len()], &styles)
+}
+
+/// Replace matching leaf occurrences of one definition by a local-space solid
+/// and export the complete scene. Retains explicit occurrence RGB, group
+/// membership and world placements. Group frames are written at identity.
+pub fn replace_step_product_at_path(text: &str, path: &[&str], model: Model, name: &str) -> Result<String> {
+    edit_step_products(text, |scene, paths| {
+        let selected: Vec<_> = paths.iter().enumerate().filter(|(_, p)| p.as_slice() == path)
+            .map(|(i, _)| i).collect();
+        scene.replace_named_variant(&selected, model, name.to_owned())?;
+        Ok(())
+    })
+}
+
+/// Apply one assembly-space rigid motion to every occurrence below a named
+/// path. Preserves one level of group membership and explicit occurrence RGB.
+pub fn move_step_product_branch(text: &str, prefix: &[&str], motion: [[f64; 4]; 4]) -> Result<String> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    edit_step_products(text, |scene, paths| {
+        let indices = product_prefix_indices(paths, prefix);
+        scene.assembly.move_occurrences(&indices, motion)
+    })
+}
+
+fn product_prefix_indices(paths: &[Vec<String>], prefix: &[&str]) -> Vec<usize> {
+    paths.iter().enumerate()
+        .filter(|(_, path)| path.len() >= prefix.len() && path.iter().zip(prefix).all(|(a,b)| a == *b))
+        .map(|(index, _)| index).collect()
+}
+
+fn edit_step_products(text: &str, edit: impl FnOnce(&mut NamedStepAssembly, &[Vec<String>]) -> Result<()>) -> Result<String> {
+    let mut paths = Vec::new();
+    let mut branches = Vec::new();
+    let (assembly, labels) = read_shared_products(text, true, Some(&mut paths), Some(&mut branches))?;
+    let (root, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
+    let mut scene = NamedStepAssembly { assembly, name: root, definition_names };
+    edit(&mut scene, &paths)?;
+    let mut group_indices = BTreeMap::new();
+    let mut groups = Vec::new();
+    let parents: Vec<_> = branches.iter().zip(&paths).map(|(branch, p)| branch.map(|id|
+        *group_indices.entry(id).or_insert_with(|| {
+            groups.push(p[1].as_str());
+            groups.len() - 1
+        }))).collect();
+    let styles: Vec<_> = import_step_occurrence_colours(text)?.into_iter().map(|rgb|
+        rgb.map(|rgb| crate::StepOccurrenceColour { name: "", rgb })).collect();
+    crate::export_named_styled_step_assembly(&scene, &groups, &parents, &styles)
+}
+
+fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<String>>>, branches: Option<&mut Vec<Option<usize>>>) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {
     validate_exchange_structure(text)?;
     let entities = parse(data_payload(text)?)?;
     let route = DirectImportRoute {
@@ -1895,6 +2513,36 @@ pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
     if placements.is_empty() {
         return Err(refuse("Selected placement graph contains no manifold B-rep occurrence"));
     }
+    let mut labels = if named {
+        let (_, shapes, _) = step_xde::product_graph(&entities)?;
+        let mut products = BTreeMap::new();
+        for entity in entities.values() {
+            if let Value::Call(kind,args) = &entity.value
+                && kind == "SHAPE_DEFINITION_REPRESENTATION" && args.len() == 2
+                && let Some(&product) = shapes.get(&one_ref(&args[0], "product shape")?) {
+                let rep = one_ref(&args[1], "product representation")?;
+                if products.insert(rep, product).is_some_and(|prior| prior != product) {
+                    return Err(refuse("Ambiguous representation product"));
+                }
+            }
+        }
+        let root = placements[0].path.first().copied().ok_or_else(|| refuse("Missing assembly root"))?;
+        if placements.iter().any(|p| p.path.first() != Some(&root)) {
+            return Err(refuse("Named assembly requires one selected root"));
+        }
+        Some((products, root, Vec::new()))
+    } else { None };
+    if let Some(branches) = branches {
+        for item in &placements {
+            branches.push(match item.path.len() {
+                3 => None,
+                5 => Some(item.path[1]),
+                _ => return Err(refuse("Branch editing supports root parts and one level of groups")),
+            });
+        }
+    }
+    let representation_paths = paths.as_ref().map(|_| placements.iter()
+        .map(|item| item.path.iter().step_by(2).copied().collect::<Vec<_>>()).collect::<Vec<_>>());
     let mut definition_indices = BTreeMap::new();
     let mut definitions = Vec::new();
     let mut occurrences = Vec::with_capacity(placements.len());
@@ -1912,6 +2560,9 @@ pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
                 restore_identity(&entities, &identity, &mut model)?;
                 model.validate()?;
                 let index = definitions.len();
+                if let Some((_, _, representations)) = &mut labels {
+                    representations.push(placement.representation);
+                }
                 definitions.push(model);
                 definition_indices.insert(key, index);
                 index
@@ -1919,7 +2570,21 @@ pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
         };
         occurrences.push(StepAssemblyOccurrence { definition, transform: placement.transform });
     }
-    Ok(StepSharedAssembly { definitions, occurrences })
+    let names = if let Some((products, root, representations)) = labels {
+        let name = |rep| -> Result<String> {
+            let id = products.get(&rep).ok_or_else(|| refuse("Selected representation has no product"))?;
+            let (kind, args) = call(&entities, *id)?;
+            if kind != "PRODUCT" || args.len() < 2 { return Err(refuse("Malformed named product")); }
+            step_xde::decode_step_string(&string_value(&args[1], "product name")?)
+        };
+        if let (Some(paths), Some(representations)) = (paths, representation_paths) {
+            for path in representations {
+                paths.push(path.into_iter().map(name).collect::<Result<_>>()?);
+            }
+        }
+        Some((name(root)?, representations.into_iter().map(name).collect::<Result<_>>()?))
+    } else { None };
+    Ok((StepSharedAssembly { definitions, occurrences }, names))
 }
 
 fn import_step_direct_impl(

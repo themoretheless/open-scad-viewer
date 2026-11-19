@@ -1,0 +1,12 @@
+{
+  "id": "NURBS-0977",
+  "testedBase": "c1580689bc137cdb81b31a1231ee128b3a334d35",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "e2ae930a53d571b91325975784e9cb0a14dbb344ffff96fbd44c349a33243178",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "609ecff82b7345e80ca1fc2482ed1116c4534de622fb69e21e37af6e9b6a84cf",
+    "crates/brep-core/src/parts/gear/gear_with_report.rs": "c27e7bf9bce582dcbe21d9874d31f37c07a9336a55c3932b7adf435068875a69"
+  },
+  "fixtureSha256": "adb518350ed0b693abdfd6c2ec1e8bfa682b52937c00fe32cc698a40afc6f1d5",
+  "command": "CAD_SPINNER_RIGID_STEP=/tmp/osv977.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib -- --nocapture",
+  "external": "Two central solids, 18 distinct planet frames, maximum matrix error 1.33e-15"
+}

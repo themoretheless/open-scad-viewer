@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0996",
+  "testedBase": "30fc1c3c8948ed4ac24dce6457268971be4c1b42",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "69f6e5d74827d28eab5677b62baa22e5d70948cf8e798bdfe817eae32cff610a",
+    "crates/cad-step/tests/baked_step_scales.rs": "16246561e3584c4b75a73aa52b8f72c182c96e9c44c7bb95bd0918b90e816ae3"
+  },
+  "fixtureSha256": "17fdd29a0d6999dd0d88ee01db92ccc3ae7b56897c906fbddf2ac06638427de6",
+  "command": "CAD_ELLIPTIC_SCALE_FIXTURE=/tmp/osv996.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "904.7786843751541 (6.999999999999999, 10.999999999999998, 6.999999999999999) [19000.352371454384, 14476.458949437321, 11762.122897244408]"
+}

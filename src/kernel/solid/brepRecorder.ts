@@ -16,6 +16,7 @@
  * Every primitive, transform and curve spelling lives in `brepGraph.ts`, which the
  * Rush adapter shares.
  */
+import { buildExactSolidBodies } from './brepBuild'
 import type { CadKernelHandle, CadKernelOps } from '../cadKernelOps'
 import {
   createBrepGraphBuilder,
@@ -143,8 +144,18 @@ export function createBrepRecordingKernelOps(base: CadKernelOps): { ops: CadKern
     },
 
     boolean3(operation, inputs) {
-      const result = base.boolean3(operation, inputs)
-      return derive(result, inputs, values => graph.boolean(operation, values))
+      try {
+        const result = base.boolean3(operation, inputs)
+        return derive(result, inputs, values => graph.boolean(operation, values))
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes('Boolean work budget exceeded during stitch')) throw error
+        const exact = graph.boolean(operation, inputs.map(solidOf))
+        if (exact.kind !== 'node') throw error
+        const [body] = buildExactSolidBodies(graph.nodes, [{ name: operation, id: exact.id }])
+        if (!body) throw error
+        const { positions, indices } = body.mesh
+        return tag(base.ofMesh(new Float64Array(positions), new Uint32Array(indices)), exact)
+      }
     },
 
     translate(input, offset) {

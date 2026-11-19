@@ -62,8 +62,11 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
   if (missing.length) throw Error(`STEP assembly requires exact B-rep geometry: ${missing.map(b => b.name).join(', ')}`)
   await warmGeometryKernel()
   const { exportDirectStepV9, exportSharedStepAssembly } = await import('./cadNurbsStep')
-  if (!snapshot.groups?.length && snapshot.bodies.some(body => body.instance)
-      && snapshot.bodies.every(body => !body.group && !body.material)) {
+  const groupNames = [...new Set([
+    ...(snapshot.groups ?? []).map(group => group.name),
+    ...snapshot.bodies.flatMap(body => body.group ? [body.group] : []),
+  ])]
+  if (snapshot.bodies.some(body => body.instance)) {
     const definitions = snapshot.bodies.filter(body => !body.instance)
     const indices = new Map(definitions.map((body, i) => [body.id, i]))
     const identity = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
@@ -73,12 +76,30 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
     }))
     let shared: string | undefined
     try {
-      shared = exportSharedStepAssembly(definitions.map(body => body.brep!), placements)
+      const materialCount = snapshot.bodies.filter(body => body.material).length
+      const hierarchy = groupNames.length || materialCount ? {
+        groups: groupNames,
+        ...(materialCount > 0 && { colours: snapshot.bodies.map(({ material }) => material
+          ? { name: material.name, rgb: solidMaterialRgb(material.color) }
+          : null) }),
+        parents: snapshot.bodies.map(body => body.group ? groupNames.indexOf(body.group) : null),
+      } : undefined
+      const text = exportSharedStepAssembly(definitions.map(body => body.brep!), placements, hierarchy)
+      // Older kernels accept unknown request fields and can return a flat assembly.
+      const retainsColours = !materialCount || (text.match(/^#\d+=PRESENTATION_STYLE_BY_CONTEXT\(/gm)?.length ?? 0) === materialCount
+      if (retainsColours && (!hierarchy || (text.match(/^#\d+=PRODUCT\('group-\d+',/gm)?.length ?? 0) === groupNames.length))
+        shared = text
     } catch {
       // Open shells, shear and other unsupported placements can still export
       // through the independently materialized current bodies below.
     }
-    if (shared) return labelSharedAssembly(shared, definitions, snapshot.bodies)
+    if (shared) {
+      const labeledGroups = shared.replace(
+        /^(#\d+=(?:PRODUCT|NEXT_ASSEMBLY_USAGE_OCCURRENCE)\()'group-(\d+)'/gm,
+        (_, prefix: string, index: string) => prefix + quoted('group:' + groupNames[Number(index)]),
+      )
+      return labelSharedAssembly(labeledGroups, definitions, snapshot.bodies)
+    }
   }
   const rows: string[] = []
   let next = 1
@@ -119,10 +140,7 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
     emit(`CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#${relation},#${shape})`)
   }
   const groups = new Map<string, Node>()
-  for (const name of new Set([
-    ...(snapshot.groups ?? []).map(g => g.name),
-    ...snapshot.bodies.flatMap(b => (b.group ? [b.group] : [])),
-  ])) {
+  for (const name of groupNames) {
     const group = product(`group:${name}`, name)
     groups.set(name, group)
     attach(root, group, `group:${name}`, name)

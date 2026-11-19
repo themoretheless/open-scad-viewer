@@ -1,0 +1,13 @@
+{
+  "id": "NURBS-0983",
+  "testedBase": "3d5e0a3552acb4f5819591416e673ab646a898e6",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "b4713df7cd313ae8e442f031db1e1e323ab8477d0740007edfc5a9d44a874b05",
+    "crates/cad-step/src/step_interchange_v3.rs": "d6c0ecb592ffe0068a2e0ba368e42927ba1b9eb7e6cfdbefd6259a5eb0312042",
+    "crates/cad-step/src/lib.rs": "fbba842510e0b69907dd6bc85cec626e6c654e83d240dc2113793e402f1cb018",
+    "crates/cad-step/tests/baked_step_scales.rs": "7e1320e69b683cf395a9006c69ec09f151e8e860e16be8389b104ed747d7854a"
+  },
+  "fixtureSha256": "0af86bdf60c72b7f0b2cb1c62779b87ae1791ae692d065a6b8a296f32e50dce5",
+  "command": "CAD_SUBASSEMBLY_FIXTURE=/tmp/osv983.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Feed contains one red Roller with the expected signed volume and centre"
+}

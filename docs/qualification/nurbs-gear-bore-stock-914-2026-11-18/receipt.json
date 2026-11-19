@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0914",
+  "testedBase": "c745f64bafc4acd51d1059604237c42f1d9bc66e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 475,
+  "scope": [
+    "Check spinner sun root-circle web and inverse bore diameter allowance at concentric, eccentric and infeasible positions. Reject negative diameter and nonfinite offset."
+  ],
+  "logSha256": "0066811e3cfb9b5fcb2fd45be69a1a693af0d57b13184f79935d96782edc5ebe",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "107daeb297233d6ffc4345e37642fe76314b9ba3c26217bcebc87a9f5eb0dd14",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "200274f8a25800cf9fd73effa84815209f5923fe08a95d83a7a7441fb94d8a28",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "7364ab9515d317adf58b8d4ceb18a0efd902cf868fe57988a2e6a9f3a763a3aa"
+  }
+}

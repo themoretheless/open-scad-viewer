@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0897",
+  "testedBase": "5064dae94ddc7f51de0c5ae30700aa0468a3ba0d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 463,
+  "scope": [
+    "Certify an oblique linear image of the original poles before spatial compression. Verify cube hexagon where all three axis projections collapse edges, and reject rank-one image."
+  ],
+  "logSha256": "bd18c8be8bad92cd753a87cfd95aa5918fcd12195e799e8520e915761386247c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "82bb00576b91b2b8dfdecec10207fceb1859511548353238fb97b693e918f243",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "65a91cefedf068f5ffca912573d1ffbe50cf6b9e0a6f52d3755b9320ecfd0ea5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6461add7b14dc6b11a5b7c7f1173a8d6d18feed9ea71ce2cfa82aa1212d023b0"
+  }
+}

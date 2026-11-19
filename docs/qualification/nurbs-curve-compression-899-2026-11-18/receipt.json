@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0899",
+  "testedBase": "166bf103bc8740f6369193d8766ada07a82f0f95",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 465,
+  "scope": [
+    "Exact Bezier partition of original multi-span edges for spatial separation proofs. Check intra-edge crossing, lifted pass and a pair limit counting every span."
+  ],
+  "logSha256": "9b25b0892d64ff70539dcb10dc9bc7f70fd1c0d831f76b007fc9687cd8397a48",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "c04c1495baea18ba8dc990e76968cf753d5d95b2e3a3dcd382eda8049c3785a4",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "0477fe88c50291efbe813ab795c9c2abc5402332ad4c6b0bf03ef75d4de4ee7c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "bd0e3e591c6cc8ec9cda6b92142a10f3b5f31f6b6772862cf16b4f08b757ec09"
+  }
+}

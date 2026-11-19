@@ -8,11 +8,12 @@
 use brep_core::analytic_features::FeatureCertificate;
 use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::Vertex;
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{curve::Curve, surface::{Axis, Surface}, Error, Result};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const IGES_INTERCHANGE_V2_CAPABILITY: &str = "iges-interchange/2";
 const MAX_BYTES: usize = 16 * 1024 * 1024;
+const MAX_ENTITY_PARAMETER_ROWS: usize = 4097;
 const MAX_RECORDS: usize = 131_072;
 const MAX_ENTITIES: usize = 65_536;
 const MAX_VALUES: usize = 1_000_000;
@@ -192,6 +193,9 @@ struct Entity {
     directory: Directory,
     values: Vec<String>,
     canonical: String,
+    legacy_surface_order: bool,
+    legacy_curve_flags: bool,
+    legacy_surface_flags: bool,
 }
 
 fn parse_directory_status(de: usize, text: &str) -> Result<DirectoryStatus> {
@@ -318,7 +322,7 @@ fn tokenize(text: &str, parameter_delimiter: char, record_delimiter: char) -> Re
     Ok(out)
 }
 
-fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64)> {
+fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64, Option<String>)> {
     let mut parameter = ',';
     let mut record = ';';
     let provisional = tokenize(text, ',', ';')?;
@@ -358,7 +362,8 @@ fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64)> {
     if resolution <= 0. {
         return Err(refuse("IGES global minimum resolution must be positive"));
     }
-    Ok((parameter, record, unit, resolution))
+    let legacy_sender = values.get(11).filter(|_| values.get(4).map(String::as_str) == Some("OpenSCAD Viewer")).cloned();
+    Ok((parameter, record, unit, resolution, legacy_sender))
 }
 
 fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
@@ -416,7 +421,10 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         .iter()
         .map(|(_, l)| field(l, 0, 72))
         .collect::<String>();
-    let (pd, rd, unit, resolution) = parse_global(&global)?;
+    let (pd, rd, unit, resolution, sender_version) = parse_global(&global)?;
+    let writer_version = sender_version.as_deref().filter(|_| {
+        sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
+    });
     let directory = &sections[&'D'];
     if !directory.len().is_multiple_of(2) {
         return Err(refuse("IGES directory section must contain record pairs"));
@@ -472,7 +480,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
                 break;
             }
             sequence += 1;
-            if sequence - dir.parameter > 4096 {
+            if sequence - dir.parameter >= MAX_ENTITY_PARAMETER_ROWS {
                 return Err(refuse("IGES entity parameter span exceeds 4096 records"));
             }
         }
@@ -488,6 +496,9 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         entities.insert(
             de,
             Entity {
+                legacy_surface_order: writer_version == Some("IGES2"),
+                legacy_curve_flags: matches!(writer_version, Some("IGES2" | "IGES2.1")),
+                legacy_surface_flags: matches!(writer_version, Some("IGES2" | "IGES2.1" | "IGES2.2")),
                 directory: dir,
                 values,
                 canonical,
@@ -553,11 +564,11 @@ fn entity_references(de: usize, entity: &Entity) -> Result<Vec<EntityReference>>
         142 => {
             exact_count(6, 0, 0, "curve on parametric surface")?;
             push(2, "parametric surface")?;
-            if u(v, 3, "boundary model curve")? != 0 {
-                push(3, "boundary model curve")?;
+            if u(v, 3, "boundary pcurve")? != 0 {
+                push(3, "boundary pcurve")?;
             }
-            if u(v, 4, "boundary pcurve")? != 0 {
-                push(4, "boundary pcurve")?;
+            if u(v, 4, "boundary model curve")? != 0 {
+                push(4, "boundary model curve")?;
             }
         }
         143 => {
@@ -654,6 +665,9 @@ fn entity_references(de: usize, entity: &Entity) -> Result<Vec<EntityReference>>
             push(3, "identity target")?;
         }
         _ => {}
+    }
+    if entity.directory.transform != 0 {
+        refs.push(EntityReference { target: entity.directory.transform, role: "directory transform" });
     }
     Ok(refs)
 }
@@ -832,12 +846,15 @@ fn curve126(
     let v = &entity(entities, de, 126)?.values;
     let k = u(v, 1, "curve upper index")?;
     let degree = u(v, 2, "curve degree")?;
+    if k >= 4096 || degree > k {
+        return Err(refuse("Malformed IGES rational B-spline curve dimensions"));
+    }
     let n = k + 1;
     let knot_count = n + degree + 1;
-    if n == 0 || n > 4096 || v.len() < 8 + knot_count + n + 3 * n {
+    if v.len() < 9 + knot_count + 4 * n {
         return Err(refuse("Malformed IGES rational B-spline curve"));
     }
-    let mut knots = (0..knot_count)
+    let knots = (0..knot_count)
         .map(|i| f(v, 7 + i, "curve knot"))
         .collect::<Result<Vec<_>>>()?;
     let weights = (0..n)
@@ -864,22 +881,19 @@ fn curve126(
     if !a.is_finite() || !b.is_finite() || a >= b {
         return Err(refuse("IGES curve domain is not increasing"));
     }
-    let old = [knots[degree], knots[knots.len() - degree - 1]];
-    if (old[0] - a).abs() > 1e-10 || (old[1] - b).abs() > 1e-10 {
-        let factor = (b - a) / (old[1] - old[0]);
-        for x in &mut knots {
-            *x = a + (*x - old[0]) * factor;
-        }
-    }
     let c = Curve {
         degree,
         knots,
         control_points: cps,
         weights,
-        periodic: u(v, 5, "curve periodic flag")? != 0,
+        periodic: u(v, if entities[&de].legacy_curve_flags { 5 } else { 6 }, "curve periodic flag")? != 0,
     };
     c.validate()?;
-    Ok(c)
+    if [a, b] == c.domain() {
+        Ok(c)
+    } else {
+        c.trim(a, b)
+    }
 }
 
 #[derive(Clone)]
@@ -890,8 +904,14 @@ struct CompositeSegment {
 
 enum CompositeVisit {
     Enter(usize, usize),
-    Exit(usize, usize),
+    Exit(usize, usize, usize),
 }
+
+mod circular_arc;
+mod placement;
+mod natural_boundary;
+mod affine_boundary;
+mod composite_join;
 
 struct CurveDispatcher<'a> {
     entities: &'a BTreeMap<usize, Entity>,
@@ -918,20 +938,17 @@ impl<'a> CurveDispatcher<'a> {
         Ok(())
     }
 
-    fn base_curve(&mut self, composite: usize, de: usize, linear: bool) -> Result<Curve> {
+    fn base_curve(&mut self, composite: usize, de: usize, composite_member: bool) -> Result<Curve> {
         let entity = self.entities.get(&de).ok_or_else(|| {
             composite_error(
                 "BREP_IGES_V2_COMPOSITE_DANGLING",
                 format!("IGES composite DE {composite} has missing segment DE {de}"),
             )
         })?;
-        let curve = match entity.directory.ty {
-            100 => {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
-                    format!("IGES circular arc DE {de} is unsupported in curve dispatch"),
-                ));
-            }
+        let transform = entity.directory.transform;
+        let source_dim = if transform == 0 { self.dim } else { 3 };
+        let mut curve = match entity.directory.ty {
+            100 => circular_arc::read(entity, source_dim, self.scale, self.tolerance_mm)?,
             110 => {
                 let values = &entity.values;
                 if values.len() != 7 {
@@ -944,7 +961,7 @@ impl<'a> CurveDispatcher<'a> {
                 for endpoint in 0..2 {
                     let at = 1 + 3 * endpoint;
                     let mut point = vec![f(values, at, "line X")?, f(values, at + 1, "line Y")?];
-                    if self.dim == 3 {
+                    if source_dim == 3 {
                         point.push(f(values, at + 2, "line Z")?);
                     }
                     for coordinate in &mut point {
@@ -954,7 +971,7 @@ impl<'a> CurveDispatcher<'a> {
                 }
                 Curve::from_polyline(points)?
             }
-            126 => curve126(self.entities, de, self.dim, self.scale)?,
+            126 => curve126(self.entities, de, source_dim, self.scale)?,
             102 => {
                 return Err(composite_error(
                     "BREP_IGES_V2_COMPOSITE_CYCLE",
@@ -971,20 +988,15 @@ impl<'a> CurveDispatcher<'a> {
                 ));
             }
         };
-        if !linear {
-            return Ok(curve);
+        if transform != 0 {
+            let matrix = placement::read(self.entities, transform)?;
+            for point in &mut curve.control_points {
+                *point = placement::apply(&matrix, point, self.scale, self.dim)?;
+            }
+            curve.validate()?;
         }
-        let uniform_weights = curve
-            .weights
-            .first()
-            .is_some_and(|first| curve.weights.iter().all(|weight| weight == first));
-        if curve.degree != 1 || curve.periodic || !uniform_weights {
-            return Err(composite_error(
-                "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
-                format!(
-                    "IGES composite DE {composite} segment DE {de} requires nonlinear or nonuniform-rational join"
-                ),
-            ));
+        if !composite_member {
+            return Ok(curve);
         }
         if curve.control_points.len() > MAX_COMPOSITE_CONTROLS {
             return Err(composite_error(
@@ -992,7 +1004,7 @@ impl<'a> CurveDispatcher<'a> {
                 format!("IGES composite DE {composite} control budget exceeded at DE {de}"),
             ));
         }
-        Ok(Curve::from_polyline(curve.control_points.clone())?)
+        Ok(curve)
     }
 
     fn endpoints(curve: &Curve) -> Result<(Vec<f64>, Vec<f64>)> {
@@ -1024,111 +1036,10 @@ impl<'a> CurveDispatcher<'a> {
         Ok(distance)
     }
 
-    fn join_segments(
-        composite: usize,
-        segments: &[CompositeSegment],
-        tolerance_mm: f64,
-    ) -> Result<Curve> {
-        let Some(first) = segments.first() else {
-            return Err(composite_error(
-                "BREP_IGES_V2_COMPOSITE_DANGLING",
-                format!("IGES composite DE {composite} has no segments"),
-            ));
-        };
-        let mut joined = Curve::from_polyline(first.curve.control_points.clone())?;
-        let mut previous = first.de;
-        for (index, segment) in segments.iter().enumerate().skip(1) {
-            let (mut current_start, mut current_end) = Self::endpoints(&joined)?;
-            let (segment_start, segment_end) = Self::endpoints(&segment.curve)?;
-            let mut end_start = Self::distance(&current_end, &segment_start)?;
-            let mut end_end = Self::distance(&current_end, &segment_end)?;
-            let mut start_start = Self::distance(&current_start, &segment_start)?;
-            let mut start_end = Self::distance(&current_start, &segment_end)?;
-            let mut forward =
-                usize::from(end_start <= tolerance_mm) + usize::from(end_end <= tolerance_mm);
-            let mut backward =
-                usize::from(start_start <= tolerance_mm) + usize::from(start_end <= tolerance_mm);
-            if index == 1 && forward == 0 && backward > 0 {
-                joined = joined.reverse()?;
-                (current_start, current_end) = Self::endpoints(&joined)?;
-                end_start = Self::distance(&current_end, &segment_start)?;
-                end_end = Self::distance(&current_end, &segment_end)?;
-                start_start = Self::distance(&current_start, &segment_start)?;
-                start_end = Self::distance(&current_start, &segment_end)?;
-                forward =
-                    usize::from(end_start <= tolerance_mm) + usize::from(end_end <= tolerance_mm);
-                backward = usize::from(start_start <= tolerance_mm)
-                    + usize::from(start_end <= tolerance_mm);
-            }
-            if forward == 0 {
-                if backward > 0 {
-                    return Err(composite_error(
-                        "BREP_IGES_V2_COMPOSITE_AMBIGUOUS",
-                        format!(
-                            "IGES composite DE {composite} requires reordering at segments DE {previous} and DE {}",
-                            segment.de
-                        ),
-                    ));
-                }
-                let gap = end_start.min(end_end).min(start_start).min(start_end);
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_GAP",
-                    format!(
-                        "IGES composite DE {composite}, segments DE {previous} -> DE {}, gap_mm={gap:.17e}, tolerance_mm={tolerance_mm:.17e}",
-                        segment.de
-                    ),
-                ));
-            }
-            if forward > 1 || backward > 0 {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_AMBIGUOUS",
-                    format!(
-                        "IGES composite DE {composite} has ambiguous orientation at segments DE {previous} and DE {}",
-                        segment.de
-                    ),
-                ));
-            }
-            let candidate = if end_end <= tolerance_mm {
-                segment.curve.reverse()?
-            } else {
-                segment.curve.clone()
-            };
-            let (candidate_start, _) = Self::endpoints(&candidate)?;
-            let snap = current_end
-                .iter()
-                .zip(&candidate_start)
-                .map(|(a, b)| (a + b) * 0.5)
-                .collect::<Vec<_>>();
-            let mut points = joined.control_points.clone();
-            let mut candidate_points = candidate.control_points.clone();
-            let (Some(joined_end), Some(candidate_end)) =
-                (points.last_mut(), candidate_points.first_mut())
-            else {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_DANGLING",
-                    format!("IGES composite DE {composite} has an empty segment"),
-                ));
-            };
-            *joined_end = snap.clone();
-            *candidate_end = snap;
-            if points.len() + candidate_points.len() - 1 > MAX_COMPOSITE_CONTROLS {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_BUDGET",
-                    format!("IGES composite DE {composite} control budget exceeded"),
-                ));
-            }
-            points.extend(candidate_points.into_iter().skip(1));
-            joined = Curve::from_polyline(points)?;
-            previous = segment.de;
-        }
-        joined.validate()?;
-        Ok(joined)
-    }
-
     fn composite(&mut self, root: usize) -> Result<Curve> {
         let mut stack = vec![CompositeVisit::Enter(root, 0)];
         let mut active = BTreeSet::new();
-        let mut memo = BTreeMap::<usize, Curve>::new();
+        let mut memo = BTreeMap::<(usize, usize), Curve>::new();
         let mut segments = Vec::<CompositeSegment>::new();
         let mut result = None;
         while let Some(visit) = stack.pop() {
@@ -1141,7 +1052,7 @@ impl<'a> CurveDispatcher<'a> {
                             format!("IGES composite cycle at DE {de}"),
                         ));
                     }
-                    if let Some(curve) = memo.get(&de) {
+                    if let Some(curve) = memo.get(&(de, self.dim)) {
                         if segments.len() >= MAX_COMPOSITE_SEGMENTS {
                             return Err(composite_error(
                                 "BREP_IGES_V2_COMPOSITE_BUDGET",
@@ -1177,7 +1088,8 @@ impl<'a> CurveDispatcher<'a> {
                             format!("IGES composite DE {root} depth budget exceeded at DE {de}"),
                         ));
                     }
-                    let refs = entity_references(de, entity)?;
+                    let mut refs = entity_references(de, entity)?;
+                    refs.retain(|reference| reference.role == "composite segment");
                     if refs.is_empty() {
                         return Err(composite_error(
                             "BREP_IGES_V2_COMPOSITE_DANGLING",
@@ -1185,16 +1097,30 @@ impl<'a> CurveDispatcher<'a> {
                         ));
                     }
                     active.insert(de);
-                    stack.push(CompositeVisit::Exit(de, segments.len()));
+                    stack.push(CompositeVisit::Exit(de, segments.len(), self.dim));
+                    if entity.directory.transform != 0 {
+                        self.dim = 3;
+                    }
                     for reference in refs.iter().rev() {
                         self.budget(root, 1)?;
                         stack.push(CompositeVisit::Enter(reference.target, depth + 1));
                     }
                 }
-                CompositeVisit::Exit(de, start) => {
+                CompositeVisit::Exit(de, start, destination_dim) => {
                     active.remove(&de);
-                    let curve = Self::join_segments(de, &segments[start..], self.tolerance_mm)?;
-                    memo.insert(de, curve.clone());
+                    let mut curve = self.join_segments(de, &segments[start..], self.tolerance_mm)?;
+                    self.dim = destination_dim;
+                    let transform = self.entities[&de].directory.transform;
+                    if transform != 0 {
+                        let matrix = placement::read(self.entities, transform)?;
+                        for point in &mut curve.control_points {
+                            *point = placement::apply(&matrix, point, self.scale, self.dim)?;
+                        }
+                        curve.validate()?;
+                        segments.truncate(start);
+                        segments.push(CompositeSegment { de, curve: curve.clone() });
+                    }
+                    memo.insert((de, self.dim), curve.clone());
                     if de == root {
                         result = Some(curve);
                     }
@@ -1226,11 +1152,18 @@ impl<'a> CurveDispatcher<'a> {
 }
 
 fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Result<Surface> {
-    let v = &entity(entities, de, 128)?.values;
+    let surface_entity = entity(entities, de, 128)?;
+    let v = &surface_entity.values;
+    let placement = (surface_entity.directory.transform != 0)
+        .then(|| placement::read(entities, surface_entity.directory.transform))
+        .transpose()?;
     let ku = u(v, 1, "surface U upper index")?;
     let kv = u(v, 2, "surface V upper index")?;
     let du = u(v, 3, "surface U degree")?;
     let dv = u(v, 4, "surface V degree")?;
+    if ku >= 16384 || kv >= 16384 || du > ku || dv > kv {
+        return Err(refuse("Malformed IGES rational B-spline surface dimensions"));
+    }
     let nu = ku + 1;
     let nv = kv + 1;
     let n = nu
@@ -1256,25 +1189,40 @@ fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Resu
     at += n;
     let mut flat_p = Vec::with_capacity(n);
     for i in 0..n {
-        flat_p.push(vec![
+        let point = vec![
             f(v, at + 3 * i, "surface X")? * scale,
             f(v, at + 3 * i + 1, "surface Y")? * scale,
             f(v, at + 3 * i + 2, "surface Z")? * scale,
-        ]);
+        ];
+        flat_p.push(match &placement {
+            Some(matrix) => placement::apply(matrix, &point, scale, 3)?,
+            None => point,
+        });
     }
-    let control_points = flat_p.chunks(nv).map(|r| r.to_vec()).collect();
-    let weights = flat_w.chunks(nv).map(|r| r.to_vec()).collect();
-    let s = Surface {
+    let index = |u: usize, v: usize| if surface_entity.legacy_surface_order { u * nv + v } else { v * nu + u };
+    let control_points = (0..nu).map(|u| (0..nv).map(|v| flat_p[index(u,v)].clone()).collect()).collect();
+    let weights = (0..nu).map(|u| (0..nv).map(|v| flat_w[index(u,v)]).collect()).collect();
+    let mut s = Surface {
         degree_u: du,
         degree_v: dv,
         knots_u,
         knots_v,
         control_points,
         weights,
-        periodic_u: u(v, 7, "surface U periodic flag")? != 0,
-        periodic_v: u(v, 8, "surface V periodic flag")? != 0,
+        periodic_u: u(v, if surface_entity.legacy_surface_flags { 7 } else { 8 }, "surface U periodic flag")? != 0,
+        periodic_v: u(v, if surface_entity.legacy_surface_flags { 8 } else { 9 }, "surface V periodic flag")? != 0,
     };
     s.validate()?;
+    let at = at + 3 * n;
+    let ranges = [
+        (Axis::U, [s.knots_u[du], s.knots_u[nu]], [f(v, at, "surface U start")?, f(v, at + 1, "surface U end")?]),
+        (Axis::V, [s.knots_v[dv], s.knots_v[nv]], [f(v, at + 2, "surface V start")?, f(v, at + 3, "surface V end")?]),
+    ];
+    for (axis, domain, [start, end]) in ranges {
+        if [start, end] != domain {
+            s = s.edit_axis(axis, |curve| curve.trim(start, end))?;
+        }
+    }
     Ok(s)
 }
 
@@ -1286,6 +1234,10 @@ fn topology_digest(entity: &Entity) -> String {
     }
     format!("{h:016x}")
 }
+fn constant_curve(curve: &Curve) -> bool {
+    curve.control_points.iter().all(|point| point == &curve.control_points[0])
+}
+
 fn verify_correspondence(
     edge: &Edge,
     pcurve: &Curve,
@@ -1563,6 +1515,7 @@ impl<'a> Builder<'a> {
         expected_surface: usize,
         curve_edges: &BTreeMap<usize, usize>,
         owned_edges: &mut BTreeSet<usize>,
+        work: &mut usize,
     ) -> Result<usize> {
         let entity = self.e.get(&de).ok_or_else(|| {
             trimmed_error(
@@ -1582,7 +1535,30 @@ impl<'a> Builder<'a> {
         let surface = surface128(self.e, expected_surface, self.scale)?;
         let mut coedges = Vec::with_capacity(segments.len());
         for segment in segments {
-            coedges.push(self.trimmed_boundary_coedge(de, segment, curve_edges, owned_edges)?);
+            if entity.directory.ty == 142 && segment.0 == 0 && segment.1 != 0 {
+                let uv = self.curve(segment.1, 2)?;
+                let remaining = MAX_GRAPH_WORK.saturating_sub(*work);
+                let lift = nurbs_core::editing::exact_projective::lift_pcurve_to_surface(&surface, &uv, (remaining as u64).min(1_000_000))?;
+                graph_work(work, lift.work_used as usize)?;
+                let pieces = lift.pieces.ok_or_else(|| trimmed_unsupported(de, "UV boundary image could not be certified"))?;
+                for piece in pieces {
+                    let [a,b] = piece.domain();
+                    let pcurve = if [a,b] == uv.domain() { uv.clone() } else { uv.trim(a,b)? };
+                    let (edge, reversed) = self.match_or_create_boundary_edge(de, piece, work)?;
+                    coedges.push(Coedge::new(edge, reversed, pcurve));
+                }
+            } else if entity.directory.ty == 142 && segment.0 != 0 && segment.1 == 0 {
+                let curve = self.curve(segment.0, 3)?;
+                let uv = affine_boundary::recover(de, &surface, &curve, work)?;
+                let (edge, reversed) = if let Some(index) = curve_edges.get(&segment.0) {
+                    (*index, false)
+                } else {
+                    self.match_or_create_boundary_edge(de, curve, work)?
+                };
+                coedges.push(Coedge::new(edge, reversed, uv));
+            } else {
+                coedges.push(self.trimmed_boundary_coedge(de, segment, curve_edges, owned_edges)?);
+            }
         }
         for index in 1..coedges.len() {
             self.chain_trimmed_segment(de, index, &mut coedges)?;
@@ -1629,7 +1605,7 @@ impl<'a> Builder<'a> {
             let b = self.trimmed_vertex(de, curve.evaluate(domain[1])?.point)?;
             let edge = self.edges.len();
             self.edges.push(Edge {
-                degenerate: a == b,
+                degenerate: a == b && constant_curve(&curve),
                 vertices: [a, b],
                 curve,
             });
@@ -1744,7 +1720,7 @@ impl<'a> Builder<'a> {
                     .ok_or_else(|| refuse("Invalid IGES end vertex index"))?;
                 let index = self.edges.len();
                 self.edges.push(Edge {
-                    degenerate: a == b,
+                    degenerate: a == b && constant_curve(&curve),
                     vertices: [a, b],
                     curve,
                 });
@@ -1879,6 +1855,7 @@ impl<'a> Builder<'a> {
     ) -> Result<()> {
         let referenced_boundaries = referenced_trimmed_boundaries(self.e);
         let mut owned_edges = BTreeSet::new();
+        let mut boundary_work = 0;
         let entities: &'a BTreeMap<usize, Entity> = self.e;
         for (&de, e) in entities {
             if !matches!(e.directory.ty, 143 | 144)
@@ -1888,9 +1865,13 @@ impl<'a> Builder<'a> {
             }
             let (surface_de, boundaries) = trimmed_face_boundaries(de, e)?;
             let mut loops = Vec::with_capacity(boundaries.len());
+            let surface = surface128(self.e, surface_de, self.scale)?;
+            if e.directory.ty == 144 && u(&e.values, 2, "trimmed surface outer flag")? == 0 {
+                loops.push(self.natural_outer_loop(de, &surface, &mut boundary_work)?);
+            }
             for boundary in boundaries {
                 let index =
-                    self.trimmed_loop(boundary, surface_de, curve_edges, &mut owned_edges)?;
+                    self.trimmed_loop(boundary, surface_de, curve_edges, &mut owned_edges, &mut boundary_work)?;
                 let coedges = &mut self
                     .loops
                     .get_mut(index)
@@ -1899,7 +1880,6 @@ impl<'a> Builder<'a> {
                 Self::orient_trimmed_loop(boundary, coedges, loops.is_empty())?;
                 loops.push(index);
             }
-            let surface = surface128(self.e, surface_de, self.scale)?;
             self.verify_face_loops(&loops, &surface).map_err(|error| {
                 trimmed_error(
                     "BREP_IGES_V2_TRIMMED_DANGLING",
@@ -2062,17 +2042,17 @@ fn trimmed_boundary_segments(de: usize, entity: &Entity) -> Result<(usize, Vec<B
                 ));
             }
             let preference = u(v, 5, "curve-on-surface preference")?;
-            if !matches!(preference, 0 | 2 | 3) {
+            if preference > 3 {
                 return Err(trimmed_unsupported(
                     de,
-                    "3D-only or model-preferred boundary without reliable parameterization",
+                    "unknown curve-on-surface representation preference",
                 ));
             }
             Ok((
                 u(v, 2, "curve-on-surface geometry")?,
                 vec![(
-                    u(v, 3, "boundary model curve")?,
-                    u(v, 4, "boundary pcurve")?,
+                    u(v, 4, "boundary model curve")?,
+                    u(v, 3, "boundary pcurve")?,
                     1,
                 )],
             ))
@@ -2151,11 +2131,9 @@ fn trimmed_face_boundaries(de: usize, e: &Entity) -> Result<(usize, Vec<usize>)>
             format!("Malformed IGES trimmed surface DE {de}"),
         ));
     }
-    if u(v, 2, "trimmed surface outer flag")? != 1 {
-        return Err(trimmed_unsupported(
-            de,
-            "natural outer boundary without an explicit 143/142 loop",
-        ));
+    let flag = u(v, 2, "trimmed surface outer flag")?;
+    if flag > 1 {
+        return Err(trimmed_unsupported(de, "invalid outer boundary flag"));
     }
     let n = u(v, 3, "trimmed surface inner boundary count")?;
     if n > MAX_TOPOLOGY || v.len() != 5 + n {
@@ -2165,15 +2143,15 @@ fn trimmed_face_boundaries(de: usize, e: &Entity) -> Result<(usize, Vec<usize>)>
         ));
     }
     let outer = u(v, 4, "trimmed surface outer boundary")?;
-    if outer == 0 {
+    if (outer == 0) != (flag == 0) {
         return Err(trimmed_error(
             "BREP_IGES_V2_TRIMMED_DANGLING",
-            format!("Missing outer boundary in IGES trimmed surface DE {de}"),
+            format!("Inconsistent outer boundary in IGES trimmed surface DE {de}"),
         ));
     }
     Ok((
         u(v, 1, "trimmed surface geometry")?,
-        (4..5 + n)
+        ((if flag == 0 { 5 } else { 4 })..5 + n)
             .map(|at| u(v, at, "trimmed boundary"))
             .collect::<Result<Vec<_>>>()?,
     ))
@@ -2391,9 +2369,10 @@ pub fn import_iges_v2_with_options(
             ignored.insert("directory-label".into());
         }
         if e.directory.transform != 0 {
-            return Err(refuse(
-                "Per-entity IGES transformations are typed-refused; bake one rigid placement into geometry",
-            ));
+            if !matches!(e.directory.ty, 100 | 102 | 110 | 124 | 126 | 128) {
+                return Err(refuse("IGES directory placement is supported only on curves, spline surfaces and placement matrices"));
+            }
+            placement::read(&entities, e.directory.transform)?;
         }
     }
     let builder = Builder {
@@ -2478,16 +2457,17 @@ impl Writer {
 fn number(x: f64) -> String {
     format!("{x:.17e}")
 }
-fn curve_values(c: &Curve, dim: usize) -> Vec<String> {
+fn curve_values(c: &Curve, dim: usize) -> Result<Vec<String>> {
+    let (start, end) = CurveDispatcher::endpoints(c)?;
     let n = c.control_points.len();
     let mut v = vec![
         "126".into(),
         (n - 1).to_string(),
         c.degree.to_string(),
         "0".into(),
-        ((c.degree + 1 == n) as usize).to_string(),
+        ((c.periodic || start == end) as usize).to_string(),
+        (c.weights.iter().all(|weight| *weight == c.weights[0]) as usize).to_string(),
         (c.periodic as usize).to_string(),
-        "0".into(),
     ];
     v.extend(c.knots.iter().map(|x| number(*x)));
     v.extend(c.weights.iter().map(|x| number(*x)));
@@ -2504,28 +2484,35 @@ fn curve_values(c: &Curve, dim: usize) -> Vec<String> {
         "0".into(),
         "1".into(),
     ]);
-    v
+    Ok(v)
 }
-fn surface_values(s: &Surface) -> Vec<String> {
+fn surface_values(s: &Surface) -> Result<Vec<String>> {
     let nu = s.control_points.len();
     let nv = s.control_points[0].len();
+    let closed_u = s.periodic_u || s.iso(Axis::U, s.knots_u[s.degree_u])? == s.iso(Axis::U, s.knots_u[nu])?;
+    let closed_v = s.periodic_v || s.iso(Axis::V, s.knots_v[s.degree_v])? == s.iso(Axis::V, s.knots_v[nv])?;
+    let polynomial = s.weights.iter().flatten().all(|w| *w == s.weights[0][0]);
     let mut v = vec![
         "128".into(),
         (nu - 1).to_string(),
         (nv - 1).to_string(),
         s.degree_u.to_string(),
         s.degree_v.to_string(),
-        "0".into(),
-        "0".into(),
+        (closed_u as usize).to_string(),
+        (closed_v as usize).to_string(),
+        (polynomial as usize).to_string(),
         (s.periodic_u as usize).to_string(),
         (s.periodic_v as usize).to_string(),
-        "0".into(),
     ];
     v.extend(s.knots_u.iter().map(|x| number(*x)));
     v.extend(s.knots_v.iter().map(|x| number(*x)));
-    v.extend(s.weights.iter().flatten().map(|x| number(*x)));
-    for p in s.control_points.iter().flatten() {
-        v.extend(p.iter().map(|x| number(*x)))
+    for j in 0..nv {
+        v.extend((0..nu).map(|i| number(s.weights[i][j])));
+    }
+    for j in 0..nv {
+        for row in &s.control_points {
+            v.extend(row[j].iter().map(|x| number(*x)));
+        }
     }
     let u = [
         s.knots_u[s.degree_u],
@@ -2536,7 +2523,7 @@ fn surface_values(s: &Surface) -> Vec<String> {
         s.knots_v[s.knots_v.len() - s.degree_v - 1],
     ];
     v.extend([number(u[0]), number(u[1]), number(q[0]), number(q[1])]);
-    v
+    Ok(v)
 }
 fn canonical(values: &[String]) -> String {
     values
@@ -2566,18 +2553,42 @@ fn pad_record(payload: &str, section: char, sequence: usize, width: usize) -> Re
 fn hollerith(s: &str) -> String {
     format!("{}H{s}", s.len())
 }
+// Numeric parameters must fit in one physical record. Hollerith metadata may
+// span records and retains every payload byte, including spaces.
+fn parameter_records(ty: usize, values: &[String]) -> Vec<String> {
+    if ty == 406 {
+        return format!("{};", values.join(",")).as_bytes().chunks(64)
+            .map(|part| String::from_utf8_lossy(part).into_owned()).collect();
+    }
+    let mut rows = Vec::new();
+    let mut row = String::new();
+    for (i, value) in values.iter().enumerate() {
+        if row.len() + value.len() + 1 > 64 {
+            rows.push(std::mem::take(&mut row));
+        }
+        row.push_str(value);
+        row.push(if i + 1 == values.len() { ';' } else { ',' });
+    }
+    rows.push(row);
+    rows
+}
+
 fn render(mut w: Writer) -> Result<String> {
     let mut p_lines = Vec::new();
     let mut p_start = Vec::new();
     for (index, e) in w.entities.iter().enumerate() {
         let de = 2 * index + 1;
-        let text = format!("{};", e.values.join(","));
         p_start.push(p_lines.len() + 1);
-        for chunk in text.as_bytes().chunks(64) {
-            let payload =
-                std::str::from_utf8(chunk).map_err(|_| refuse("Non-ASCII IGES parameter"))?;
+        if e.values.iter().any(|value| !value.is_ascii()) {
+            return Err(refuse("Non-ASCII IGES parameter"));
+        }
+        let rows = parameter_records(e.ty, &e.values);
+        if rows.len() > MAX_ENTITY_PARAMETER_ROWS {
+            return Err(refuse("IGES entity parameter span exceeds supported limit"));
+        }
+        for payload in rows {
             p_lines.push(
-                pad_record(payload, 'P', p_lines.len() + 1, 64)?[..64].to_string()
+                pad_record(&payload, 'P', p_lines.len() + 1, 64)?[..64].to_string()
                     + &format!("{de:>8}P{:>7}", p_lines.len() + 1),
             );
         }
@@ -2594,7 +2605,7 @@ fn render(mut w: Writer) -> Result<String> {
         hollerith("open-scad-viewer"),
         hollerith("OpenSCAD Viewer"),
         hollerith("open-scad-viewer"),
-        hollerith("IGES2"),
+        hollerith("IGES2.3"),
         hollerith("20260917.000000"),
         number(1e-7),
         hollerith(""),
@@ -2609,6 +2620,7 @@ fn render(mut w: Writer) -> Result<String> {
             72,
         )?);
     }
+    p_start.push(p_lines.len() + 1);
     for (index, e) in w.entities.iter_mut().enumerate() {
         let de = 2 * index + 1;
         let a = format!(
@@ -2617,7 +2629,7 @@ fn render(mut w: Writer) -> Result<String> {
         );
         let b = format!(
             "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:<8}{:>8}",
-            e.ty, 0, e.color, 0, e.form, 0, 0, e.label, 0
+            e.ty, 0, e.color, p_start[index + 1] - p_start[index], e.form, 0, 0, e.label, 0
         );
         lines.push(pad_record(&a, 'D', de, 72)?);
         lines.push(pad_record(&b, 'D', de + 1, 72)?);
@@ -2633,6 +2645,9 @@ fn render(mut w: Writer) -> Result<String> {
         p_lines.len()
     );
     lines.push(pad_record(&terminate, 'T', 1, 72)?);
+    if lines.len() > MAX_RECORDS {
+        return Err(refuse("IGES output exceeds record limit"));
+    }
     let text = lines.join("\n") + "\n";
     if text.len() > MAX_BYTES {
         return Err(refuse("IGES output exceeds 16 MiB"));
@@ -2649,13 +2664,13 @@ pub fn export_iges_v2(model: &Model) -> Result<(String, FeatureCertificate, Iges
     let surfaces = model
         .faces
         .iter()
-        .map(|face| w.emit(128, surface_values(&face.surface)))
-        .collect::<Vec<_>>();
+        .map(|face| Ok(w.emit(128, surface_values(&face.surface)?)))
+        .collect::<Result<Vec<_>>>()?;
     let curves = model
         .edges
         .iter()
-        .map(|edge| w.emit(126, curve_values(&edge.curve, 3)))
-        .collect::<Vec<_>>();
+        .map(|edge| Ok(w.emit(126, curve_values(&edge.curve, 3)?)))
+        .collect::<Result<Vec<_>>>()?;
     let mut vertex_values = vec!["502".into(), model.vertices.len().to_string()];
     for vertex in &model.vertices {
         vertex_values.extend(vertex.point.iter().map(|x| number(*x)))
@@ -2676,7 +2691,7 @@ pub fn export_iges_v2(model: &Model) -> Result<(String, FeatureCertificate, Iges
     for l in &model.loops {
         let mut values = vec!["508".into(), l.coedges.len().to_string()];
         for c in &l.coedges {
-            let pc = w.emit(126, curve_values(&c.pcurve, 2));
+            let pc = w.emit(126, curve_values(&c.pcurve, 2)?);
             values.extend([
                 "0".into(),
                 edge_list.to_string(),

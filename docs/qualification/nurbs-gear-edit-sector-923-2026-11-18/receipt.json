@@ -1,0 +1,43 @@
+{
+  "id": "NURBS-0923",
+  "testedBase": "deb284066cd45d3d15e83d3979cf83c5b10dd403",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 486,
+  "scope": [
+    "Repeated coordinate and weight edits to ordinary and seed sectors, exact comparisons across all sectors after invalid knot and piece-count replacements."
+  ],
+  "logSha256": "ea1381677552f1feda4a225e73585f02e74bfef0aa4a915f74eb9e0443bba2fd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "2dd97e9b9ee069c2822abad03caa7b0119542536d84ea4e6f0783bc2e98743bd",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2dcd0c05fed7322a0c9696d88eeb384a72c5c40808ba0f1885e3879ee0502535",
+    "crates/brep-core/tests/gear_profile.rs": "9dbb0d151f2b7b1d59f1150046b8189bcf322c15506775c49b43022a6208af41"
+  }
+}

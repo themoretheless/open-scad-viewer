@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0876",
+  "testedBase": "20bf88982856927c8a7ef704f71509bc216deffa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Outward-rounded nominal transverse contact ratio over the shared active involutes; checked external and internal meshes at shifted centre distances against working-angle equations, invalid distances and loss of overlap."
+  ],
+  "logSha256": "32a2dee512bfa89ed643c70900a5a6082d200a249293483a13f1b074bdbca0c5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2c2f3f31ec4fbfcb0904b068ecb6455daf015b3ab74313b7a740c8f4e59ae0a1",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "1d438b3b95ed781b7732b79a709dc46133b03ae8d724c9a004d05f6e0d65da10",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "5350a0f7325e140c0a5cfc36303e9538f875ec508e5b3910df0be240c27489b8"
+  }
+}

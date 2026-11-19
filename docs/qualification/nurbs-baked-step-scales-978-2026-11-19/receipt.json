@@ -1,0 +1,12 @@
+{
+  "id": "NURBS-0978",
+  "testedBase": "e0fadbd5be7a332fd04afa42f14848b09f6fe9a9",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "3f41a82a311076f1852bd28d9195a214c6824a6a324888865a6198f3fb235061",
+    "crates/cad-step/tests/baked_step_scales.rs": "d97b045a0c6a4c836fd6a81c5615434ea28b0b63739e59b1c6134175c126fb43",
+    "crates/brep-core/src/model/transform.rs": "8668caa1365c1a27b5fb7cbcc00091321018efdc78d8522ad3203c086000a94d"
+  },
+  "fixtureSha256": "2f3cf2eca118bf8c2617691457950643f20303f126f871fa7bb950a16a7f10af",
+  "command": "CAD_BAKED_SCALE_FIXTURE=/tmp/osv978.step CAD_ELLIPTIC_SCALE_FIXTURE=/tmp/osv978-ellipse.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "[(5.5, 2.0, 8.0, 576.0), (15.5, 2.0, -8.0, 576.0), (35.5, 2.0, 8.0, 576.0)]\nElliptic cylinder: (7.0, 11.0, 6.999999999999999, 904.7786843751541)"
+}

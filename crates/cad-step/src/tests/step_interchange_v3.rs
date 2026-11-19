@@ -215,6 +215,9 @@ fn product_assembly_frames_use_their_own_units() {
         )
         .replace("ENDSEC;\nEND-ISO", &format!("{extra}ENDSEC;\nEND-ISO"));
     let (model, _, _) = import_step_v9(&moved).unwrap();
+    let (retained, _, _) = crate::import_step_v10(&moved).unwrap();
+    assert_eq!(retained.bodies.len(), 2);
+    assert_eq!(retained.vertices, model.vertices);
     let max = model
         .vertices
         .iter()
@@ -3474,14 +3477,19 @@ fn check_shared_step_affine_placement(scale_z: f64) {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
     let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
-    let row = step.lines().find(|line| line.contains("=CARTESIAN_TRANSFORMATION_OPERATOR_3D(")).unwrap();
-    let (id, call) = row.split_once("=CARTESIAN_TRANSFORMATION_OPERATOR_3D(").unwrap();
-    let fields: Vec<_> = call.trim_end_matches(");").split(',').collect();
-    let [_, x, y, p, _, z] = fields[..] else { panic!("unexpected operator fields"); };
-    let affine = format!(
-        "{id}=(CARTESIAN_TRANSFORMATION_OPERATOR('',{x},{y},{p},2.)CARTESIAN_TRANSFORMATION_OPERATOR_3D({z})CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(3.,{scale_z:.1})GEOMETRIC_REPRESENTATION_ITEM()REPRESENTATION_ITEM(''));"
-    );
-    let assembly = crate::import_step_shared_assembly(&step.replacen(row, &affine, 1)).unwrap();
+    let rigid = crate::import_step_shared_assembly(&step).unwrap();
+    let mut placements = rigid.occurrences().to_vec();
+    for row in &mut placements[0].transform[..3] {
+        for (component, scale) in row.iter_mut().zip([2., 3., 4.]) { *component *= scale; }
+    }
+    let scaled = crate::StepSharedAssembly::from_placed_solids(rigid.definitions().to_vec(), placements).unwrap();
+    let affine = crate::export_step_shared_assembly(&scaled).unwrap();
+    let fields = affine.split_once("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(")
+        .unwrap().1.split_once(')').unwrap().0;
+    let (sy, sz) = fields.split_once(',').unwrap();
+    let signed = if scale_z < 0. { format!("{sy},-{sz}") } else { fields.to_owned() };
+    let assembly = crate::import_step_shared_assembly(&affine.replace(
+        &format!("3DNON_UNIFORM({fields})"), &format!("3DNON_UNIFORM({signed})"))).unwrap();
     let exported = crate::export_step_shared_assembly(&assembly).unwrap();
     assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 1);
     assert_eq!(exported.matches("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(").count(), 1);
@@ -3498,7 +3506,6 @@ fn check_shared_step_affine_placement(scale_z: f64) {
             assert!((expected - actual).abs() < 1e-10);
         }
     }
-    let rigid = crate::import_step_shared_assembly(&step).unwrap();
     let original = rigid.occurrences()[0].transform;
     let model = back.materialize(0).unwrap();
     let [x, y, z] = back.definitions()[0].vertices[0].point;
@@ -3837,6 +3844,18 @@ fn planetary_gear_set_step_round_trips_twenty_spur_occurrences() {
     let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
     assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
     assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
+    let directions: Vec<_> = text.lines().filter_map(|line| {
+        let (_, entity) = line.split_once('=')?;
+        entity.starts_with("DIRECTION(").then_some(entity)
+    }).collect();
+    let distinct: std::collections::BTreeSet<_> = directions.iter().collect();
+    assert_eq!(directions.len(), distinct.len());
+    assert!(directions.len() >= 3 && directions.len() < 2 * 20);
+    eprintln!("Spinner STEP shares {} distinct directions across 40 axis references", directions.len());
+    if let Some(path) = std::env::var_os("CAD_SPINNER_RIGID_STEP") {
+        std::fs::write(path, &text).unwrap();
+    }
+    assert_eq!(text.matches("ITEM_DEFINED_TRANSFORMATION(").count(), 20);
     let (back, _, _) = crate::import_step_v9(&text).unwrap();
     assert_eq!(back.bodies.len(), 20);
     assert_eq!(back.validate().unwrap().boundary_edge_count, 0);
@@ -3863,13 +3882,24 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     assert_eq!(stored_faces, sun.faces.len() + ring.faces.len() + planets.prototype().faces.len());
     assert_eq!(placed_faces - stored_faces, 17 * planets.prototype().faces.len());
     eprintln!("Spinner STEP: {} bytes, {stored_faces} stored faces, {placed_faces} placed faces", text.len());
+    let named = crate::import_named_step_assembly(&text).unwrap();
+    let usage = named.surface_usage().unwrap();
+    assert_eq!(usage.len(), 3);
+    assert_eq!(usage[0].part.quantity, 18);
+    assert_eq!(usage.iter().map(|row| row.stored_faces).sum::<usize>(), stored_faces);
+    assert_eq!(usage.iter().map(|row| row.placed_faces).sum::<usize>(), placed_faces);
+    let planet_poles: u64 = planets.prototype().faces.iter().map(|face| {
+        (face.surface.control_points.len() * face.surface.control_points[0].len()) as u64
+    }).sum();
+    assert_eq!((usage[0].stored_poles, usage[0].placed_poles), (planet_poles, 18 * planet_poles));
+    eprintln!("Shared planet surface poles: {planet_poles} stored, {} placed", usage[0].placed_poles);
     let planet_index = imported.occurrences()[2].definition;
     assert!(imported.occurrences()[2..].iter().all(|item| item.definition == planet_index));
     let first_planet = imported.materialize(2).unwrap();
     assert_eq!(first_planet.faces.len(), planets.prototype().faces.len());
     assert_eq!(first_planet.validate().unwrap().boundary_edge_count, 0);
 
-    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec }).unwrap();
+    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec.clone() }).unwrap();
     assert!(imported.replace_definition(usize::MAX, edited.clone()).is_err());
     imported.replace_definition(planet_index, edited).unwrap();
     let exported = crate::export_step_shared_assembly(&imported).unwrap();
@@ -3892,6 +3922,42 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
         assert!((maximum_z(&reopened.definitions()[index])
             - maximum_z(&imported.definitions()[index])).abs() < 1e-10);
     }
+    // Edit the bore and regroup all placements before exporting the complete spinner.
+    let edited_sun = brep_core::gear(&brep_core::GearSpec {
+        teeth: 32, bore: 42., helix_angle_deg: -35., ..spec
+    }).unwrap();
+    let sun_definition = imported.occurrences()[0].definition;
+    imported.replace_definition(sun_definition, edited_sun.clone()).unwrap();
+    let groups: Vec<_> = (0..20).map(|index| Some(usize::from(index >= 2))).collect();
+    let grouped = crate::export_grouped_step_assembly(&imported, &["Central gears", "Planets"], &groups).unwrap();
+    let result = crate::import_step_shared_assembly(&grouped).unwrap();
+    assert_eq!(result.definitions().len(), 3);
+    assert_eq!(result.occurrences().len(), 20);
+    let sun = &result.definitions()[result.occurrences()[0].definition];
+    let bore_radius = sun.vertices.iter().map(|v| v.point[0].hypot(v.point[1])).fold(f64::INFINITY, f64::min);
+    assert!((bore_radius - 21.).abs() < 1e-8);
+    assert_eq!(sun.edges.len(), edited_sun.edges.len());
+    for (edge, original) in sun.edges.iter().zip(&edited_sun.edges) {
+        assert_eq!(edge.curve.degree, original.curve.degree);
+        assert_eq!(edge.curve.control_points.len(), original.curve.control_points.len());
+        assert_eq!(edge.curve.weights.len(), original.curve.weights.len());
+        assert_eq!(edge.curve.knots.len(), original.curve.knots.len());
+        for (a, b) in edge.curve.weights.iter().chain(&edge.curve.knots)
+            .zip(original.curve.weights.iter().chain(&original.curve.knots)) {
+            assert!((a-b).abs() < 1e-12);
+        }
+        for (a, b) in edge.curve.control_points.iter().flatten().zip(original.curve.control_points.iter().flatten()) {
+            assert!((a-b).abs() < 1e-10);
+        }
+    }
+    let shared_planet = result.occurrences()[2].definition;
+    for (actual, expected) in result.occurrences()[2..].iter().zip(imported.occurrences()[2..].iter()) {
+        assert_eq!(actual.definition, shared_planet);
+        for (a, b) in actual.transform.iter().flatten().zip(expected.transform.iter().flatten()) {
+            assert!((a-b).abs() < 1e-10);
+        }
+    }
+
 }
 
 #[test]
@@ -4132,4 +4198,137 @@ fn interference_groups_connect_chains_but_exclude_touch_and_isolated_parts() {
     assert_eq!(scene.interference_groups(4).unwrap(), [vec![0, 2, 4], vec![1, 3]]);
     assert!(scene.interference_groups(3).is_err());
     assert!(scene.extract_occurrences(&[0, 6]).unwrap().interference_groups(0).unwrap().is_empty());
+}
+
+#[test]
+fn cross_group_interference_limits_work_to_selected_interfaces() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        [0., 1., 2.5, 10., 11.].into_iter().map(placed).collect()).unwrap();
+    let mut regions = scene.interferences_between(&[2, 4, 3], &[0, 1], 1).unwrap();
+    assert_eq!(regions.len(), 1);
+    let (indices, common) = regions.pop().unwrap();
+    assert_eq!(indices, [2, 1]);
+    let volume = brep_core::analysis::mass_properties(&common.unwrap(), 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume - 2.).abs() < 1e-8);
+    assert!(scene.interferences_between(&[2], &[1], 0).is_err());
+    assert!(scene.interferences_between(&[0], &[3], 0).unwrap().is_empty());
+    for invalid in [&[0, 0][..], &[1], &[5], &[]] {
+        assert!(scene.interferences_between(invalid, &[1], 9).is_err());
+    }
+}
+
+#[test]
+fn interface_clearances_exclude_internal_pairs_and_retain_world_distance() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        [0., 1., 5., 50.].into_iter().map(placed).collect()).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry, pairs: 100, contact_pairs: 1000, cells: 100_000, domain_cells: 1_000_000,
+    };
+    let check = |minimum, budget| scene.clearances_between(&[2, 3], &[0, 1], minimum,
+        1e-5, policy.tolerance_uv, limits, budget);
+    let rows = check(2.5, 1).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].0, [2, 1]);
+    let report = rows[0].1.as_ref().unwrap();
+    assert_eq!(report.status, crate::StepClearanceStatus::BelowMinimum);
+    let [lo, hi] = report.measurement.distance_interval_mm.unwrap();
+    assert!(lo <= 2. && hi >= 2.);
+    assert!(check(1.5, 0).unwrap().is_empty());
+    assert!(check(2.5, 0).is_err());
+    assert!(check(f64::NAN, 1).is_err());
+}
+
+#[test]
+fn closest_interface_pair_preserves_orientation_and_budget_bounds() {
+    let solid = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![solid],
+        [0., 1., 7., 40.].into_iter().map(placed).collect()).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits { validity: policy.geometry, pairs: 100,
+        contact_pairs: 1000, cells: 100_000, domain_cells: 1_000_000 };
+    let check = |budget| scene.minimum_clearance_between(&[2, 3], &[0, 1],
+        1e-5, policy.tolerance_uv, limits, budget);
+    let result = check(1).unwrap();
+    assert!(result.converged);
+    assert_eq!(result.upper_bound_pair, Some([2, 1]));
+    assert!(result.lower_bound_mm <= 4. && result.upper_bound_mm.unwrap() >= 4.);
+    let bounded = check(0).unwrap();
+    assert!(bounded.lower_bound_mm > 3.99 && bounded.lower_bound_mm <= 4.);
+    assert!(bounded.upper_bound_mm.is_none());
+    assert!(scene.minimum_clearance_between(&[0], &[0], 1e-5, policy.tolerance_uv, limits, 1).is_err());
+}
+
+#[test]
+fn group_move_round_trips_scaled_shared_placements_and_rejects_partial_changes() {
+    let block = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let placed = |x, scale| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [scale, 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let mut scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(1., 1.), placed(4., -2.), placed(8., 1.)]).unwrap();
+    let motion = [[0., -1., 0., 3.], [1., 0., 0., 5.], [0., 0., 1., 0.], [0., 0., 0., 1.]];
+    assert!(scene.move_occurrences(&[0, 3], motion).is_err());
+    assert!(scene.move_occurrences(&[0, 0], motion).is_err());
+    assert!(scene.move_occurrences(&[0], [[0.; 4]; 4]).is_err());
+    assert_eq!(scene.occurrences()[0].transform, placed(1., 1.).transform);
+    scene.move_occurrences(&[1, 0], motion).unwrap();
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 1);
+    assert_eq!(back.occurrences()[2].transform, placed(8., 1.).transform);
+    for (index, y, scale) in [(0, 6., 1.), (1, 9., -2.)] {
+        let transform = back.occurrences()[index].transform;
+        assert_eq!(transform[0], [0., -1., 0., 3.]);
+        assert_eq!(transform[1], [scale, 0., 0., y]);
+    }
+}
+
+#[test]
+fn copied_subassembly_keeps_original_definition_links_and_selection_order() {
+    let solid = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let mut scene = crate::StepSharedAssembly::from_placed_solids(vec![solid], vec![placed(2.), placed(5.)]).unwrap();
+    let motion = placed(10.).transform;
+    assert!(scene.copy_occurrences(&[1, 1], motion).is_err());
+    assert!(scene.copy_occurrences(&[0, 2], motion).is_err());
+    assert!(scene.copy_occurrences(&[0; 255], motion).is_err());
+    assert_eq!(scene.copy_occurrences(&[1, 0], motion).unwrap(), 2..4);
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 1);
+    let positions: Vec<_> = back.occurrences().iter().map(|o| o.transform[0][3]).collect();
+    assert_eq!(positions, [2., 5., 15., 12.]);
+}
+
+#[test]
+fn subset_variant_stays_shared_after_edit_and_step_round_trip() {
+    let block = |height| brep_core::cuboid([0.; 3], [1., 1., height]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let mut scene = crate::StepSharedAssembly::from_placed_solids(vec![block(1.)],
+        [0., 3., 6.].into_iter().map(placed).collect()).unwrap();
+    assert!(scene.replace_variant(&[1, 1], block(2.)).is_err());
+    assert_eq!(scene.replace_variant(&[2, 1], block(2.)).unwrap(), 1);
+    assert!(scene.replace_variant(&[0, 1], block(3.)).is_err());
+    assert_eq!(scene.replace_variant(&[1, 2], block(4.)).unwrap(), 1);
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 2);
+    assert_eq!(back.occurrences()[1].definition, back.occurrences()[2].definition);
+    for (i, expected) in [1., 4., 4.].into_iter().enumerate() {
+        let mass = brep_core::analysis::mass_properties(&back.materialize(i).unwrap(), 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - expected).abs() < 1e-8);
+    }
 }

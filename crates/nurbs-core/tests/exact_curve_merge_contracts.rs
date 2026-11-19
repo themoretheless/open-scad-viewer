@@ -13315,3 +13315,307 @@ fn planar_contour_fill_boundary_distance_ignores_inactive_loops() {
     assert!(lo <= 1. && 1. <= hi && hi - lo <= 1e-5);
     assert!(measure([1., 0.], FillRule::EvenOdd).is_err());
 }
+
+#[test]
+fn mixed_degree_profile_compression_eliminates_both_artificial_seams() {
+    use nurbs_core::editing::exact_curve_merge::compress_mixed_degree_chain;
+    let segment = |degree:usize, start:f64, weight:f64| Curve {
+        degree, knots:[vec![start;degree+1],vec![start+2.;degree+1]].concat(),
+        control_points:(0..=degree).map(|i| vec![start+2.*i as f64/degree as f64, 1.]).collect(),
+        weights:vec![weight;degree+1], periodic:false,
+    };
+    let mut profile = [segment(1,-2.,2.),segment(2,0.,4.),segment(1,2.,1.)];
+    let report = compress_mixed_degree_chain(&profile,1_000_000).unwrap();
+    let result = report.curve.unwrap();
+    assert_eq!(result.degree,1);
+    assert_eq!(result.knots,[-2.,-2.,4.,4.]);
+    assert_eq!(result.control_points,[vec![-2.,1.],vec![4.,1.]]);
+    assert!(compress_mixed_degree_chain(&profile,report.work_used-1).unwrap().curve.is_none());
+    profile[2].control_points[0][1] = 1_f64.next_up();
+    assert!(compress_mixed_degree_chain(&profile,1_000_000).unwrap().curve.is_none());
+}
+
+#[test]
+fn ordered_profile_orients_reversed_knots_without_rounding_the_clock() {
+    use nurbs_core::editing::exact_curve_merge::orient_and_compress_chain as join;
+    let left = Curve { degree:1, knots:vec![0.,0.,1.,1.], control_points:vec![vec![0.,0.],vec![1.,0.]], weights:vec![1.;2], periodic:false };
+    let mut right = Curve { degree:1, knots:vec![1.,1.,2.,4.,4.], control_points:vec![vec![5.,1.],vec![3.,2.],vec![1.,0.]], weights:vec![2.,3.,2.], periodic:false };
+    let original = [left.clone(),right.clone()];
+    let full = join(&original,1_000_000).unwrap();
+    let output = full.curve.unwrap();
+    for t in [1.,2.,3.,3.5,4.] {
+        let a = output.evaluate(t).unwrap().point;
+        let b = right.evaluate(5.-t).unwrap().point;
+        for i in 0..2 { assert!((a[i]-b[i]).abs()<1e-12); }
+    }
+    assert!(join(&original,1).unwrap().curve.is_none());
+    right.knots[2] = 1_f64.next_up();
+    assert!(join(&[left.clone(),right.clone()],1_000_000).unwrap().curve.is_none());
+    right.control_points[0] = vec![1.,0.];
+    assert!(join(&[left,right],1_000_000).is_err());
+}
+
+#[test]
+fn unordered_partition_restores_first_and_last_reversed_segments() {
+    use nurbs_core::editing::exact_curve_merge::assemble_parameter_partition as assemble;
+    let segment = |start:f64, a:f64, b:f64| Curve {
+        degree:1, knots:vec![start,start,start+1.,start+1.],
+        control_points:vec![vec![a,0.],vec![b,0.]], weights:vec![1.;2],periodic:false,
+    };
+    let mut pieces = [segment(2.,3.,2.),segment(0.,1.,0.),segment(1.,1.,2.)];
+    let result = assemble(&pieces,1_000_000).unwrap().curve.unwrap();
+    assert_eq!(result.knots,[0.,0.,3.,3.]);
+    assert_eq!(result.control_points,[vec![0.,0.],vec![3.,0.]]);
+    for start in [0.5,1.25] {
+        pieces[2] = segment(start,1.,2.);
+        assert!(assemble(&pieces,1_000_000).unwrap().curve.is_none());
+    }
+    assert!(assemble(&[segment(0.,0.,1.),segment(1.,1.,0.)],1_000_000).is_err());
+}
+
+#[test]
+fn endpoint_graph_assembles_independent_local_clocks_from_the_selected_end() {
+    use nurbs_core::editing::exact_curve_merge::assemble_open_endpoint_chain as assemble;
+    let line = |a:f64,b:f64,t:f64,d:f64| Curve { degree:1, knots:vec![t,t,t+d,t+d],
+        control_points:vec![vec![a,0.],vec![b,0.]], weights:vec![1.;2],periodic:false };
+    let curves = [line(4.,2.,8.,2.),line(0.,1.,9.,1.),line(2.,1.,-3.,1.)];
+    for (anchor,end) in [(0.,4.),(4.,0.)] {
+        let compact = assemble(&curves,&[anchor,-0.],1_000_000).unwrap().curve.unwrap();
+        assert_eq!(compact.knots,[0.,0.,4.,4.]);
+        assert_eq!(compact.control_points,[vec![anchor,0.],vec![end,0.]]);
+    }
+    assert!(assemble(&curves,&[2.,0.],1_000_000).is_err());
+    assert!(assemble(&curves,&[0.,0.],1).unwrap().curve.is_none());
+    let mut branch = curves.to_vec();
+    branch.push(line(2.,9.,0.,1.));
+    assert!(assemble(&branch,&[0.,0.],1_000_000).is_err());
+    let mut disconnected = curves.to_vec();
+    disconnected.extend([line(7.,8.,0.,1.),line(8.,7.,0.,1.)]);
+    assert!(assemble(&disconnected,&[0.,0.],1_000_000).is_err());
+}
+
+#[test]
+fn closed_endpoint_wire_obeys_chosen_edge_direction_and_rejects_other_cycles() {
+    use nurbs_core::editing::exact_curve_merge::assemble_closed_endpoint_chain as assemble;
+    let edge = |a:[f64;2], b:[f64;2]| Curve {degree:1, knots:vec![8.,8.,9.,9.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[0.,0.]; let b=[1.,0.]; let c=[0.,1.];
+    let triangle = [edge(c,b),edge(a,b),edge(a,c)];
+    for (reverse,points) in [(false,[a,b,c,a]),(true,[b,a,c,b])] {
+        let curve=assemble(&triangle,1,reverse,1_000_000).unwrap().curve.unwrap();
+        for (i,point) in points.iter().enumerate() {
+            assert_eq!(curve.evaluate(i as f64).unwrap().point,point);
+        }
+    }
+    assert!(assemble(&triangle,3,false,1_000_000).is_err());
+    assert!(assemble(&triangle[..2],0,false,1_000_000).is_err());
+    let mut separate=triangle.to_vec();
+    separate.extend([edge([3.,0.],[4.,0.]),edge([4.,0.],[3.,0.])]);
+    assert!(assemble(&separate,0,false,1_000_000).is_err());
+}
+
+#[test]
+fn planar_loop_assembly_requires_interior_separation_proof() {
+    use nurbs_core::editing::exact_curve_merge::assemble_simple_planar_loop as assemble;
+    let edge = |a:[f64;2], b:[f64;2]| Curve {degree:1, knots:vec![0.,0.,1.,1.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[0.,0.]; let b=[1.,0.]; let c=[1.,1.]; let d=[0.,1.];
+    let square = [edge(c,b),edge(a,b),edge(d,c),edge(a,d)];
+    let curve=assemble(&square,1,false,1_000_000,1e-8,6,10000).unwrap().curve.unwrap();
+    for (i,point) in [a,b,c,d,a].iter().enumerate() {
+        assert_eq!(curve.evaluate(i as f64).unwrap().point,point);
+    }
+    assert!(assemble(&square,1,false,1_000_000,1e-8,5,10000).is_err());
+    let crossing = [edge(a,c),edge(c,b),edge(b,d),edge(d,a)];
+    assert!(assemble(&crossing,0,false,1_000_000,1e-8,6,10000).is_err());
+}
+
+#[test]
+fn planar_wire_enforces_material_winding_without_moving_the_seam() {
+    use nurbs_core::editing::exact_curve_merge::assemble_wound_planar_loop as assemble;
+    let edge = |a:[f64;2], b:[f64;2]| Curve {degree:1, knots:vec![0.,0.,1.,1.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[2.,3.]; let b=[4.,3.]; let c=[2.,4.];
+    let edges=[edge(b,c),edge(a,c),edge(b,a)];
+    for (clockwise,points) in [(true,[b,a,c,b]),(false,[b,c,a,b])] {
+        let curve=assemble(&edges,0,clockwise,1_000_000,1e-8,1e-8,3,10000).unwrap().curve.unwrap();
+        for (i,p) in points.iter().enumerate() {
+            assert_eq!(curve.evaluate(i as f64).unwrap().point,p);
+        }
+    }
+    assert!(assemble(&edges,0,true,1_000_000,1e-8,1e-8,3,2).is_err());
+}
+
+#[test]
+fn spatial_wire_preserves_height_and_requires_a_simple_projection() {
+    use nurbs_core::editing::exact_curve_merge::assemble_simple_spatial_loop as assemble;
+    let edge = |a:[f64;3], b:[f64;3]| Curve {degree:1, knots:vec![0.,0.,1.,1.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[0.,0.,0.]; let b=[1.,0.,0.]; let c=[1.,1.,1.]; let d=[0.,1.,0.];
+    let edges=[edge(a,b),edge(c,b),edge(d,a),edge(c,d)];
+    let result=assemble(&edges,0,false,2,1_000_000,1e-8,6,10000).unwrap().curve.unwrap();
+    for (i,p) in [a,b,c,d,a].iter().enumerate() {
+        assert_eq!(result.evaluate(i as f64).unwrap().point,p);
+    }
+    assert!(assemble(&edges,0,false,0,1_000_000,1e-8,6,10000).is_err());
+    assert!(assemble(&edges,0,false,3,1_000_000,1e-8,6,10000).is_err());
+}
+
+#[test]
+fn cube_edge_hexagon_admits_oblique_simple_projection() {
+    use nurbs_core::editing::exact_curve_merge::{assemble_oblique_simple_loop as oblique,assemble_simple_spatial_loop as axis};
+    let points=[[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[1.,1.,1.],[0.,1.,1.],[0.,0.,1.]];
+    let edges:Vec<_>=(0..6).map(|i| Curve {degree:1,knots:vec![0.,0.,1.,1.],weights:vec![1.;2],periodic:false,
+        control_points:vec![points[i].to_vec(),points[(i+1)%6].to_vec()]}).collect();
+    for k in 0..3 {assert!(axis(&edges,0,false,k,1_000_000,1e-8,15,10000).is_err());}
+    let forms=[[1.,0.,-1.],[0.,1.,1.]];
+    let curve=oblique(&edges,0,false,forms,1_000_000,1e-8,15,10000).unwrap().curve.unwrap();
+    for (i,p) in points.iter().enumerate() {assert_eq!(curve.evaluate(i as f64).unwrap().point,p);}
+    assert!(oblique(&edges,0,false,[[1.;3];2],1_000_000,1e-8,15,10000).is_err());
+}
+
+#[test]
+fn pairwise_spatial_proof_distinguishes_a_lifted_from_a_true_crossing() {
+    use nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop as assemble;
+    let loop_at = |z| {
+        let p=[[0.,0.,0.],[2.,2.,0.],[0.,2.,z],[2.,0.,z]];
+        (0..4).map(|i| Curve {degree:1,knots:vec![0.,0.,1.,1.],weights:vec![1.;2],
+            control_points:vec![p[i].to_vec(),p[(i+1)%4].to_vec()],periodic:false}).collect::<Vec<_>>()
+    };
+    let raised=loop_at(1.);
+    let curve=assemble(&raised,0,false,1_000_000,1e-8,6,1000).unwrap().curve.unwrap();
+    assert_eq!(curve.evaluate(2.5).unwrap().point,[1.,1.,1.]);
+    assert_eq!(curve.evaluate(0.5).unwrap().point,[1.,1.,0.]);
+    assert!(assemble(&loop_at(0.),0,false,1_000_000,1e-8,6,1000).is_err());
+    assert!(assemble(&raised,0,false,1_000_000,1e-8,5,1000).is_err());
+}
+
+#[test]
+fn spatial_wire_proves_each_original_knot_span_including_same_edge_pairs() {
+    use nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop as assemble;
+    let build = |z| {
+        let a=vec![0.,0.,0.]; let b=vec![2.,2.,0.]; let c=vec![0.,2.,z]; let d=vec![2.,0.,z];
+        [Curve{degree:1,knots:vec![0.,0.,1.,2.,3.,3.],control_points:vec![a.clone(),b,c,d.clone()],
+            weights:vec![1.;4],periodic:false},
+         Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![d,a],weights:vec![1.;2],periodic:false}]
+    };
+    let curve=assemble(&build(1.),0,false,1_000_000,1e-8,6,1000).unwrap().curve.unwrap();
+    assert_eq!(curve.evaluate(2.5).unwrap().point,[1.,1.,1.]);
+    assert!(assemble(&build(0.),0,false,1_000_000,1e-8,6,1000).is_err());
+    assert!(assemble(&build(1.),0,false,1_000_000,1e-8,5,1000).is_err());
+}
+
+#[test]
+fn spatial_contour_clearance_covers_all_pairs_and_preserves_source_witnesses() {
+    use nurbs_core::analysis::curve_measure::measure_spatial_contour_sets_distance as measure;
+    let triangle = |z| Curve {degree:1,knots:vec![2.,2.,3.,4.,5.,5.],
+        control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
+        weights:vec![1.;4],periodic:false};
+    let (a,b,c)=(triangle(-8.),triangle(1.),triangle(3.));
+    let r=measure(&[&a,&b],&[&c],1e-6,1000).unwrap();
+    assert!(r.converged && r.bounds[0]<=2. && r.bounds[1]>=2.);
+    assert_eq!(r.witness_contours,[1,0]);
+    let p=b.evaluate(r.witness_parameters[0]).unwrap().point;
+    let q=c.evaluate(r.witness_parameters[1]).unwrap().point;
+    assert!((p[0]-q[0]).hypot(p[1]-q[1]).hypot(p[2]-q[2])<=r.bounds[1]);
+    assert!(measure(&[&a,&b],&[&c],1e-6,17).is_err());
+    let mut open=c.clone(); open.control_points[3][2]+=1.;
+    assert!(measure(&[&a],&[&open],1e-6,1000).is_err());
+}
+
+#[test]
+fn closest_spatial_pair_skips_diagonal_and_keeps_coincident_members() {
+    use nurbs_core::analysis::curve_measure::closest_spatial_contour_pair as closest;
+    let triangle = |z| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],
+        control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
+        weights:vec![1.;4],periodic:false};
+    let (a,b,c)=(triangle(10.),triangle(-1.),triangle(8.));
+    let r=closest(&[&a,&b,&c],1e-7,27).unwrap();
+    assert!(r.converged && r.bounds[0]<=2. && r.bounds[1]>=2.);
+    assert_eq!(r.witness_contours,[0,2]);
+    assert!(closest(&[&a,&b,&c],1e-7,26).is_err());
+    let duplicate=closest(&[&a,&b,&a],1e-7,1000).unwrap();
+    assert_eq!(duplicate.witness_contours,[0,2]);
+    assert!(duplicate.bounds[0]<=0. && duplicate.bounds[1]<1e-7);
+    assert!(closest(&[&a],1e-7,100).is_err());
+}
+
+#[test]
+fn clearance_inspection_retains_violations_safe_and_exact_boundary_pairs() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let triangle = |z| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],
+        control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
+        weights:vec![1.;4],periodic:false};
+    let (a,b,c)=(triangle(0.),triangle(1.),triangle(3.));
+    let set=[&a,&b,&c];
+    let r=inspect(&set,2.,1e-7,27).unwrap();
+    assert_eq!(r.iter().map(|p|(p.contours,p.decision)).collect::<Vec<_>>(),
+        [([0,1],BelowMinimum),([0,2],MeetsMinimum),([1,2],MeetsMinimum)]);
+    assert_eq!(r.iter().map(|p|p.cells).sum::<usize>(),27);
+    assert!(inspect(&set,2.,1e-7,26).is_err());
+    assert!(inspect(&set,f64::NAN,1e-7,27).is_err());
+}
+
+#[test]
+fn exact_box_clearance_resolves_diagonal_equality_without_snapping() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let tri = |p:Vec<Vec<f64>>| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],control_points:p,
+        weights:vec![1.,2.,3.,1.],periodic:false};
+    let a=tri(vec![vec![0.,0.,0.],vec![-1.,0.,0.],vec![0.,-1.,0.],vec![0.,0.,0.]]);
+    let b=tri(vec![vec![3.,4.,0.],vec![4.,4.,0.],vec![3.,5.,0.],vec![3.,4.,0.]]);
+    let exact=inspect(&[&a,&b],5.,1e-7,1000).unwrap();
+    assert_eq!(exact[0].decision,MeetsMinimum);
+    assert_eq!(exact[0].bounds[0],5.);
+    assert_ne!(inspect(&[&a,&b],5_f64.next_up(),1e-7,1000).unwrap()[0].decision,MeetsMinimum);
+}
+
+#[test]
+fn exact_witness_classifies_a_strict_sub_ulp_clearance_violation() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let tri = |x,y| Curve {degree:1,knots:vec![2.,2.,3.,4.,5.,5.],
+        control_points:vec![vec![x,y,0.],vec![x,y,1.],vec![x+1.,y,0.],vec![x,y,0.]],
+        weights:vec![1.,2.,1.,1.],periodic:false};
+    let a=tri(0.,0.);
+    let mut b=tri(3.,4.);
+    // Put both triangles on opposite sides of the 3-4-5 closest endpoints.
+    b.control_points[1][2] = -1.;
+    let mut a=a;
+    a.control_points[2][0] = -1.;
+    let set=[&a,&b];
+    let report=inspect(&set,5_f64.next_up(),1e-7,100).unwrap();
+    assert_eq!(report[0].decision,BelowMinimum);
+    let [u,v]=report[0].witness_parameters;
+    assert_eq!(a.evaluate(u).unwrap().point,[0.,0.,0.]);
+    assert_eq!(b.evaluate(v).unwrap().point,[3.,4.,0.]);
+    assert_eq!(inspect(&set,5.,1e-7,100).unwrap()[0].decision,MeetsMinimum);
+}
+
+#[test]
+fn oblique_support_proves_clearance_at_equality_for_overlapping_cartesian_boxes() {
+    use nurbs_core::analysis::curve_measure::prove_spatial_contour_clearance_along as prove;
+    let contour = |x:f64,y:f64| Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,2.,2.,2.],
+        control_points:vec![vec![x,y,0.],vec![x+8.,y-6.,2.],vec![x+4.,y-3.,4.],
+                            vec![x-4.,y+3.,2.],vec![x,y,0.]],
+        weights:vec![1.,2.,1.,3.,1.],periodic:false};
+    let a=contour(0.,0.); let b=contour(3.,4.);
+    for n in [[3.,4.,0.],[-6.,-8.,0.]] {
+        assert!(prove(&a,&b,n,5.).unwrap());
+        assert!(!prove(&a,&b,n,5_f64.next_up()).unwrap());
+    }
+    assert!(!prove(&a,&b,[1.,0.,0.],5.).unwrap());
+    assert!(prove(&a,&b,[0.;3],5.).is_err());
+}
+
+#[test]
+fn automatic_support_certifies_oblique_gap_and_preserves_strict_failure() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let contour = |x:f64,y:f64| Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,2.,2.,2.],
+        control_points:vec![vec![x,y,0.],vec![x+8.,y-6.,2.],vec![x+4.,y-3.,4.],
+                            vec![x-4.,y+3.,2.],vec![x,y,0.]], weights:vec![1.,2.,1.,3.,1.], periodic:false};
+    let (a,b)=(contour(0.,0.),contour(3.,4.));
+    let pair=[&a,&b];
+    let r=inspect(&pair,5.,1e-6,4).unwrap();
+    assert_eq!(r[0].decision,MeetsMinimum);
+    assert_eq!(r[0].bounds[0],5.);
+    assert_eq!(inspect(&pair,5_f64.next_up(),1e-6,4).unwrap()[0].decision,BelowMinimum);
+}

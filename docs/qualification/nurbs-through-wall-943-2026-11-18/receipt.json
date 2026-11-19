@@ -1,0 +1,15 @@
+{
+  "id": "NURBS-0943",
+  "testedBase": "2f05e1a87c9f637ef910e2d5d7775dda35941ba5",
+  "testTargets": [
+    "brep-core --test spinner_bore_boolean --test gear_profile --test gear_verified_profile"
+  ],
+  "innerWalls": 32,
+  "outerWalls": 384,
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis.rs": "c83218c728af1f1df20dd98d246cbacbeb276f939c61ca040d03ffda6cc8aa32",
+    "crates/brep-core/src/body_analysis/through_wall.rs": "06686df6abc783320c078acbbaab083d9fee79a4534c96bb27630241eaf2488b",
+    "crates/brep-core/tests/spinner_bore_boolean.rs": "daa49c5c0d63af6856675dec88cdd82f5d08718e95bdb6de26c3ab056fdc6bf4"
+  },
+  "logSha256": "00c03df83f5848b9778470525f3ec95187ccb0f201cc2d5794d30e60d8b88b5b"
+}

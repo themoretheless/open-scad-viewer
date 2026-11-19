@@ -1,0 +1,23 @@
+{
+  "id": "NURBS-0965",
+  "testedBase": "4083a881414767d227d5f5266ea3903438366163",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "bba9311fd6849a6c1c2f168b9ba99536897af563ae88f4592e275a722da76896",
+    "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs": "e4c40db5883ac2e3c540a88e9233ce760fe9383ef52b265e2917b15d1a5786bb",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "2deccbac4d7b3766ccc89ccd1409d50542e1c7d0e2e8d648872ea6be9ce13ec2"
+  },
+  "occt": {
+    "solids": 1,
+    "shells": 1,
+    "faces": 4,
+    "volume": 4.0
+  },
+  "fixtureSha256": "99ac7fd321119d1811c215cf57777a42e097971757c75712da278b1c766d4f6a",
+  "fixtureEnvironment": "CAD_IGES_NATURAL_POLE_STEP=/tmp/osv965-pole.step",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Four pole faces form a closed tetrahedron with six ordinary edges",
+    "Finite UV span retained at each pole",
+    "Rational quarter-cone apex collapses while the circular rim remains ordinary"
+  ]
+}

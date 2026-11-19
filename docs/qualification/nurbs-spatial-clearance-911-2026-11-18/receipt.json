@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0911",
+  "testedBase": "6b6aa3cb09154bcd6ddcfe81d8c6a9983ec6f625",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "surface_distance_queries",
+    "--test",
+    "curve_surface_distance"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 470,
+  "scope": [
+    "Quadratic path above a plane has a known interior minimum. Verify signed margin intervals for separation, tangency and penetration, reject negative radius and omit margin on empty regions."
+  ],
+  "logSha256": "08c98b0aef6c777c1244d6c7256e07d8a96de4d9b530df8dff683bbfa6d3e192",
+  "sourceSha256": {
+    "crates/nurbs-core/src/trim/trimmed_surface_distance.rs": "670aa5c03984486add2228648e0b1501fb1f5a1adefcfd23afce91152290ef1d",
+    "crates/nurbs-core/tests/curve_surface_distance.rs": "ca2087e0416102e64b0189dee10f0fa330df649f85dba3f9ad7275aa7afa9116"
+  }
+}

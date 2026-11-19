@@ -274,9 +274,18 @@ fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
     }
 }
 
+/// Display material bound to an assembly occurrence. RGB channels are in 0..=1.
+pub struct StepOccurrenceColour<'a> {
+    pub name: &'a str,
+    pub rgb: [f64; 3],
+}
+
 struct AssemblyExport<'a> {
+    colours: Option<&'a [Option<StepOccurrenceColour<'a>>]>,
+    groups: Option<(&'a [&'a str], &'a [Option<usize>])>,
     placements: &'a [(usize, [[f64; 4]; 4])],
     definition_tolerances: &'a [f64],
+    names: Option<(&'a str, &'a [&'a str])>,
 }
 
 fn export_step_direct_impl(
@@ -286,6 +295,7 @@ fn export_step_direct_impl(
     capability: &'static str,
     semantic: Option<&StepSemanticMetadata>,
     assembly: Option<AssemblyExport<'_>>,
+    share_points: bool,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
     if let Some(semantic) = semantic {
         semantic.presentation.validate_for_model(model)?;
@@ -321,7 +331,7 @@ fn export_step_direct_impl(
         return Err(refuse("STEP /9 export requires a solid body or open shell"));
     }
     let mut w = Writer::new();
-    if assembly.is_some() {
+    if share_points || assembly.is_some() {
         w.shared_points = Some(BTreeMap::new());
     }
     let mut vertex_entities = Vec::new();
@@ -378,6 +388,7 @@ fn export_step_direct_impl(
     let mut pcurves_by_edge = vec![Vec::<usize>::new(); model.edges.len()];
     let mut pcurve_surfaces_by_edge = vec![Vec::<usize>::new(); model.edges.len()];
     let mut coedge_pcurve = BTreeMap::new();
+    let mut uv_curves = BTreeMap::new();
     for (li, loop_) in model.loops.iter().enumerate() {
         for (ci, c) in loop_.coedges.iter().enumerate() {
             let face = model
@@ -385,7 +396,10 @@ fn export_step_direct_impl(
                 .iter()
                 .position(|f| f.outer == li || f.holes.contains(&li))
                 .ok_or_else(|| refuse("Loop has no owning face"))?;
-            let curve2 = if ap242_composition {
+            // Share the immutable UV spline while retaining each use's carrier and orientation.
+            let curve2 = if capability == STEP_INTERCHANGE_V9_CAPABILITY {
+                *uv_curves.entry(format!("{:?}", c.pcurve)).or_insert_with(|| emit_curve_v5(&mut w, &c.pcurve))
+            } else if ap242_composition {
                 emit_curve_v5(&mut w, &c.pcurve)
             } else {
                 emit_curve(&mut w, &c.pcurve)
@@ -630,7 +644,7 @@ fn export_step_direct_impl(
         let product = w.emit(format!(
             "PRODUCT({},{},{},(#{product_context}))",
             quote(authored.map_or("model", |product| product.id.as_str())),
-            quote(authored.map_or("model", |product| product.name.as_str())),
+            quote(assembly.as_ref().and_then(|a| a.names.map(|(_, names)| names[0])).unwrap_or_else(|| authored.map_or("model", |product| product.name.as_str()))),
             quote(authored.map_or("", |product| product.description.as_str())),
         ));
         let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
@@ -650,7 +664,7 @@ fn export_step_direct_impl(
         ));
         if let Some(assembly) = assembly {
             let assembly_product = w.emit(format!(
-                "PRODUCT('planet-set','Planet gear set','',(#{product_context}))"
+                "PRODUCT('planet-set',{},'',(#{product_context}))", quote(assembly.names.map_or("Planet gear set", |(name,_)| name))
             ));
             let assembly_formation = w.emit(format!(
                 "PRODUCT_DEFINITION_FORMATION('1','',#{assembly_product})"
@@ -668,7 +682,8 @@ fn export_step_direct_impl(
             let mut definitions = vec![(representation, definition)];
             for (index, &body) in body_entities.iter().enumerate().skip(1) {
                 let product = w.emit(format!(
-                    "PRODUCT('gear-{index}','Gear {index}','',(#{product_context}))"
+                    "PRODUCT('gear-{index}',{},'',(#{product_context}))",
+                    assembly.names.map_or_else(|| quote(&format!("Gear {index}")), |(_,names)| quote(names[index]))
                 ));
                 let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
                 let definition = w.emit(format!(
@@ -682,8 +697,29 @@ fn export_step_direct_impl(
                 w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"));
                 definitions.push((representation, definition));
             }
+            let mut group_nodes = Vec::new();
+            if let Some((groups, _)) = assembly.groups {
+                for (index, name) in groups.iter().enumerate() {
+                    let product = w.emit(format!("PRODUCT('group-{index}',{},'',(#{product_context}))", quote(name)));
+                    let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
+                    let definition = w.emit(format!("PRODUCT_DEFINITION('design','',#{formation},#{definition_context})"));
+                    let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{definition})"));
+                    let rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{frame}),#{context})"));
+                    w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{rep})"));
+                    let identity = w.emit(format!("ITEM_DEFINED_TRANSFORMATION('','',#{frame},#{frame})"));
+                    let relation = w.emit(format!("(REPRESENTATION_RELATIONSHIP('','',#{rep},#{assembly_rep})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#{identity})SHAPE_REPRESENTATION_RELATIONSHIP())"));
+                    let usage = w.emit(format!("NEXT_ASSEMBLY_USAGE_OCCURRENCE('group-{index}',{},'',#{assembly_definition},#{definition},$)", quote(name)));
+                    let usage_shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{usage})"));
+                    w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relation},#{usage_shape})"));
+                    group_nodes.push((definition, rep));
+                }
+            }
+            let mut directions = BTreeMap::new();
             for (index, (body, matrix)) in assembly.placements.iter().enumerate() {
                 let (representation, definition) = definitions[*body];
+                let (assembly_definition, assembly_rep) = assembly.groups
+                    .and_then(|(_, parents)| parents[index])
+                    .map_or((assembly_definition, assembly_rep), |group| group_nodes[group]);
                 let rigid = crate::step_interchange_v3::is_proper_rigid_placement(*matrix);
                 let scales = if rigid {
                     [1.; 3]
@@ -692,15 +728,22 @@ fn export_step_direct_impl(
                         .ok_or_else(|| refuse("STEP assembly export requires nonsingular orthogonal placements"))?
                 };
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
-                let [x, y, z] = [0, 1, 2].map(|column| {
+                let mut direction_id = |w: &mut Writer, column: usize| {
                     let direction = [0, 1, 2].map(|row| matrix[row][column] / scales[column]);
-                    w.emit(format!("DIRECTION('',({}))", floats(&direction)))
-                });
-                let operator = if rigid {
-                    w.emit(format!(
-                        "CARTESIAN_TRANSFORMATION_OPERATOR_3D('',#{x},#{y},#{origin},1.,#{z})"
-                    ))
+                    *directions.entry(direction.map(f64::to_bits)).or_insert_with(|| {
+                        w.emit(format!("DIRECTION('',({}))", floats(&direction)))
+                    })
+                };
+                let x = direction_id(&mut w, 0);
+                let z = direction_id(&mut w, 2);
+                if assembly.colours.is_some() && !rigid {
+                    return Err(refuse("Styled STEP assemblies require rigid placements"));
+                }
+                let placement_axis = rigid.then(|| w.emit(format!("AXIS2_PLACEMENT_3D('',#{origin},#{z},#{x})")));
+                let operator = if let Some(axis) = placement_axis {
+                    w.emit(format!("ITEM_DEFINED_TRANSFORMATION('','',#{frame},#{axis})"))
                 } else {
+                    let y = direction_id(&mut w, 1);
                     let [sx, sy, sz] = scales;
                     let (sx, sy, sz) = (floats(&[sx]), floats(&[sy]), floats(&[sz]));
                     w.emit(format!(
@@ -715,6 +758,20 @@ fn export_step_direct_impl(
                 ));
                 let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{occurrence})"));
                 w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relationship},#{shape})"));
+                if let (Some(axis), Some(style)) = (placement_axis, assembly.colours.and_then(|styles| styles[index].as_ref())) {
+                    let placement_rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{axis}),#{context})"));
+                    w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{placement_rep})"));
+                    let rgb = w.emit(format!("COLOUR_RGB({},{})", quote(style.name), floats(&style.rgb)));
+                    let colour = w.emit(format!("FILL_AREA_STYLE_COLOUR('',#{rgb})"));
+                    let fill = w.emit(format!("FILL_AREA_STYLE('',(#{colour}))"));
+                    let surface = w.emit(format!("SURFACE_STYLE_FILL_AREA(#{fill})"));
+                    let side = w.emit(format!("SURFACE_SIDE_STYLE('',(#{surface}))"));
+                    let usage = w.emit(format!("SURFACE_STYLE_USAGE(.BOTH.,#{side})"));
+                    let assignment = w.emit(format!("PRESENTATION_STYLE_BY_CONTEXT((#{usage}),#{placement_rep})"));
+                    let solid = body_entities[*body];
+                    let item = w.emit(format!("STYLED_ITEM('',(#{assignment}),#{solid})"));
+                    w.emit(format!("MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(#{item}),#{context})"));
+                }
             }
         }
         if let Some(semantic) = semantic {
@@ -818,7 +875,7 @@ pub(crate) fn export_step_direct(
     allow_degenerate: bool,
     capability: &'static str,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
-    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None, None)
+    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None, None, false)
 }
 
 pub fn export_step_v3(model: &Model) -> Result<(String, FeatureCertificate, StepV3Report)> {
@@ -860,6 +917,16 @@ pub fn export_step_v8(model: &Model) -> Result<(String, StepV8Certificate, StepV
     Ok((text, certificate, report))
 }
 pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_points(model, false)
+}
+
+/// AP242 export sharing Cartesian point entities with bit-identical coordinates.
+/// Topological vertices, parameter-space dimensions and authored charts remain distinct.
+pub fn export_step_v9_shared_points(model: &Model) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_points(model, true)
+}
+
+fn export_v9_points(model: &Model, share_points: bool) -> Result<(String, StepV8Certificate, StepV3Report)> {
     // Compatibility API follows STEP /9 source-preserving chart semantics.
     let mut certificate = certify_step_v8_topology(model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
@@ -871,7 +938,7 @@ pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV
         "authored_nurbs_charts_preserved",
     ]);
     let (text, _, report) =
-        export_step_direct(model, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
+        export_step_direct_impl(model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, None, share_points)?;
     Ok((text, certificate, report))
 }
 
@@ -882,7 +949,7 @@ pub fn export_planet_gear_occurrences_step(
     let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[assembly.prototype().tolerance_mm] }),
+        None, Some(AssemblyExport { placements: &placements, groups: None, colours: None, names: None, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
     )?;
     Ok(text)
 }
@@ -911,6 +978,79 @@ pub fn export_planetary_gear_set_step(
 
 /// Serialize current shared definitions with their nonsingular orthogonal placements.
 pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
+    export_shared_products(assembly, None, None, None)
+}
+
+/// Name the assembly and each reusable part definition in definition-index order.
+pub fn export_named_step_assembly(assembly: &crate::StepSharedAssembly, name: &str, parts: &[&str]) -> Result<String> {
+    validate_part_names(assembly, name, parts)?;
+    export_shared_products(assembly, Some((name, parts)), None, None)
+}
+
+fn validate_part_names(assembly: &crate::StepSharedAssembly, name: &str, parts: &[&str]) -> Result<()> {
+    if parts.len() != assembly.definitions().len() || std::iter::once(name).chain(parts.iter().copied())
+        .any(|s| s.is_empty() || s.chars().any(char::is_control)) {
+        return Err(refuse("Expected an assembly name and one nonempty printable name per definition"));
+    }
+    Ok(())
+}
+
+/// Export a flat group hierarchy while retaining reusable local solid definitions.
+pub fn export_grouped_step_assembly(
+    assembly: &crate::StepSharedAssembly,
+    groups: &[&str],
+    parents: &[Option<usize>],
+) -> Result<String> {
+    export_grouped_with_styles(assembly, None, groups, parents, None)
+}
+
+/// Write occurrence-specific surface colours while sharing the underlying solid.
+pub fn export_styled_step_assembly(
+    assembly: &crate::StepSharedAssembly, groups: &[&str], parents: &[Option<usize>],
+    colours: &[Option<StepOccurrenceColour<'_>>],
+) -> Result<String> {
+    export_grouped_with_styles(assembly, None, groups, parents, Some(colours))
+}
+
+/// Export product labels, one level of groups, and occurrence-specific colours
+/// together. Scaled geometry variants retain the label of their source product.
+pub fn export_named_styled_step_assembly(
+    assembly: &crate::NamedStepAssembly, groups: &[&str], parents: &[Option<usize>],
+    colours: &[Option<StepOccurrenceColour<'_>>],
+) -> Result<String> {
+    let parts: Vec<_> = assembly.definition_names.iter().map(String::as_str).collect();
+    validate_part_names(&assembly.assembly, &assembly.name, &parts)?;
+    export_grouped_with_styles(&assembly.assembly, Some((&assembly.name, &parts)), groups, parents, Some(colours))
+}
+
+fn export_grouped_with_styles(
+    assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: &[&str], parents: &[Option<usize>],
+    colours: Option<&[Option<StepOccurrenceColour<'_>>]>,
+) -> Result<String> {
+    if let Some(colours) = colours {
+        if colours.len() != parents.len() || colours.iter().flatten().any(|style|
+            style.name.chars().any(char::is_control) || style.rgb.iter().any(|x| !(0.0..=1.0).contains(x))) {
+            return Err(refuse("Expected one optional named RGB style per occurrence"));
+        }
+    }
+    if parents.len() != assembly.occurrences().len()
+        || groups.len() > 256
+        || groups.iter().any(|name| name.is_empty() || name.chars().any(char::is_control))
+        || parents.iter().flatten().any(|&i| i >= groups.len())
+    {
+        return Err(refuse("Expected printable group names and a valid optional parent for every occurrence"));
+    }
+    if colours.is_some() && assembly.occurrences().iter().any(|item|
+        !crate::step_interchange_v3::is_proper_rigid_placement(item.transform)) {
+        let (baked, sources) = assembly.with_baked_scales()?;
+        let labels = names.map(|(_, parts)| sources.iter().map(|&i| parts[i]).collect::<Vec<_>>());
+        let baked_names = names.zip(labels.as_deref()).map(|((name, _), parts)| (name, parts));
+        return export_shared_products(&baked, baked_names, Some((groups, parents)), colours);
+    }
+    export_shared_products(assembly, names, Some((groups, parents)), colours)
+}
+
+fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>, groups: Option<(&[&str], &[Option<usize>])>, colours: Option<&[Option<StepOccurrenceColour<'_>>]>) -> Result<String> {
     let definitions = assembly.definitions();
     let occurrences = assembly.occurrences();
     if definitions.is_empty() || occurrences.is_empty() || occurrences.len() > 256 {
@@ -927,7 +1067,7 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
     let model = crate::compose_step_v7_occurrences(definitions)?;
     let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }),
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, groups, colours, names, definition_tolerances: &tolerances }), false,
     )?;
     Ok(text)
 }
@@ -935,6 +1075,19 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
 pub fn export_step_v9_with_metadata(
     model: &Model,
     semantic: &StepSemanticMetadata,
+) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_metadata_points(model, semantic, false)
+}
+
+/// Write typed product and face attributes together with shared Cartesian points.
+pub fn export_step_v9_with_metadata_shared_points(
+    model: &Model, semantic: &StepSemanticMetadata,
+) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_metadata_points(model, semantic, true)
+}
+
+fn export_v9_metadata_points(
+    model: &Model, semantic: &StepSemanticMetadata, share_points: bool,
 ) -> Result<(String, StepV8Certificate, StepV3Report)> {
     let mut certificate = certify_step_v8_topology(model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
@@ -950,6 +1103,7 @@ pub fn export_step_v9_with_metadata(
         STEP_INTERCHANGE_V9_CAPABILITY,
         Some(semantic),
         None,
+        share_points,
     )?;
     Ok((text, certificate, report))
 }

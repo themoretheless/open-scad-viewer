@@ -214,6 +214,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_smooth_miter_stations", "brep_smooth_sweep_stations",
             "surface",
             "curve",
+            "curve_edit", "surface_edit",
             "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",
@@ -242,6 +243,19 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
         let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
+            if ["reverse", "reverse_u", "reverse_v"].contains(&key.as_str()) {
+                continue;
+            }
+            if ["insert_knots", "insert_knots_u", "insert_knots_v"].contains(&key.as_str()) {
+                for knot in value.as_array_mut().ok_or_else(|| text_error(key, "Expected knot list"))? {
+                    let entry = knot.as_object_mut().ok_or_else(|| text_error(key, "Expected knot record"))?;
+                    for field_name in ["value", "count"] {
+                        let item = entry.get_mut(field_name).ok_or_else(|| text_error(key, "Expected knot value and count"))?;
+                        *item = field(item, SCALAR, &params, key)?;
+                    }
+                }
+                continue;
+            }
             if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
             if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "lower", "closed", "periodic", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
                 continue;

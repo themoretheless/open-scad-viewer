@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0919",
+  "testedBase": "d4dacfdc7650e8a3afba6dd04724b3c86124cdf6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 480,
+  "scope": [
+    "Compress four ordered sectors with linear and rational quadratic pieces. Check exact reconstruction, order, incompatible subdivision, index bounds and a perturbation in the final piece."
+  ],
+  "logSha256": "28934548b4f2334b083c6fca1f12d56fa94777fd815aecc6ebca9beb5e4c707f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "a2c90a026ac1f37905083429a1650edaa0ff87aec004366f5386de4249deb8f0",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "e47a47b43e44c509f93ff1ea5c6c80604d9c4263bae9afa6f2fb7d131fec2b7d",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "c88ee0803b81326d4291100ae65d1dfb03e4e6caeda51935ef28d623eec72479"
+  }
+}

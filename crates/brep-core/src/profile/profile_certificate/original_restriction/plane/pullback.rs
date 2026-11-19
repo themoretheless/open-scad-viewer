@@ -1,7 +1,7 @@
 //! Unique inverse-chart boundary expressions on the UNCHANGED native carrier.
 //! The world curve is primary. No rounded UV controls are manufactured.
 use super::*;
-use num_traits::Signed;
+use num_traits::{Signed, ToPrimitive};
 #[derive(Clone, Debug)]
 pub struct Pullback {
     chart: Chart,
@@ -63,6 +63,35 @@ pub fn qualify(surface: &Surface, world: &Curve) -> Result<Pullback> {
     contained(&chart, &world)?;
     Ok(Pullback { chart, world })
 }
+/// Construct a stored UV trim for an existing spatial edge on a horizontal
+/// affine cap. The returned proof bounds the rounded trim's displacement over
+/// every knot span. Coordinates along the cap normal must agree exactly.
+pub fn stored_affine_trim(surface: &Surface, edge: &Curve, tolerance: f64) -> Result<Boundary> {
+    surface.validate()?;
+    edge.validate()?;
+    let height = surface.control_points[0][0][2];
+    if edge.control_points.iter().any(|p| p.len() != 3 || p[2] != height) {
+        return Err(refused("Spatial edge does not lie at the cap height"));
+    }
+    let mut xy = edge.clone();
+    for point in &mut xy.control_points { point.truncate(2); }
+    let owner = qualify(surface, &xy)?;
+    let coefficients = &owner.chart.coefficients;
+    if coefficients[3].iter().any(|v| !v.is_zero()) {
+        return Err(refused("Stored affine trim requires an affine chart"));
+    }
+    let mut uv = xy.clone();
+    for point in &mut uv.control_points {
+        let offset = [q(point[0])? - &coefficients[0][0], q(point[1])? - &coefficients[0][1]];
+        let inverse = owner.affine_inverse(&offset);
+        for (coordinate, range) in point.iter_mut().zip(inverse) {
+            *coordinate = range[0].to_f64().filter(|v| v.is_finite())
+                .ok_or_else(|| refused("Cap UV coordinate is outside binary64 range"))?;
+        }
+    }
+    super::qualify(surface, &uv, &xy, tolerance)
+}
+
 fn native_box(chart: &Chart, p: [[Q; 2]; 2]) -> [[Q; 2]; 2] {
     std::array::from_fn(|k| {
         p[k].each_ref()
@@ -260,4 +289,57 @@ impl InverseBox {
         }
         Ok(())
     }
+}
+
+/// Transfer a complete indexed loop onto another affine cap. Returned coedges
+/// refer to the source model's edges. Set `reverse` to traverse the loop in
+/// the opposite direction, for example when a cutter rim becomes a hole.
+pub fn stored_affine_loop(
+    model: &crate::Model,
+    loop_index: usize,
+    surface: &Surface,
+    reverse: bool,
+    tolerance: f64,
+) -> Result<crate::Loop> {
+    model.validate()?;
+    let wire = model.loops.get(loop_index).ok_or_else(|| refused("Missing source loop"))?;
+    let mut coedges = Vec::with_capacity(wire.coedges.len());
+    for i in 0..wire.coedges.len() {
+        let index = if reverse { wire.coedges.len() - 1 - i } else { i };
+        let source = &wire.coedges[index];
+        let edge = &model.edges[source.edge];
+        if source.trim().is_some() || edge.degenerate {
+            return Err(refused("Cap loop transfer requires whole nondegenerate edges"));
+        }
+        let reversed = source.reversed ^ reverse;
+        let curve = if reversed {
+            let curve = edge.curve.reverse()?;
+            let [lo, hi] = edge.curve.domain();
+            let sum = q(lo)? + q(hi)?;
+            for (before, after) in edge.curve.knots.iter().rev().zip(&curve.knots) {
+                if q(*before)? + q(*after)? != sum {
+                    return Err(refused("Edge parameter reversal is not exactly representable"));
+                }
+            }
+            curve
+        } else {
+            edge.curve.clone()
+        };
+        let proof = stored_affine_trim(surface, &curve, tolerance)?;
+        coedges.push(crate::Coedge::new(source.edge, reversed, proof.pcurve().clone()));
+    }
+    for (a, b) in coedges.iter().zip(coedges.iter().cycle().skip(1)) {
+        let end = model.edges[a.edge].vertices[usize::from(!a.reversed)];
+        let start = model.edges[b.edge].vertices[usize::from(b.reversed)];
+        let clamped = |c: &Curve| {
+            let [lo, hi] = c.domain();
+            c.knots[..=c.degree].iter().all(|k| *k == lo)
+                && c.knots[c.control_points.len()..].iter().all(|k| *k == hi)
+        };
+        if end != start || !clamped(&a.pcurve)
+            || a.pcurve.control_points.last() != b.pcurve.control_points.first() {
+            return Err(refused("Transferred cap loop does not close at every UV endpoint"));
+        }
+    }
+    Ok(crate::Loop { coedges })
 }

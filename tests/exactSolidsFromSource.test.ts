@@ -1,5 +1,9 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { replaceCustomizerValue } from '../src/language/scadCustomizer'
 import { describe, expect, it } from 'vitest'
+import { importDirectStepV9 } from '../src/kernel/cadNurbsStep'
 import { exportSolidStepAssembly } from '../src/kernel/solidStepAssembly'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
@@ -74,12 +78,37 @@ describe('exact solids from source', () => {
     expect(extent.max[0]).toBeCloseTo(14, 1)
   }, 30000)
 
+  it('exports the spinner sun after enlarging its bore with Rush subtraction', async () => {
+    const source = readFileSync(new URL('../examples/rush-frontend/spinner-bore-edit.r', import.meta.url), 'utf8')
+    const evaluated = await evaluate(source)
+    const plan = evaluated.exactSolids!
+    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+    expect(bodies).toHaveLength(1)
+    const step = await exportSolidStepAssembly({ version: 1, sketches: [], bodies })
+    const { model } = importDirectStepV9(step)
+    expect(model.bodies).toHaveLength(1)
+    expect(model.faces).toHaveLength(390)
+    const minRadius = Math.min(...model.vertices.map(({ point }) => Math.hypot(point[0], point[1])))
+    expect(minRadius).toBeCloseTo(22, 7)
+    const fixtureDirectory = process.env.CAD_STEP_EDITED_SPINNER_FIXTURE
+    if (fixtureDirectory) {
+      mkdirSync(fixtureDirectory, { recursive: true })
+      writeFileSync(join(fixtureDirectory, 'after.step'), step)
+      const before = await evaluate(source.replace('show sun.subtract(cylinder(diameter / 2, 10mm))', 'show sun'))
+      const original = before.exactSolids!
+      const stock = buildExactSolidBodies(original.nodes, original.roots)
+      writeFileSync(join(fixtureDirectory, 'before.step'), await exportSolidStepAssembly({
+        version: 1, sketches: [], bodies: stock,
+      }))
+    }
+  }, 60000)
+
   it('builds and exports the planetary spinner as twenty exact herringbone gears', async () => {
     // The spinner used to be a sampled polygon prototype; its gears are now
     // the brep_gear builtin, so the Solid workspace gets sun, ring and 18
     // planets as NURBS bodies.
     const source = readFileSync(new URL('../examples/rush-frontend/planetary-spinner.r', import.meta.url), 'utf8')
-    const result = await evaluate(source)
+    const result = await evaluate(source.replace('param hole = 44mm', 'param hole = 42mm'))
     expect(result.meshes.length).toBeGreaterThan(0)
     const plan = result.exactSolids!
     expect(plan.roots).toHaveLength(20)
@@ -109,7 +138,58 @@ describe('exact solids from source', () => {
       const placed = matrix.slice(0, 3).map(row => row[3] + point.reduce((sum, x, i) => sum + x * row[i], 0))
       placed.forEach((x, i) => expect(x).toBeCloseTo(planet.brep!.vertices[0].point[i], 9))
     }
+    const grouped = await exportSolidStepAssembly({
+      version: 1,
+      sketches: [],
+      bodies: bodies.map((body, i) => ({ ...body, group: i < 2 ? 'Central gears' : 'Planets' })),
+    })
+    expect(grouped.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(3)
+    expect(grouped.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(22)
+    expect(grouped).toContain("PRODUCT('group:Planets','Planets'")
+    expect(grouped).toContain("PRODUCT('group:Central gears','Central gears'")
+    const styled = await exportSolidStepAssembly({
+      version: 1, sketches: [],
+      bodies: bodies.map((body, i) => ({
+        ...body,
+        group: i < 2 ? 'Central gears' : 'Planets',
+        material: i % 2 ? { name: 'Red PLA', color: '#ff0000' } : { name: 'Blue PLA', color: '#0000ff' },
+      })),
+    })
+    expect(styled.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(3)
+    expect(styled.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(22)
+    expect(styled.match(/=PRESENTATION_STYLE_BY_CONTEXT\(/g)).toHaveLength(20)
+    expect(styled.match(/=COLOUR_RGB\('Red PLA',/g)).toHaveLength(10)
+    expect(styled.match(/=COLOUR_RGB\('Blue PLA',/g)).toHaveLength(10)
+    const fixtureDirectory = process.env.CAD_STEP_STYLED_SPINNER_FIXTURE
+    if (fixtureDirectory) {
+      mkdirSync(fixtureDirectory, { recursive: true })
+      writeFileSync(join(fixtureDirectory, 'spinner.step'), styled)
+      const manifest = bodies.map((body, i) => ({
+        id: body.id, name: body.name, colour: i % 2 ? 'red' : 'blue', xyz: body.brep!.vertices[0].point,
+      }))
+      writeFileSync(join(fixtureDirectory, 'bodies.json'), JSON.stringify(manifest))
+    }
     console.info('Rush spinner STEP', { definitions, occurrences, bytes: Buffer.byteLength(step) })
+  }, 600000)
+
+  it('rebuilds the spinner assembly for both customizer bore settings', async () => {
+    let source = readFileSync(new URL('../examples/rush/planetary-spinner.r', import.meta.url), 'utf8')
+    for (const diameter of [42, 44]) {
+      const hole = compileRushFrontend(source).customizer.find(parameter => parameter.name === 'hole')!
+      source = replaceCustomizerValue(source, hole, diameter)
+      const { exactSolids } = await evaluate(source)
+      const bodies = buildExactSolidBodies(exactSolids!.nodes, exactSolids!.roots)
+      const radius = Math.min(...bodies[0].brep!.vertices.map(({ point }) => Math.hypot(point[0], point[1])))
+      expect(radius).toBeCloseTo(diameter / 2, 7)
+      const step = await exportSolidStepAssembly({ version: 1, sketches: [], bodies })
+      expect(step.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(3)
+      expect(step.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(20)
+      const directory = process.env.CAD_STEP_SPINNER_BORE_ASSEMBLIES
+      if (directory) {
+        mkdirSync(directory, { recursive: true })
+        writeFileSync(join(directory, `spinner-${diameter}.step`), step)
+      }
+    }
   }, 600000)
 
   it('lowers a helical RushGraph gear through the same builtin', async () => {

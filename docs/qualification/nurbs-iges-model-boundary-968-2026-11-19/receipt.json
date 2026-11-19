@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0968",
+  "testedBase": "b0f0a386e1b09b1779ddd3fb9f0da03192d6f37f",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "535618a68b9ac8ec8eb79e02e5416c3da096b6e7ca9906a2fdcc55961a5502b5",
+    "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs": "49e9a83d049ad5a68cd5b6d775ee25eec32559bd25d33789b95640aae877a179",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "0dea3c163c7cbcb9be4515c0f9f97f06b9e8e5d548583b4e85db05ed0ca73295",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "35dff905c0b3bc8a7d2173bced0de90dd7b401a641d9eab218a5252c0b72c364"
+  },
+  "occt": {
+    "valid": true,
+    "igsArea": 8.0,
+    "restoredStepArea": 8.0,
+    "centroid": [
+      14.0,
+      2.0,
+      7.0
+    ]
+  },
+  "fixtureSha256": "624978ed8ad8fb9efbb603ca32266595505c74f3286847fbb905e572da289206",
+  "fixtureEnvironment": "CAD_IGES_MODEL_BOUNDARY_FIXTURE=/tmp/osv968-model.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Model-only closed trim on offset plane",
+    "Weighted spatial trim in tilted YZ chart with shifted UV intervals",
+    "Out-of-chart and off-plane edges refused"
+  ]
+}

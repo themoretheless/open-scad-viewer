@@ -29,13 +29,14 @@ pub struct TrimmedDistance {
 }
 
 struct Domains<'a> {
-    regions: [&'a TrimDomain; 2],
+    regions: [Option<&'a TrimDomain>; 2],
     cells: usize,
     max: usize,
     points: [HashMap<[u64; 2], Location>; 2],
 }
 impl Domains<'_> {
     fn classify(&mut self, side: usize, rectangle: [[f64; 2]; 2]) -> Result<Location> {
+        let Some(region) = self.regions[side] else { return Ok(Location::Inside); };
         let remaining = self.max - self.cells;
         if remaining == 0 {
             return Ok(Location::Unresolved);
@@ -43,7 +44,7 @@ impl Domains<'_> {
         // A single difficult boundary query must not monopolize the complete
         // search. Unresolved cells stay in the queue; unresolved points are not
         // witnesses. This limit never changes an unresolved answer to outside.
-        let result = self.regions[side].classify(rectangle, remaining.min(4096))?;
+        let result = region.classify(rectangle, remaining.min(4096))?;
         self.cells += result.cells;
         Ok(result.location)
     }
@@ -250,7 +251,7 @@ impl Search for TrimmedSearch<'_> {
         let [lo, hi] = selected.patch.domain[axis];
         let mid = if selected.location == Location::Unresolved {
             self.domains.regions[side]
-                .split_hint(selected.patch.domain, axis)
+                .and_then(|region| region.split_hint(selected.patch.domain, axis))
                 .unwrap_or_else(|| midpoint(lo, hi))
         } else {
             midpoint(lo, hi)
@@ -298,6 +299,57 @@ pub fn distance(
     max_cells: usize,
     max_domain_cells: usize,
 ) -> Result<TrimmedDistance> {
+    distance_with_regions(a, b, [Some(domain_a), Some(domain_b)], tolerance_mm, max_cells, max_domain_cells)
+}
+
+/// Bound the distance from a spatial curve to the retained surface image.
+/// The first witness parameter is the original curve parameter. Its second
+/// coordinate is redundant because both columns of the tensor net coincide.
+pub fn curve_distance(
+    curve: &crate::curve::Curve, face: &Surface, domain: &TrimDomain,
+    tolerance_mm: f64, max_cells: usize, max_domain_cells: usize,
+) -> Result<TrimmedDistance> {
+    curve.validate()?;
+    check(curve.control_points[0].len() == 3, "Expected a spatial curve")?;
+    let sheet = Surface {
+        degree_u: curve.degree, degree_v: 1,
+        knots_u: curve.knots.clone(), knots_v: vec![0., 0., 1., 1.],
+        control_points: curve.control_points.iter().map(|p| vec![p.clone(), p.clone()]).collect(),
+        weights: curve.weights.iter().map(|&w| vec![w, w]).collect(),
+        periodic_u: curve.periodic, periodic_v: false,
+    };
+    distance_with_regions(&sheet, face, [None, Some(domain)], tolerance_mm, max_cells, max_domain_cells)
+}
+
+/// Clearance of a ball swept along a spatial centerline, including its end caps.
+#[derive(Debug)]
+pub struct SweptBallClearance {
+    /// Centerline distance minus radius. Negative values indicate penetration.
+    /// Absent until both geometry sets have an admitted witness.
+    pub signed_margin_mm: Option<[f64; 2]>,
+    pub centerline_distance: TrimmedDistance,
+}
+
+pub fn swept_ball_clearance(
+    curve: &crate::curve::Curve, radius_mm: f64, face: &Surface, domain: &TrimDomain,
+    tolerance_mm: f64, max_cells: usize, max_domain_cells: usize,
+) -> Result<SweptBallClearance> {
+    check(radius_mm.is_finite() && radius_mm >= 0., "Expected finite nonnegative sweep radius")?;
+    let centerline_distance = curve_distance(curve, face, domain, tolerance_mm, max_cells, max_domain_cells)?;
+    let signed_margin_mm = if let Some(upper) = centerline_distance.upper_bound_mm {
+        let distance = Interval::new(centerline_distance.lower_bound_mm, upper)?;
+        let margin = distance.sub(Interval::point(radius_mm))?;
+        Some([margin.lo, margin.hi])
+    } else {
+        None
+    };
+    Ok(SweptBallClearance { signed_margin_mm, centerline_distance })
+}
+
+fn distance_with_regions(
+    a: &Surface, b: &Surface, regions: [Option<&TrimDomain>; 2],
+    tolerance_mm: f64, max_cells: usize, max_domain_cells: usize,
+) -> Result<TrimmedDistance> {
     a.validate()?;
     b.validate()?;
     check(
@@ -321,7 +373,7 @@ pub fn distance(
         ));
     }
     let mut domains = Domains {
-        regions: [domain_a, domain_b],
+        regions,
         cells: 0,
         max: max_domain_cells,
         points: std::array::from_fn(|_| HashMap::new()),

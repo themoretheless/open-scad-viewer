@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0970",
+  "testedBase": "e9b0b47bf285917768fa271cbb5f76117832f898",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "535618a68b9ac8ec8eb79e02e5416c3da096b6e7ca9906a2fdcc55961a5502b5",
+    "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs": "b77f7149dd7cf07dd88a62f46f6a34bdd783eb8987fe506587060a7795695bb0",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "95515b0f5d1e3a1cd84b4f522d5edc8d8c55b40e220f2deb1d41fb789f043a69",
+    "crates/nurbs-core/src/analysis/surface_injectivity.rs": "38a4d87b7aa746fcf463500572b8adcc69169b483e0b1c5b4e2a29a4986c544d",
+    "crates/nurbs-core/src/analysis/surface_injectivity/exact_affine_xy.rs": "515bcd34129f1ce9ab38aa6074937c69834ae2977ac4829aa7cd02250fca4a11",
+    "crates/nurbs-core/tests/surface_rectangle_injectivity.rs": "6fcf88dcc2f31e504b0b5a24b612d060f2fd58db5feedcd982333156027d7869"
+  },
+  "occt": {
+    "valid": true,
+    "area": 10.246314202216563,
+    "referenceArea": 10.246314202187238,
+    "boundarySamples": 193,
+    "boundaryTolerance": 1e-12
+  },
+  "fixtureSha256": "1a0534664f5eab4dc725f70c121b6baffff48df297f41d945a3f2b261d319621",
+  "fixtureEnvironment": "CAD_IGES_GRID_BOUNDARY_FIXTURE=/tmp/osv970-grid.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Four-cell saddle with U and V internal knots; model-only quadratic boundary",
+    "Nonuniform repeated knots on a quadratic chart with an interior ridge",
+    "Interior control perturbation invalidates the coordinate proof"
+  ]
+}

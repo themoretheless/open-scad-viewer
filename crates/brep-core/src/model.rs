@@ -4,6 +4,8 @@ pub mod boolean_robustness;
 pub(crate) mod boolean_support;
 pub mod closed_solid;
 pub mod face_domain;
+mod face_compression;
+mod edge_compression;
 pub mod face_injectivity;
 #[doc(hidden)]
 pub mod face_senses;

@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0931",
+  "testedBase": "347d80c0634f7007dd5a30dd22d609c58cf3ae0a",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Check named Part 21 product records for the assembly and both definitions, Unicode and apostrophe escaping, shared instance references and different placements after reimport, and wrong name count."
+  ],
+  "logSha256": "027661ee5b657acdd439b432e8106c8b043856fc5b79580671db2aaf3d0d3027",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "daec89cf51b69637860ad0fb56123c017e5d1cb12910ffddbf8beac221ccad24",
+    "crates/cad-step/src/step_interchange_v3.rs": "7a186d83f8d1ead3d2cccc25df142ea454731ef226c80113d4c916594b233929",
+    "crates/cad-step/src/lib.rs": "fc483f9fb506e3ff305fefaea8bec1fc41b0c4c2e62b51f566c170ecf04a053d",
+    "crates/cad-step/tests/edited_gear_step.rs": "537e99bf9a7515dff86dcc42ef041839dada05a3ef0ae9466f17584c7f4ecf97"
+  }
+}

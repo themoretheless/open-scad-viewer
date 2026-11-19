@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0969",
+  "testedBase": "2ccb6631d3cdc5e631daad9089b6398a91ab23a8",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "535618a68b9ac8ec8eb79e02e5416c3da096b6e7ca9906a2fdcc55961a5502b5",
+    "crates/cad-step/src/iges_interchange_v2/affine_boundary.rs": "93a72459924e85f4b8b5d67e329f1dde92e5b194a98cc64025c91925c94d236f",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "1a61e3e4fe650379f5b1e231b82cd19c9bec0bd1e4231b838a3f17c687c176c9",
+    "crates/nurbs-core/src/analysis/surface_injectivity.rs": "44b456608ee628108b272991059d460a87473e622932d6e72351568563b79fb3",
+    "crates/nurbs-core/src/analysis/surface_injectivity/exact_affine_xy.rs": "2d030e07b23e84cc7f862f44b4a8d1592041048625e3188d80adb167900276d8"
+  },
+  "occt": {
+    "valid": true,
+    "area": 10.246314261576027,
+    "referenceArea": 10.246314202187238,
+    "boundarySamples": 193,
+    "boundaryTolerance": 1e-12
+  },
+  "fixtureSha256": "bc5938f2fe567331031b004882753cbc45ded8886cd138fcabd1a83c0d7b53ac",
+  "fixtureEnvironment": "CAD_IGES_GRAPH_BOUNDARY_FIXTURE=/tmp/osv969-graph.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Model-only quadratic boundary on a curved saddle",
+    "XY and YZ affine projections",
+    "Perturbed diagonal with matching endpoints refused"
+  ]
+}

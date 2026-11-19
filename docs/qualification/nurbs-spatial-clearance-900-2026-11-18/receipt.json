@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0900",
+  "testedBase": "63ff22f4826851434b164e25e867c0295db48869",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 466,
+  "scope": [
+    "Bound all spatial span pairs and retain source witnesses. Verify minimum across multiple contours, witness distance, insufficient coverage and open-input refusal."
+  ],
+  "logSha256": "958ae506a019f06cc59e812a1e941bf08d8e490a74042652032334d567fdd92a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "cf4e076aac145a7818744ad005f9c8d946f03b65a015b66ade4957232b22f1f7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "953ca879412474165fe80631b8cd9a5846e667d886cd0193f416f069154c19da"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0874",
+  "testedBase": "0c715e8555eaaad94904c432c1d3b5e707a77a46",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 3,
+  "scope": [
+    "Outward-rounded nominal transverse contact ratio over the shared active involutes; checked standard pair, reversed and scaled pair, base-limited small gears and invalid tooth count."
+  ],
+  "logSha256": "e467201284adfb668663b20467d798168abf565d69d38092bcc6ef0354d48916",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "6d09371e1550a6c5e82164d56c48f48f2cbcf1a0c7428a02a66c594516c02311",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "44eaed0c7e1d26516b88707029a94e912d01f068cf57921d1df423b88b9e2e50",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "02991f6143c567dfa0e82edb07301419593a4c3d4d9fb7e6832e78a71551740b"
+  }
+}

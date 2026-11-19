@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0885",
+  "testedBase": "a5882348ee65b7a9df5611030a5f5f01806edeb3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 14,
+  "scope": [
+    "Independent radial and angular pin tolerances, unequal planets, Cartesian distance checks and collinear endpoints."
+  ],
+  "logSha256": "8f630c8138695bbf0f4366f3d13331f2d3840211783ebb0d10f22a7a7ebb40e6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "787950dbfa454ce958b9684b56d589b2cc9da1f92b0c9685381fb939b0ba5531",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "cde3fb81b57e4a4bcf80ec53899ad09b7facb41a391c28fdc0d2e5c3f1ca8a5f",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "57c02e75fe20115f5457e21783ff72def788ee928679f38fdb51d505ec1abc85"
+  }
+}

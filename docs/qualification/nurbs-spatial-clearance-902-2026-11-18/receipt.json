@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0902",
+  "testedBase": "e53296880b1385a56aff4e88450f5645df12898b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 468,
+  "scope": [
+    "Classify each distinct pair against an inclusive threshold. Check violation, separation and unresolved boundary, shared budget and invalid threshold."
+  ],
+  "logSha256": "88597e128554aae72b21a99a39782782a4eb1b111687a6c3d51d835f4bdd8c95",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "8be345bfc34f0ee7bcdc72b96cf86e03306dd5b431de1dd5e61923154a585318",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1d134aa67a5f6c06676d5d49798bfeddfad825f482d02583d086e611c19115ed"
+  }
+}

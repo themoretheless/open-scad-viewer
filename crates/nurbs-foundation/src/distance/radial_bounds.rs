@@ -96,6 +96,55 @@ pub fn axis_radius_bounds(s: &Surface, axis: usize, origin: [f64; 3]) -> Result<
     }
     radius_bounds(&projected, origin)
 }
+/// Enclose distance to a coordinate axis across an authored tensor grid of
+/// rational Bezier spans. Full internal multiplicity permits direct extraction
+/// of each control net without floating-point knot insertion.
+pub fn piecewise_axis_radius_bounds(
+    s: &Surface, axis: usize, origin: [f64; 3], max_patches: usize,
+) -> Result<Option<[f64; 2]>> {
+    s.validate()?;
+    check(axis < 3 && origin.iter().all(|x| x.is_finite()), "Invalid radius axis or origin")?;
+    fn starts(knots: &[f64], degree: usize) -> Option<Vec<usize>> {
+        if !(1..=8).contains(&degree) { return None; }
+        let mut spans = Vec::new();
+        let mut at = 0;
+        while at < knots.len() {
+            let count = knots[at..].iter().take_while(|&&k| k == knots[at]).count();
+            let end = at + count;
+            let endpoint = at == 0 || end == knots.len();
+            if (endpoint && count != degree + 1) || (!endpoint && count != degree) {
+                return None;
+            }
+            if end < knots.len() { spans.push(end - degree - 1); }
+            at = end;
+        }
+        Some(spans)
+    }
+    if s.periodic_u || s.periodic_v { return Ok(None); }
+    let (Some(us), Some(vs)) = (starts(&s.knots_u, s.degree_u), starts(&s.knots_v, s.degree_v))
+        else { return Ok(None) };
+    if us.len().saturating_mul(vs.len()) > max_patches { return Ok(None); }
+    let clamped = |degree| [vec![0.; degree + 1], vec![1.; degree + 1]].concat();
+    let mut range = [f64::INFINITY, 0_f64];
+    for u in us {
+        for &v in &vs {
+            let patch = Surface {
+                degree_u: s.degree_u, degree_v: s.degree_v,
+                knots_u: clamped(s.degree_u), knots_v: clamped(s.degree_v),
+                periodic_u: false, periodic_v: false,
+                control_points: s.control_points[u..=u+s.degree_u].iter()
+                    .map(|row| row[v..=v+s.degree_v].to_vec()).collect(),
+                weights: s.weights[u..=u+s.degree_u].iter()
+                    .map(|row| row[v..=v+s.degree_v].to_vec()).collect(),
+            };
+            let Some(bounds) = axis_radius_bounds(&patch, axis, origin)? else { return Ok(None) };
+            range[0] = range[0].min(bounds[0]);
+            range[1] = range[1].max(bounds[1]);
+        }
+    }
+    Ok(Some(range))
+}
+
 /// Each axis-radius map is 1-Lipschitz, so separation of its image intervals
 /// is a lower bound on every Euclidean point-pair distance. Unsupported charts
 /// and numeric range failures keep the ordinary Cartesian bound.
@@ -116,6 +165,21 @@ pub fn axis_separation_lower(a: &Surface, b: &Surface) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn axis_radius_covers_all_spans_and_obeys_patch_limit() {
+        let s = Surface {
+            degree_u: 1, degree_v: 1, periodic_u: false, periodic_v: false,
+            knots_u: vec![0.,0.,0.3,1.,1.], knots_v: vec![2.,2.,3.,6.,6.],
+            control_points: (0..3).map(|u| (0..3).map(|v|
+                vec![2. + (u*v) as f64, 3., v as f64]).collect()).collect(),
+            weights: vec![vec![0.5,1.,1.5];3],
+        };
+        let bounds = piecewise_axis_radius_bounds(&s, 2, [1.,3.,8.], 4).unwrap().unwrap();
+        assert!(bounds[0] <= 1. && bounds[0] > 0.999999);
+        assert!(bounds[1] >= 5. && bounds[1] < 5.000001);
+        assert!(piecewise_axis_radius_bounds(&s, 2, [0.;3], 3).unwrap().is_none());
+        assert!(piecewise_axis_radius_bounds(&s, 3, [0.;3], 4).is_err());
+    }
     #[test]
     fn constant_radius_is_certified_from_polynomial_coefficients() {
         let weights = (0..3)

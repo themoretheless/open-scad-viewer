@@ -1,0 +1,14 @@
+{
+  "id": "NURBS-0973",
+  "testedBase": "51c231cb1af8cc8c1334b1b7039cd393b1cb32e0",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "2f7c32e46a4b0e875f035f62b6075f14e1801c27e69b32e3be66bbfa3570ca1e",
+    "crates/cad-step/src/step_interchange_v3.rs": "d1d56e4381bcafac2fba322d00dc1ed8fbe433477e37352d58f5a36002aa5bbe",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "a7984c849cd21c6cef6e38e2756077f81a03dd5eb0a378b9238e6a11e45a6880",
+    "crates/cad-step/tests/edited_gear_step.rs": "9b4b7c9fcd0b46db075198dea1bc4746717bf9b0760a91d2cd4a1ab2fe78bf7f",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "4f8474e2fbc703a32fc7c029916cd72eb2ef4cff9ae9f7057c0b85ac35fbe6de"
+  },
+  "storedPlanetPoles": 3880,
+  "placedPlanetPoles": 69840,
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib -- --nocapture"
+}

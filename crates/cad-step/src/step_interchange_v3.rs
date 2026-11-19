@@ -16,7 +16,7 @@ pub(crate) use crate::step_v3_export::{
 #[cfg(test)] use crate::step_v3_export::canonical_face_senses;
 pub use crate::step_v3_export::{
     export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
-    export_step_v9, export_step_v9_with_metadata,
+    export_step_v9, export_step_v9_shared_points, export_step_v9_with_metadata, export_step_v9_with_metadata_shared_points,
 };
 use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::{CoedgeTrim, Vertex};
@@ -1183,21 +1183,7 @@ fn inverse_rigid(m: [[f64; 4]; 4]) -> [[f64; 4]; 4] {
     r[3][3] = 1.;
     r
 }
-pub(crate) fn is_proper_rigid_placement(matrix: [[f64; 4]; 4]) -> bool {
-    if matrix[3] != [0., 0., 0., 1.] || !matrix.iter().flatten().all(|value| value.is_finite()) {
-        return false;
-    }
-    let [x, y, z] = [0, 1, 2].map(|column| [matrix[0][column], matrix[1][column], matrix[2][column]]);
-    let dot = |a: [f64; 3], b: [f64; 3]| a.into_iter().zip(b).map(|(a, b)| a * b).sum::<f64>();
-    let cross = [
-        x[1] * y[2] - x[2] * y[1],
-        x[2] * y[0] - x[0] * y[2],
-        x[0] * y[1] - x[1] * y[0],
-    ];
-    [x, y, z].into_iter().all(|axis| (dot(axis, axis) - 1.).abs() <= 1e-12)
-        && [dot(x, y), dot(x, z), dot(y, z)].into_iter().all(|value| value.abs() <= 1e-12)
-        && (dot(cross, z) - 1.).abs() <= 1e-12
-}
+pub(crate) use brep_core::transform::is_proper_rigid_placement;
 
 pub(crate) fn orthogonal_placement_scales(mut matrix: [[f64; 4]; 4]) -> Option<[f64; 3]> {
     let scales = [0, 1, 2].map(|column| {
@@ -2851,7 +2837,7 @@ fn restore_identity(
 #[path = "step_interchange_v3/import_routes.rs"]
 mod import_routes;
 pub use import_routes::{
-    import_step_shared_assembly, StepAssemblyOccurrence, StepClearanceCheck, StepClearanceStatus, StepMinimumClearance, StepMaterialDelta, StepRayMaterialCoverage, StepSharedAssembly,
+    import_step_shared_assembly, import_step_occurrence_colours, import_named_step_assembly, import_step_product_paths, export_step_product_subassembly, replace_step_product_at_path, move_step_product_branch, step_branch_parts_list, step_branch_bounds, step_branch_mass_properties, StepBranchPartQuantity, NamedStepAssembly, StepPartsListRow, StepPartSurfaceUsage, StepPartQuantityChange, StepAssemblyOccurrence, StepClearanceCheck, StepClearanceStatus, StepMinimumClearance, StepMaterialDelta, StepRayMaterialCoverage, StepSharedAssembly,
     export_step_v10, import_step_v3, import_step_v3_with_metadata, import_step_v4,
     import_step_v5, import_step_v6, import_step_v7, import_step_v8, import_step_v9,
     import_step_v9_with_metadata, import_step_v10,

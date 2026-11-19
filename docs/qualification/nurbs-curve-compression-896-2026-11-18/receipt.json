@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0896",
+  "testedBase": "7ee9aaad6c9a1ada517cbe17821eafa458e4ec88",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 462,
+  "scope": [
+    "Verify simplicity of an exact coordinate projection and retain spatial geometry. Check a nonplanar wire, degenerate projection and invalid axis."
+  ],
+  "logSha256": "e73fe0b833cc48a0ecec397b45f3dc04850fe37e32b51eab0d55d33dde8ffab4",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "e5845e4b5eb10d939a9d0d018c88beb36d603006547b63a8d2c718da1cde54de",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "e9b0495f6666d23bc6771fb922955952e4c18fad97ee88dd88f714fb88741812",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "de42786747a6f53f4b479971b6f09d012a00d03e31942427bb21ed2834a30119"
+  }
+}

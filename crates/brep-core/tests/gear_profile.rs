@@ -67,3 +67,147 @@ fn represented_small_gear_profile_has_independent_exact_certificate() {
         assert_eq!(verified.nesting_depth(), &[0]);
     }
 }
+
+#[test]
+fn spinner_sun_profile_roundtrips_through_lossless_sector_pattern() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { module: 1.5, teeth: 32, clearance: 0.1, herringbone: true,
+        helix_angle_deg: -35., ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let outline = &wires[0];
+    let width = outline.len()/spec.teeth;
+    let pattern = LosslessSectorPattern::encode(outline,width).unwrap();
+    let mut raw = 0;
+    for (i,sector) in outline.chunks_exact(width).enumerate() {
+        for (a,b) in sector.iter().zip(pattern.sector(i).unwrap()) {
+            assert_eq!(a.degree,b.degree);
+            assert_eq!(a.periodic,b.periodic);
+            let bits = |c: &nurbs_core::curve::Curve| c.control_points.iter().flatten()
+                .chain(&c.weights).chain(&c.knots).map(|x| x.to_bits()).collect::<Vec<_>>();
+            assert_eq!(bits(a),bits(&b));
+            if i > 0 { raw += bits(a).len()*8; }
+        }
+    }
+    eprintln!("sun profile: {} segments, {} seed pieces, {} residual bytes vs {} repeated numeric bytes",
+        outline.len(),width,pattern.residual_bytes(),raw);
+    assert!(pattern.residual_bytes() < raw);
+    assert!(pattern.sector(spec.teeth).is_err());
+    assert!(LosslessSectorPattern::encode(outline,0).is_err());
+}
+
+#[test]
+fn internal_spinner_ring_packs_reverse_sectors_without_reordering_wire() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { module: 1.5, teeth: 40, clearance: 0.1, internal: true,
+        helix_angle_deg: 35., herringbone: true, ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let ring = &wires[1];
+    let width = ring.len()/spec.teeth;
+    let forward = LosslessSectorPattern::encode(ring,width).unwrap();
+    let packed = LosslessSectorPattern::encode_bidirectional(ring,width).unwrap();
+    for (i, original) in ring.chunks_exact(width).enumerate() {
+        for (a,b) in original.iter().zip(packed.sector(i).unwrap()) {
+            let bits = |c: &nurbs_core::curve::Curve| c.control_points.iter().flatten().chain(&c.weights)
+                .chain(&c.knots).map(|v| v.to_bits()).collect::<Vec<_>>();
+            assert_eq!(bits(a),bits(&b));
+            assert_eq!((a.degree,a.periodic),(b.degree,b.periodic));
+        }
+    }
+    eprintln!("ring {} segments: forward {} adaptive {} residual bytes", ring.len(),forward.residual_bytes(),packed.residual_bytes());
+    assert!(packed.residual_bytes() < forward.residual_bytes());
+    assert!(LosslessSectorPattern::encode_bidirectional(ring,0).is_err());
+}
+
+#[test]
+fn lossless_gear_edits_are_local_even_on_the_predictor_tooth() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { teeth: 8, ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let mut expected = wires[0].clone();
+    let width = expected.len()/spec.teeth;
+    let mut packed = LosslessSectorPattern::encode_bidirectional(&expected,width).unwrap();
+    for index in [3,0,3] {
+        let sector = &mut expected[index*width..(index+1)*width];
+        sector[0].control_points[0][0] += 0.125;
+        sector[0].weights[0] *= 1.25;
+        packed.replace_sector(index,sector).unwrap();
+    }
+    let mut incompatible = packed.sector(0).unwrap();
+    incompatible[0].knots.iter_mut().for_each(|x| *x += 1.);
+    assert!(packed.replace_sector(0,&incompatible).is_err());
+    assert!(packed.replace_sector(2,&[]).is_err());
+    for (index, original) in expected.chunks_exact(width).enumerate() {
+        for (a,b) in original.iter().zip(packed.sector(index).unwrap()) {
+            let bits = |c: &nurbs_core::curve::Curve| c.control_points.iter().flatten()
+                .chain(&c.weights).chain(&c.knots).map(|v| v.to_bits()).collect::<Vec<_>>();
+            assert_eq!(bits(a),bits(&b));
+        }
+    }
+}
+
+#[test]
+fn guarded_tooth_edit_preserves_internal_joins_and_cyclic_seam() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { teeth: 8, ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let width = wires[0].len()/spec.teeth;
+    let mut packed = LosslessSectorPattern::encode(&wires[0],width).unwrap();
+    for index in [0, spec.teeth-1] {
+        let mut good = packed.sector(index).unwrap();
+        let flank = good.iter_mut().find(|c| c.control_points.len() > 2).unwrap();
+        flank.control_points[1][0] += 0.001;
+        packed.replace_sector_with_closed_joins(index,&good).unwrap();
+        for (piece,at_end) in [(0,false),(0,true),(width-1,true)] {
+            let mut bad = good.clone();
+            let pts = &mut bad[piece].control_points;
+            let pole = if at_end { pts.len()-1 } else { 0 };
+            pts[pole][0] += 0.01;
+            assert!(packed.replace_sector_with_closed_joins(index,&bad).is_err());
+        }
+        for (a,b) in good.iter().zip(packed.sector(index).unwrap()) {
+            assert_eq!(a.control_points,b.control_points);
+        }
+    }
+}
+
+#[test]
+fn certified_sector_edit_rejects_crossings_even_with_closed_joins() {
+    use brep_core::profile_certificate::replace_certified_profile_sector as edit;
+    use nurbs_core::{curve::Curve, involute::LosslessSectorPattern};
+    let polygon = |points: &[[f64;2]]| (0..points.len()).map(|i|
+        Curve::from_polyline(vec![points[i].to_vec(),points[(i+1)%points.len()].to_vec()]).unwrap()
+    ).collect::<Vec<_>>();
+    let outer = polygon(&[[0.,0.],[4.,0.],[4.,4.],[0.,4.]]);
+    let holes = [polygon(&[[1.,1.],[1.,2.],[2.,2.],[2.,1.]])];
+    let mut wire = LosslessSectorPattern::encode(&outer,1).unwrap();
+    let report = edit(&mut wire,1,&outer[1..2],&holes,1e-7).unwrap();
+    assert_eq!(report.nesting_depth(), &[0,1]);
+    let mut whole = LosslessSectorPattern::encode(&outer,4).unwrap();
+    let enlarged = polygon(&[[0.,0.],[5.,0.],[5.,4.],[0.,4.]]);
+    edit(&mut whole,0,&enlarged,&holes,1e-7).unwrap();
+    let crossing = polygon(&[[0.,0.],[5.,4.],[0.,4.],[5.,0.]]);
+    assert!(edit(&mut whole,0,&crossing,&holes,1e-7).is_err());
+    let cuts_hole = polygon(&[[0.,0.],[1.5,0.],[1.5,4.],[0.,4.]]);
+    assert!(edit(&mut whole,0,&cuts_hole,&holes,1e-7).is_err());
+    for (a,b) in enlarged.iter().zip(whole.sector(0).unwrap()) { assert_eq!(a.control_points,b.control_points); }
+}
+
+#[test]
+fn full_spinner_sun_edit_checks_all_192_segments_before_commit() {
+    use brep_core::gear::{replace_verified_gear_sector as edit, ProfileEmbeddingLimits};
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { teeth:32, module:1.5, clearance:0.1, bore:5., ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    assert_eq!(wires[0].len(),192);
+    let mut packed = LosslessSectorPattern::encode(&wires[0],6).unwrap();
+    let mut tooth = packed.sector(31).unwrap();
+    let flank = tooth.iter().position(|c| c.degree > 2).unwrap();
+    tooth[flank].control_points[1][0] += 1e-8;
+    let result = edit(&mut packed,31,&tooth,false,Some(&wires[1]),1e-7,ProfileEmbeddingLimits::default()).unwrap();
+    assert_eq!(result.winding(), &[1,-1]);
+    assert_eq!(result.profile()[0][31*6+flank].control_points,tooth[flank].control_points);
+    let mut bad = tooth.clone();
+    bad[flank].control_points[1] = vec![0.,0.];
+    assert!(edit(&mut packed,31,&bad,false,Some(&wires[1]),1e-7,ProfileEmbeddingLimits::default()).is_err());
+    assert_eq!(packed.sector(31).unwrap()[flank].control_points,tooth[flank].control_points);
+}

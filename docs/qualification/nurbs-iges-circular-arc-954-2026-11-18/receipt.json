@@ -1,0 +1,17 @@
+{
+  "id": "NURBS-0954",
+  "testedBase": "0cb065f9425de930307f31e95f55f24a68858409",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "f11d44c6c1490f2ff3be44e453d439986c71272daaadf0f1b55f6fbc86623fc5",
+    "crates/cad-step/src/iges_interchange_v2/circular_arc.rs": "0678749ee921de2ccfe9ae905cd77fcb45f28450a1d2f91dbe530556741341f3",
+    "crates/cad-step/src/iges_interchange_v2/tests/circular_arcs.rs": "fc32e2f5194a151b1e526b3a5146cf6cd0596dbe757b0b037398f4ec7f10f11e",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "e4238a18ed945417c744aacb05704ec8757c80ac2f5e3a69455494df726ada6a"
+  },
+  "occt": {
+    "radius": 3.0,
+    "angle": 1.5707963267948966,
+    "volume": 141.3716688561796,
+    "analytic": 141.3716694115407
+  },
+  "fixtureCommand": "CAD_IGES_ARC_FIXTURE=/tmp/iges-arc cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib type_100"
+}

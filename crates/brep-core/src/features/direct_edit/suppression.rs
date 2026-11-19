@@ -330,7 +330,7 @@ pub(super) fn suppress_by_deletion(
 
 /// Rebuild the model without the given entities, remapping every reference
 /// and preserving the persistent ids of all kept entities.
-pub(super) fn compact(
+pub(crate) fn compact(
     model: &Model,
     remove_faces: &BTreeSet<usize>,
     remove_loops: &BTreeSet<usize>,

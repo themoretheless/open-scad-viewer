@@ -73,3 +73,47 @@ fn smooth_extraction_keeps_existing_control_limit_and_refuses_atomic_growth(){
  let source=Curve{degree:3,knots:[vec![0.;4],(1..253).map(|i|i as f64/253.).collect(),vec![1.;4]].concat(),control_points:(0..256).map(|i|vec![i as f64,0.]).collect(),weights:vec![1.;256],periodic:false};
  source.validate().unwrap();let r=reduce_smooth(&source,1_000_000).unwrap();assert!(!r.reduced);assert_eq!(r.curve,source);assert_eq!(r.refusal,Some(Refusal::InvalidProposedDefinition));assert_eq!(r.work_used,0);
 }
+
+#[test]
+fn joint_curve_compression_keeps_proved_steps_under_one_budget() {
+    use nurbs_core::editing::exact_knot_removal::{compress_curve, simplify};
+    let source = cubic().insert(3.5, 1).unwrap();
+    let full = compress_curve(&source, 1_000_000).unwrap();
+    assert!(full.completed);
+    assert_eq!((full.removed_knots, full.reduced_degrees), (1, 1));
+    assert_eq!(full.curve, reduce(&cubic(), 1_000_000).unwrap().curve);
+    let first = simplify(&source, 1_000_000).unwrap();
+    let partial = compress_curve(&source, first.work_used).unwrap();
+    assert!(!partial.completed);
+    assert_eq!(partial.curve, cubic());
+    assert_eq!(partial.work_used, first.work_used);
+    assert_eq!(compress_curve(&partial.curve, 1_000_000).unwrap().curve, full.curve);
+    let short = compress_curve(&source, 1).unwrap();
+    assert!(!short.completed);
+    assert_eq!(short.curve, source);
+    assert!(compress_curve(&source, 0).is_err());
+}
+
+#[test]
+fn curve_batch_commits_only_complete_ordered_profiles() {
+    use nurbs_core::editing::exact_knot_removal::{compress_curve, compress_curve_batch};
+    let first = cubic().insert(3.5, 1).unwrap();
+    let mut second = cubic();
+    second.knots = [vec![5.;4],vec![7.;4]].concat();
+    for p in &mut second.control_points { p[0]+=6.; p[2]+=6.; }
+    let sources = [first,second];
+    let batch = compress_curve_batch(&sources, 1_000_000).unwrap();
+    let segments = batch.segments.unwrap();
+    for (segment,source) in segments.iter().zip(&sources) {
+        assert_eq!(segment.curve, compress_curve(source,1_000_000).unwrap().curve);
+    }
+    assert_eq!(segments[0].curve.evaluate(5.).unwrap().point,segments[1].curve.evaluate(5.).unwrap().point);
+    let short = compress_curve_batch(&sources,batch.work_used-1).unwrap();
+    assert!(short.segments.is_none());
+    assert!(short.work_used < batch.work_used);
+    assert!(compress_curve_batch(&sources,batch.work_used).unwrap().segments.is_some());
+    assert!(compress_curve_batch(&[],100).is_err());
+    let mut bad = sources.clone();
+    bad[1].weights.clear();
+    assert!(compress_curve_batch(&bad,1_000_000).is_err());
+}

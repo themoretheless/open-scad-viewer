@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0990",
+  "testedBase": "07db179ac45fc4ed3adb7340b7c66b92cf8324e8",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "b112722685056187b3e825d86f9e513adff1e5701a9b03692723caa672ecdbed",
+    "crates/cad-step/tests/baked_step_scales.rs": "c664f475683d6b666da3047dcc9e904fb0d9ca2495f398012415245ce8753389"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv990.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Unbalance kg mm: (0.43200000000000005, 0.5760000000000001) balanced centre XY: 5.0 4.000000000000001"
+}

@@ -2357,7 +2357,7 @@ pub fn measure_planar_contour_set_oriented_box_distance(
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct PlanarContourPairDistanceReport {
+pub struct ContourPairDistanceReport {
     pub bounds: [f64; 2],
     /// Contour index and source parameter in each input set.
     pub witness_contours: [usize; 2],
@@ -2365,6 +2365,8 @@ pub struct PlanarContourPairDistanceReport {
     pub work_cells: usize,
     pub converged: bool,
 }
+
+pub type PlanarContourPairDistanceReport = ContourPairDistanceReport;
 
 /// Bound the minimum distance between two sets of closed planar NURBS
 /// contours. Every original knot-span pair receives a cell before
@@ -2378,16 +2380,44 @@ pub fn measure_planar_contour_sets_distance(
     validate(tolerance, max_cells)?;
     validate_distance_contours(first, max_cells)?;
     validate_distance_contours(second, max_cells)?;
-    let counts = [first, second].map(|set| {
-        set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
-    });
-    let total = |spans: &[usize]| spans.iter().try_fold(0_usize, |sum, &count| sum.checked_add(count));
-    let initial = total(&counts[0]).zip(total(&counts[1]))
-        .and_then(|(a, b)| a.checked_mul(b))
-        .filter(|&work| work <= max_cells)
-        .ok_or_else(|| resource("Contour distance budget must cover every original span pair"))?;
-    let mut extra = max_cells - initial;
-    let mut pairs = first.len() * second.len();
+    measure_validated_contour_pairs(first, second, tolerance, max_cells, false)
+}
+
+/// Enclose the minimum 3D distance between two collections of clamped,
+/// continuous closed spatial curves, with witnesses in source parameters.
+pub fn measure_spatial_contour_sets_distance(
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize,
+) -> Result<ContourPairDistanceReport> {
+    validate(tolerance,max_cells)?;
+    validate_spatial_distance_set(first, max_cells)?;
+    validate_spatial_distance_set(second, max_cells)?;
+    measure_validated_contour_pairs(first, second, tolerance, max_cells, false)
+}
+
+fn validate_spatial_distance_set(set: &[&Curve], max_cells: usize) -> Result<()> {
+    check(!set.is_empty() && set.len() <= max_cells, "Expected bounded nonempty spatial contour set")?;
+    for curve in set {
+        validate_continuous_clamped_curve(curve, 3)?;
+        check(curve.control_points.first() == curve.control_points.last(), "Spatial contour must be closed")?;
+    }
+    Ok(())
+}
+
+/// Bound clearance between distinct members of one collection. Witness
+/// indices are ordered. Two coincident entries are distinct members and
+/// therefore can attain zero clearance.
+pub fn closest_spatial_contour_pair(
+    contours: &[&Curve], tolerance: f64, max_cells: usize,
+) -> Result<ContourPairDistanceReport> {
+    validate(tolerance, max_cells)?;
+    check(contours.len() >= 2, "Closest pair needs at least two contours")?;
+    validate_spatial_distance_set(contours, max_cells)?;
+    measure_validated_contour_pairs(contours, contours, tolerance, max_cells, true)
+}
+
+fn measure_validated_contour_pairs(
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize, distinct_members: bool,
+) -> Result<ContourPairDistanceReport> {
     let mut report = PlanarContourPairDistanceReport {
         bounds: [f64::INFINITY; 2],
         witness_contours: [0; 2],
@@ -2395,12 +2425,7 @@ pub fn measure_planar_contour_sets_distance(
         work_cells: 0,
         converged: false,
     };
-    for (i, a) in first.iter().enumerate() {
-        for (j, b) in second.iter().enumerate() {
-            let reserved = counts[0][i] * counts[1][j];
-            let distance = crate::curve_distance::distance(a, b, tolerance, reserved + extra / pairs)?;
-            pairs -= 1;
-            extra -= distance.cells.saturating_sub(reserved);
+    visit_contour_pairs(first, second, tolerance, max_cells, distinct_members, |[i,j], distance| {
             report.work_cells += distance.cells;
             report.bounds[0] = report.bounds[0].min(distance.distance_interval_mm[0]);
             if distance.distance_interval_mm[1] < report.bounds[1] {
@@ -2408,10 +2433,333 @@ pub fn measure_planar_contour_sets_distance(
                 report.witness_contours = [i, j];
                 report.witness_parameters = distance.parameters;
             }
-        }
-    }
+            Ok(())
+    })?;
     report.converged = (report.bounds[1] - report.bounds[0]).next_up() <= tolerance;
     Ok(report)
+}
+
+fn visit_contour_pairs(
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize, distinct_members: bool,
+    mut visit: impl FnMut([usize;2], crate::curve_distance::CurveDistance) -> Result<()>,
+) -> Result<()> {
+    let counts = [first, second].map(|set| {
+        set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
+    });
+    let start = |i| if distinct_members { i + 1 } else { 0 };
+    let mut extra = max_cells;
+    let mut pairs = 0;
+    for (i, &left) in counts[0].iter().enumerate() {
+        for &right in &counts[1][start(i)..] {
+            extra = extra.checked_sub(left * right)
+                .ok_or_else(|| resource("Contour distance budget must cover every original span pair"))?;
+            pairs += 1;
+        }
+    }
+    for (i, a) in first.iter().enumerate() {
+        for (j, b) in second.iter().enumerate().skip(start(i)) {
+            let reserved = counts[0][i] * counts[1][j];
+            let distance = crate::curve_distance::distance(a, b, tolerance, reserved + extra / pairs)?;
+            pairs -= 1;
+            extra -= distance.cells.saturating_sub(reserved);
+            visit([i,j],distance)?;
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClearanceDecision { MeetsMinimum, BelowMinimum, Unresolved }
+
+#[derive(Debug, Clone)]
+pub struct ContourClearanceCheck {
+    pub contours: [usize;2],
+    pub bounds: [f64;2],
+    pub witness_parameters: [f64;2],
+    pub cells: usize,
+    pub decision: ClearanceDecision,
+}
+
+// Positive-weight rational curves stay inside the box of their Cartesian
+// poles. Compare squared box separation in exact binary64-input arithmetic
+// so that an inclusive clearance can be certified even at equality.
+fn spatial_control_box(curve: &Curve) -> [[f64;2];3] {
+    std::array::from_fn(|axis| curve.control_points.iter().fold(
+        [f64::INFINITY, f64::NEG_INFINITY],
+        |[lo,hi], pole| [lo.min(pole[axis]), hi.max(pole[axis])],
+    ))
+}
+
+fn box_proves_clearance(a: &[[f64;2];3], b: &[[f64;2];3], minimum: f64) -> bool {
+    use num_rational::BigRational;
+    // Validation of the curves and threshold guarantees finite inputs.
+    let exact = |x| BigRational::from_float(x).expect("validated finite coordinate");
+    let mut squared = exact(0.);
+    for (left,right) in a.iter().zip(b) {
+        let gap = if left[1] < right[0] {exact(right[0])-exact(left[1])}
+            else if right[1] < left[0] {exact(left[0])-exact(right[1])}
+            else {continue};
+        squared += &gap * &gap;
+    }
+    let threshold = exact(minimum);
+    squared >= &threshold * &threshold
+}
+
+// Compare a known pair of on-curve points enclosed by outward coordinate
+// intervals. Use the farthest opposite faces on each axis for an upper proof.
+fn witnesses_below_clearance(a: &[[f64;2]], b: &[[f64;2]], minimum: f64) -> bool {
+    use num_rational::BigRational;
+    use num_traits::Signed;
+    let exact = |x| BigRational::from_float(x).expect("finite witness coordinate");
+    let mut squared = exact(0.);
+    for (left,right) in a.iter().zip(b) {
+        let delta = (exact(left[0])-exact(right[1])).abs()
+            .max((exact(left[1])-exact(right[0])).abs());
+        squared += &delta * &delta;
+    }
+    let limit = exact(minimum);
+    squared < &limit * &limit
+}
+
+/// Sufficient clearance certificate from exact control-pole projections on
+/// a supplied separating normal. A false result only means the direction
+/// did not prove the threshold. The normal need not have unit length.
+pub fn prove_spatial_contour_clearance_along(
+    first: &Curve, second: &Curve, normal: [f64; 3], minimum: f64,
+) -> Result<bool> {
+    use num_rational::BigRational as Q;
+    validate_spatial_distance_set(&[first, second], 2)?;
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    check(normal.iter().all(|v| v.is_finite()) && normal.iter().any(|&v| v != 0.),
+          "Expected finite nonzero separating normal")?;
+    let exact = |x| Q::from_float(x).expect("validated finite input");
+    Ok(projected_support_proves(first, second, normal.map(exact), minimum))
+}
+
+fn projected_support_proves(first: &Curve, second: &Curve, n: [num_rational::BigRational;3], minimum: f64) -> bool {
+    pole_support_proves(first.control_points.iter(), second.control_points.iter(), n, minimum)
+}
+
+fn pole_support_proves<'a>(
+    first: impl Iterator<Item=&'a Vec<f64>>, second: impl Iterator<Item=&'a Vec<f64>>,
+    n: [num_rational::BigRational;3], minimum: f64,
+) -> bool {
+    use num_rational::BigRational as Q;
+    use num_traits::Zero;
+    if n.iter().all(Q::is_zero) { return false; }
+    let exact = |x| Q::from_float(x).expect("validated finite input");
+    let support = |poles: &mut dyn Iterator<Item=&Vec<f64>>| {
+        let mut projections = poles.map(|p| {
+            n.iter().zip(p).map(|(a,&b)| a * exact(b)).sum::<Q>()
+        });
+        let first = projections.next().expect("validated nonempty control net");
+        projections.fold((first.clone(),first), |(lo,hi),x| (lo.min(x.clone()),hi.max(x)))
+    };
+    let (alo,ahi) = support(&mut first.into_iter());
+    let (blo,bhi) = support(&mut second.into_iter());
+    let gap = (blo-ahi).max(alo-bhi).max(Q::zero());
+    let squared_norm = n.iter().map(|a| a*a).sum::<Q>();
+    let threshold = exact(minimum);
+    &gap * &gap >= &threshold * &threshold * squared_norm
+}
+
+// The point differences only propose normals. Even a rounded witness can
+// suggest a valid direction: acceptance uses the entire exact support ranges.
+fn automatic_support_proves(first: &Curve, second: &Curve, points: &[Vec<f64>;2], minimum: f64) -> bool {
+    let direction = |a: &[f64], b: &[f64]| std::array::from_fn(|i|
+        num_rational::BigRational::from_float(b[i]).unwrap()
+        - num_rational::BigRational::from_float(a[i]).unwrap());
+    let seam = direction(&first.control_points[0], &second.control_points[0]);
+    if projected_support_proves(first,second,seam.clone(),minimum) { return true; }
+    if points.iter().flatten().any(|v| !v.is_finite()) { return false; }
+    let candidate = direction(&points[0], &points[1]);
+    candidate != seam && projected_support_proves(first,second,candidate,minimum)
+}
+
+/// Signed separation of two constant-radius ball sweeps, including their end caps.
+/// The witnesses use independent centerline parameters; this is a static routing check.
+#[derive(Debug)]
+pub struct TubePairClearance {
+    pub signed_margin_mm: [f64; 2],
+    pub centerline_distance: crate::curve_distance::CurveDistance,
+}
+
+pub fn tube_pair_clearance(
+    first: (&Curve, f64), second: (&Curve, f64), tolerance: f64, max_cells: usize,
+) -> Result<TubePairClearance> {
+    for (curve, radius) in [first, second] {
+        check(radius.is_finite() && radius >= 0., "Expected finite nonnegative tube radius")?;
+        check(curve.control_points.first().is_some_and(|p| p.len() == 3), "Expected spatial tube centerline")?;
+    }
+    let centerline_distance = crate::curve_distance::distance(first.0, second.0, tolerance, max_cells)?;
+    let signed_margin_mm = tube_margin(centerline_distance.distance_interval_mm, first.1, second.1)?;
+    Ok(TubePairClearance { signed_margin_mm, centerline_distance })
+}
+
+fn tube_margin([lo, hi]: [f64; 2], a: f64, b: f64) -> Result<[f64; 2]> {
+    let margin = Interval::new(lo, hi)?.sub(Interval::point(a))?.sub(Interval::point(b))?;
+    Ok([margin.lo, margin.hi])
+}
+
+#[derive(Debug)]
+pub struct TubeBundleClearance {
+    pub signed_margin_mm: [f64; 2],
+    /// Pair that furnished the global upper bound; other pairs may tie or overlap its interval.
+    pub witness_pair: [usize; 2],
+    pub witness_parameters: [f64; 2],
+    pub work_cells: usize,
+}
+
+/// Find the least signed clearance among all distinct routed tubes under one cell budget.
+pub fn tube_bundle_clearance(
+    tubes: &[(&Curve, f64)], tolerance: f64, max_cells: usize,
+) -> Result<TubeBundleClearance> {
+    validate(tolerance, max_cells)?;
+    check(tubes.len() >= 2, "Expected at least two tubes")?;
+    if tubes.len().saturating_mul(tubes.len()-1)/2 > max_cells {
+        return Err(resource("Tube budget must cover every pair"));
+    }
+    let mut curves = Vec::with_capacity(tubes.len());
+    for &(curve, radius) in tubes {
+        curve.validate()?;
+        check(curve.control_points[0].len() == 3, "Expected spatial tube centerline")?;
+        check(radius.is_finite() && radius >= 0., "Expected finite nonnegative tube radius")?;
+        curves.push(curve);
+    }
+    let mut report = TubeBundleClearance {
+        signed_margin_mm: [f64::INFINITY; 2], witness_pair: [0, 1],
+        witness_parameters: [0.; 2], work_cells: 0,
+    };
+    visit_contour_pairs(&curves, &curves, tolerance, max_cells, true, |[i,j], distance| {
+        let [lo, hi] = tube_margin(distance.distance_interval_mm, tubes[i].1, tubes[j].1)?;
+        report.signed_margin_mm[0] = report.signed_margin_mm[0].min(lo);
+        if hi < report.signed_margin_mm[1] {
+            report.signed_margin_mm[1] = hi;
+            report.witness_pair = [i, j];
+            report.witness_parameters = distance.parameters;
+        }
+        report.work_cells += distance.cells;
+        Ok(())
+    })?;
+    Ok(report)
+}
+
+/// Check clearance to the entire untrimmed tensor patch. The distance report
+/// retains the curve and UV witness parameters. In ambiguous cases, use the
+/// witness direction to certify the full control nets, or certify a strict
+/// violation using the enclosed witness coordinates.
+pub fn inspect_curve_surface_clearance(
+    curve: &Curve, surface: &crate::surface::Surface, minimum: f64, tolerance: f64, max_cells: usize,
+) -> Result<(ClearanceDecision, crate::curve_surface_distance::Report)> {
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    let report = crate::curve_surface_distance::distance(curve,surface,tolerance,max_cells)?;
+    let decision = patch_clearance_decision(report.distance_interval, &report.points,
+        [&report.point_enclosures[0], &report.point_enclosures[1]], minimum,
+        curve.control_points.iter(), surface.control_points.iter().flatten());
+    Ok((decision, report))
+}
+
+/// Check the inclusive minimum clearance across two full positive-weight tensor surfaces.
+/// The returned UV pair locates the sampled upper bound on the original surfaces.
+pub fn inspect_surface_surface_clearance(
+    first: &crate::surface::Surface, second: &crate::surface::Surface,
+    minimum: f64, tolerance: f64, max_cells: usize,
+) -> Result<(ClearanceDecision, crate::surface_distance::SurfaceDistance)> {
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    let report = crate::surface_distance::distance(first, second, tolerance, max_cells)?;
+    let decision = patch_clearance_decision(report.distance_interval_mm, &report.points,
+        [&report.point_enclosures[0], &report.point_enclosures[1]], minimum,
+        first.control_points.iter().flatten(), second.control_points.iter().flatten());
+    Ok((decision, report))
+}
+
+/// Inspect clearance on the retained regions of two UV-trimmed surfaces.
+/// A decision requires an admitted witness on each face, including for a zero threshold.
+pub fn inspect_trimmed_surface_clearance(
+    first: (&crate::surface::Surface, &crate::trim_domain::TrimDomain),
+    second: (&crate::surface::Surface, &crate::trim_domain::TrimDomain),
+    minimum: f64, tolerance: f64, max_cells: usize, max_domain_cells: usize,
+) -> Result<(ClearanceDecision, crate::trimmed_surface_distance::TrimmedDistance)> {
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    let report = crate::trimmed_surface_distance::distance(
+        first.0, first.1, second.0, second.1, tolerance, max_cells, max_domain_cells,
+    )?;
+    let decision = match (report.upper_bound_mm, &report.points, &report.point_enclosures) {
+        (Some(upper), Some(points), Some(bounds)) => patch_clearance_decision(
+            [report.lower_bound_mm, upper], points, [&bounds[0], &bounds[1]], minimum,
+            first.0.control_points.iter().flatten(), second.0.control_points.iter().flatten(),
+        ),
+        _ => ClearanceDecision::Unresolved,
+    };
+    Ok((decision, report))
+}
+
+fn patch_clearance_decision<'a>(
+    [lo, hi]: [f64; 2], points: &[impl AsRef<[f64]>; 2], bounds: [&[[f64; 2]]; 2], minimum: f64,
+    first: impl Iterator<Item=&'a Vec<f64>>, second: impl Iterator<Item=&'a Vec<f64>>,
+) -> ClearanceDecision {
+    if lo >= minimum { return ClearanceDecision::MeetsMinimum; }
+    if hi < minimum || witnesses_below_clearance(bounds[0], bounds[1], minimum) {
+        return ClearanceDecision::BelowMinimum;
+    }
+    let exact = |x| num_rational::BigRational::from_float(x).expect("finite witness coordinate");
+    let direction = std::array::from_fn(|i| exact(points[1].as_ref()[i]) - exact(points[0].as_ref()[i]));
+    if pole_support_proves(first, second, direction, minimum) {
+        ClearanceDecision::MeetsMinimum
+    } else {
+        ClearanceDecision::Unresolved
+    }
+}
+
+/// Check every distinct pair, in index order, against an inclusive minimum.
+/// At a threshold straddle, exact control-box and witness tests can still
+/// certify the decision. A closed upper bound may equal a strictly violated threshold.
+pub fn inspect_spatial_contour_clearances(
+    contours: &[&Curve], minimum: f64, tolerance: f64, max_cells: usize,
+) -> Result<Vec<ContourClearanceCheck>> {
+    validate(tolerance,max_cells)?;
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative minimum clearance")?;
+    check(contours.len() >= 2, "Clearance inspection requires at least two contours")?;
+    validate_spatial_distance_set(contours,max_cells)?;
+    let boxes: Vec<_> = contours.iter().map(|c| spatial_control_box(c)).collect();
+    let mut checks = Vec::new();
+    visit_contour_pairs(contours,contours,tolerance,max_cells,true,|indices,distance| {
+        let [mut lo,mut hi] = distance.distance_interval_mm;
+        let mut parameters = distance.parameters;
+        let decision = if lo >= minimum {
+            ClearanceDecision::MeetsMinimum
+        } else if hi < minimum {
+            ClearanceDecision::BelowMinimum
+        } else if box_proves_clearance(&boxes[indices[0]], &boxes[indices[1]], minimum) {
+            lo = minimum;
+            ClearanceDecision::MeetsMinimum
+        } else {
+            let [a,b] = indices.map(|i| contours[i]);
+            let witness = &distance.point_enclosures;
+            // The first pole of a clamped curve is an exact endpoint. Its
+            // enclosure need not inherit rounding from point evaluation.
+            let endpoint = |c: &Curve| -> [[f64;2];3] {
+                std::array::from_fn(|k| [c.control_points[0][k];2])
+            };
+            if witnesses_below_clearance(&witness[0], &witness[1], minimum) {
+                hi = minimum;
+                ClearanceDecision::BelowMinimum
+            } else if witnesses_below_clearance(&endpoint(a), &endpoint(b), minimum) {
+                parameters = [a.domain()[0], b.domain()[0]];
+                hi = minimum;
+                ClearanceDecision::BelowMinimum
+            } else if automatic_support_proves(a,b,&distance.points,minimum) {
+                lo = minimum;
+                ClearanceDecision::MeetsMinimum
+            } else {
+                ClearanceDecision::Unresolved
+            }
+        };
+        checks.push(ContourClearanceCheck { contours: indices, bounds:[lo,hi],
+            witness_parameters:parameters,cells:distance.cells,decision });
+        Ok(())
+    })?;
+    Ok(checks)
 }
 
 #[derive(Clone, Debug)]
@@ -3231,8 +3579,12 @@ fn measure_contour_set_distance(
 }
 
 fn validate_winding_curve(direction: &Curve) -> Result<[f64; 2]> {
+    validate_continuous_clamped_curve(direction, 2)
+}
+
+fn validate_continuous_clamped_curve(direction: &Curve, dimension: usize) -> Result<[f64; 2]> {
     direction.validate()?;
-    check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;
+    check(direction.control_points[0].len() == dimension, "Unexpected contour dimension")?;
     let domain = direction.domain();
     let degree = direction.degree;
     let last = direction.control_points.len();

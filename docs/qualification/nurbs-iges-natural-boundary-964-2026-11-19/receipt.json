@@ -1,0 +1,23 @@
+{
+  "id": "NURBS-0964",
+  "testedBase": "1e991596c221112573c594dac82981aaa04693dc",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "bba9311fd6849a6c1c2f168b9ba99536897af563ae88f4592e275a722da76896",
+    "crates/cad-step/src/iges_interchange_v2/natural_boundary.rs": "03af087575fa9435f88a9d9ec52d56444535784c91c84d3e9975dd1ebb4bf20b",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "c8897ca38616781be5834bdd7fd3da8f6e7a2a9acc2efe7e73e1162840ce8a31"
+  },
+  "occt": {
+    "solids": 1,
+    "shells": 1,
+    "faces": 6,
+    "volume": 24.0
+  },
+  "fixtureSha256": "efebdbc4e10981ed675d2d97d9c25aed0ff53b3bafa00aae72a00fe3d468607a",
+  "fixtureEnvironment": "CAD_IGES_NATURAL_BOUNDARY_STEP=/tmp/osv964-natural.step",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Closed cuboid reuses twelve shared edges",
+    "Explicit inner loop retains hole orientation",
+    "Open rational cylinder patch synthesizes four natural edges"
+  ]
+}

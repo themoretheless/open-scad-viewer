@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0886",
+  "testedBase": "ae9775a3e552dd44ab6b8b0e0692fb70dd70a032",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 15,
+  "scope": [
+    "Enumerate phase-compatible spinner station counts with certified tip clearance. Validate exact lists, scaled layout, empty solution and domain errors."
+  ],
+  "logSha256": "d368d68adb33261846c2a159407b6d142d32a036e44686ce74a3a57bf097a998",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "a9e3957f7aff8d65f9f2968ccb15f9bb8467ae3565d5d4813de399909d6cee54",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "3bdf3730ac27f4995a61cc3e57101a2fc02464c68eaf427c3e1d46be7b3fc326",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "f5c0492e972f65010eb9b5f3d2d54f389021ddfd013c0d63dba7db02e7619c49"
+  }
+}

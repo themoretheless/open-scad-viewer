@@ -376,7 +376,7 @@ pub fn suppress_feature(
 // Fillet-chain suppression: extend supports to their intersection.
 // ---------------------------------------------------------------------------
 
-mod suppression;
+pub(crate) mod suppression;
 use suppression::*;
 
 // ---------------------------------------------------------------------------

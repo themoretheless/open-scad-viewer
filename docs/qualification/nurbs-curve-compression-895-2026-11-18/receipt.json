@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0895",
+  "testedBase": "36a0ed70f0dc1c2cc15562b4de01e1daf989162d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 461,
+  "scope": [
+    "Certify signed area and enforce either winding while retaining the selected seam. Verify both traversals and insufficient area budget."
+  ],
+  "logSha256": "0b6c2e39cf42d3d55cabdda84dddbfd8f9cba18634aee9af069516444e11700f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "34542f77e2081717e8b2f743f50ccbc58ce4605d9c9fe47bb4d6d7b0ab08e6c1",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "10a5a283aaf024f3885e565492389f5201d14a217d801a8cb29b87fea16380a3",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "88191dd5c9399693a40e151a0a38f47794a57e621be82a65253f69bf1b3702e0"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0909",
+  "testedBase": "8ed5a98ae5822059bf10de840e938216376b5e50",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "surface_distance_queries",
+    "--test",
+    "curve_surface_distance"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 468,
+  "scope": [
+    "Compare retained-domain clearance with and without a square hole. Verify strict violation, separation, admitted UV witness, empty region and invalid threshold."
+  ],
+  "logSha256": "0e06443a3c2f265fd40b0ddec2dde76c63f45838f4429328dd03451650ba3664",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "2ceeebfc3b929dde5c2d15f714e75556e8d9d454755e0255d098bfe50dc960b0",
+    "crates/nurbs-core/tests/surface_distance_queries.rs": "3d82786155c6f7a1c6eb018a249589d88e8b1a4a74f90da4bb60a2b93460f11f"
+  }
+}

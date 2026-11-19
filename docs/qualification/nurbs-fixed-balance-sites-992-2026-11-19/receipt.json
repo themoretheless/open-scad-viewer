@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0992",
+  "testedBase": "5a010b38871c4a15af8c5c6258bde51dd0870f97",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "742eee04d6433c1a999e37e07b799c526ceb9966242c4e2f1d157d5a02ae1bb3",
+    "crates/cad-step/tests/baked_step_scales.rs": "9efe0ac4b1080da3adad9cad04fb4f3045c7d465543700b6ec7d17ce61b50d33"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv992.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Four discrete masses: residual radial offset and inertia products [0. 0. 0.] [0.0, 4.440892098500626e-16]"
+}

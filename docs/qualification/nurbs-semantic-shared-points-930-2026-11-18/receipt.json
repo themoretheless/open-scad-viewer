@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0930",
+  "testedBase": "17fb82810d4f2acdf512749dc4384742f5186bc2",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "Round-trip a gear with a named material, styled and layered face. Compare face assignments and marked face geometry to ordinary attributed export."
+  ],
+  "logSha256": "d095d2677f5bdc624f34c5ede11bce63ec11a603c10d18cec991995029625705",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "927adf17c0576b153c336973ac2c8299a4d3409876fa1f884e466cec1d157315",
+    "crates/cad-step/src/step_interchange_v3.rs": "7a186d83f8d1ead3d2cccc25df142ea454731ef226c80113d4c916594b233929",
+    "crates/cad-step/src/lib.rs": "b99da5d5f1a99e929fb8358a9adfe5dac986ee39931c8338c48f79af409410ca",
+    "crates/cad-step/tests/edited_gear_step.rs": "590d8d65ed6852e3eb714faecca69c704252cd358393a226703ff924f6488c18"
+  }
+}

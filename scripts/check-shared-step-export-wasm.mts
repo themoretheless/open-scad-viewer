@@ -46,3 +46,35 @@ assert.equal(reopened.model.bodies.length, 2)
 const xCoordinates = reopened.model.vertices.map(vertex => vertex.point[0])
 assert.deepEqual([...new Set(xCoordinates)].sort((a, b) => a - b), [0, 2, 17, 19])
 console.log('Shared STEP round trip verified on WASM: two blocks placed 17 mm apart.')
+
+const grouped = request<{ text: string }>({
+  op: 'brep_nurbs_export_shared_step',
+  definitions: [block],
+  occurrences: [0, 17].map(x => ({ definition: 0, transform: placement(x) })),
+  groups: ['Drive', 'Rotor', 'Spare'],
+  parents: [0, 1],
+})
+assert.equal(grouped.text.match(/=MANIFOLD_SOLID_BREP\(/g)?.length, 1)
+assert.equal(grouped.text.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)?.length, 5)
+for (const [index, name] of ['Drive', 'Rotor', 'Spare'].entries()) {
+  assert.ok(grouped.text.includes(`PRODUCT('group-${index}','${name}'`))
+}
+const groupedImport = request<typeof reopened>({ op: 'brep_nurbs_import_step_v9', text: grouped.text })
+assert.equal(groupedImport.model.bodies.length, 2)
+assert.deepEqual([...new Set(groupedImport.model.vertices.map(vertex => vertex.point[0]))].sort((a,b) => a-b), [0, 2, 17, 19])
+console.log('Grouped STEP round trip verified on WASM, including an empty group.')
+
+const styled = request<{ text: string }>({
+  op: 'brep_nurbs_export_shared_step',
+  definitions: [block],
+  occurrences: [0, 17].map(x => ({ definition: 0, transform: placement(x) })),
+  groups: ['Drive'],
+  parents: [0, 0],
+  colours: [{name: 'Blue', rgb: [0, 0, 1]}, {name: 'Red', rgb: [1, 0, 0]}],
+})
+assert.equal(styled.text.match(/=MANIFOLD_SOLID_BREP\(/g)?.length, 1)
+assert.equal(styled.text.match(/=PRESENTATION_STYLE_BY_CONTEXT\(/g)?.length, 2)
+const styledImport = request<typeof reopened>({ op: 'brep_nurbs_import_step_v9', text: styled.text })
+assert.equal(styledImport.model.bodies.length, 2)
+assert.deepEqual([...new Set(styledImport.model.vertices.map(vertex => vertex.point[0]))].sort((a,b) => a-b), [0, 2, 17, 19])
+console.log('Styled shared STEP export verified on WASM.')
