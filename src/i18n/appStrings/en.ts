@@ -176,13 +176,14 @@ export const en = {
   perf: 'Build measurements',
   modelTools: 'Modeling tools',
   generators: 'Generators',
+  skadisVoronoi: 'SKÅDIS · Voronoi',
   codeToSolid: 'Bring scene into Solid',
   codeToMesh: 'Bring scene into Mesh',
   fileMenu: 'File',
   forPrinting: 'printing',
   forCad: 'CAD, Blender',
   savedDraftStatus: 'Draft saved in browser',
-  exportScope: 'The whole scene is exported as one body',
+  exportScope: '3MF, OBJ, and AMF preserve object groups and names; STL, PLY, and OFF export a single mesh',
   renderShortcut: 'Render',
   exportQuality: 'Mesh quality (tessellation)',
   exportQualityViewport: 'Viewport',
@@ -223,8 +224,7 @@ export const en = {
   'kernelError.dimensionPositive': 'The dimension must be positive.',
   'kernelError.booleanOperands': 'The Boolean operands are empty.',
   'kernelError.booleanDuplicate': 'A body is listed in both A and B.',
-  'kernelError.booleanInstanceSource':
-    'The operation would remove a source that remaining linked instances refer to.',
+  'kernelError.booleanInstanceSource': 'The operation would remove a source that remaining linked instances refer to.',
   'kernelError.invalidSize': 'The size is out of range.',
   'kernelError.invalidSelection': 'The selected edges do not suit this operation.',
   'kernelError.curveInput': 'The NURBS curve input is invalid ({code}). The model is unchanged.',
@@ -243,8 +243,7 @@ export const en = {
   'kernelError.rationalSweep': 'Sweeping a rational profile is not supported ({code}). The model is unchanged.',
   'kernelError.sweepFrame':
     'The profile orientation along the path could not be built ({code}). The model is unchanged.',
-  'kernelError.sourceContact':
-    'The contact between the source surfaces is unproven ({code}). The model is unchanged.',
+  'kernelError.sourceContact': 'The contact between the source surfaces is unproven ({code}). The model is unchanged.',
   'kernelError.filletRefused':
     'The fillet is unproven for the selected edges and radius ({code}). The model is unchanged.',
   'kernelError.variableFillet':
@@ -271,8 +270,7 @@ export const en = {
   'kernelError.dimensionAnalytic': 'Arcs and circles accept only radius and diameter dimensions.',
   'kernelError.surfaceInputs': 'The number of input curves does not suit this surface.',
   'kernelError.sweepDeviation': 'The sweep deviation exceeds the budget.',
-  'kernelError.sweepPath':
-    'The sweep path cannot be used: it crosses itself or bends tighter than the profile radius.',
+  'kernelError.sweepPath': 'The sweep path cannot be used: it crosses itself or bends tighter than the profile radius.',
   'kernelError.profilePlane': 'The profile contours lie on different planes.',
   'kernelError.targetBody': 'No target body is selected.',
   'kernelError.upToPlane':

@@ -176,13 +176,14 @@ export const ru = {
   perf: 'Замеры сборки',
   modelTools: 'Инструменты моделирования',
   generators: 'Генераторы',
+  skadisVoronoi: 'SKÅDIS · Вороной',
   codeToSolid: 'Перенести сцену в Solid',
   codeToMesh: 'Перенести сцену в Mesh',
   fileMenu: 'Файл',
   forPrinting: 'печать',
   forCad: 'CAD, Blender',
   savedDraftStatus: 'Черновик сохранён в браузере',
-  exportScope: 'Экспортируется вся сцена одним телом',
+  exportScope: '3MF, OBJ и AMF сохраняют группы и названия объектов; STL, PLY и OFF — единым мешем',
   renderShortcut: 'Рендер',
   exportQuality: 'Качество сетки (детализация)',
   exportQualityViewport: 'Экранное',
@@ -212,8 +213,7 @@ export const ru = {
   'kernelError.loftSections': 'Для loft нужно от 2 до 64 замкнутых сечений.',
   'kernelError.sketchSelfIntersection': 'Контур эскиза пересекает сам себя.',
   'kernelError.ellipseInput': 'Эллипс требует конечный центр и радиусы от 0,01 до 1 000 000 мм.',
-  'kernelError.ellipseNotExact':
-    'Точный эллипс в профиле эскиза не поддерживается; приближение ломаной не создаётся.',
+  'kernelError.ellipseNotExact': 'Точный эллипс в профиле эскиза не поддерживается; приближение ломаной не создаётся.',
   'kernelError.projectionInput':
     'Проецировать можно только ломаную, окружность или дугу эскиза с конечными точками; отрезок не должен схлопываться в точку.',
   'kernelError.projectionNotExact':
@@ -244,8 +244,7 @@ export const ru = {
   'kernelError.rationalSweep': 'Протяжка рационального профиля не поддерживается ({code}). Модель не изменена.',
   'kernelError.sweepFrame': 'Не удалось построить ориентацию профиля вдоль пути ({code}). Модель не изменена.',
   'kernelError.sourceContact': 'Касание исходных поверхностей не подтверждено ({code}). Модель не изменена.',
-  'kernelError.filletRefused':
-    'Скругление не подтверждено для выбранных рёбер и радиуса ({code}). Модель не изменена.',
+  'kernelError.filletRefused': 'Скругление не подтверждено для выбранных рёбер и радиуса ({code}). Модель не изменена.',
   'kernelError.variableFillet':
     'Переменное скругление не подтверждено для этого ребра и радиусов ({code}). Модель не изменена.',
   'kernelError.chamferRefused': 'Фаска не подтверждена для выбранных рёбер и размера ({code}). Модель не изменена.',

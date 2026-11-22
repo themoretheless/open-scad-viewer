@@ -3,6 +3,7 @@ import { z } from 'zod/v4'
 import type { McpServer } from '@modelcontextprotocol/server'
 import type { McpGeometryService } from './geometryService'
 import { compileRushGraph, rushGraphSchema } from '../language/rushGraph'
+import { traceExportSceneParts } from '../kernel/geometryBuildEngine'
 import { exportMeshFormatCompressed, MESH_EXPORT_FORMATS, meshExportBase64 } from '../exchange/meshExportFormats'
 import { flattenExportMeshes } from '../exchange/meshExportAdapter'
 import { rushExportOutputSchema } from './rushOutputSchemas'
@@ -27,7 +28,8 @@ export function registerRushGraphMeshExport(server: McpServer, geometry: McpGeom
             async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes,
           ),
         )
-        const mesh = flattenExportMeshes(built.meshes)
+        const traces = await traceExportSceneParts(compiled.source)
+        const mesh = flattenExportMeshes(built.meshes, traces)
         const artifact = await exportMeshFormatCompressed(mesh, input.format)
         const structuredContent = {
           document_sha256: compiled.document_sha256,

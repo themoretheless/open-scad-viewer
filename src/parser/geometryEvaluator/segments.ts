@@ -345,9 +345,20 @@ export function booleanShapes(
   if (shapes.length <= 1 || !firstShape) return shapes
   ctx.control?.poll()
   if (firstShape.dimension === 3) {
+    const firstSolid = firstShape as Shape3D
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
     const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean3(operation, solids))
-    return [{ dimension: 3, geometry, color: firstShape.color, entityId: currentEntityId(ctx) }]
+    return [
+      {
+        dimension: 3,
+        geometry,
+        color: firstSolid.color,
+        entityId: currentEntityId(ctx),
+        moduleStack: ctx.moduleStack.length > 0 ? [...ctx.moduleStack] : firstSolid.moduleStack,
+        topModuleInstancePath: ctx.topModuleInstancePath ?? firstSolid.topModuleInstancePath,
+        callName: firstSolid.callName ?? operation,
+      },
+    ]
   }
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
   const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean2(operation, sections))
@@ -381,13 +392,24 @@ export async function booleanShapesCooperative(
   const shapes = homogeneousShapes(sourceShapes, operation, ctx, p, diagnosticName)
   if (shapes.length <= 1 || shapes[0]!.dimension !== 3) return booleanShapes(shapes, operation, ctx, p, diagnosticName)
   control.poll()
+  const firstSolid = shapes[0] as Shape3D
   const geometry = await cooperativeBoolean3(
     ctx,
     p,
     operation,
     shapes.map(shape => (shape as Shape3D).geometry),
   )
-  return [{ dimension: 3, geometry, color: shapes[0]!.color, entityId: currentEntityId(ctx) }]
+  return [
+    {
+      dimension: 3,
+      geometry,
+      color: firstSolid.color,
+      entityId: currentEntityId(ctx),
+      moduleStack: ctx.moduleStack.length > 0 ? [...ctx.moduleStack] : firstSolid.moduleStack,
+      topModuleInstancePath: ctx.topModuleInstancePath ?? firstSolid.topModuleInstancePath,
+      callName: firstSolid.callName ?? operation,
+    },
+  ]
 }
 
 /** One cooperative 3D Boolean; the checkpoint polls abort and yields when due. */

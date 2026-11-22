@@ -158,7 +158,8 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   async function exportScene(target: MeshExportFormat, sourceExtension: RegExp) {
     if (disposed || conversionPending.value || !canExport.value) return
     const mesh = sceneMeshes.value,
-      sourceName = fileName.value
+      sourceName = fileName.value,
+      stem = sanitizeFileName(sourceName).replace(sourceExtension, '') || 'model'
     conversionOperation.value = 'export'
     await conversionTask.run(
       {
@@ -168,10 +169,10 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
         options: {
           quality: exportMeshQuality.value,
           source: code.value,
+          title: stem,
         },
       },
       artifact => {
-        const stem = sanitizeFileName(sourceName).replace(sourceExtension, '') || 'model'
         downloadBlob(
           new Blob([artifact.data.slice().buffer as ArrayBuffer], { type: artifact.mimeType }),
           `${stem}.${artifact.extension}`,
@@ -221,11 +222,19 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     if (disposed || !canExport.value) return
     const meshes = options.visibleMeshes?.() ?? sceneMeshes.value
     if (!meshes.length) return
-    // The encoder serves only this command, so it loads on first use instead of at startup.
-    const { encodeGlb } = await import('../exchange/glbExport')
-    if (disposed) return
-    const data = encodeGlb(meshes)
+    const currentCode = code.value
     const stem = sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '') || 'model'
+    // The encoder serves only this command, so it loads on first use instead of at startup.
+    const [{ encodeGlb }, { traceExportSceneParts }, { deriveExportPartMetadataForDisplay }] = await Promise.all([
+      import('../exchange/glbExport'),
+      import('../kernel/geometryBuildEngine'),
+      import('../exchange/meshExportAdapter'),
+    ])
+    if (disposed) return
+    const traces = currentCode.trim() ? await traceExportSceneParts(currentCode) : []
+    const partMeta = deriveExportPartMetadataForDisplay(meshes, traces)
+    const names = partMeta.map(m => (m.groupName ? `${m.groupName}/${m.name}` : m.name))
+    const data = encodeGlb(meshes, { names })
     downloadBlob(new Blob([data.buffer as ArrayBuffer], { type: 'model/gltf-binary' }), `${stem}.glb`)
   }
 

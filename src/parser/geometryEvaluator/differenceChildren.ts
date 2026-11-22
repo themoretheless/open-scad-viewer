@@ -80,7 +80,8 @@ export async function differenceChildren(
   }
   ctx.control?.poll()
   if (baseShape.dimension === 3) {
-    const operands = [baseShape.geometry, ...cutters.map(cutter => (cutter as Shape3D).geometry)]
+    const baseSolid = baseShape as Shape3D
+    const operands = [baseSolid.geometry, ...cutters.map(cutter => (cutter as Shape3D).geometry)]
     return [
       {
         dimension: 3,
@@ -88,8 +89,16 @@ export async function differenceChildren(
           ctx.control?.cooperative && ctx.kernel.boolean3Cooperatively !== undefined
             ? await cooperativeBoolean3(ctx, node.p, 'difference', operands)
             : kernelCall(ctx, node.p, () => ctx.kernel.boolean3('difference', operands)),
-        color: baseShape.color,
+        color: baseSolid.color,
         entityId: currentEntityId(ctx),
+        moduleStack:
+          baseSolid.moduleStack && baseSolid.moduleStack.length > ctx.moduleStack.length
+            ? baseSolid.moduleStack
+            : ctx.moduleStack.length > 0
+              ? [...ctx.moduleStack]
+              : baseSolid.moduleStack,
+        topModuleInstancePath: ctx.topModuleInstancePath ?? baseSolid.topModuleInstancePath,
+        callName: baseSolid.callName ?? 'difference',
       },
     ]
   }

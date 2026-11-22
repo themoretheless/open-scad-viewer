@@ -167,3 +167,86 @@ it.each([false, true])('writes consistent native ZIP headers and CRC with compre
   }
   expect(cursor).toBe(end)
 })
+
+it('preserves OpenSCAD module groups, object names, and colors across 3MF, OBJ, and AMF exports', async () => {
+  const { inflateRawSync } = await import('node:zlib')
+  const { HeadlessGeometryService } = await import('../src/mcp/geometryService')
+  const { exportMesh } = await import('../src/exchange/meshConvert')
+  const { traceExportSceneParts } = await import('../src/kernel/geometryBuildEngine')
+  const { flattenExportMeshes } = await import('../src/exchange/meshExportAdapter')
+
+  const source = `
+module bracket() {
+  color([0.1, 0.2, 0.3]) cube([10, 4, 2]);
+  color([0.1, 0.2, 0.3]) translate([0, 0, 2]) cylinder(r = 1.5, h = 4);
+}
+module pin() {
+  color([0.9, 0.5, 0.1]) cylinder(r = 1, h = 5);
+}
+bracket();
+translate([25, 0, 0]) pin();
+`
+  const built = await new HeadlessGeometryService().compile(source, 'full')
+
+  const art3mf = await exportMesh(built.meshes, '3mf', {
+    quality: 'viewport',
+    source,
+    title: 'named-assembly',
+  })
+  const view = new DataView(art3mf.data.buffer, art3mf.data.byteOffset, art3mf.data.byteLength)
+  const dirOff = view.getUint32(art3mf.data.length - 6, true)
+  const count = view.getUint16(art3mf.data.length - 12, true)
+  let cursor = dirOff
+  let modelXml = ''
+  for (let i = 0; i < count; i++) {
+    const method = view.getUint16(cursor + 10, true)
+    const compSize = view.getUint32(cursor + 20, true)
+    const nameLen = view.getUint16(cursor + 28, true)
+    const extraLen = view.getUint16(cursor + 30, true)
+    const commentLen = view.getUint16(cursor + 32, true)
+    const localOff = view.getUint32(cursor + 42, true)
+    const entryName = new TextDecoder().decode(art3mf.data.subarray(cursor + 46, cursor + 46 + nameLen))
+    if (entryName === '3D/3dmodel.model') {
+      const lNameLen = view.getUint16(localOff + 26, true)
+      const lExtraLen = view.getUint16(localOff + 28, true)
+      const start = localOff + 30 + lNameLen + lExtraLen
+      const payload = art3mf.data.subarray(start, start + compSize)
+      modelXml = new TextDecoder().decode(method === 8 ? inflateRawSync(payload) : payload)
+    }
+    cursor += 46 + nameLen + extraLen + commentLen
+  }
+  expect(modelXml).toContain('<metadata name="Title">named-assembly</metadata>')
+  expect(modelXml).toContain('<basematerials id="5">')
+  expect(modelXml).toContain('displaycolor="#1A334D"')
+  expect(modelXml).toContain('displaycolor="#E6801A"')
+  expect(modelXml).toContain('name="bracket_cube"')
+  expect(modelXml).toContain('name="bracket_cylinder"')
+  expect(modelXml).toContain('name="pin"')
+  expect(modelXml).toContain(
+    '<object id="4" name="bracket" type="model"><components><component objectid="1"/><component objectid="2"/></components></object>',
+  )
+  expect(modelXml).toContain('<build><item objectid="4"/><item objectid="3"/></build>')
+
+  const decoded3mf = await parseOpenScad3mf(file(art3mf.data, '3mf'))
+  const expectedTris = built.meshes.reduce((sum, m) => sum + m.indices.length / 3, 0)
+  expect(decoded3mf.triangleCount).toBe(expectedTris)
+
+  const traces = await traceExportSceneParts(source)
+  const flat = flattenExportMeshes(built.meshes, traces, 'named-assembly')
+  const objText = new TextDecoder().decode(exportMeshFormat(flat, 'obj').data)
+  expect(objText).toContain('g bracket')
+  expect(objText).toContain('o bracket_cube')
+  expect(objText).toContain('o bracket_cylinder')
+  expect(objText).toContain('g pin')
+  expect(objText).toContain('o pin')
+
+  const amfText = new TextDecoder().decode(exportMeshFormat(flat, 'amf').data)
+  expect(amfText).toContain('<metadata type="name">bracket_cube</metadata>')
+  expect(amfText).toContain('<metadata type="name">bracket_cylinder</metadata>')
+  expect(amfText).toContain('<metadata type="name">pin</metadata>')
+  expect(amfText).toContain(
+    '<constellation id="4"><metadata type="name">bracket</metadata><instance objectid="1"/><instance objectid="2"/></constellation>',
+  )
+  const decodedAmf = await parseOpenScadAmf(file(new TextEncoder().encode(amfText), 'amf'))
+  expect(decodedAmf.triangleCount).toBe(expectedTris)
+})

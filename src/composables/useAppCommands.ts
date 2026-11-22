@@ -116,6 +116,7 @@ export interface UseCommandDispatchOptions {
   blockingSurfaceOpen: () => boolean
   mainTools: () => MainToolsHandle | null
   openFunctionReferenceFromCommand: (paletteWasOpen: boolean) => void
+  openSkadisBox: () => void
   openCommandPalette: () => void
   renderFull: () => void
   toggleTheme: () => void
@@ -178,6 +179,7 @@ export function useCommandDispatch(options: UseCommandDispatchOptions) {
       section.setSectionEnabled(!section.sectionEnabled.value)
     },
     sidebar: () => (options.dockOpen.value = !options.dockOpen.value),
+    'skadis-voronoi-box': options.openSkadisBox,
     theme: options.toggleTheme,
     'cancel-measure': v.cancelMeasure,
     'flip-section': () => section.setSectionFlip(!section.sectionFlip.value),

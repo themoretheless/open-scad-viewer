@@ -354,4 +354,6 @@ pub fn centered_graph(
 }
 
 mod lightening;
+mod voronoi;
 pub use lightening::{generate_lightening_cells, LighteningOptions, lighten};
+pub use voronoi::{GradientMode, VoronoiLatticeOptions, generate_voronoi_cells};

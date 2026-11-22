@@ -1,0 +1,304 @@
+<script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'svet'
+import {
+  generateSkadisVoronoiBox,
+  isSkadisMount,
+  SKADIS_VORONOI_BOX_DEFAULTS,
+  SKADIS_VORONOI_PRESETS,
+  summarizeSkadisBox,
+  type SkadisVoronoiBoxParams,
+} from '../app/skadisVoronoiBox'
+
+const props = defineProps<{ open: boolean; locale: 'ru' | 'en' }>()
+const emit = defineEmits<{ close: []; generate: [source: string, name: string]; downloadCurrent: [] }>()
+
+const dialog = ref<HTMLDialogElement | null>(null)
+const values = ref<SkadisVoronoiBoxParams>({ ...SKADIS_VORONOI_BOX_DEFAULTS })
+const activePresetId = ref('skadis_dovetail_voronoi')
+const generated = ref<{ source: string; fileName: string } | null>(null)
+const error = ref('')
+const ru = computed(() => props.locale === 'ru')
+const isSkadis = computed(() => isSkadisMount(values.value.mount_system))
+const isWallRustLattice = computed(() =>
+  ['trabecular', 'voronoi', 'honeycomb', 'isogrid', 'triangles', 'grid'].includes(values.value.lattice_mode),
+)
+const isWallOrganic = computed(() => isWallRustLattice.value)
+const isFloorRustLattice = computed(() =>
+  ['trabecular', 'voronoi', 'honeycomb', 'isogrid', 'triangles', 'grid'].includes(values.value.floor_lattice_mode),
+)
+const summary = computed(() => {
+  try {
+    return summarizeSkadisBox(values.value, props.locale)
+  } catch {
+    return ''
+  }
+})
+
+function applyPreset(id: string) {
+  const preset = SKADIS_VORONOI_PRESETS.find(item => item.id === id)
+  if (!preset) return
+  values.value = { ...preset.params }
+  activePresetId.value = id
+  generated.value = null
+  error.value = ''
+}
+
+function toggleBend(event: Event) {
+  const checked = (event.target as HTMLInputElement).checked
+  values.value.bend_radius = checked ? Math.max(150, Number(values.value.bend_radius) || 150) : 0
+}
+
+watch(
+  () => values.value.mount_system,
+  mount => {
+    if (isSkadisMount(mount)) values.value.bend_radius = 0
+  },
+)
+watch(
+  () => values.value.floor_lattice_mode,
+  mode => {
+    values.value.floor_mesh = ['trabecular', 'voronoi', 'honeycomb', 'isogrid', 'triangles', 'grid'].includes(mode)
+    values.value.drain = mode === 'circles'
+  },
+)
+watch(
+  values,
+  () => {
+    generated.value = null
+    error.value = ''
+  },
+  { deep: true },
+)
+watch(
+  () => props.open,
+  async open => {
+    await nextTick()
+    if (open && !dialog.value?.open) dialog.value?.showModal()
+    else if (!open && dialog.value?.open) dialog.value.close()
+  },
+)
+
+function generate() {
+  error.value = ''
+  try {
+    const source = generateSkadisVoronoiBox(values.value, props.locale)
+    const fileName = isSkadis.value ? 'skadis-voronoi-box.scad' : 'voronoi-box.scad'
+    generated.value = { source, fileName }
+    openEditor(false)
+  } catch (err) {
+    generated.value = null
+    error.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+function download() {
+  if (!generated.value) return
+  const url = URL.createObjectURL(new Blob([generated.value.source], { type: 'text/plain' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = generated.value.fileName
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function openEditor(save: boolean) {
+  if (!generated.value) return
+  if (save) emit('downloadCurrent')
+  emit('generate', generated.value.source, generated.value.fileName)
+  emit('close')
+}
+</script>
+
+<template>
+  <Teleport to="body">
+    <dialog ref="dialog" class="skadis-dialog" aria-labelledby="skadis-title" @cancel.prevent="emit('close')">
+      <header>
+        <h2 id="skadis-title">{{ ru ? 'Коробка SKÅDIS + решётка Вороного' : 'SKÅDIS Box + Voronoi Lattice' }}</h2>
+        <button type="button" :aria-label="ru ? 'Закрыть' : 'Close'" @click="emit('close')">×</button>
+      </header>
+      <div class="presets" role="group" :aria-label="ru ? 'Готовые профили' : 'Presets'">
+        <button
+          v-for="preset in SKADIS_VORONOI_PRESETS"
+          :key="preset.id"
+          type="button"
+          class="preset-chip"
+          :class="{ active: activePresetId === preset.id }"
+          :title="preset.description[locale]"
+          @click="applyPreset(preset.id)"
+        >
+          {{ preset.name[locale] }}
+        </button>
+      </div>
+      <p v-if="summary" class="summary" role="status">{{ summary }}</p>
+      <form @submit.prevent="generate">
+        <fieldset class="group">
+          <legend>{{ ru ? '1. Корпус' : '1. Body' }}</legend>
+          <div class="fields">
+            <label><span>{{ ru ? 'Ширина, мм' : 'Width, mm' }}</span><input v-model.number="values.width" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Глубина, мм' : 'Depth, mm' }}</span><input v-model.number="values.depth" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Высота, мм' : 'Height, mm' }}</span><input v-model.number="values.height" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Толщина стенки, мм' : 'Wall thickness, mm' }}</span><input v-model.number="values.wall" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Толщина дна, мм' : 'Floor thickness, mm' }}</span><input v-model.number="values.floor" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Скругление углов, мм' : 'Corner radius, mm' }}</span><input v-model.number="values.corner_radius" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Наклон переда, °' : 'Front tilt, °' }}</span><input v-model.number="values.front_angle" type="number" step="any" required></label>
+            <label><span>{{ ru ? 'Перегородки' : 'Dividers' }}</span><input v-model.number="values.dividers" type="number" step="1" required></label>
+          </div>
+          <div class="fields compact">
+            <label class="check"><span>{{ ru ? 'Скругление стыка со дном' : 'Bottom inner fillet' }}</span><input v-model="values.bottom_fillet" type="checkbox"></label>
+            <label class="check"><span>{{ ru ? 'Перемычки по стенкам и углам (каркас)' : 'Wall & corner frame' }}</span><input v-model="values.edge_frame" type="checkbox"></label>
+          </div>
+          <div v-if="!isSkadis" class="fields compact">
+            <label class="check"><span>{{ ru ? 'Изогнуть по дуге' : 'Arc bend' }}</span><input :checked="values.bend_radius > 0" type="checkbox" @change="toggleBend"></label>
+            <template v-if="values.bend_radius > 0">
+              <label><span>{{ ru ? 'Радиус дуги, мм' : 'Bend radius, mm' }}</span><input v-model.number="values.bend_radius" type="number" step="any" required></label>
+              <label class="check"><span>{{ ru ? 'Вогнуть внутрь' : 'Bend inward' }}</span><input v-model="values.bend_reverse" type="checkbox"></label>
+              <label><span>{{ ru ? 'Сегменты дуги' : 'Arc segments' }}</span><input v-model.number="values.bend_segments" type="number" step="1" required></label>
+            </template>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>{{ ru ? '2. Крепление (SKÅDIS / рейка)' : '2. Mounting (SKÅDIS / Rail)' }}</legend>
+          <div class="fields">
+            <label class="wide">
+              <span>{{ ru ? 'Система крепления' : 'Mount system' }}</span>
+              <select v-model="values.mount_system">
+                <option value="skadis_dovetail">{{ ru ? 'SKÅDIS — вставной ласточкин хвост (шаг 40 мм, без поддержек)' : 'SKÅDIS — bottom-insert dovetail (40 mm grid, support-free)' }}</option>
+                <option value="skadis_integral">{{ ru ? 'SKÅDIS — цельные крючки (шаг 40 мм)' : 'SKÅDIS — integral hooks (40 mm grid)' }}</option>
+                <option value="rail_monolithic">{{ ru ? 'Рейка — монолитные крючки' : 'Rail — monolithic hooks' }}</option>
+                <option value="rail_t_slot">{{ ru ? 'Рейка — съёмный Т-упор в прорезь' : 'Rail — separate T-lock slot' }}</option>
+                <option value="rail_dovetail">{{ ru ? 'Рейка — съёмные салазки «ласточкин хвост»' : 'Rail — separate dovetail slide' }}</option>
+                <option value="none">{{ ru ? 'Без крепления (настольный органайзер)' : 'No hooks (desk organizer)' }}</option>
+              </select>
+            </label>
+            <template v-if="values.mount_system === 'skadis_dovetail'">
+              <label class="wide">
+                <span>{{ ru ? 'Детали для вывода' : 'Output part' }}</span>
+                <select v-model.number="values.skadis_part">
+                  <option :value="0">{{ ru ? '0 — Сборка (корпус + крючки)' : '0 — Assembly (box + hooks)' }}</option>
+                  <option :value="1">{{ ru ? '1 — Только корпус (дном вниз)' : '1 — Box only (upright)' }}</option>
+                  <option :value="2">{{ ru ? '2 — Один крючок (лёжа на боку)' : '2 — Single hook (flat for printing)' }}</option>
+                  <option :value="3">{{ ru ? '3 — Полный стол печати (корпус + все крючки)' : '3 — Full print plate (box + all hooks)' }}</option>
+                </select>
+              </label>
+              <label><span>{{ ru ? 'Число крючков (0 — авто, 2–8)' : 'Hook count (0 = auto, 2–8)' }}</span><input v-model.number="values.hook_count" type="number" min="0" max="8" step="1" required></label>
+              <label><span>{{ ru ? 'Шаг по сетке 40 мм' : '40 mm grid steps' }}</span><input v-model.number="values.skadis_spacing_steps" type="number" step="1" required></label>
+              <label><span>{{ ru ? 'Отступ сверху, мм' : 'Top offset, mm' }}</span><input v-model.number="values.skadis_top_offset" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Толщина зоны пазов, мм (≥7)' : 'Slot boss thickness, mm (≥7)' }}</span><input v-model.number="values.skadis_back_thickness" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Зазор паза, мм' : 'Dovetail fit, mm' }}</span><input v-model.number="values.skadis_fit" type="number" step="any" required></label>
+              <label class="check"><span>{{ ru ? 'Удерживающее ребро' : 'Friction ridge' }}</span><input v-model="values.skadis_friction_ridge" type="checkbox"></label>
+            </template>
+            <template v-else-if="values.mount_system === 'skadis_integral'">
+              <label><span>{{ ru ? 'Число крючков (0 — авто, 1–8)' : 'Hook count (0 = auto, 1–8)' }}</span><input v-model.number="values.hook_count" type="number" min="0" max="8" step="1" required></label>
+              <label><span>{{ ru ? 'Шаг по сетке 40 мм' : '40 mm grid steps' }}</span><input v-model.number="values.skadis_spacing_steps" type="number" step="1" required></label>
+              <label><span>{{ ru ? 'Отступ сверху, мм' : 'Top offset, mm' }}</span><input v-model.number="values.skadis_top_offset" type="number" step="any" required></label>
+              <label class="check"><span>{{ ru ? 'Косынка 45°' : '45° gusset' }}</span><input v-model="values.hook_chamfer" type="checkbox"></label>
+            </template>
+            <template v-else-if="values.mount_system !== 'none'">
+              <label><span>{{ ru ? 'Число крючков (0 — авто, 1–8)' : 'Hook count (0 = auto, 1–8)' }}</span><input v-model.number="values.hook_count" type="number" min="0" max="8" step="1" required></label>
+              <label><span>{{ ru ? 'Ширина крючка, мм' : 'Hook width, mm' }}</span><input v-model.number="values.hook_width" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Толщина крючка, мм' : 'Hook thickness, mm' }}</span><input v-model.number="values.hook_thickness" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Зазор под рейку, мм' : 'Rail gap, mm' }}</span><input v-model.number="values.hook_gap" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Длина зацепа, мм' : 'Hook drop, mm' }}</span><input v-model.number="values.hook_drop" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Шаг, мм (0 — авто Бессель)' : 'Spacing, mm (0 = auto Bessel)' }}</span><input v-model.number="values.hook_spacing" type="number" step="any" required></label>
+              <label v-if="values.mount_system !== 'rail_monolithic'"><span>{{ ru ? 'Монтажный зазор, мм' : 'Fit tolerance, mm' }}</span><input v-model.number="values.hook_tolerance" type="number" step="any" required></label>
+              <label class="check"><span>{{ ru ? 'Косынка 45°' : '45° gusset' }}</span><input v-model="values.hook_chamfer" type="checkbox"></label>
+            </template>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>{{ ru ? '3. Заполнение стенок' : '3. Wall fill' }}</legend>
+          <div class="fields">
+            <label class="wide">
+              <span>{{ ru ? 'Рисунок стенок' : 'Wall pattern' }}</span>
+              <select v-model="values.lattice_mode">
+                <option value="trabecular">{{ ru ? 'Органическая сетка (как в коробке)' : 'Organic trivalent web (box style)' }}</option>
+                <option value="voronoi">{{ ru ? 'Диаграмма Вороного (Rust-ядро)' : 'Voronoi diagram (Rust kernel)' }}</option>
+                <option value="honeycomb">{{ ru ? 'Соты (регулярные шестиугольники)' : 'Honeycomb (regular hexagons)' }}</option>
+                <option value="isogrid">{{ ru ? 'Изосетка (треугольники 60°)' : 'Isogrid (60° triangles)' }}</option>
+                <option value="triangles">{{ ru ? 'Треугольники (регулярная диагональ)' : 'Triangles (split quads)' }}</option>
+                <option value="grid">{{ ru ? 'Прямоугольная сетка' : 'Rectangular grid' }}</option>
+                <option value="circles">{{ ru ? 'Круглые / каплевидные отверстия' : 'Circular / teardrop holes' }}</option>
+                <option value="solid">{{ ru ? 'Сплошные стенки' : 'Solid walls' }}</option>
+              </select>
+            </label>
+            <template v-if="values.lattice_mode !== 'solid'">
+              <label class="check"><span>{{ ru ? 'Без поддержек (свод по углу свеса)' : 'Upright FDM roof clipping' }}</span><input v-model="values.print_optimized" type="checkbox"></label>
+              <label v-if="values.print_optimized"><span>{{ ru ? 'Макс. свес от вертикали, °' : 'Max overhang, °' }}</span><input v-model.number="values.overhang_angle" type="number" step="any" required></label>
+            </template>
+            <template v-if="isWallOrganic">
+              <label><span>{{ ru ? 'Размер ячейки стенок, мм' : 'Wall cell size, mm' }}</span><input v-model.number="values.cell_size" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Перемычка стенок, мм' : 'Wall rib width, mm' }}</span><input v-model.number="values.rib" type="number" step="any" required></label>
+              <label v-if="values.lattice_mode === 'voronoi' || values.lattice_mode === 'trabecular'"><span>{{ ru ? 'Нерегулярность Вороного (0–1)' : 'Voronoi jitter (0–1)' }}</span><input v-model.number="values.voronoi_jitter" type="number" step="0.05" required></label>
+              <label><span>{{ ru ? 'Градиент сопромата (0–2)' : 'Stress gradient (0–2)' }}</span><input v-model.number="values.stress_gradient" type="number" step="0.1" required></label>
+              <label><span>{{ ru ? 'Плотность сетки (0.5–2)' : 'Mesh density (0.5–2)' }}</span><input v-model.number="values.mesh_density" type="number" step="0.1" required></label>
+              <label><span>{{ ru ? 'Seed рисунка' : 'Pattern seed' }}</span><input v-model.number="values.pattern_seed" type="number" step="1" required></label>
+              <label><span>{{ ru ? 'Скругление углов ячеек, мм' : 'Cell fillet radius, mm' }}</span><input v-model.number="values.cell_radius" type="number" step="any" required></label>
+            </template>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>{{ ru ? '4. Заполнение дна' : '4. Floor fill' }}</legend>
+          <div class="fields">
+            <label class="wide">
+              <span>{{ ru ? 'Рисунок дна (независимо от стенок)' : 'Floor pattern (independent from walls)' }}</span>
+              <select v-model="values.floor_lattice_mode">
+                <option value="trabecular">{{ ru ? 'Органическая сетка (как в коробке)' : 'Organic trivalent web (box style)' }}</option>
+                <option value="voronoi">{{ ru ? 'Диаграмма Вороного (Rust-ядро)' : 'Voronoi diagram (Rust kernel)' }}</option>
+                <option value="honeycomb">{{ ru ? 'Соты (регулярные шестиугольники)' : 'Honeycomb (regular hexagons)' }}</option>
+                <option value="isogrid">{{ ru ? 'Изосетка (треугольники 60°)' : 'Isogrid (60° triangles)' }}</option>
+                <option value="triangles">{{ ru ? 'Треугольники (регулярная диагональ)' : 'Triangles (split quads)' }}</option>
+                <option value="grid">{{ ru ? 'Прямоугольная сетка' : 'Rectangular grid' }}</option>
+                <option value="circles">{{ ru ? 'Дренажные круглые отверстия' : 'Circular drain holes' }}</option>
+                <option value="solid">{{ ru ? 'Сплошное дно' : 'Solid floor' }}</option>
+              </select>
+            </label>
+            <label v-if="values.floor_lattice_mode !== 'solid'" class="check"><span>{{ ru ? 'Перемычки по периметру дна (каркас)' : 'Floor perimeter frame' }}</span><input v-model="values.floor_frame" type="checkbox"></label>
+            <template v-if="isFloorRustLattice">
+              <label><span>{{ ru ? 'Ячейка дна, мм' : 'Floor cell size, mm' }}</span><input v-model.number="values.floor_cell_size" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Перемычка дна, мм' : 'Floor rib width, mm' }}</span><input v-model.number="values.floor_rib" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Скругление ячеек дна, мм' : 'Floor cell fillet, mm' }}</span><input v-model.number="values.floor_cell_radius" type="number" step="any" required></label>
+              <label v-if="values.floor_lattice_mode === 'voronoi' || values.floor_lattice_mode === 'trabecular'"><span>{{ ru ? 'Нерегулярность дна (0–1)' : 'Floor jitter (0–1)' }}</span><input v-model.number="values.floor_jitter" type="number" step="0.05" required></label>
+            </template>
+            <template v-if="values.lattice_mode === 'circles' || values.floor_lattice_mode === 'circles'">
+              <label><span>{{ ru ? 'Диаметр отверстий, мм' : 'Hole diameter, mm' }}</span><input v-model.number="values.hole_diameter" type="number" step="any" required></label>
+              <label><span>{{ ru ? 'Шаг отверстий, мм' : 'Hole pitch, mm' }}</span><input v-model.number="values.hole_pitch" type="number" step="any" required></label>
+            </template>
+            <label><span>{{ ru ? 'Ширина линии сопла, мм' : 'Nozzle line width, mm' }}</span><input v-model.number="values.line_width" type="number" step="0.05" required></label>
+            <label><span>{{ ru ? 'Мин. линий в перемычке' : 'Min rib extrusion lines' }}</span><input v-model.number="values.min_rib_lines" type="number" step="1" required></label>
+          </div>
+        </fieldset>
+
+        <p v-if="error" class="error" role="alert">{{ error }}</p>
+        <button class="primary" type="submit">{{ ru ? 'Создать модель' : 'Generate model' }}</button>
+      </form>
+      <section v-if="generated" class="generated" aria-live="polite">
+        <div class="actions">
+          <button type="button" @click="download">{{ ru ? 'Скачать SCAD' : 'Download SCAD' }}</button>
+          <button type="button" @click="openEditor(true)">{{ ru ? 'Скачать текущую и открыть' : 'Save current and open' }}</button>
+          <button class="primary" type="button" @click="openEditor(false)">{{ ru ? 'Открыть в редакторе' : 'Open in editor' }}</button>
+        </div>
+      </section>
+    </dialog>
+  </Teleport>
+</template>
+
+<style scoped>
+.skadis-dialog{box-sizing:border-box;width:min(700px,calc(100vw - 32px));max-height:90vh;overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:22px;box-shadow:0 18px 70px #0005}
+.skadis-dialog::backdrop{background:#0008}header{display:flex;align-items:center;justify-content:space-between;gap:16px}h2{font-size:19px;margin:0 0 12px}
+header button{font-size:24px;border:0;background:none;cursor:pointer;color:inherit}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.preset-chip{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface-raised);color:inherit;cursor:pointer}
+.preset-chip.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--surface-raised))}
+.summary{margin:0 0 12px;padding:9px 12px;border-radius:8px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border));background:color-mix(in srgb,var(--accent) 10%,transparent);font-size:12.5px;line-height:1.45}
+.group{margin:14px 0;border:1px solid var(--border);border-radius:8px;padding:12px}.group legend{font-weight:600;padding:0 6px;font-size:13px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:8px}.fields .wide{grid-column:1/-1}.fields.compact{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)}
+.fields label{display:grid;gap:4px;font-size:12.5px}.fields input,.fields select{width:100%;box-sizing:border-box}
+.fields .check{display:flex;align-items:center;justify-content:space-between}.check input{width:auto}
+button,select,input{font:inherit;color:inherit;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);padding:7px 9px}
+button{cursor:pointer}.primary{background:var(--accent);color:var(--accent-contrast,#fff);margin-top:6px}.error{color:#df6262;font-size:13px;overflow-wrap:anywhere}
+.generated{border-top:1px solid var(--border);margin-top:14px;padding-top:12px}.actions{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:520px){.fields{grid-template-columns:1fr}.skadis-dialog{padding:16px}}
+</style>

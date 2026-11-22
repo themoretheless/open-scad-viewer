@@ -13,7 +13,15 @@ import {
   GeometryLanguageContractError,
   planGeometrySourceExecution,
 } from '../core/geometryExecution'
-import { parseOpenSCAD, parseOpenScadProject, warmGeometryKernel } from '../language/openscadParser'
+import {
+  evaluateOpenScadExportScene,
+  parseOpenSCAD,
+  parseOpenScadProject,
+  traceOpenScadSceneParts,
+  warmGeometryKernel,
+  type ExportScenePartTrace,
+} from '../language/openscadParser'
+export type { ExportScenePartTrace }
 import { OpenScadProject } from '../language/openScadProject'
 import { buildBrepSemanticScene } from './brepSemanticScene'
 import { lowerOpenSCADToSemanticProgram } from '../language/semantic/semanticProgramLowerer'
@@ -705,6 +713,19 @@ export async function evaluateExportMeshes(
 ): Promise<import('../core/mesh').MeshData[]> {
   const result = await parseOpenSCAD(source, { quality: 'full', exportQuality })
   return result.meshes
+}
+
+/** Evaluates dense export meshes together with module call-stack part traces. */
+export function evaluateExportScene(
+  source: string,
+  exportQuality: 'high' | 'ultra',
+): Promise<{ meshes: import('../core/mesh').MeshData[]; partTraces: ExportScenePartTrace[] }> {
+  return evaluateOpenScadExportScene(source, exportQuality)
+}
+
+/** Traces module hierarchy and part names without invoking the native WASM kernel. */
+export function traceExportSceneParts(source: string): Promise<ExportScenePartTrace[]> {
+  return traceOpenScadSceneParts(source)
 }
 
 export const defaultGeometryBuildEngine = new GeometryBuildEngine()

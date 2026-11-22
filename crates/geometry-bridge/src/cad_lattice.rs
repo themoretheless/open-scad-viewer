@@ -1,6 +1,6 @@
 //! Native spatial lattice utilities: graph generation, component counting,
 //! topology-preserving decimation, and lightening cell construction.
-use super::{Result, Value, encode, field, input};
+use super::{Result, Value, encode, field, input, optional_field};
 use polygon_core::Mesh;
 use std::collections::BTreeMap;
 mod markers;
@@ -333,6 +333,35 @@ pub fn lightening_cells(v: Value) -> Result<Value> {
         field(&v, "seed")?,
         field(&v, "jitter")?,
     )?)
+}
+
+pub fn voronoi_cells(v: Value) -> Result<Value> {
+    let gradient_mode = match optional_field::<String>(&v, "gradientMode")?.as_deref() {
+        None | Some("none") => polygon_core::lattice_tools::GradientMode::None,
+        Some("vertical") => polygon_core::lattice_tools::GradientMode::Vertical,
+        Some("radial") => polygon_core::lattice_tools::GradientMode::Radial,
+        Some(_) => return Err(input("gradientMode must be none, vertical, or radial.")),
+    };
+    let options = polygon_core::lattice_tools::VoronoiLatticeOptions {
+        min: field(&v, "min")?,
+        max: field(&v, "max")?,
+        pattern: optional_field::<String>(&v, "pattern")?.unwrap_or_else(|| "voronoi".into()),
+        cell: field(&v, "cell")?,
+        rib: field(&v, "rib")?,
+        seed: optional_field::<f64>(&v, "seed")?.unwrap_or(1.0),
+        jitter: optional_field::<f64>(&v, "jitter")?.unwrap_or(0.7),
+        overhang_angle: optional_field::<f64>(&v, "overhangAngle")?,
+        stress_gradient: optional_field::<f64>(&v, "stressGradient")?.unwrap_or(0.0),
+        gradient_mode,
+        corner_radius: optional_field::<f64>(&v, "cornerRadius")?.unwrap_or(0.0),
+        slope: optional_field::<f64>(&v, "slope")?.unwrap_or(0.0),
+        frame: optional_field::<f64>(&v, "frame")?.unwrap_or(0.0),
+        keep_out: optional_field::<Vec<[f64; 4]>>(&v, "keepOut")?.unwrap_or_default(),
+        max_sites: optional_field::<usize>(&v, "maxSites")?
+            .unwrap_or(400)
+            .clamp(1, 600),
+    };
+    encode(polygon_core::lattice_tools::generate_voronoi_cells(&options)?)
 }
 pub fn graph(v: Value) -> Result<Value> {
     let options = &v["options"];

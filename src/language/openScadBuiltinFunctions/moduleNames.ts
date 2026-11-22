@@ -43,4 +43,5 @@ export const OPENSCAD_BUILTIN_MODULE_NAMES = Object.freeze([
   'translate',
   'union',
   'viewer_bend',
+  'viewer_voronoi',
 ] as const)

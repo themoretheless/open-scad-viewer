@@ -71,7 +71,15 @@ export function trackedSolid(geometry: CadKernelHandle, color: RGBA, node: CallN
   const id = ctx.kernel.originalId(geometry)
   const trackedGeometry = id === null || id < 0 ? ctx.kernel.asOriginal(geometry) : geometry
   trackSource(trackedGeometry, node, ctx)
-  return { dimension: 3, geometry: trackedGeometry, color, entityId: currentEntityId(ctx) }
+  return {
+    dimension: 3,
+    geometry: trackedGeometry,
+    color,
+    entityId: currentEntityId(ctx),
+    ...(ctx.moduleStack.length > 0 ? { moduleStack: [...ctx.moduleStack] } : {}),
+    ...(ctx.topModuleInstancePath !== undefined ? { topModuleInstancePath: ctx.topModuleInstancePath } : {}),
+    callName: node.name,
+  }
 }
 
 export function warn(ctx: EvalContext, message: string) {

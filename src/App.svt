@@ -44,7 +44,8 @@ import CommandPalette from './components/CommandPalette.svt'
 import CustomizerPanel from './components/CustomizerPanel.svt'
 const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.svt'))
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.svt'))
-import { BOX_DEFAULTS, generateBox } from './app/boxGenerator'
+const SkadisVoronoiGenerator = defineAsyncComponent(() => import('./features/SkadisVoronoiGenerator.svt'))
+import { BOX_DEFAULTS, generateBox, generateSkadisVoronoiBox, SKADIS_VORONOI_BOX_DEFAULTS } from './app/skadisVoronoiBox'
 import { BUSHING_DEFAULTS, generateBushing } from './app/bushingGenerator'
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, generateSpinner, generateSpinnerSafe } from './app/spinnerGenerator'
 import { translate, type TranslateParams } from './i18n/appStrings'
@@ -175,6 +176,7 @@ const functionReferenceOpen = ref(false)
 const functionReferenceQuery = ref('')
 const functionReferenceButton = ref<HTMLButtonElement | null>(null)
 const mechanicalGeneratorOpen = ref(false)
+const skadisBoxOpen = ref(false)
 const {
   directModelerOpen, meshModelerOpen, solidSeedDocument, meshSeedDocument, editorOpen, workspaceMode, solidBuilding, solidAppendBodies, groupEdit, cancelSolidBuild,
   openGroupEditor, openWorkspaceMode, buildSolidGroup, buildSolidFromSource, bringCodeToMesh, bringCodeToSolid, openMeshFromSolid, meshToSolid, continueMainEditInSolid
@@ -368,8 +370,8 @@ function handleCanvasKey(event: KeyboardEvent) {
 }
 const { executeCommand, dispatchKeyboardCommand, handleViewportKey, handleGlobalKey } = useCommandDispatch({
   palette, paletteOpen, shortcutHelpOpen, mainTools: () => mainToolsRef.value, openCommandPalette, renderFull: () => doRender('full'), toggleTheme, dockOpen,
-  measureActive, selectedMesh, meshVisibility, viewport, section, files, openEditorFind, openFunctionReferenceFromCommand,
-  blockingSurfaceOpen: () => exampleGalleryOpen.value || mechanicalGeneratorOpen.value || functionReferenceOpen.value,
+  measureActive, selectedMesh, meshVisibility, viewport, section, files, openEditorFind, openFunctionReferenceFromCommand, openSkadisBox: () => { skadisBoxOpen.value = true },
+  blockingSurfaceOpen: () => exampleGalleryOpen.value || mechanicalGeneratorOpen.value || skadisBoxOpen.value || functionReferenceOpen.value,
 })
 const { dockToggleRef, closeDock, handleShellAction, handleShellBinding } = useShellActions({
   dockTab, dockOpen, editorOpen, autoRender, viewport, openWorkspaceMode, saveSource, resolveWorkspaceConflict, retryWorkspacePersistence, openCommandPalette,
@@ -431,9 +433,12 @@ onMounted(async () => {
   const generatorQuery = new URLSearchParams(location.search).get('generator')
   const needsSpinnerSafeLoad = fileName.value === 'spinner.r' && (!code.value.includes('param inner_rim') || !code.value.includes('planet_backlash'))
   const needsBushingLoad = fileName.value === 'bushing.scad' && (!code.value.includes('is_tube_mf') || !code.value.includes('max_mf_teeth'))
-  if (generatorQuery === 'box' || generatorQuery === 'bushing' || generatorQuery === 'spinner' || generatorQuery === 'spinner_safe' || generatorQuery === 'spinner1' || generatorQuery === 'planetary_spinner' || needsSpinnerSafeLoad || needsBushingLoad) {
+  if (generatorQuery === 'box' || generatorQuery === 'skadis' || generatorQuery === 'skadis-voronoi' || generatorQuery === 'bushing' || generatorQuery === 'spinner' || generatorQuery === 'spinner_safe' || generatorQuery === 'spinner1' || generatorQuery === 'planetary_spinner' || needsSpinnerSafeLoad || needsBushingLoad) {
     await resolveWorkspaceConflict(true)
-    if (generatorQuery === 'box') {
+    if (generatorQuery === 'skadis' || generatorQuery === 'skadis-voronoi') {
+      await loadMechanicalModel(generateSkadisVoronoiBox(SKADIS_VORONOI_BOX_DEFAULTS, lang.value), 'skadis-voronoi-box.scad')
+      skadisBoxOpen.value = true
+    } else if (generatorQuery === 'box') {
       await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: false }), 'box.scad')
     } else if (generatorQuery === 'bushing' || needsBushingLoad) {
       await loadMechanicalModel(generateBushing(BUSHING_DEFAULTS), 'bushing.scad')
@@ -545,6 +550,7 @@ useLocalEditorBridge(async model => {
   functionReferenceOpen.value = false
   exampleGalleryOpen.value = false
   mechanicalGeneratorOpen.value = false
+  skadisBoxOpen.value = false
   editorOpen.value = true
   dockOpen.value = true
   dockTab.value = 'parameters'
@@ -561,7 +567,10 @@ async function loadExample(id: string) {
 async function loadMechanicalModel(source: string, name: string) {
   groupEdit.value = null
   editorOpen.value = true
-  if (name === 'spinner.r' || name === 'bushing.scad') {
+  if (name === 'skadis-voronoi-box.scad' || name === 'voronoi-box.scad') {
+    dockOpen.value = true
+    dockTab.value = 'parameters'
+  } else if (name === 'spinner.r' || name === 'bushing.scad') {
     dockOpen.value = true
     dockTab.value = 'params'
   }
@@ -622,6 +631,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <input ref="convertInputRef" class="sr-only" type="file" tabindex="-1" :aria-label="t('convertFileHelp')" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
         </template>
         <template #generators>
+          <button class="btn generators-button" type="button" aria-haspopup="dialog" @click="skadisBoxOpen = true">{{ t('skadisVoronoi') }}</button>
           <button class="btn generators-button" type="button" aria-haspopup="dialog" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
         </template>
         <template #settingsMenu>
@@ -696,6 +706,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
               <div class="menu-list menu-right" @click="closeMenus">
                 <button type="button" :disabled="solidBuilding" :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'" @click="buildSolidFromSource()">{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
                 <button type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
+                <button type="button" @click="skadisBoxOpen = true">{{ t('skadisVoronoi') }}</button>
                 <button type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
                 <span class="menu-sep" aria-hidden="true" />
                 <button type="button" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }} <kbd>Alt Shift F</kbd></button>
@@ -968,7 +979,8 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
       @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }"
     />
     <MeshModeler :open="meshModelerOpen && !editorOpen" :locale="lang" :seed-document="meshSeedDocument" :palette-request="meshPaletteRequest" @close="meshModelerOpen = false" @export-to-solid="meshToSolid" />
-    <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
+    <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" @open-skadis-box="mechanicalGeneratorOpen = false; skadisBoxOpen = true" />
+    <SkadisVoronoiGenerator :open="skadisBoxOpen" :locale="lang" @close="skadisBoxOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
     <ExampleGallery v-if="exampleGalleryOpen" :open="exampleGalleryOpen" :examples="EXAMPLE_CATALOG" :locale="lang" @close="exampleGalleryOpen = false" @select="loadExample" @download-current="saveSource" />
     <FunctionReference :open="functionReferenceOpen" :locale="lang" :language="isRushFrontend(code) ? 'rush' : 'openscad'" :initial-query="functionReferenceQuery" @close="functionReferenceOpen = false" />
     <KeyboardShortcuts v-if="shortcutHelpOpen" :open="shortcutHelpOpen" :groups="shortcutHelpGroups" :locale="lang" @close="shortcutHelpOpen = false" />

@@ -329,6 +329,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/m51LYVn7.js':113_200,'assets/mainSolid.worker-dP66mhXS.js':178_900}),
   }),
+  // Unified SKADIS + Voronoi lattice kernel & generator UI + named/grouped 3MF export: 19,240,497 raw bytes and 6,870,039 packed bytes.
+  '2f0e1b7156582268666f0813d1bb689941b4591367d73f5cdd2022e1f521b70a':Object.freeze({
+    version:48,geometryChunkBytes:6_875_000,totalAssetBytes:13_800_000,rawGeometryBytes:19_250_000,
+    namedJsChunkBytes:Object.freeze({
+      index:269_800,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DSjI2jWL.js':204_000,'assets/DwdnO0M6.js':175_500,'assets/mainSolid.worker-CnQLZS06.js':180_500}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

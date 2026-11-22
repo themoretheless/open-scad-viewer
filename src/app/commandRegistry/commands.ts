@@ -424,6 +424,14 @@ export const COMMAND_REGISTRY = [
     bindings: [{ key: '?', scope: 'global' }],
   },
   {
+    id: 'skadis-voronoi-box',
+    labelKey: 'skadisVoronoi',
+    aliasKeys: ['skadisVoronoi', 'generators'],
+    keywords: ['skadis', 'скадис', 'voronoi', 'вороной', 'pegboard', 'box', 'коробка'],
+    scopes: ['global'],
+    palette: true,
+  },
+  {
     id: 'command-palette',
     labelKey: 'commandHelp',
     aliasKeys: ['commands'],

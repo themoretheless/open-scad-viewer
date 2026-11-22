@@ -33,6 +33,8 @@ export interface MeshExportOptions {
   readonly quality?: ExportMeshQualityPreset | undefined
   /** Source code used to rebuild a denser mesh when quality is 'high' or 'ultra'. */
   readonly source?: string | undefined
+  /** Optional model title stored in multi-part container metadata (e.g. 3MF Title). */
+  readonly title?: string | undefined
 }
 export interface MeshConvertOptions extends MeshImportOptions, MeshExportOptions {}
 export type MeshExportArtifact = Awaited<ReturnType<typeof exportMeshFormatCompressed>>
@@ -99,13 +101,13 @@ export async function exportMesh(
   const quality = options.quality ?? 'viewport'
   const source = typeof options.source === 'string' ? options.source.trim() : ''
   if (Array.isArray(mesh) && quality !== 'viewport' && source.length > 0) {
-    const { evaluateExportMeshes } = await import('../kernel/geometryBuildEngine')
+    const { evaluateExportScene } = await import('../kernel/geometryBuildEngine')
     const candidateQualities: readonly ('ultra' | 'high')[] = quality === 'ultra' ? ['ultra', 'high'] : ['high']
     for (const candidate of candidateQualities) {
       try {
-        const rebuilt = await evaluateExportMeshes(source, candidate)
-        if (rebuilt.length > 0) {
-          const prepared = flattenExportMeshes(rebuilt)
+        const rebuilt = await evaluateExportScene(source, candidate)
+        if (rebuilt.meshes.length > 0) {
+          const prepared = flattenExportMeshes(rebuilt.meshes, rebuilt.partTraces, options.title)
           onProgress?.({ phase: 'export', completed: 1, total: 2 })
           return await serialize(prepared)
         }
@@ -114,8 +116,12 @@ export async function exportMesh(
       }
     }
   }
+  const traces =
+    Array.isArray(mesh) && source.length > 0
+      ? await (await import('../kernel/geometryBuildEngine')).traceExportSceneParts(source)
+      : undefined
   const prepared = Array.isArray(mesh)
-    ? flattenExportMeshes(mesh as readonly MeshData[])
+    ? flattenExportMeshes(mesh as readonly MeshData[], traces, options.title)
     : polygonMeshToExportMesh(mesh as PolygonMesh)
   onProgress?.({ phase: 'export', completed: 1, total: 2 })
   return serialize(prepared)

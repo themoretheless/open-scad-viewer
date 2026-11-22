@@ -59,6 +59,18 @@ function parseMetadata(
   return options.length ? { options } : {}
 }
 
+function extractCommentLabel(raw: string): string | null {
+  const commentMatch = raw.match(/^[ \t]*\/\/(.*)$/)
+  if (!commentMatch) return null
+  const body = commentMatch[1]!.trim()
+  if (!body) return null
+  if (body.startsWith('[')) {
+    const after = body.match(/^\[[^\]]+\][ \t]*(?:[-—–:][ \t]*)?(.*)$/)?.[1]?.trim()
+    return after || null
+  }
+  return body
+}
+
 /** Extract OpenSCAD Customizer-style top-level literal assignments. */
 export function extractCustomizerParameters(source: string): CustomizerParameter[] {
   const parameters: CustomizerParameter[] = []
@@ -123,7 +135,8 @@ export function extractCustomizerParameters(source: string): CustomizerParameter
     // found "1" at offset 1), corrupting the source on replacement.
     const valueStart = statementStart + match[2]!.length + name.length + match[4]!.length
     const value = decodeLiteral(rawValue)
-    const label = name.replace(/[_-]+/g, ' ').replace(/^./, character => character.toUpperCase())
+    const fallbackLabel = name.replace(/[_-]+/g, ' ').replace(/^./, character => character.toUpperCase())
+    const label = extractCommentLabel(match[6]!) ?? fallbackLabel
     parameters.push({
       name,
       label,

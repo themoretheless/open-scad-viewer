@@ -42,8 +42,10 @@ import {
 import { type OpenScadProject } from './openScadProject'
 import { prepareOpenScadImportAssets } from '../exchange/openScadImport'
 import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
+import type { CadKernelHandle, CadKernelOps } from '../kernel/cadKernelOps'
 import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
 import { nextColor, resetPalette, type RGBA } from './openscadColors'
+import { evalViewerBend, evalViewerVoronoi } from './openscadViewerExtensions'
 
 export { AbortedError, OpenSCADParseError } from './openscadErrors'
 import {
@@ -55,6 +57,7 @@ import {
   StableViewportRootSelection,
   YIELD_EVERY_STATEMENTS,
   type EvalContext,
+  type ExportScenePartTrace,
   type ParseOpenScadProjectOptions,
   type ParseOptions,
   type ParseResult,
@@ -63,7 +66,7 @@ import {
   type Vec2,
   type Vec3,
 } from '../parser/types'
-export type { ParseOpenScadProjectOptions, ParseOptions, ParseResult } from '../parser/types'
+export type { ExportScenePartTrace, ParseOpenScadProjectOptions, ParseOptions, ParseResult } from '../parser/types'
 import {
   bindAssertArguments,
   callExpressionArguments,
@@ -499,24 +502,10 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       }
       return (await childShapes()).map(shape => ({ ...shape, color: [...color] as RGBA }))
     }
-    case 'viewer_bend': {
-      if (isStableProfile(ctx))
-        evaluationError(ctx, node.p, 'viewer_bend is a viewer mesh extension, not standard OpenSCAD')
-      const radius = finiteNumber(arg(node, 'radius', 0, 0, ctx), ctx, node.p, 'bend radius')
-      const center = finiteNumber(arg(node, 'center', 1, 0, ctx), ctx, node.p, 'bend center')
-      const step = finiteNumber(arg(node, 'step', 2, 5, ctx), ctx, node.p, 'bend mesh step')
-      if (radius <= 0 || step <= 0) evaluationError(ctx, node.p, 'Bend radius and mesh step must be positive')
-      const reverse = arg(node, 'reverse', 3, false, ctx) === true
-      const shapes = await childShapes()
-      if (!ctx.kernel.bend3) evaluationError(ctx, node.p, 'Bend is unavailable for this geometry backend')
-      return shapes.map(shape => {
-        if (shape.dimension !== 3) evaluationError(ctx, node.p, 'viewer_bend requires a 3D solid')
-        return {
-          ...shape,
-          geometry: kernelCall(ctx, node.p, () => ctx.kernel.bend3!(shape.geometry, radius, center, reverse, step)),
-        }
-      })
-    }
+    case 'viewer_bend':
+      return await evalViewerBend(node, ctx, childShapes)
+    case 'viewer_voronoi':
+      return evalViewerVoronoi(node, ctx, nextColor())
     case 'union':
       return await booleanShapesCooperative(await childShapes(), 'union', ctx, node.p)
     case 'difference':
@@ -614,9 +603,13 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         'offset distance',
       )
       const hasRoundOption = node.args.r !== undefined || node.args._0 !== undefined || node.args.delta === undefined
-      const hasExplicitRoundSegments =
-        hasRoundOption && (node.args.$fn !== undefined || node.args.$fa !== undefined || node.args.$fs !== undefined)
-      const circularSegments = hasExplicitRoundSegments ? segments(node, ctx, 48, 3, Math.abs(distance)) : undefined
+      const hasRoundSegments =
+        hasRoundOption &&
+        (node.args.$fn !== undefined ||
+          node.args.$fa !== undefined ||
+          node.args.$fs !== undefined ||
+          ctx.env.get('$fn') !== undefined)
+      const circularSegments = hasRoundSegments ? segments(node, ctx, 48, 3, Math.abs(distance)) : undefined
       return (await childShapes()).map(shape => {
         if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
         return {
@@ -850,6 +843,7 @@ async function evalUserModule(
       evaluationError(ctx, call.p, `Stable module ${module.name}() is missing its lexical scope`)
     }
     const moduleStack = [...ctx.moduleStack, module.name]
+    const topModuleInstancePath = ctx.topModuleInstancePath ?? ctx.instancePath
     const definitionEnv = new Map(definitionScope.env)
     overlayDynamicVariables(definitionEnv, ctx.env)
     definitionEnv.set('$children', call.children.length)
@@ -860,6 +854,7 @@ async function evalUserModule(
       stableScope: definitionScope,
       scopeVisibleBefore: Number.POSITIVE_INFINITY,
       moduleStack,
+      topModuleInstancePath,
     }
     const args = callExpressionArguments(call)
     const resolved = resolveStableExpressionArguments(
@@ -919,6 +914,7 @@ async function evalUserModule(
       env,
       callChildren: call.children,
       moduleStack: [...ctx.moduleStack, module.name],
+      topModuleInstancePath: ctx.topModuleInstancePath ?? ctx.instancePath,
     },
     false,
   )
@@ -931,6 +927,98 @@ async function evalUserModule(
  * one transient network failure must not brick every future parse, so the
  * cached promise is cleared on rejection and the next call retries.
  */
+type TraceStubHandle = CadKernelHandle & { readonly empty: boolean }
+
+function makeTraceStubHandle(dimension: 2 | 3, empty = false): CadKernelHandle {
+  return { dimension, empty } as unknown as TraceStubHandle
+}
+
+function isTraceStubEmpty(handle: CadKernelHandle): boolean {
+  return Boolean((handle as Partial<TraceStubHandle>).empty)
+}
+
+function createHierarchyTraceKernelOps(): CadKernelOps {
+  let nextOriginalId = 0
+  const unusedAnalysis = (): never => {
+    throw new Error('analyzeSolid is not used in hierarchy tracing')
+  }
+  return {
+    implementationKey: 'own-rust-cad-plan-v1',
+    empty2: () => makeTraceStubHandle(2, true),
+    empty3: () => makeTraceStubHandle(3, true),
+    box: () => makeTraceStubHandle(3, false),
+    sphere: () => makeTraceStubHandle(3, false),
+    cylinder: () => makeTraceStubHandle(3, false),
+    polyhedron: () => makeTraceStubHandle(3, false),
+    rectangle: () => makeTraceStubHandle(2, false),
+    circle: () => makeTraceStubHandle(2, false),
+    polygon: () => makeTraceStubHandle(2, false),
+    ofMesh: () => makeTraceStubHandle(3, false),
+    gear: () => makeTraceStubHandle(3, false),
+    translate: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    scale: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    rotate: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    mirror: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    transform2: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    transform3: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    transform3Projective: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    bend3: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    boolean2: (operation, inputs) => {
+      const empty =
+        operation === 'union'
+          ? inputs.every(isTraceStubEmpty)
+          : operation === 'intersection'
+            ? inputs.length === 0 || inputs.some(isTraceStubEmpty)
+            : inputs.length === 0 || isTraceStubEmpty(inputs[0]!)
+      return makeTraceStubHandle(2, empty)
+    },
+    boolean3: (operation, inputs) => {
+      const empty =
+        operation === 'union'
+          ? inputs.every(isTraceStubEmpty)
+          : operation === 'intersection'
+            ? inputs.length === 0 || inputs.some(isTraceStubEmpty)
+            : inputs.length === 0 || isTraceStubEmpty(inputs[0]!)
+      return makeTraceStubHandle(3, empty)
+    },
+    hull2: inputs => makeTraceStubHandle(2, inputs.every(isTraceStubEmpty)),
+    hull3: inputs => makeTraceStubHandle(3, inputs.every(isTraceStubEmpty)),
+    linearExtrude: input => makeTraceStubHandle(3, isTraceStubEmpty(input)),
+    rotateExtrude: input => makeTraceStubHandle(3, isTraceStubEmpty(input)),
+    projection: input => makeTraceStubHandle(2, isTraceStubEmpty(input)),
+    offset: input => makeTraceStubHandle(2, isTraceStubEmpty(input)),
+    minkowskiSum2: inputs => makeTraceStubHandle(2, inputs.length === 0 || inputs.some(isTraceStubEmpty)),
+    minkowskiSum3: (left, right) => makeTraceStubHandle(3, isTraceStubEmpty(left) || isTraceStubEmpty(right)),
+    polygons: () => [
+      [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+      ],
+    ],
+    bounds: () => ({ min: [0, 0, 0], max: [1, 1, 1] }),
+    firstVertex3: () => [0, 0, 0],
+    mirrorZ: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    translateZ: input => makeTraceStubHandle(input.dimension, isTraceStubEmpty(input)),
+    isEmpty: isTraceStubEmpty,
+    originalId: () => ++nextOriginalId,
+    asOriginal: input => input,
+    analyzeSolid: unusedAnalysis,
+    analyzeSolidCooperatively: async () => unusedAnalysis(),
+    delete: () => {},
+  }
+}
+
+function shapeToPartTrace(shape: Shape3D): ExportScenePartTrace {
+  return {
+    entityId: shape.entityId,
+    moduleStack: shape.moduleStack ?? [],
+    ...(shape.topModuleInstancePath !== undefined ? { topModuleInstancePath: shape.topModuleInstancePath } : {}),
+    callName: shape.callName ?? 'part',
+    color: [...shape.color],
+  }
+}
+
 export function warmGeometryKernel(): Promise<void> {
   return defaultGeometryKernel.warm().then(() => undefined)
 }
@@ -944,6 +1032,7 @@ async function parseInternal(
     }),
   project?: OpenScadProject,
   projectRuntime?: typeof import('./openScadProjectRuntime'),
+  collectTraces?: ExportScenePartTrace[],
 ): Promise<ParseResult> {
   const now = options.now ?? (() => performance.now())
   const startedAt = now()
@@ -984,10 +1073,12 @@ async function parseInternal(
           projectRuntime.prepareOpenScadTextAssets(project),
         ])
   const parsedAt = now()
-  const kernelSession = await defaultGeometryKernel.openEvalSession()
+  const traceOps = options.traceHierarchyOnly === true ? createHierarchyTraceKernelOps() : null
+  const kernelSession = traceOps ? null : await defaultGeometryKernel.openEvalSession()
   // Recording costs only a small JSON graph, but it is opt-in because the result
   // crosses a protocol that validates an exact set of keys.
-  const exactRecorder = options.recordExactSolids === true ? createBrepRecordingKernelOps(kernelSession.kernel) : null
+  const exactRecorder =
+    !traceOps && options.recordExactSolids === true ? createBrepRecordingKernelOps(kernelSession!.kernel) : null
   const warnings: string[] = []
   const modules = new Map(bound.modules)
   const functions = new Map(bound.functions)
@@ -1008,7 +1099,7 @@ async function parseInternal(
   const sourceReferences = new Map<number, MeshSourceReference>()
   const reduced = { value: false }
   let ctx: EvalContext = {
-    kernel: exactRecorder?.ops ?? kernelSession.kernel,
+    kernel: exactRecorder?.ops ?? traceOps ?? kernelSession!.kernel,
     source,
     project,
     importAssets,
@@ -1022,6 +1113,7 @@ async function parseInternal(
     warnings,
     quality,
     exportQuality: options.exportQuality,
+    traceHierarchyOnly: options.traceHierarchyOnly,
     sourceReferences,
     depth: 0,
     functionStack: [],
@@ -1057,6 +1149,26 @@ async function parseInternal(
     const solids = shapes.filter(
       (shape): shape is Shape3D => shape.dimension === 3 && !ctx.kernel.isEmpty(shape.geometry),
     )
+    if (collectTraces) {
+      for (const solid of solids) collectTraces.push(shapeToPartTrace(solid))
+    }
+    if (options.traceHierarchyOnly === true) {
+      return {
+        meshes: [],
+        warnings,
+        volume: 0,
+        surfaceArea: 0,
+        quality,
+        reduced: reduced.value,
+        timings: {
+          parseMs,
+          bindMs,
+          initializeMs: Math.max(0, initializedAt - parsedAt),
+          evaluateMs: Math.max(0, evaluatedAt - initializedAt),
+          analyzeMs: 0,
+        },
+      }
+    }
     const meshes: MeshData[] = []
     let volume = 0
     let surfaceArea = 0
@@ -1158,54 +1270,101 @@ async function parseInternal(
       },
     }
   } finally {
-    kernelSession.dispose()
+    kernelSession?.dispose()
   }
 }
 
 let parseQueue: Promise<void> = Promise.resolve()
 
+async function parseSceneWithTraces(
+  source: string,
+  options: ParseOptions,
+  collectTraces?: ExportScenePartTrace[],
+): Promise<ParseResult> {
+  if (isRushFrontend(source)) {
+    const { compileRushFrontend } = await import('./rushFrontend')
+    const compiled = compileRushFrontend(source)
+    if (compiled.execution_target === 'own-nurbs') {
+      const { buildTextNurbsScene } = await import('./rushFrontendScene')
+      if (options.shouldAbort?.()) throw new AbortedError()
+      try {
+        const result = await buildTextNurbsScene(compiled.document, options.quality, {
+          shouldAbort: options.shouldAbort,
+          onYield: options.onYield,
+          onSweepPreview: options.onSweepPreview,
+          exportQuality: options.exportQuality,
+        })
+        if (options.shouldAbort?.()) throw new AbortedError()
+        return result
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw new AbortedError()
+        throw error
+      }
+    }
+    const result = await parseInternal(compiled.source, options, undefined, undefined, undefined, collectTraces)
+    requireRushGraphChecks(
+      await evaluateRushGraphGeometry(
+        compiled.geometry_assertions,
+        result.meshes,
+        async checkSource => (await parseInternal(checkSource, options)).meshes,
+      ),
+    )
+    for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
+    return result
+  }
+  return parseInternal(source, options, undefined, undefined, undefined, collectTraces)
+}
+
 /** Parse and evaluate the supported OpenSCAD subset in a serialized WASM scope. */
 export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promise<ParseResult> {
-  const run = async () => {
-    if (isRushFrontend(source)) {
-      const { compileRushFrontend } = await import('./rushFrontend')
-      const compiled = compileRushFrontend(source)
-      if (compiled.execution_target === 'own-nurbs') {
-        const { buildTextNurbsScene } = await import('./rushFrontendScene')
-        if (options.shouldAbort?.()) throw new AbortedError()
-        try {
-          const result = await buildTextNurbsScene(compiled.document, options.quality, {
-            shouldAbort: options.shouldAbort,
-            onYield: options.onYield,
-            onSweepPreview: options.onSweepPreview,
-            exportQuality: options.exportQuality,
-          })
-          if (options.shouldAbort?.()) throw new AbortedError()
-          return result
-        } catch (error) {
-          if (error instanceof DOMException && error.name === 'AbortError') throw new AbortedError()
-          throw error
-        }
-      }
-      const result = await parseInternal(compiled.source, options)
-      requireRushGraphChecks(
-        await evaluateRushGraphGeometry(
-          compiled.geometry_assertions,
-          result.meshes,
-          async source => (await parseInternal(source, options)).meshes,
-        ),
-      )
-      for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
-      return result
-    }
-    return parseInternal(source, options)
-  }
+  const run = () => parseSceneWithTraces(source, options)
   const result = parseQueue.then(run, run)
   parseQueue = result.then(
     () => undefined,
     () => undefined,
   )
   return result
+}
+
+/** Evaluate full export meshes alongside module/group call-stack traces. */
+export async function evaluateOpenScadExportScene(
+  source: string,
+  exportQuality: 'high' | 'ultra',
+): Promise<{ meshes: MeshData[]; partTraces: ExportScenePartTrace[] }> {
+  const partTraces: ExportScenePartTrace[] = []
+  const run = () => parseSceneWithTraces(source, { quality: 'full', exportQuality }, partTraces)
+  const pending = parseQueue.then(run, run)
+  parseQueue = pending.then(
+    () => undefined,
+    () => undefined,
+  )
+  const result = await pending
+  return { meshes: result.meshes, partTraces }
+}
+
+/** Fast pure-JS module hierarchy pass (no WASM kernel or parseQueue wait). */
+export async function traceOpenScadSceneParts(source: string): Promise<ExportScenePartTrace[]> {
+  try {
+    let evalSource = source
+    if (isRushFrontend(source)) {
+      const { compileRushFrontend } = await import('./rushFrontend')
+      const compiled = compileRushFrontend(source)
+      if (compiled.execution_target === 'own-nurbs') return []
+      evalSource = compiled.source
+    }
+    const traces: ExportScenePartTrace[] = []
+    await parseInternal(
+      evalSource,
+      { quality: 'full', traceHierarchyOnly: true },
+      undefined,
+      undefined,
+      undefined,
+      traces,
+    )
+    return traces
+  } catch {
+    return []
+  }
 }
 
 /** Compile and evaluate one bounded project snapshot with the independent full profile. */

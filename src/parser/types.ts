@@ -20,6 +20,14 @@ import type { PreparedOpenScadTextAssets } from '../language/openScadText'
 
 export type ExportMeshQuality = 'viewport' | 'high' | 'ultra'
 
+export interface ExportScenePartTrace {
+  readonly entityId: SceneEntityId
+  readonly moduleStack: readonly string[]
+  readonly topModuleInstancePath?: string | undefined
+  readonly callName: string
+  readonly color: RGBA
+}
+
 export interface ParseOptions {
   /**
    * Record the exact solid graph beside the polygon evaluation, for the Solid
@@ -27,6 +35,8 @@ export interface ParseOptions {
    * result keys, so the field must not appear on the ordinary display route.
    */
   recordExactSolids?: boolean
+  /** Lightweight metadata-only pass skipping mesh extraction and heavy Voronoi lattices. */
+  traceHierarchyOnly?: boolean | undefined
   /** Versioned frontend profile. The legacy public route remains subset@1. */
   languageProfile?: OpenScadLanguageProfile | undefined
   quality?: GeometryQuality | undefined
@@ -149,6 +159,8 @@ export interface EvalContext {
   /** Shared mutable flag — set when preview quality actually altered a value. */
   reduced: { value: boolean }
   instancePath: string
+  topModuleInstancePath?: string | undefined
+  traceHierarchyOnly?: boolean | undefined
   valueBudget: { used: number }
   valueWeights: WeakMap<Value[], number>
   valueDepths: WeakMap<Value[], number>
@@ -181,6 +193,9 @@ export interface Shape3D {
   geometry: CadKernelHandle
   color: RGBA
   entityId: SceneEntityId
+  moduleStack?: readonly string[] | undefined
+  topModuleInstancePath?: string | undefined
+  callName?: string | undefined
 }
 export type Shape = Shape2D | Shape3D
 
