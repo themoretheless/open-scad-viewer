@@ -649,6 +649,26 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'surface_ray_hits': {
+            const {id:_id,op,input,...parameters} = n
+            const surface = needSurface(input)
+            const report = callGeometryRust<object>(op, {surface,...parameters})
+            constructionReports[key] = {measurement:{operation:op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
+          case 'curve_plane_roots':
+          case 'curve_pair_crossings':
+          case 'curve_plane_chart_crossings': {
+            const curve = needCurve(n.input)
+            const parameters = n.op === 'curve_plane_roots'
+              ? {plane_normal:n.plane_normal, plane_offset_mm:n.plane_offset_mm, parameter_tolerance:n.parameter_tolerance}
+              : {target:n.op==='curve_pair_crossings' ? needCurve(n.target_geometry) : needSurface(n.target_geometry), tolerance_mm:n.tolerance_mm}
+            const report = callGeometryRust<object>(n.op,{curve,...parameters,max_cells:n.max_cells})
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'curve',data:curve}
+            break
+          }
           case 'curve_curvature_torsion': {
             const curve = needCurve(n.input)
             const report = callGeometryRust<object>(n.op, {curve, parameter:n.parameter, query_side:n.query_side ?? 'automatic'})

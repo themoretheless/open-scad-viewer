@@ -4,7 +4,13 @@ use super::*;
 #[path = "arc_metrology.rs"]
 mod arc_metrology;
 
+#[path = "intersection_measurements.rs"]
+mod intersection_measurements;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op, "curve_plane_roots" | "curve_pair_crossings" | "curve_plane_chart_crossings" | "surface_ray_hits") {
+        return Some(intersection_measurements::inspect(v, op));
+    }
     if matches!(op, "curve_length_bounds" | "curve_station_at_length" | "curve_divide_by_length" | "surface_area_bounds") {
         return Some(arc_metrology::measure(op, v));
     }

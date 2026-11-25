@@ -1,0 +1,11 @@
+// @rush/1
+axis = line_curve(start:[-2mm,0mm,0mm],end:[2mm,0mm,0mm])
+cross_axis = line_curve(start:[0mm,-1mm,0mm],end:[0mm,1mm,0mm])
+rim = line_curve(start:[0mm,-1mm,-1mm],end:[0mm,1mm,-1mm])
+chart = rim.surface_extrude(vector:[0mm,0mm,2mm])
+roots = axis.curve_plane_roots(plane_normal:[1,0,0],plane_offset_mm:0mm,parameter_tolerance:0.001,max_cells:128)
+crossings = roots.curve_pair_crossings(target_geometry:cross_axis,tolerance_mm:0.001mm,max_cells:1024)
+hits = crossings.curve_plane_chart_crossings(target_geometry:chart,tolerance_mm:0.001mm,max_cells:512)
+wall = hits.surface_extrude(vector:[0mm,2mm,0mm])
+ray = wall.surface_ray_hits(ray_origin:[0mm,1mm,3mm],ray_direction:[0,0,-1],parameter_tolerance:0.001,max_cells:512)
+show ray.tessellate(8,4)
