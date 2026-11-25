@@ -5612,7 +5612,7 @@
     {
       "id": "NURBS-0184",
       "name": "оценка отклонения кривой после редактирования",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5622,13 +5622,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/distance/curve_deviation.rs",
         "crates/nurbs-core/tests/curve_deviation.rs",
-        "docs/design/nurbs-curve-deviation.md"
+        "docs/design/nurbs-curve-deviation.md",
+        "examples/rush/edit-deviation.r",
+        "tests/rushEditDeviation.test.ts"
       ]
     },
     {
       "id": "NURBS-0185",
       "name": "оценка отклонения поверхности после редактирования",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5638,7 +5640,9 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/surface_deviation.rs",
         "crates/nurbs-core/tests/surface_deviation.rs",
-        "docs/design/nurbs-surface-deviation.md"
+        "docs/design/nurbs-surface-deviation.md",
+        "examples/rush/edit-deviation.r",
+        "tests/rushEditDeviation.test.ts"
       ]
     },
     {
