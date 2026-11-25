@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "ec492e21edc6492ca646cce40cfb8e8472ab4a046ae1dea7f0f4a590d0cad1fa",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/cst-measured-sides.r",
+      "exampleSha256": "577f479dd55303dd004c7821a810bf909eb98b69dd3a3e3d767ff25dedbe523c",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n4,03\nГотово · 58 ms"
+    }
+  ]
+}

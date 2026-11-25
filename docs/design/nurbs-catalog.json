@@ -6374,7 +6374,7 @@
     {
       "id": "NURBS-0221",
       "name": "обратная подгонка CST в авторской 3D-плоскости с разметкой сторон",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-cst",
       "category": "Профили и восстановление",
       "nativeApi": "nurbs_core::construct::curves::airfoil::cst_fit_sides",
@@ -6384,7 +6384,9 @@
         "docs/design/nurbs-cst-profiles.md",
         "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json",
         "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
-        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json"
+        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json",
+        "examples/rush/cst-measured-sides.r",
+        "tests/rushCstInverse.test.ts"
       ],
       "remainingQualification": [
         "numerical construction and discrete fit diagnostics only; no continuous error, exact frame or B-rep authority",
