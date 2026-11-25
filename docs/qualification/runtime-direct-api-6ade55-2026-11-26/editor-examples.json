@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "6ade5583d10d6c34a51784fccb60349bb4346645664c0dfedd09db229ec85044",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/original-self-contact.r",
+      "exampleSha256": "ee86ff27754c9f05ad8893a4b9cfabf5bafd4ff7342f85382f846b3caf096993",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2,96\nГотово · 39 ms"
+    }
+  ]
+}

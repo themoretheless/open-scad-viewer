@@ -5152,7 +5152,7 @@
     {
       "id": "NURBS-0166",
       "name": "проверка самопересечений кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5162,13 +5162,15 @@
       "evidence": [
         "crates/nurbs-core/src/intersection/self_curve.rs",
         "crates/nurbs-core/tests/curve_self_intersection.rs",
-        "docs/design/nurbs-self-intersection-audits.md"
+        "docs/design/nurbs-self-intersection-audits.md",
+        "examples/rush/original-self-contact.r",
+        "tests/rushSelfContact.test.ts"
       ]
     },
     {
       "id": "NURBS-0167",
       "name": "проверка самопересечений поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5178,7 +5180,9 @@
       "evidence": [
         "crates/nurbs-core/src/intersection/self_surface.rs",
         "crates/nurbs-core/tests/surface_self_intersection.rs",
-        "docs/design/nurbs-self-intersection-audits.md"
+        "docs/design/nurbs-self-intersection-audits.md",
+        "examples/rush/original-self-contact.r",
+        "tests/rushSelfContact.test.ts"
       ]
     },
     {
@@ -5578,7 +5582,7 @@
     {
       "id": "NURBS-0183",
       "name": "проверка регулярности поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5588,7 +5592,9 @@
       "evidence": [
         "crates/nurbs-core/src/analysis/surface_regularity.rs",
         "crates/nurbs-core/tests/surface_regularity.rs",
-        "docs/design/nurbs-surface-regularity.md"
+        "docs/design/nurbs-surface-regularity.md",
+        "examples/rush/original-self-contact.r",
+        "tests/rushSelfContact.test.ts"
       ]
     },
     {
