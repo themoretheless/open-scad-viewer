@@ -933,6 +933,15 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'surface_gap_pair_distance': {
+            const {op, id: _id, input, target_geometry, ...settings} = n
+            const surface = needSurface(input)
+            const target = needSurface(target_geometry)
+            const report = callGeometryRust<object>(op, {surface, target, ...settings})
+            constructionReports[key] = {measurement: {operation: op, report}}
+            result = {kind: 'surface', data: surface}
+            break
+          }
           case 'surface_gap_world_polyline': {
             const {op,id:_id,input,return_field,...settings}=n
             const surface=needSurface(input)

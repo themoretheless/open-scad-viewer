@@ -49,6 +49,38 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
         _ => return Err(input("Unknown contour axis")),
     };
     match op {
+        "surface_gap_pair_distance" => {
+            let target = field(v, "target")?;
+            let stations: Vec<f64> = field(v, "transverse")?;
+            let target_stations: Vec<f64> = field(v, "target_transverse")?;
+            let a = gap::CurvatureGapContourSpec {
+                surface: &s,
+                span,
+                axis,
+                level,
+                transverse: &stations,
+                root_depth: field(v, "max_depth")?,
+            };
+            let b = gap::CurvatureGapContourSpec {
+                surface: &target,
+                span: field(v, "target_knot_span")?,
+                axis: match field::<String>(v, "target_direction")?.as_str() {
+                    "u" => gap::Axis::U,
+                    "v" => gap::Axis::V,
+                    _ => return Err(input("Unknown target contour axis")),
+                },
+                level: field(v, "target_gap_level_per_mm2")?,
+                transverse: &target_stations,
+                root_depth: field(v, "target_max_depth")?,
+            };
+            let r = gap::distance_between_curvature_gap_contours(a, b, budget)?;
+            if let Some(reason) = r.refusal {
+                return Err(input(format!("Contour pair proof refused: {reason:?}")));
+            }
+            Ok(
+                json!({"distanceBoundsMm":r.distance_bounds,"upperSegments":r.upper_segments,"comparedPairs":r.compared_pairs,"prunedPairs":r.pruned_pairs,"workUsed":r.work_used}),
+            )
+        }
         "surface_gap_contour_graph" => {
             let r = gap::certify_curvature_gap_graph(&s, span, axis, level, budget)?;
             Ok(json!({"domain":r.domain,"graph":graph(r.graph,r.refusal)?,"workUsed":r.work_used}))
