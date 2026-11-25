@@ -19,7 +19,13 @@ mod planar_path_selection;
 #[path = "parallel_section_queries.rs"]
 mod parallel_section_queries;
 
+#[path = "bounded_mesh_construction.rs"]
+mod bounded_mesh_construction;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op,"bounded_curve_chord" | "bounded_surface_mesh") {
+        return Some(bounded_mesh_construction::build(v,op));
+    }
     if matches!(op,"parallel_plane_sections" | "parallel_section_piece") {
         return Some(parallel_section_queries::inspect(v,op));
     }

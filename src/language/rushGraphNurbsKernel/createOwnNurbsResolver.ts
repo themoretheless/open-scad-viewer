@@ -491,6 +491,21 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'bounded_curve_chord': {
+            const {id:_id,input,op,...options}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;errorUpperMm:number;cells:number}>(op,{curve:needCurve(input),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'bounded_surface_mesh': {
+            const {id:_id,input,op,...options}=n
+            const {positions,indices,uv,...report}=callGeometryRust<{positions:number[];indices:number[];uv:number[];errorUpperMm:number;cells:number}>(op,{surface:needSurface(input),...options})
+            const mesh=normalizePolygonMesh({positions,indices,uv})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
+            break
+          }
           case 'parallel_plane_sections':
           case 'parallel_section_piece': {
             const {id:_id,op,input,...settings}=n
