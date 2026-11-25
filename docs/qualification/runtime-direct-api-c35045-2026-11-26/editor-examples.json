@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "c35045123a10a1c0f5ee9b86f698cec8b7ce52a6c18c4be19db3f5c28ab5cf1f",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/bounded-planar-offset.r",
+      "exampleSha256": "e1849a66956e7d650e86349c8d16d2ad7dbb2702c9a18dd8492e525446dd6192",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n10,45\nГотово · 389 ms"
+    },
+    {
+      "example": "examples/rush/planar-knot-miter.r",
+      "exampleSha256": "f742140031a9f7bb678fc4ce50a95089dbf12a8660de972591d9b0b526d0779d",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n0,5\nГотово · 6 ms"
+    }
+  ]
+}

@@ -5662,7 +5662,7 @@
     {
       "id": "NURBS-0186",
       "name": "плоский offset кривой с допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5673,13 +5673,15 @@
       "evidence": [
         "crates/nurbs-core/src/offset/curve_offset.rs",
         "crates/nurbs-core/tests/curve_offset.rs",
-        "docs/design/nurbs-planar-offset-native.md"
+        "docs/design/nurbs-planar-offset-native.md",
+        "examples/rush/bounded-planar-offset.r",
+        "tests/rushPlanarOffset.test.ts"
       ]
     },
     {
       "id": "NURBS-0187",
       "name": "стыки offset-контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5690,7 +5692,9 @@
       "evidence": [
         "crates/nurbs-core/src/offset/curve_offset_join.rs",
         "crates/nurbs-core/tests/offset_join.rs",
-        "docs/design/nurbs-offset-joins.md"
+        "docs/design/nurbs-offset-joins.md",
+        "examples/rush/planar-knot-miter.r",
+        "tests/rushPlanarOffset.test.ts"
       ]
     },
     {
