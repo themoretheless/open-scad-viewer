@@ -52,6 +52,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'surface_gap_contour_samples') return russian ? 'Интервалы точек контура кривизны' : 'Curvature contour sample brackets'
   if (operation === 'surface_gap_world_polyline') return russian ? 'Пространственная ломаная контура' : 'World contour polyline'
   if (operation === 'surface_gap_world_length') return russian ? 'Длина пространственного контура' : 'World contour length'
+  if (operation === 'compress_tensor_surface') return russian ? 'Точное упрощение поверхности' : 'Exact surface compression'
+  if (operation === 'compress_tensor_surface_batch') return russian ? 'Точное упрощение набора поверхностей' : 'Exact surface batch compression'
   if (operation === 'surface_gap_pair_distance') return russian ? 'Расстояние между контурами кривизны' : 'Curvature contour pair distance'
   if (operation === 'surface_gap_plane_section') return russian ? 'Сечение контура плоскостью' : 'Contour plane section'
   if (operation === 'surface_gap_world_distance') return russian ? 'Расстояние до пространственного контура' : 'Point to world contour distance'

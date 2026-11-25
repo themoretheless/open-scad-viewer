@@ -933,6 +933,18 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'compress_tensor_surface':
+          case 'compress_tensor_surface_batch': {
+            const settings = n.op === 'compress_tensor_surface'
+              ? {source: needSurface(n.input)}
+              : {surfaces: [n.input, ...n.inputs].map(needSurface), patch_index: n.patch_index}
+            const {surface, ...report} = callGeometryRust<{surface: NurbsSurface; workUsed: number}>(
+              n.op, {...settings, max_work: n.max_work},
+            )
+            constructionReports[key] = {measurement: {operation: n.op, report}}
+            result = {kind: 'surface', data: surface}
+            break
+          }
           case 'surface_gap_pair_distance': {
             const {op, id: _id, input, target_geometry, ...settings} = n
             const surface = needSurface(input)

@@ -23,3 +23,25 @@ pub(super) fn merge(v: &Value, op: &str) -> Result<Value> {
     let seam = match axis { Axis::U => left.knots_u[left.control_points.len()], Axis::V => left.knots_v[left.control_points[0].len()] };
     Ok(json!({"surface":surface,"seam":seam,"direction":direction}))
 }
+
+pub(super) fn compress(v: &Value, op: &str) -> Result<Value> {
+    use crate::editing::exact_surface_knot_removal::{
+        TensorCompression, compress_tensor_surface, compress_tensor_surface_batch,
+    };
+    fn summary(patch: &TensorCompression) -> Value {
+        json!({"removedKnots":patch.removed_knots,"reducedDegrees":patch.reduced_degrees,
+            "completed":patch.completed,"controlNet":[patch.surface.control_points.len(),
+            patch.surface.control_points[0].len()],"workUsed":patch.work_used})
+    }
+    let budget = field(v,"max_work")?;
+    if op == "compress_tensor_surface" {
+        let r = compress_tensor_surface(&field(v,"source")?,budget)?;
+        return Ok(json!({"surface":r.surface,"patches":[summary(&r)],"workUsed":r.work_used}));
+    }
+    let sources: Vec<crate::surface::Surface> = field(v,"surfaces")?;
+    let index: usize = field(v,"patch_index")?;
+    if sources.len()>32 || index>=sources.len() { return Err(input("Invalid compression batch or patch index")); }
+    let r=compress_tensor_surface_batch(&sources,budget)?;
+    let patches=r.patches.ok_or_else(||input("Exact batch compression exhausted its shared work budget"))?;
+    Ok(json!({"surface":patches[index].surface,"patches":patches.iter().map(summary).collect::<Vec<_>>(),"selectedPatch":index,"workUsed":r.work_used}))
+}

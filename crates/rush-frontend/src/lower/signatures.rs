@@ -354,6 +354,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_gap_contour_samples" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","max_work"],
         "surface_gap_world_polyline" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","return_field","max_work"],
         "surface_gap_world_length" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","max_work"],
+        "compress_tensor_surface" => &["max_work"],
+        "compress_tensor_surface_batch" => &["inputs","patch_index","max_work"],
         "surface_gap_pair_distance" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","target_geometry","target_knot_span","target_direction","target_gap_level_per_mm2","target_transverse","target_max_depth","max_work"],
         "surface_gap_plane_section" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","plane_normal","plane_offset_mm","max_work"],
         "surface_gap_world_distance" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","probe_point","max_work"],

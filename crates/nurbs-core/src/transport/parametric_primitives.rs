@@ -90,6 +90,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
                 "gradientLower":r.gradient_lower,"reason":r.reason}))
         })());
     }
+    if matches!(op,"compress_tensor_surface" | "compress_tensor_surface_batch") { return Some(exact_merge_requests::compress(v,op)); }
     if matches!(op,"merge_curve_exact" | "merge_surface_exact") { return Some(exact_merge_requests::merge(v,op)); }
     if matches!(op,"fit_cst_sides" | "naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
