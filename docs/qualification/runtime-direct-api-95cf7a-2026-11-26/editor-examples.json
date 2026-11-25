@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "95cf7a27518fbdcef0a358630595aa55235fce74704212000fbf451591f38371",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/shared-patch-mesh.r",
+      "exampleSha256": "0bb3cdb00a0f41b557aae0f12a521483f135f9c87dbaf87185727229ee651372",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 21 ms"
+    }
+  ]
+}

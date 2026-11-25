@@ -513,6 +513,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CHID7inX.js':183_300,'assets/CgjgoDCg.js':203_600,'assets/mainSolid.worker-0WZ_d1kq.js':193_400}),
   }),
+  // Shared indexed seam construction across NURBS patches: 20,756,211 raw bytes, 7,479,074 packed bytes and 14,489,231 total asset bytes.
+  '95cf7a27518fbdcef0a358630595aa55235fce74704212000fbf451591f38371':Object.freeze({
+    version:71,geometryChunkBytes:7_480_000,totalAssetBytes:14_490_000,rawGeometryBytes:20_757_000,
+    namedJsChunkBytes:Object.freeze({
+      index:276_100,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DTM9-KVT.js':185_800,'assets/V2cS-l_c.js':203_600,'assets/mainSolid.worker-C8jMER8p.js':194_500}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

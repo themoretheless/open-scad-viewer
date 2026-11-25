@@ -5811,7 +5811,7 @@
     {
       "id": "NURBS-0193",
       "name": "согласованная тесселяция общих границ патчей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5821,7 +5821,9 @@
       "evidence": [
         "crates/nurbs-core/src/tessellation/shared_tessellation.rs",
         "crates/nurbs-core/tests/shared_tessellation.rs",
-        "docs/design/nurbs-shared-tessellation.md"
+        "docs/design/nurbs-shared-tessellation.md",
+        "examples/rush/shared-patch-mesh.r",
+        "tests/rushSharedPatchMesh.test.ts"
       ]
     },
     {
