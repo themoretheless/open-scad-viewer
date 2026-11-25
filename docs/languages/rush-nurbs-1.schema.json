@@ -51642,6 +51642,152 @@
               },
               "op": {
                 "type": "string",
+                "const": "curve_curvature_torsion"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "parameter": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "query_side": {
+                "type": "string",
+                "enum": [
+                  "automatic",
+                  "left",
+                  "right"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "parameter"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "surface_principal_curvatures"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "uv": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "u_side": {
+                "type": "string",
+                "enum": [
+                  "automatic",
+                  "left",
+                  "right"
+                ]
+              },
+              "v_side": {
+                "type": "string",
+                "enum": [
+                  "automatic",
+                  "left",
+                  "right"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "uv"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "curve_nearest_point"
               },
               "input": {

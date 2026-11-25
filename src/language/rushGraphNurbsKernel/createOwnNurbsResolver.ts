@@ -649,6 +649,20 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'curve_curvature_torsion': {
+            const curve = needCurve(n.input)
+            const report = callGeometryRust<object>(n.op, {curve, parameter:n.parameter, query_side:n.query_side ?? 'automatic'})
+            constructionReports[key] = { measurement:{operation:n.op,report} }
+            result = {kind:'curve',data:curve}
+            break
+          }
+          case 'surface_principal_curvatures': {
+            const surface = needSurface(n.input)
+            const report = callGeometryRust<object>(n.op, {surface, uv:n.uv, u_side:n.u_side ?? 'automatic', v_side:n.v_side ?? 'automatic'})
+            constructionReports[key] = { measurement:{operation:n.op,report} }
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'curve_nearest_point':
           case 'surface_nearest_point':
           case 'curve_pair_distance':

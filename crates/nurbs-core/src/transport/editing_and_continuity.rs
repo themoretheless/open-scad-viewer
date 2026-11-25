@@ -8,8 +8,31 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     try_dispatch_sculpt_coons_and_continuity(v, op)
 }
 
+fn differential_side(v: &Value, key: &str) -> Result<crate::curve_differential::Side> {
+    use crate::curve_differential::Side;
+    match optional_field::<String>(v,key)?.as_deref().unwrap_or("automatic") {
+        "automatic" => Ok(Side::Automatic),
+        "left" => Ok(Side::Left),
+        "right" => Ok(Side::Right),
+        _ => Err(input("Unknown differential side")),
+    }
+}
+
 fn try_dispatch_distance_trim_and_probes(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
+        "curve_curvature_torsion" => (|| {
+            let r = crate::curve_differential::at(&field(v,"curve")?, field(v,"parameter")?, differential_side(v,"query_side")?)?;
+            Ok(json!({"parameter":r.parameter,"side":format!("{:?}",r.side),"continuity":r.continuity,
+                "curvaturePerMm":r.curvature,"torsionPerMm":r.torsion,"curvatureStatus":format!("{:?}",r.curvature_status),
+                "torsionStatus":format!("{:?}",r.torsion_status),"frameStatus":format!("{:?}",r.frame_status),
+                "tangent":r.tangent,"normal":r.normal,"binormal":r.binormal}))
+        })(),
+        "surface_principal_curvatures" => (|| {
+            let r = crate::surface_differential::at(&field(v,"surface")?, field(v,"uv")?,
+                [differential_side(v,"u_side")?, differential_side(v,"v_side")?])?;
+            Ok(json!({"status":format!("{:?}",r.status),"directionStatus":format!("{:?}",r.direction_status),
+                "principalPerMm":r.principal,"meanPerMm":r.mean,"gaussianPerMm2":r.gaussian,"directions":r.directions}))
+        })(),
         "curve_nearest_point" => (|| {
             let point: Vec<f64> = field(v, "point")?;
             let r = curve_distance::nearest_point(&field(v,"geometry")?, &point, field(v,"toleranceMm")?, field(v,"maxCells")?)?;
