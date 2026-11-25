@@ -7,7 +7,13 @@ mod arc_metrology;
 #[path = "intersection_measurements.rs"]
 mod intersection_measurements;
 
+#[path = "surface_seam_measurements.rs"]
+mod surface_seam_measurements;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op, "surface_seam_g0" | "surface_seam_g1" | "surface_seam_g2") {
+        return Some(surface_seam_measurements::inspect(v, op));
+    }
     if matches!(op, "curve_plane_roots" | "curve_pair_crossings" | "curve_plane_chart_crossings" | "surface_ray_hits") {
         return Some(intersection_measurements::inspect(v, op));
     }

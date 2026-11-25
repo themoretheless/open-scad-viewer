@@ -649,6 +649,16 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'surface_seam_g0':
+          case 'surface_seam_g1':
+          case 'surface_seam_g2': {
+            const {id:_id,op,input,target_geometry,...options} = n
+            const surface = needSurface(input)
+            const report = callGeometryRust<object>(op,{surface,target:needSurface(target_geometry),...options})
+            constructionReports[key] = {measurement:{operation:op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'curve_join_continuity': {
             const {id:_id,op,input,target_geometry,...options} = n
             const curve = needCurve(input)

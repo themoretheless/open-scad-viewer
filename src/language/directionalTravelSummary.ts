@@ -8,6 +8,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (['surface_seam_g0','surface_seam_g1','surface_seam_g2'].includes(operation)) return (russian ? 'Сопряжение поверхностей ' : 'Surface seam ') + operation.slice(-2).toUpperCase()
   if (operation === 'curve_join_continuity') return russian ? 'Сопряжение кривых G0/G1/G2' : 'Curve join G0/G1/G2'
   if (operation === 'curve_self_contacts') return russian ? 'Самопересечения кривой' : 'Curve self-intersections'
   if (operation === 'surface_self_contacts') return russian ? 'Самопересечения поверхности' : 'Surface self-intersections'
