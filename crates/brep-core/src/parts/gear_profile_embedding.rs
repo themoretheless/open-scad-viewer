@@ -157,13 +157,13 @@ fn fan(wire: &[Curve], n: usize, k: usize, i: usize, negative: bool) -> Vec<Vec<
     curves.push(line2([0., 0.], [first[0], first[1]]));
     oriented_source(curves, negative)
 }
-fn groups(wire: &[Curve], k: usize) -> Vec<Vec<[Q; 2]>> {
+fn groups(wire: &[Curve], k: usize) -> Vec<Vec<[f64; 2]>> {
     wire.chunks(k)
         .map(|curves| {
             curves
                 .iter()
                 .flat_map(|c| c.control_points.iter())
-                .map(|p| [Q::from_float(p[0]).unwrap(), Q::from_float(p[1]).unwrap()])
+                .map(|p| [p[0], p[1]])
                 .collect()
         })
         .collect()
@@ -175,9 +175,23 @@ fn charge(work: &mut usize, limits: ProfileEmbeddingLimits) -> Result<()> {
     *work += 1;
     Ok(())
 }
+/// Rounding is monotone: distinct rounded products prove the exact order.
+fn cross_sign(ray: [f64; 2], point: [f64; 2]) -> std::cmp::Ordering {
+    let lhs = ray[0] * point[1];
+    let rhs = ray[1] * point[0];
+    if lhs < rhs {
+        return std::cmp::Ordering::Less;
+    }
+    if lhs > rhs {
+        return std::cmp::Ordering::Greater;
+    }
+    // Ties include underflow and overflow. Compare the original binary rationals.
+    let exact = |x| Q::from_float(x).unwrap();
+    (exact(ray[0]) * exact(point[1])).cmp(&(exact(ray[1]) * exact(point[0])))
+}
 fn separated(
-    a: &[[Q; 2]],
-    b: &[[Q; 2]],
+    a: &[[f64; 2]],
+    b: &[[f64; 2]],
     ray: [f64; 2],
     work: &mut usize,
     limits: ProfileEmbeddingLimits,
@@ -185,19 +199,15 @@ fn separated(
     if !ray.iter().all(|x| x.is_finite()) || ray == [0.; 2] {
         return Ok(false);
     }
-    let r = [
-        Q::from_float(ray[0]).unwrap(),
-        Q::from_float(ray[1]).unwrap(),
-    ];
     let mut side = 0i8;
     for (group, opposite) in [(a, false), (b, true)] {
         for p in group {
             charge(work, limits)?;
-            let cross = &r[0] * &p[1] - &r[1] * &p[0];
-            if cross.is_zero() {
-                return Ok(false);
-            }
-            let sign = if cross > Q::zero() { 1 } else { -1 };
+            let sign = match cross_sign(ray, *p) {
+                std::cmp::Ordering::Equal => return Ok(false),
+                std::cmp::Ordering::Less => -1,
+                std::cmp::Ordering::Greater => 1,
+            };
             if side == 0 {
                 side = sign;
             }
@@ -544,4 +554,19 @@ pub fn replace_verified_gear_sector(
     )?;
     pattern.replace_sector_with_closed_joins(index, replacement)?;
     Ok(verified)
+}
+
+#[cfg(test)]
+mod cross_sign_tests {
+    use super::cross_sign;
+    use std::cmp::Ordering::{Equal, Greater, Less};
+
+    #[test]
+    fn resolves_tied_products_using_the_binary_inputs() {
+        let epsilon = f64::EPSILON;
+        assert_eq!(cross_sign([1.0 + epsilon, 1.0], [1.0, 1.0 - epsilon]), Less);
+        assert_eq!(cross_sign([f64::MIN_POSITIVE, 0.0], [0.0, f64::MIN_POSITIVE]), Greater);
+        assert_eq!(cross_sign([f64::MAX, f64::MAX], [2.0, 3.0]), Greater);
+        assert_eq!(cross_sign([2.0, 3.0], [4.0, 6.0]), Equal);
+    }
 }

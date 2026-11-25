@@ -165,10 +165,19 @@ pub fn certify_bevel_profile(
         max_surfaces,
         max_curves,
     )?;
+    certify_qualified_outline(source, limits)
+}
+
+pub(super) fn certify_qualified_outline(
+    source: QualifiedBevelOutline,
+    limits: ProfileEmbeddingLimits,
+) -> Result<VerifiedBevelProfile> {
+    let teeth = source.source().specification().teeth;
     let (grouped, projected, k) = grouped(&source)?;
-    let (certificate, _) =
-        certify_grouped_profile_embedding(&[projected.clone()], spec.teeth, k, 0, 1e-7, limits)?;
-    verify_bevel_profile_projection(&source, &projected, &certificate, limits)?;
+    // The constructor independently replays the embedding certificate against this exact wire.
+    let (certificate, _) = certify_grouped_profile_embedding(
+        std::slice::from_ref(&projected), teeth, k, 0, 1e-7, limits,
+    )?;
     Ok(VerifiedBevelProfile {
         source,
         grouped,

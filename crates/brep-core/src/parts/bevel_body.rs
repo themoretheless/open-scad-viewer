@@ -411,14 +411,7 @@ pub fn bevel_with_verified_profile(
     )?;
     let candidate =
         bevel_body_candidate(&source, tolerance, limits.closure_cells, limits.exact_work)?;
-    let profile = certify_bevel_profile(
-        spec,
-        tolerance,
-        limits.max_patches_per_flank,
-        limits.max_surfaces,
-        limits.max_curves,
-        limits.profile,
-    )?;
+    let profile = super::bevel_profile::certify_qualified_outline(source, limits.profile)?;
     let original = profile.source().curves();
     let n = original.len();
     if candidate.model.edges.len() < 2 * n
