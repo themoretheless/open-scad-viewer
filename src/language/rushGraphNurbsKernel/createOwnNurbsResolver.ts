@@ -491,6 +491,33 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'geometry_bounds_union':
+          case 'geometry_conditioning':
+          case 'coordinate_frame_local':
+          case 'coordinate_frame_world': {
+            const source=get(n.input)
+            if (source.kind!=='curve' && source.kind!=='surface') throw new Error('Expected a curve or surface')
+            if(n.op==='geometry_bounds_union'){
+              const items=[n.input,...n.inputs].map(ref=>{
+                const geometry=get(ref)
+                if(geometry.kind!=='curve' && geometry.kind!=='surface') throw new Error('Bounds require curves or surfaces')
+                return {[geometry.kind]:geometry.data}
+              })
+              const report=callGeometryRust<object>(n.op,{items})
+              constructionReports[key]={measurement:{operation:n.op,report}}
+              result=source
+            } else if(n.op==='geometry_conditioning'){
+              const report=callGeometryRust<object>(n.op,{[source.kind]:source.data})
+              constructionReports[key]={measurement:{operation:n.op,report}}
+              result=source
+            } else {
+              const frame={origin:n.origin,frame_scale:n.frame_scale}
+              result=source.kind==='curve'
+                ? {kind:'curve',data:callGeometryRust<NurbsCurve>(n.op,{curve:source.data,...frame})}
+                : {kind:'surface',data:callGeometryRust<NurbsSurface>(n.op,{surface:source.data,...frame})}
+            }
+            break
+          }
           case 'shared_patch_mesh': {
             const {id:_id,input,inputs,op,...options}=n
             const {positions,indices,faceIds,...report}=callGeometryRust<{positions:number[];indices:number[];faceIds:number[];errorUpperMm:number}>(op,{surfaces:[input,...inputs].map(needSurface),...options})

@@ -25,7 +25,13 @@ mod bounded_mesh_construction;
 #[path = "shared_patch_mesh.rs"]
 mod shared_patch_mesh;
 
+#[path = "coordinate_analysis.rs"]
+mod coordinate_analysis;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op,"geometry_bounds_union" | "geometry_conditioning" | "coordinate_frame_local" | "coordinate_frame_world") {
+        return Some(coordinate_analysis::apply(v,op));
+    }
     if op == "shared_patch_mesh" { return Some(shared_patch_mesh::build(v)); }
     if matches!(op,"bounded_curve_chord" | "bounded_surface_mesh") {
         return Some(bounded_mesh_construction::build(v,op));
