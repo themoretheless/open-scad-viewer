@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "5acc90be5969ff15a7abe6bb512060b15bf42a3ef558e9df321a10a8d37dc09b",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/original-geometry-distances.r",
+      "exampleSha256": "d5174d91490a6d34a0e2f1916cd7909022e861d8f79a559404e9710c548442d6",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 45 ms"
+    }
+  ]
+}

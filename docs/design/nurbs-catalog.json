@@ -4911,7 +4911,7 @@
     {
       "id": "NURBS-0154",
       "name": "ближайшая точка на кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4921,13 +4921,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/distance/curve_distance.rs",
         "crates/nurbs-core/tests/nearest_point.rs",
-        "docs/design/nurbs-nearest-point.md"
+        "docs/design/nurbs-nearest-point.md",
+        "examples/rush/original-geometry-distances.r",
+        "tests/rushOriginalDistances.test.ts"
       ]
     },
     {
       "id": "NURBS-0155",
       "name": "ближайшая точка на поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4937,13 +4939,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/distance/surface_distance.rs",
         "crates/nurbs-core/tests/surface_distance_queries.rs",
-        "docs/design/nurbs-surface-distance-queries.md"
+        "docs/design/nurbs-surface-distance-queries.md",
+        "examples/rush/original-geometry-distances.r",
+        "tests/rushOriginalDistances.test.ts"
       ]
     },
     {
       "id": "NURBS-0156",
       "name": "расстояние между двумя кривыми",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4953,13 +4957,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/distance/curve_distance.rs",
         "crates/nurbs-core/tests/curve_pair_distance.rs",
-        "docs/design/nurbs-curve-distance.md"
+        "docs/design/nurbs-curve-distance.md",
+        "examples/rush/original-geometry-distances.r",
+        "tests/rushOriginalDistances.test.ts"
       ]
     },
     {
       "id": "NURBS-0157",
       "name": "расстояние между кривой и поверхностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4969,13 +4975,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/distance/curve_surface_distance.rs",
         "crates/nurbs-core/tests/curve_surface_distance.rs",
-        "docs/design/nurbs-curve-surface-distance.md"
+        "docs/design/nurbs-curve-surface-distance.md",
+        "examples/rush/original-geometry-distances.r",
+        "tests/rushOriginalDistances.test.ts"
       ]
     },
     {
       "id": "NURBS-0158",
       "name": "расстояние между двумя поверхностями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4985,7 +4993,9 @@
       "evidence": [
         "crates/nurbs-foundation/src/distance/surface_distance.rs",
         "crates/nurbs-core/tests/surface_distance_queries.rs",
-        "docs/design/nurbs-surface-distance-queries.md"
+        "docs/design/nurbs-surface-distance-queries.md",
+        "examples/rush/original-geometry-distances.r",
+        "tests/rushOriginalDistances.test.ts"
       ]
     },
     {
