@@ -491,6 +491,14 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'shared_patch_mesh': {
+            const {id:_id,input,inputs,op,...options}=n
+            const {positions,indices,faceIds,...report}=callGeometryRust<{positions:number[];indices:number[];faceIds:number[];errorUpperMm:number}>(op,{surfaces:[input,...inputs].map(needSurface),...options})
+            const mesh=normalizePolygonMesh({positions,indices,faceIds,sharedPatchVertices:true as const})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
+            break
+          }
           case 'bounded_curve_chord': {
             const {id:_id,input,op,...options}=n
             const {curve,...report}=callGeometryRust<{curve:NurbsCurve;errorUpperMm:number;cells:number}>(op,{curve:needCurve(input),...options})

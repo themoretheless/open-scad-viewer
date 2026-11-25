@@ -1672,6 +1672,7 @@ export const rushGraphNurbsSchema = z
             installed_weights:z.array(z.array(z.tuple([scalar,scalar])).length(4)).length(2).optional(),
           }).strict(),
           z.object({ id, op: z.literal('curve_axial_derivative_peak'), input: id, axis_vector: z.array(scalar).min(2).max(3), interval, order: z.number().int().min(1).max(3), tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), parameter_tolerance: scalar.optional() }).strict(),
+          z.object({id,op:z.literal('shared_patch_mesh'),input:id,inputs:z.array(id).max(15),seams:z.array(z.tuple([z.number().int().min(0).max(15),z.number().int().min(0).max(3),z.number().int().min(0).max(15),z.number().int().min(0).max(3),z.number().int().min(0).max(1)])).max(64),segments:z.number().int().min(1).max(128),tolerance_mm:scalar,max_cells:z.number().int().min(1).max(100000),max_agreement_cells:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('bounded_curve_chord'),input:id,tolerance_mm:scalar,max_cells:z.number().int().min(1).max(100000),piece:z.number().int().nonnegative()}).strict(),
           z.object({id,op:z.literal('bounded_surface_mesh'),input:id,tolerance_mm:scalar,max_cells:z.number().int().min(1).max(100000)}).strict(),
           z.object({id,op:z.literal('parallel_plane_sections'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offsets:z.array(scalar).min(1).max(1024),tolerance_mm:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),

@@ -22,7 +22,11 @@ mod parallel_section_queries;
 #[path = "bounded_mesh_construction.rs"]
 mod bounded_mesh_construction;
 
+#[path = "shared_patch_mesh.rs"]
+mod shared_patch_mesh;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op == "shared_patch_mesh" { return Some(shared_patch_mesh::build(v)); }
     if matches!(op,"bounded_curve_chord" | "bounded_surface_mesh") {
         return Some(bounded_mesh_construction::build(v,op));
     }

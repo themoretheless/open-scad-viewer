@@ -8,6 +8,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'shared_patch_mesh') return russian ? 'Сетка с общей границей патчей' : 'Shared patch mesh'
   if (operation === 'bounded_curve_chord') return russian ? 'Хорда кривой с допуском' : 'Bounded curve chord'
   if (operation === 'bounded_surface_mesh') return russian ? 'Сетка поверхности с допуском' : 'Bounded surface mesh'
   if (operation === 'parallel_plane_sections') return russian ? 'Сечения параллельными плоскостями' : 'Parallel plane sections'

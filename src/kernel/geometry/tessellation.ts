@@ -11,7 +11,7 @@ import {
 
 export type NurbsUV = number[]
 export type NurbsTrim = { outer: NurbsUV[]; holes?: NurbsUV[][] }
-export type NurbsMesh = PolygonBuild & { faceIds?: number[] }
+export type NurbsMesh = PolygonBuild & { faceIds?: number[]; sharedPatchVertices?: true }
 export type NurbsTessellationOptions = { segmentsU: number; segmentsV: number; trim?: NurbsTrim; maxTriangles?: number }
 
 export function tessellateNurbsSurface(surface: NurbsSurface, options: NurbsTessellationOptions): NurbsMesh {

@@ -11,7 +11,8 @@ import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import { buildMeshBvh } from '../kernel/meshBvh'
 import { extractSemanticEdges } from '../kernel/meshTopology'
-import { expandFlatTrianglesInKernel } from '../kernel/geometry/meshAnalysis'
+import { metricsManifoldInKernel } from '../kernel/geometry/manifoldAnalysis'
+import { expandFlatTrianglesInKernel, fillVertexNormalsInKernel } from '../kernel/geometry/meshAnalysis'
 export async function buildTextNurbsScene(
   document: unknown,
   quality: GeometryQuality = 'full',
@@ -86,6 +87,17 @@ export async function buildTextNurbsScene(
   }
 }
 
+function indexedPatchDisplay(positions: Float64Array, indices: Uint32Array) {
+  const vertices = new Float32Array(positions.length * 2)
+  for (let source = 0, target = 0; source < positions.length; source += 3, target += 6) {
+    vertices[target] = positions[source]!
+    vertices[target + 1] = positions[source + 1]!
+    vertices[target + 2] = positions[source + 2]!
+  }
+  fillVertexNormalsInKernel(vertices, indices)
+  return {vertices, indices, surfaceArea:metricsManifoldInKernel(positions, indices).surfaceArea}
+}
+
 /** Display-only adapter shared by final scenes and intermediate sweep previews. */
 export function ownNurbsDisplayMesh(
   mesh: ReturnType<typeof import('../kernel/geometry/tessellation').tessellateNurbsSurface>,
@@ -94,7 +106,9 @@ export function ownNurbsDisplayMesh(
 ) {
   const posArray = mesh.positions instanceof Float64Array ? mesh.positions : Float64Array.from(mesh.positions)
   const idxArray = mesh.indices instanceof Uint32Array ? mesh.indices : Uint32Array.from(mesh.indices)
-  const { vertices, indices, surfaceArea } = expandFlatTrianglesInKernel(posArray, idxArray)
+  const { vertices, indices, surfaceArea } = mesh.sharedPatchVertices
+    ? indexedPatchDisplay(posArray, idxArray)
+    : expandFlatTrianglesInKernel(posArray, idxArray)
   const edges = extractSemanticEdges(vertices, indices)
   const output = {
     vertices,
