@@ -108,6 +108,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "circle_transition_surface" => &["start_center","start_normal","start_seam","start_radius","end_center","end_normal","end_seam","end_radius"],
         "helicoid_surface" => &["center", "inner_radius", "outer_radius", "height", "turns", "phase_degrees", "max_deviation"],
         "catenoid_patches" => &["center", "scale", "start_z", "end_z", "max_deviation"],
+        "fit_cst_sides" => &["upper_points","lower_points","origin","chord_vector","ordinate_direction","order","n1","n2","lambda","samples","degree","control_count"],
         "naca_five_digit_profile" => &["profile_code", "chord_mm", "closed", "samples", "degree", "control_count"],
         "cst_spline_profile" => &["chord_mm", "n1", "n2", "upper_coefficients", "lower_coefficients", "samples", "degree", "control_count"],
         "cst_section_integrals" => &["chord_mm", "n1", "n2", "upper_coefficients", "lower_coefficients", "max_work"],

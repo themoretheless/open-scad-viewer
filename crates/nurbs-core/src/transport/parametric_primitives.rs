@@ -44,7 +44,7 @@ mod airfoil_section_requests;
 mod signed_curvature_fit;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
-    if matches!(op,"naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
+    if matches!(op,"fit_cst_sides" | "naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
     if matches!(op,"surface_highlight_lines" | "surface_reflection_lines" | "surface_isophote_analysis" | "surface_dent_detection") { return Some(optical_surface_analysis::inspect(v,op)); }
     if matches!(op,"curve_from_curvature_samples" | "fit_biarc_piece") { return Some(signed_curvature_fit::build(v,op)); }

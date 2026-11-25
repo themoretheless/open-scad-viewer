@@ -491,6 +491,7 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'fit_cst_sides':
           case 'naca_five_digit_profile':
           case 'cst_spline_profile':
           case 'cst_section_integrals': {

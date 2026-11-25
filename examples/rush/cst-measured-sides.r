@@ -1,0 +1,3 @@
+// @rush/1
+profile = fit_cst_sides(upper_points:[[3mm,4mm,1mm],[3.0875mm,4.25mm,1mm],[3.15mm,4.5mm,1mm],[3.1875mm,4.75mm,1mm],[3.2mm,5mm,1mm],[3.1875mm,5.25mm,1mm],[3.15mm,5.5mm,1mm],[3.0875mm,5.75mm,1mm],[3mm,6mm,1mm]],lower_points:[[3mm,4mm,1mm],[3.04375mm,4.25mm,1mm],[3.075mm,4.5mm,1mm],[3.09375mm,4.75mm,1mm],[3.1mm,5mm,1mm],[3.09375mm,5.25mm,1mm],[3.075mm,5.5mm,1mm],[3.04375mm,5.75mm,1mm],[3mm,6mm,1mm]],origin:[3mm,4mm,1mm],chord_vector:[0,2mm,0],ordinate_direction:[1,0,0],order:1,n1:1,n2:1,lambda:0,samples:64,degree:3,control_count:24)
+show profile.surface_extrude(vector:[0,0,1mm]).tessellate(32,4)
