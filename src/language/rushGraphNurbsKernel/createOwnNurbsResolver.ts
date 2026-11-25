@@ -873,6 +873,13 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'surface_quadric_support': {
+            const surface = needSurface(n.input)
+            const report = callGeometryRust<object>(n.op,{surface,quadric:n.quadric,max_work:n.max_work,max_cells:n.max_cells})
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'surface_self_contacts':
           case 'surface_span_regularity': {
             const surface = needSurface(n.input)

@@ -47,6 +47,14 @@ mod signed_curvature_fit;
 mod exact_merge_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op == "surface_quadric_support" {
+        return Some((|| {
+            let r = crate::analysis::implicit_quadric::inspect(&field(v,"surface")?,field(v,"quadric")?,field(v,"max_work")?,field(v,"max_cells")?)?;
+            Ok(json!({"exactMembership":r.exact_membership,"gradientNonzero":r.gradient_nonzero,
+                "regularImplicitSupport":r.regular_implicit_support,"exactWork":r.exact_work,"cells":r.cells,
+                "gradientLower":r.gradient_lower,"reason":r.reason}))
+        })());
+    }
     if matches!(op,"merge_curve_exact" | "merge_surface_exact") { return Some(exact_merge_requests::merge(v,op)); }
     if matches!(op,"fit_cst_sides" | "naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }

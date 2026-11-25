@@ -1722,6 +1722,7 @@ export const rushGraphNurbsSchema = z
             tolerance_mm:scalar, tangent_tolerance:scalar, curvature_tolerance_per_mm:scalar }).strict(),
           z.object({ id, op: z.literal('curve_self_contacts'), input: id, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), max_pairs: z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('surface_self_contacts'), input: id, max_spans: z.number().int().min(1).max(100000) }).strict(),
+          z.object({id,op:z.literal('surface_quadric_support'),input:id,quadric:z.array(z.array(scalar).length(4)).length(4),max_work:z.number().int().min(0).max(16000000),max_cells:z.number().int().min(0).max(100000)}).strict(),
           z.object({ id, op: z.literal('surface_span_regularity'), input: id, max_cells: z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('curve_plane_roots'), input: id, plane_normal: vector, plane_offset_mm: scalar, parameter_tolerance: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('curve_pair_crossings'), input: id, target_geometry: id, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
