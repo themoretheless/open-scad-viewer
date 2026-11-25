@@ -5912,7 +5912,7 @@
     {
       "id": "NURBS-0198",
       "name": "сертификат непрерывного отклонения с учётом округления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Точность",
       "remainingQualification": [
@@ -5921,7 +5921,9 @@
       "nativeApi": "nurbs_core::curve_surface_agreement::verify",
       "evidence": [
         "crates/nurbs-core/src/analysis/curve_surface_agreement.rs",
-        "docs/design/nurbs-rounding-deviation-certificate.md"
+        "docs/design/nurbs-rounding-deviation-certificate.md",
+        "examples/rush/affine-surface-trace.r",
+        "tests/rushSupportAudit.test.ts"
       ]
     },
     {
@@ -6048,7 +6050,7 @@
     {
       "id": "NURBS-0205",
       "name": "точное распознавание аффинного носителя контрольной геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-support",
       "category": "Упрощение и распознавание",
       "nativeApi": "nurbs_core::analysis::affine_support::curve",
@@ -6056,7 +6058,9 @@
         "crates/nurbs-core/src/analysis/affine_support.rs",
         "crates/nurbs-core/tests/affine_support.rs",
         "docs/design/nurbs-affine-support.md",
-        "docs/qualification/nurbs-affine-support-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-affine-support-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/affine-surface-trace.r",
+        "tests/rushSupportAudit.test.ts"
       ],
       "remainingQualification": [
         "containment only; no regularity, analytic replacement or B-rep authority",

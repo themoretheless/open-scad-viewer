@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "8114795176d6a4d32e80a70211c52a1d4d897e8de7f365f1d3f05ef3286e45b2",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/affine-surface-trace.r",
+      "exampleSha256": "d52f1614ddaa7f5dc4f4ce5052ee9b37e589d459f4491f41b8f3d78ac6e8a8e6",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n1\nГотово · 53 ms"
+    }
+  ]
+}
