@@ -593,6 +593,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/Bgqs_wHz.js':188_800,'assets/C30FN_Qm.js':203_600,'assets/mainSolid.worker-xCbY7AOW.js':200_100}),
   }),
+  // Exact implicit quadric surface support: 20,939,492 raw bytes, 7,525,799 packed bytes and 14,569,359 total asset bytes.
+  'de104a3b9580c787d3f3ba04238d93ca13881f4c869e9fe033802b1a9e386c14':Object.freeze({
+    version:81,geometryChunkBytes:7_526_000,totalAssetBytes:14_570_000,rawGeometryBytes:20_940_000,
+    namedJsChunkBytes:Object.freeze({
+      index:279_000,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CSF59WNi.js':189_000,'assets/ClJleRdY.js':203_600,'assets/mainSolid.worker-DP5Zh9uQ.js':200_800}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

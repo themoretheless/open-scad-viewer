@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "de104a3b9580c787d3f3ba04238d93ca13881f4c869e9fe033802b1a9e386c14",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/quadric-support.r",
+      "exampleSha256": "69f4188fd09945558772a4f7022bdc235daa35a4f6122970cfa86db048094c4f",
+      "editorStats": "Объекты\n1\nТреугольники\n576\nОбъём\n0\nПлощадь\n1,28\nГотово · 398 ms"
+    }
+  ]
+}

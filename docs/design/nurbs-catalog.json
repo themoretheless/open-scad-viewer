@@ -6418,7 +6418,7 @@
     {
       "id": "NURBS-0223",
       "name": "точная принадлежность исходного NURBS-патча заданной квадрике и регулярная неявная опора",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-analytic-support",
       "category": "Анализ аналитических поверхностей",
       "nativeApi": "nurbs_core::analysis::implicit_quadric::inspect",
@@ -6433,7 +6433,9 @@
         "docs/qualification/knot-removal-zero-admission-2026-11-02/after-check.json",
         "crates/cad-predicates/src/bspline_quadric_identity.rs",
         "crates/nurbs-core/tests/implicit_quadric_multispan_contracts.rs",
-        "docs/qualification/nurbs-quadric-multispan-native-2026-11-02/checks.json"
+        "docs/qualification/nurbs-quadric-multispan-native-2026-11-02/checks.json",
+        "examples/rush/quadric-support.r",
+        "tests/rushQuadricSupport.test.ts"
       ],
       "remainingQualification": [
         "clamped nonperiodic degree1..8 original tensor and authored equation only; no automatic fitting, periodic/unclamped proof, parameter regularity, injectivity, pole quotient, B-rep or solid authority",
