@@ -5001,7 +5001,7 @@
     {
       "id": "NURBS-0159",
       "name": "кривизна и кручение пространственной кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -5012,13 +5012,15 @@
         "crates/nurbs-core/src/analysis/curve_differential.rs",
         "crates/nurbs-core/tests/curve_differential.rs",
         "crates/nurbs-core/examples/curve_differential.rs",
-        "docs/design/nurbs-curve-differential.md"
+        "docs/design/nurbs-curve-differential.md",
+        "examples/rush/curvature-and-torsion.r",
+        "tests/rushDifferentialGeometry.test.ts"
       ]
     },
     {
       "id": "NURBS-0160",
       "name": "главные кривизны и направления поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -5030,7 +5032,9 @@
       "evidence": [
         "crates/nurbs-core/src/analysis/surface_differential.rs",
         "crates/nurbs-core/tests/surface_differential.rs",
-        "docs/design/nurbs-surface-differential.md"
+        "docs/design/nurbs-surface-differential.md",
+        "examples/rush/curvature-and-torsion.r",
+        "tests/rushDifferentialGeometry.test.ts"
       ]
     },
     {
