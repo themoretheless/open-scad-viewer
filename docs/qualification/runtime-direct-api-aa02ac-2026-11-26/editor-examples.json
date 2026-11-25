@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "aa02ac7b44de1358fb36f86ea77fd20e0eb7ac0f95f0fbdff3e2e6f8f59615d1",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/projective-curve.r",
+      "exampleSha256": "501d0351cb59d3b657002de1dd24d7837e8a3b95b15a30eca7208dc0140440e8",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1,12\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/projective-surface.r",
+      "exampleSha256": "b4978e114657ebc25162361790f0f28e8475c7ed501cf733e651ea7363da90f1",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n0,75\nГотово · 7 ms"
+    }
+  ]
+}

@@ -6901,7 +6901,7 @@
     {
       "id": "NURBS-0241",
       "name": "Точное проективное преобразование рациональных кривых и тензорных поверхностей с сохранением полной параметризации и доказательством конечного знаменателя",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-transformation",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_projective::curve",
@@ -6912,7 +6912,10 @@
         "crates/nurbs-core/tests/exact_projective_numeric_boundaries.rs",
         "docs/design/nurbs-exact-projective.md",
         "docs/qualification/nurbs-exact-projective-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-exact-projective-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-exact-projective-2026-11-03/exact_oracle.py",
+        "examples/rush/projective-surface.r",
+        "examples/rush/projective-curve.r",
+        "tests/rushProjectiveTransforms.test.ts"
       ],
       "remainingQualification": [
         "Validated3D geometry and invertible finite4x4 matrix. All transformed control weights have one strict sign; mixed/zero signs conservatively refuse. Full original basis/clock and one global net gauge; exact positive binary64 storage or atomic refusal under existing geometry,4096-bit and1m-work limits.",
