@@ -873,6 +873,20 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'projective_curve_exact': {
+            const source = needCurve(n.input)
+            const {curve,...report} = callGeometryRust<{curve:NurbsCurve;workUsed:number}>(n.op,{source,coefficients:n.coefficients,max_work:n.max_work})
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'curve',data:curve}
+            break
+          }
+          case 'projective_surface_exact': {
+            const source = needSurface(n.input)
+            const {surface,...report} = callGeometryRust<{surface:NurbsSurface;workUsed:number}>(n.op,{source,coefficients:n.coefficients,max_work:n.max_work})
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'surface_quadric_support': {
             const surface = needSurface(n.input)
             const report = callGeometryRust<object>(n.op,{surface,quadric:n.quadric,max_work:n.max_work,max_cells:n.max_cells})

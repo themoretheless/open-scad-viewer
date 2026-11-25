@@ -47,6 +47,20 @@ mod signed_curvature_fit;
 mod exact_merge_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op == "projective_curve_exact" {
+        return Some((|| {
+            let report = crate::editing::exact_projective::curve(&field(v,"source")?,field(v,"coefficients")?,field(v,"max_work")?)?;
+            let geometry = report.geometry.ok_or_else(|| input(format!("Exact projective transformation refused: {:?}",report.refusal)))?;
+            Ok(json!({"curve":geometry,"workUsed":report.work_used,"finiteChart":true}))
+        })());
+    }
+    if op == "projective_surface_exact" {
+        return Some((|| {
+            let report = crate::editing::exact_projective::surface(&field(v,"source")?,field(v,"coefficients")?,field(v,"max_work")?)?;
+            let geometry = report.geometry.ok_or_else(|| input(format!("Exact projective transformation refused: {:?}",report.refusal)))?;
+            Ok(json!({"surface":geometry,"workUsed":report.work_used,"finiteChart":true}))
+        })());
+    }
     if op == "surface_quadric_support" {
         return Some((|| {
             let r = crate::analysis::implicit_quadric::inspect(&field(v,"surface")?,field(v,"quadric")?,field(v,"max_work")?,field(v,"max_cells")?)?;

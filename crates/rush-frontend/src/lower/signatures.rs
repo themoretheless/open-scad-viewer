@@ -315,6 +315,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "curve_join_continuity" => &["target_geometry", "source_end", "target_end", "tolerance_mm", "tangent_tolerance", "curvature_tolerance_per_mm"],
         "curve_self_contacts" => &["tolerance_mm", "max_cells", "max_pairs"],
         "surface_self_contacts" => &["max_spans"],
+        "projective_curve_exact" | "projective_surface_exact" => &["coefficients","max_work"],
         "surface_quadric_support" => &["quadric","max_work","max_cells"],
         "surface_span_regularity" => &["max_cells"],
         "curve_plane_roots" => &["plane_normal", "plane_offset_mm", "parameter_tolerance", "max_cells"],
