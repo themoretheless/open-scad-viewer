@@ -4834,7 +4834,7 @@
     {
       "id": "NURBS-0150",
       "name": "длина кривой с оценкой численной ошибки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4845,13 +4845,15 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_measure.rs",
         "crates/nurbs-core/examples/curve_measure.rs",
-        "docs/design/nurbs-curve-measure.md"
+        "docs/design/nurbs-curve-measure.md",
+        "examples/rush/curve-and-surface-metrology.r",
+        "tests/rushArcMetrology.test.ts"
       ]
     },
     {
       "id": "NURBS-0151",
       "name": "площадь поверхности с оценкой численной ошибки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4863,13 +4865,15 @@
         "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
         "crates/nurbs-core/tests/surface_measure.rs",
         "crates/nurbs-core/examples/surface_measure.rs",
-        "docs/design/nurbs-surface-area.md"
+        "docs/design/nurbs-surface-area.md",
+        "examples/rush/curve-and-surface-metrology.r",
+        "tests/rushArcMetrology.test.ts"
       ]
     },
     {
       "id": "NURBS-0152",
       "name": "точка кривой на заданной длине",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4880,13 +4884,15 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_measure.rs",
         "crates/nurbs-core/examples/curve_measure.rs",
-        "docs/design/nurbs-curve-measure.md"
+        "docs/design/nurbs-curve-measure.md",
+        "examples/rush/curve-and-surface-metrology.r",
+        "tests/rushArcMetrology.test.ts"
       ]
     },
     {
       "id": "NURBS-0153",
       "name": "равномерное деление кривой по длине",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Измерения и запросы",
       "remainingQualification": [
@@ -4897,7 +4903,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_measure.rs",
         "crates/nurbs-core/examples/curve_measure.rs",
-        "docs/design/nurbs-curve-measure.md"
+        "docs/design/nurbs-curve-measure.md",
+        "examples/rush/curve-and-surface-metrology.r",
+        "tests/rushArcMetrology.test.ts"
       ]
     },
     {
