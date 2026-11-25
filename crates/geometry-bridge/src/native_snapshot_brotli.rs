@@ -4,7 +4,8 @@ use brotli::{BrotliDecompressStream, BrotliResult, BrotliState, CompressorReader
 use std::io::Read;
 
 pub(super) fn encode(source: &[u8], max_bytes: usize) -> Result<Vec<u8>> {
-    let mut reader = CompressorReader::new(source, 16384, 5, 22).take(max_bytes as u64 + 1);
+    // The 40-tooth wheel needs quality 7 to fit the existing base64 envelope.
+    let mut reader = CompressorReader::new(source, 16384, 7, 22).take(max_bytes as u64 + 1);
     let mut bytes = Vec::new();
     reader
         .read_to_end(&mut bytes)
