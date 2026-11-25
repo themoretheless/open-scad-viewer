@@ -8,6 +8,10 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'curve_length_bounds') return russian ? 'Длина кривой' : 'Curve length'
+  if (operation === 'curve_station_at_length') return russian ? 'Точка на заданной длине' : 'Point at arc length'
+  if (operation === 'curve_divide_by_length') return russian ? 'Деление по длине' : 'Equal arc-length division'
+  if (operation === 'surface_area_bounds') return russian ? 'Площадь поверхности' : 'Surface area'
   if (operation === 'trimmed_surface_area_in_window') return russian ? 'Площадь внутри окна UV' : 'Area inside the UV window'
   if (operation === 'trimmed_surface_centroid') return russian ? 'Центр площади' : 'Area centroid'
   if (operation === 'trimmed_surface_area_inertia') return russian ? 'Тензор инерции площади' : 'Area inertia tensor'

@@ -1,7 +1,13 @@
 //! Affine transforms, parametric curves/surfaces, splines, formulas, patches, and primitives.
 use super::*;
 
+#[path = "arc_metrology.rs"]
+mod arc_metrology;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op, "curve_length_bounds" | "curve_station_at_length" | "curve_divide_by_length" | "surface_area_bounds") {
+        return Some(arc_metrology::measure(op, v));
+    }
     if let Some(result) = engineering_profile(v, op) { return Some(result); }
     if let Some(res) = try_dispatch_affine_pipes_and_helicoids(v, op) {
         return Some(res);

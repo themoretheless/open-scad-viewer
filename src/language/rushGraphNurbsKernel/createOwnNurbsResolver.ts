@@ -649,6 +649,23 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'surface_area_bounds': {
+            const surface = needSurface(n.input)
+            const report = callGeometryRust<object>(n.op, { surface, tolerance_mm2:n.tolerance_mm2, max_cells:n.max_cells })
+            constructionReports[key] = { measurement: { operation:n.op, report } }
+            result = { kind:'surface', data:surface }
+            break
+          }
+          case 'curve_length_bounds':
+          case 'curve_station_at_length':
+          case 'curve_divide_by_length': {
+            const { id: _id, op, input, ...options } = n
+            const curve = needCurve(input)
+            const report = callGeometryRust<object>(op, {curve, ...options})
+            constructionReports[key] = { measurement: { operation:op, report } }
+            result = { kind:'curve', data:curve }
+            break
+          }
           case 'curve_measure_directional_travel':
           case 'curve_measure_directional_travel_batch': {
             const curve = needCurve(n.input)
