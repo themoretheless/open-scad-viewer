@@ -3204,14 +3204,14 @@
       "partialNativeApi": "brep_core::gear::bevel_body_candidate",
       "remainingQualification": [
         "Global saved-wall/fan-cap embedding and complete independent owned-solid admission; solid_geometry_certified remains false",
-        "Bore/cutter-envelope extensions and packaged WASM/Rush/editor/STEP runtime qualification remain separate"
+        "Bore/cutter-envelope extensions and STEP export qualification remain separate"
       ],
       "nativeScope": "Straight spherical-involute bevel blank: original exact grouped XY projection proves actual 3D outline embedding; immutable original source matches actual body outer edges; inclusive nominal whole-profile, radial-wall and explicit axis fan-cap error meets caller tolerance (default integration 1e-6); one owned closed body and complete continuous edge/lift closure. No bore, manufacturing envelope or global solid-geometry certificate. Existing native-constructor criterion is unchanged."
     },
     {
       "id": "NURBS-0087",
       "name": "червяк",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::worm::finite_with_certificates",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/worm.rs",
@@ -3225,19 +3225,21 @@
         "crates/brep-core/tests/worm.rs",
         "crates/nurbs-core/tests/worm_trim.rs",
         "docs/qualification/nurbs-worm-trim-2026-10-16/native-tests.json",
-        "docs/qualification/nurbs-worm-finite-2026-10-16/native-tests.json"
+        "docs/qualification/nurbs-worm-finite-2026-10-16/native-tests.json",
+        "examples/rush/finite-za-worm.r",
+        "tests/rushWormGears.test.ts"
       ],
       "partialNativeApi": "nurbs_core::worm::trimmed_patches_certified",
       "remainingQualification": [
         "Global saved-wall/cap embedding, complete independent owned-solid admission and combined ideal finite-body error bound remain separate",
-        "Cutter-envelope and conjugate worm-wheel contact plus packaged runtime/export qualification remain separate"
+        "Cutter-envelope and conjugate worm-wheel contact plus STEP export qualification remain separate"
       ],
       "nativeScope": "Finite cylindrical ZA worm blank: its own axial-module/diameter-quotient/pressure trapezoid and lead source; inclusive original working-patch error; full affine clipping/UV isotopy and axial error band; exact represented cap profile proofs; every current saved wall bound to original retained surfaces; one owned closed body candidate with complete continuous current boundary agreement. Both hands and multiple starts tested, including axial extent longer than a full lead. No global solid or combined ideal finite-body certificate."
     },
     {
       "id": "NURBS-0088",
       "name": "червячное колесо",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::worm::finite_wheel_with_certificates",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/worm_wheel.rs",
@@ -3273,13 +3275,15 @@
         "crates/brep-core/src/parts/worm/wheel/body.rs",
         "crates/brep-core/tests/worm_wheel_caps.rs",
         "docs/qualification/nurbs-worm-wheel-caps-2026-10-16/native-tests.json",
-        "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs"
+        "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs",
+        "examples/rush/finite-za-wheel.r",
+        "tests/rushWormGears.test.ts"
       ],
       "partialNativeApi": "nurbs_core::worm_wheel::fit_axial_stock",
       "remainingQualification": [
         "Global saved-wall/cap embedding, complete cutter visibility and complete independent owned-solid admission remain separate; solid_geometry_certified=false",
         "Combined ideal finite-body error remains None",
-        "Packaged WASM/Rush/editor/STEP runtime qualification remains separate"
+        "STEP export qualification remains separate"
       ],
       "nativeScope": "Complete finite ZA-generated worm-wheel candidate: all original side families and tooth periods with actual shared world controls, original-source error/rank ownership, two continuously admitted physical planar caps, connected manifold closed B-rep and complete saved boundary agreement. Default40-tooth geometry has independent flux/section volume checks. Explicit resolution, cap-curve/topology/proof limits can refuse other inputs. No global solid/cutter visibility or combined ideal finite-body certificate."
     },
@@ -3310,7 +3314,7 @@
       "remainingQualification": [
         "Global 3D wall/cap embedding and independent owned-solid admission; solid_geometry_certified remains false",
         "Combined ideal finite-body error, ISO fit classes, rounded roots and runout",
-        "Packaged WASM/Rush/editor/STEP runtime qualification"
+        "STEP export qualification"
       ],
       "nativeScope": "Finite external sharp-profile thread with disk caps. Original nominal wall error including rounding, complete affine clipping coverage and stored UV isotopy, immutable source-wall binding, exact cap profile topology and final continuous G0 agreement. Closed body candidate; global solid geometry remains explicitly unqualified."
     },
@@ -3341,7 +3345,7 @@
       "remainingQualification": [
         "Global 3D wall/cap embedding and independent owned-solid admission; solid_geometry_certified remains false",
         "Combined ideal finite-body error, ISO fit classes, rounded roots and runout",
-        "Packaged WASM/Rush/editor/STEP runtime qualification"
+        "STEP export qualification"
       ],
       "nativeScope": "Internal threaded ring with separated cylindrical outer walls and annular caps. Original nominal wall error including rounding, complete affine clipping coverage and stored UV isotopy, immutable source-wall binding, exact cap profile topology and final continuous G0 agreement. Closed body candidate; global solid geometry remains explicitly unqualified."
     },
@@ -3359,7 +3363,7 @@
       "remainingQualification": [
         "adaptive Hermite error, pressure angle and undercut diagnostics are sampled; continuous error/undercut-free/global topology are not certified",
         "output is an exactly data-closed planar contour chain, not an extruded/manifold B-rep cam or manufacturing admission",
-        "WASM, Rush, editor and export integration remain outside native completion"
+        "Export qualification remains open"
       ],
       "nativeApi": "nurbs_core::radial_cam::profile"
     },

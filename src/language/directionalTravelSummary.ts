@@ -11,9 +11,11 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'trimmed_surface_area_in_window') return russian ? 'Площадь внутри окна UV' : 'Area inside the UV window'
   if (operation === 'trimmed_surface_centroid') return russian ? 'Центр площади' : 'Area centroid'
   if (operation === 'trimmed_surface_area_inertia') return russian ? 'Тензор инерции площади' : 'Area inertia tensor'
-  if (operation.startsWith('radial_cam_')) return russian ? 'Профиль кулачка' : 'Cam profile'
   if (operation === 'finite_external_thread') return russian ? 'Наружная резьба' : 'External thread'
   if (operation === 'finite_internal_thread') return russian ? 'Внутренняя резьба' : 'Internal thread'
+  if (operation === 'finite_za_worm') return russian ? 'Цилиндрический червяк ZA' : 'ZA worm'
+  if (operation === 'finite_za_wheel') return russian ? 'Червячное колесо ZA' : 'ZA worm wheel'
+  if (operation.startsWith('radial_cam_')) return russian ? 'Профиль кулачка' : 'Cam profile'
   if (operation === 'rack_profile' || operation === 'brep_rack') return russian ? 'Зубчатая рейка' : 'Gear rack'
   if (operation === 'verified_bevel_gear') return russian ? 'Точность конической шестерни' : 'Bevel gear accuracy'
   if (operation === 'brep_nurbs_verified_gear') return russian ? 'Точность зубчатого профиля' : 'Gear profile accuracy'
@@ -122,6 +124,9 @@ export function directionalTravelSummary(operation: string, report: string, russ
   if (operation === 'finite_external_thread' || operation === 'finite_internal_thread') return [
     (russian ? 'Погрешность стенок ≤ ' : 'Wall deviation ≤ ') + format(parsed.patchErrorUpperMm) + ' ' + unit,
     (russian ? 'Осевое отклонение обрезки ≤ ' : 'Axial trim deviation ≤ ') + format(parsed.axialErrorBandUpperMm) + ' ' + unit,
+  ]
+  if (operation === 'finite_za_worm' || operation === 'finite_za_wheel') return [
+    (russian ? 'Погрешность стенок ≤ ' : 'Wall deviation ≤ ') + format(parsed.wallErrorUpperMm) + ' ' + unit,
   ]
   if (operation === 'verified_bevel_gear') return [(russian ? 'Погрешность ≤ ' : 'Deviation ≤ ') + format(parsed.worldErrorUpperMm) + ' ' + unit]
   if (operation === 'brep_nurbs_verified_gear') return [

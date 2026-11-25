@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "4a39c0cbccf4da30610b807f6a0256e1c42cb37bcbfc9b8d431a2aea21476b28",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/finite-za-worm.r",
+      "exampleSha256": "0424729288dcd1606aede48f81cf9bf71e78a4b6f97f3a9811168cc2acbc2ad3",
+      "editorStats": "Объекты\n1\nТреугольники\n302\nОбъём\n77,27\nПлощадь\n221,8\nГотово · 1 381 ms"
+    },
+    {
+      "example": "examples/rush/finite-za-wheel.r",
+      "exampleSha256": "a2fb8c7566352a8e2d1b16abfea4d634f33837532036c83a6502f74273a8be4f",
+      "editorStats": "Объекты\n1\nТреугольники\n14 660\nОбъём\n5 065,31\nПлощадь\n3 505,54\nГотово · 60 322 ms"
+    }
+  ]
+}

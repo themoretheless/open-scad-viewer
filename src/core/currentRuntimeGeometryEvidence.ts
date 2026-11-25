@@ -1,9 +1,9 @@
 // Finite exact-artifact API baseline, broader qualification separate.
 export const CURRENT_RUNTIME_GEOMETRY_EVIDENCE = Object.freeze({
-  "wasmSha256": "c2665d0bb6ad1b89700dd18a028cc14b1c5f63373bdc1ab8f66b4c08231ca111",
-  "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+  "wasmSha256": "4a39c0cbccf4da30610b807f6a0256e1c42cb37bcbfc9b8d431a2aea21476b28",
+  "noticesSha256": "f022e129c97f585a1dc8ec9a64f01dc487581beff8a7011f5128d06a37c66b48",
   "lockfileSha256": "5ec2184363daf18800f0bd0eb9ee1bf5997fabbb7b72fbf052799f144a9edf08",
-  "rustLockfileSha256": "efb04e625ce4e30920e03823c3e06f74f748445ce6d8c82b2b1dc126e097704d",
-  "recordId": "docs/qualification/runtime-provider-c2665d0bb6ad-2026-11-26.json",
-  "corpusVersion": "runtime-direct-api-c2665d0bb6ad-2026-11-26"
+  "rustLockfileSha256": "6afc82e4be007219a6049279d4c51d0c37510cbcf11f4ed64e02a1b07a474af7",
+  "recordId": "docs/qualification/runtime-provider-4a39c0cbccf4-2026-11-26.json",
+  "corpusVersion": "runtime-direct-api-4a39c0cbccf4-2026-11-26"
 } as const)
