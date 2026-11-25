@@ -7424,7 +7424,7 @@
     {
       "id": "NURBS-0261",
       "name": "Точная классификация умбилических и разделённых UV-ячеек NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_umbilics",
@@ -7436,7 +7436,9 @@
         "crates/nurbs-core/tests/umbilic_cell_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
         "docs/qualification/nurbs-curvature-field-261-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-261-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-261-2026-11-15/native.log.gz",
+        "examples/rush/umbilic-regions.r",
+        "tests/rushUmbilicRegions.test.ts"
       ],
       "remainingQualification": [
         "Classifies each complete original cell as everywhere umbilic, strictly separated everywhere, or containing at least one nonumbilic point without a whole-cell separation proof. The audit uses exact polynomials without storing a curvature field or locating isolated umbilics.",
@@ -7447,7 +7449,7 @@
     {
       "id": "NURBS-0262",
       "name": "Адаптивное уточнение областей разделения главных кривизн NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::refine_umbilics",
@@ -7459,7 +7461,9 @@
         "crates/nurbs-core/tests/umbilic_cell_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
         "docs/qualification/nurbs-curvature-field-262-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-262-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-262-2026-11-15/native.log.gz",
+        "examples/rush/umbilic-regions.r",
+        "tests/rushUmbilicRegions.test.ts"
       ],
       "remainingQualification": [
         "Exact dyadic Bernstein refinement covers each original cell. A positive coefficient net proves strict separation. Regions without that proof retain an existential nonumbilic status at the depth cap.",
@@ -7470,7 +7474,7 @@
     {
       "id": "NURBS-0263",
       "name": "Сертификат сравнения квадрата разности главных кривизн NURBS с порогом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::compare_curvature_gap",
@@ -7482,7 +7486,9 @@
         "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
         "docs/qualification/nurbs-curvature-field-263-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-263-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-263-2026-11-15/native.log.gz",
+        "examples/rush/umbilic-regions.r",
+        "tests/rushUmbilicRegions.test.ts"
       ],
       "remainingQualification": [
         "An exact polynomial residual compares squared principal curvature separation to a positive threshold. Each cell reports inclusive bounds, identity, opposite corner signs or an unresolved comparison.",
@@ -7493,7 +7499,7 @@
     {
       "id": "NURBS-0264",
       "name": "Непрерывный числовой диапазон квадрата разности главных кривизн NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_ranges",
@@ -7505,7 +7511,9 @@
         "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
         "docs/qualification/nurbs-curvature-field-264-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-264-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-264-2026-11-15/native.log.gz",
+        "examples/rush/umbilic-regions.r",
+        "tests/rushUmbilicRegions.test.ts"
       ],
       "remainingQualification": [
         "Bounds the original curvature gap on a complete knot cell by the convex hull of exact coefficient ratios with positive denominator coefficients. Numeric endpoints are checked outward against the exact ratios.",
@@ -7516,7 +7524,7 @@
     {
       "id": "NURBS-0265",
       "name": "Адаптивная карта областей по заданному порогу разности главных кривизн NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::refine_curvature_gap",
@@ -7529,7 +7537,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
         "docs/qualification/nurbs-curvature-field-265-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-265-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-265-2026-11-15/native.log.gz",
+        "examples/rush/umbilic-regions.r",
+        "tests/rushUmbilicRegions.test.ts"
       ],
       "remainingQualification": [
         "Exact dyadic subdivision of the threshold residual produces a full UV cover with proven inclusive comparisons or explicit unresolved leaves.",

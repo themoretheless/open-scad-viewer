@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "5e79815bb15ddcba169ecfb7649c18b46a1148d47ce3a15221ddeb85cd6aee76",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/umbilic-regions.r",
+      "exampleSha256": "cecf718c42f3436e18e50f0b185ab7f5011f8feae8686644e9f232da9968f7f6",
+      "editorStats": "Объекты\n1\nТреугольники\n576\nОбъём\n0\nПлощадь\n1\nГотово · 76 ms"
+    }
+  ]
+}
