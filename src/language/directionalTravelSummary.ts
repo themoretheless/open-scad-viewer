@@ -52,6 +52,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'surface_gap_contour_samples') return russian ? 'Интервалы точек контура кривизны' : 'Curvature contour sample brackets'
   if (operation === 'surface_gap_world_polyline') return russian ? 'Пространственная ломаная контура' : 'World contour polyline'
   if (operation === 'surface_gap_world_length') return russian ? 'Длина пространственного контура' : 'World contour length'
+  if (operation === 'surface_gap_plane_section') return russian ? 'Сечение контура плоскостью' : 'Contour plane section'
   if (operation === 'surface_gap_world_distance') return russian ? 'Расстояние до пространственного контура' : 'Point to world contour distance'
   if (operation === 'surface_gap_world_bounds') return russian ? 'Габариты пространственного контура' : 'World contour bounds'
   if (operation === 'surface_gap_uv_polyline') return russian ? 'Отклонение UV-ломаной контура' : 'UV contour polyline deviation'

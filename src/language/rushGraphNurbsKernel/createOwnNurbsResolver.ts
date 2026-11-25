@@ -951,6 +951,7 @@ export function createOwnNurbsResolver(
           case 'surface_gap_contour_graph':
           case 'surface_gap_contour_samples':
           case 'surface_gap_world_length':
+          case 'surface_gap_plane_section':
           case 'surface_gap_world_distance':
           case 'surface_gap_world_bounds':
           case 'surface_gap_uv_polyline':

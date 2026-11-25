@@ -114,6 +114,7 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
         }
         "surface_gap_world_polyline"
         | "surface_gap_world_length"
+        | "surface_gap_plane_section"
         | "surface_gap_world_distance"
         | "surface_gap_world_bounds" => {
             let stations: Vec<f64> = field(v, "transverse")?;
@@ -146,6 +147,32 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
                     )?;
                     Ok(
                         json!({"graph":graph(r.graph,r.refusal)?,"lengthBoundsMm":r.length_bounds,"segmentBoundsMm":r.segment_bounds,"workUsed":r.work_used}),
+                    )
+                }
+                "surface_gap_plane_section" => {
+                    let spec = gap::CurvatureGapContourSpec {
+                        surface: &s,
+                        span,
+                        axis,
+                        level,
+                        transverse: &stations,
+                        root_depth: depth,
+                    };
+                    let report = gap::section_curvature_gap_contour(
+                        spec,
+                        field(v, "plane_normal")?,
+                        field(v, "plane_offset_mm")?,
+                        budget,
+                    )?;
+                    let events = report.events.map(|events| events.into_iter().map(|event| {
+                        let status = match event.status {
+                            gap::CurvatureGapPlaneStatus::Crossing => "crossing",
+                            gap::CurvatureGapPlaneStatus::Possible => "possible",
+                        };
+                        json!({"segment":event.segment,"transverse":event.transverse,"status":status})
+                    }).collect::<Vec<_>>());
+                    Ok(
+                        json!({"graph":graph(report.graph,report.refusal)?,"events":events,"workUsed":report.work_used}),
                     )
                 }
                 "surface_gap_world_distance" => {
