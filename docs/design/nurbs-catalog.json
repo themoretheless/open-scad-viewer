@@ -7289,7 +7289,7 @@
     {
       "id": "NURBS-0255",
       "name": "Непрерывная оценка ошибки линейной интерполяции внутри UV-ячейки NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-certified-tessellation",
       "category": "Измерения и запросы",
       "nativeApi": "nurbs_core::surface_chord_bound::cell_interpolation_error",
@@ -7297,7 +7297,9 @@
         "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
         "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
         "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/native.log.gz",
+        "examples/rush/stored-grid-deviation.r",
+        "tests/rushInterpolationError.test.ts"
       ],
       "remainingQualification": [
         "An outward interval certificate using normalized second jets and the weighted variance bound. It covers exact surface samples in every triangle contained in the cell, with original knot pieces and an explicit cell budget. Crossing a knot requires C1 continuity.",
@@ -7307,7 +7309,7 @@
     {
       "id": "NURBS-0256",
       "name": "Сертификат отклонения сохранённого треугольника от участка NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-certified-tessellation",
       "category": "Измерения и запросы",
       "nativeApi": "nurbs_core::surface_chord_bound::triangle_interpolation_error",
@@ -7315,7 +7317,9 @@
         "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
         "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
         "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/native.log.gz",
+        "examples/rush/stored-grid-deviation.r",
+        "tests/rushInterpolationError.test.ts"
       ],
       "remainingQualification": [
         "The report combines the continuous interpolation error and the outward maximum displacement of stored vertices from exact surface points. Matching barycentric coordinates give the geometric correspondence. Mesh topology is outside this API.",
@@ -7325,7 +7329,7 @@
     {
       "id": "NURBS-0257",
       "name": "Сертификат отклонения сохранённой прямоугольной сетки от NURBS по всей UV-области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-certified-tessellation",
       "category": "Измерения и запросы",
       "nativeApi": "nurbs_core::surface_chord_bound::grid_interpolation_error",
@@ -7333,7 +7337,9 @@
         "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
         "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
         "docs/qualification/nurbs-chord-interpolation-257-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-chord-interpolation-257-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-chord-interpolation-257-2026-11-15/native.log.gz",
+        "examples/rush/stored-grid-deviation.r",
+        "tests/rushInterpolationError.test.ts"
       ],
       "remainingQualification": [
         "Covers the complete supplied rectangular UV grid for either diagonal in each cell. The worst bound includes actual vertex displacement and charges all original knot rectangles against a single budget. Only finite rectilinear untrimmed grids with increasing axes are admitted.",

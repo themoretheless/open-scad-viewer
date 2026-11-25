@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "dcaa30bd26295512adfa188df5f64c55f7e155906b3decd085ca37a925ab1477",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/stored-grid-deviation.r",
+      "exampleSha256": "64e02f3bbcf9bdc051fb5f8aa1f6bd57becae49ac84df6e7ae09c1f4fa928006",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n1\nГотово · 377 ms"
+    }
+  ]
+}
