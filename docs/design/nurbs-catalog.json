@@ -5421,7 +5421,7 @@
     {
       "id": "NURBS-0174",
       "name": "согласование степеней и узлов сечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5432,13 +5432,15 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/sections.rs",
         "crates/nurbs-core/tests/sections.rs",
-        "docs/design/nurbs-section-compatibility.md"
+        "docs/design/nurbs-section-compatibility.md",
+        "examples/rush/section-basis.r",
+        "tests/rushSectionBasis.test.ts"
       ]
     },
     {
       "id": "NURBS-0175",
       "name": "согласование ориентации сечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5449,7 +5451,9 @@
       "evidence": [
         "crates/nurbs-foundation/src/foundation/sections.rs",
         "crates/nurbs-core/tests/sections.rs",
-        "docs/design/nurbs-section-compatibility.md"
+        "docs/design/nurbs-section-compatibility.md",
+        "examples/rush/section-basis.r",
+        "tests/rushSectionBasis.test.ts"
       ]
     },
     {
