@@ -7192,7 +7192,7 @@
     {
       "id": "NURBS-0251",
       "name": "Построение дифференциальных полей кривой в binary64 с непрерывной доказанной границей ошибки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-bounded-field-storage",
       "category": "Дифференциальная геометрия с доказанным допуском",
       "nativeApi": "nurbs_core::editing::bounded_differential::curve",
@@ -7208,7 +7208,9 @@
         "docs/qualification/nurbs-bounded-differential-2026-11-03/independent_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/bounded-curve-fields.r",
+        "tests/rushBoundedFields.test.ts"
       ],
       "remainingQualification": [
         "Current-source native typed API,16 new contracts,3 upper-bound unit cases, independent continuous polynomial proofs and complete default/no-codec target coverage passed. This is one capability family; no adapter or application qualification.",
@@ -7219,7 +7221,7 @@
     {
       "id": "NURBS-0252",
       "name": "Дифференциальные поля NURBS-поверхности с непрерывной доказанной границей ошибки хранения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-bounded-field-storage",
       "category": "Дифференциальная геометрия с доказанным допуском",
       "nativeApi": "nurbs_core::editing::bounded_surface_differential::surface",
@@ -7233,7 +7235,9 @@
         "docs/design/nurbs-bounded-surface-differential.md",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/independent_oracle.py",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/bounded-saddle-fields.r",
+        "tests/rushBoundedFields.test.ts"
       ],
       "remainingQualification": [
         "Native typed API,16 new contracts, independent full-UV polynomial error certificates and complete current default/no-codec target coverage passed. This is one capability family; adapters and application delivery remain separate.",

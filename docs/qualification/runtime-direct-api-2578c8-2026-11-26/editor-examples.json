@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "2578c8d3a50b20c38b9eb03c177381742fb35a18dd97752cf4e98063a872fc3d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/bounded-curve-fields.r",
+      "exampleSha256": "8eaf0bf175505e0382fd0483cc991a7699bd47fd8c5f902731d8e3789195c2ad",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n1,48\nГотово · 63 ms"
+    },
+    {
+      "example": "examples/rush/bounded-circle-curvature.r",
+      "exampleSha256": "8733ccc54396649ef354a3fa596e5281c3cba5faf307d701bbf985cf0dc3a68a",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n3,14\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/bounded-saddle-fields.r",
+      "exampleSha256": "0fd27ea901a28970b65ddf294a80dd864745b4e582561fbabd3596101a91f13e",
+      "editorStats": "Объекты\n1\nТреугольники\n576\nОбъём\n0\nПлощадь\n1,28\nГотово · 16 ms"
+    }
+  ]
+}
