@@ -160,6 +160,28 @@ fn try_dispatch_affine_pipes_and_helicoids(v: &Value, op: &str) -> Option<Result
                 field(v, "max_deviation")?,
             )?)
         })(),
+        "superellipsoid_patches" => (|| {
+            use crate::superellipsoid::{approximate, Request, Stop};
+            let result = approximate(Request {
+                center: field(v, "center")?, radii: field(v, "radii")?,
+                exponents: field(v, "exponents")?, tolerance: field(v, "tolerance")?,
+                max_cells: field(v, "max_cells")?,
+            })?;
+            let (surfaces, domains): (Vec<_>, Vec<_>) = result.patches.into_iter()
+                .map(|patch| (patch.surface, json!({"signs":patch.signs, "domain":patch.domain}))).unzip();
+            Ok(json!({
+                "patches": encode(surfaces)?,
+                "report": {
+                    "domains":domains, "cells":result.cells, "subdivisions":result.subdivisions,
+                    "analyticInterpolationEstimateMm":result.analytic_interpolation_estimate,
+                    "roundingCertified":false, "continuousBound":false,
+                    "stop":match result.stop {
+                        Stop::AnalyticEstimateReached => "analyticEstimateReached",
+                        Stop::CellBudget => "cellBudget",
+                    }
+                }
+            }))
+        })(),
         "corrugated_bellows" => (|| {
             let shell = crate::bellows::cubic(crate::bellows::Request {
                 center: field(v, "center")?,

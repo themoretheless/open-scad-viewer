@@ -26,7 +26,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
     "circle_transition_surface",
     "helicoid_surface",
     "catenoid_patches",
-    "corrugated_bellows", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface",
+    "superellipsoid_patches", "corrugated_bellows", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface",
     "catenary_curve",
     "archimedean_spiral_curve",
     "epicycloid_curve",

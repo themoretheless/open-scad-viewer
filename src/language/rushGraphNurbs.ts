@@ -331,6 +331,10 @@ export const rushGraphNurbsSchema = z
             })
             .strict(),
           z.object({
+            id, op: z.literal('superellipsoid_patches'), center: vector, radii: vector,
+            exponents: z.tuple([scalar, scalar]), tolerance: scalar, max_cells: scalar,
+          }).strict(),
+          z.object({
             id, op: z.literal('corrugated_bellows'), center: vector, mean_radius: scalar,
             amplitude: scalar, height: scalar, radial_thickness: scalar, periods: scalar,
           }).strict(),

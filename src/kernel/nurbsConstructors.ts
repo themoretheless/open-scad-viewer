@@ -1095,6 +1095,15 @@ export const approximateCatenaryNurbsCurve = (
 ): NurbsHelixApproximation =>
   callNurbsRust('curve_catenary', { center, scale, start_x: startX, end_x: endX, max_deviation: maxDeviation })
 
+export const superellipsoidPatches = (
+  center: [number, number, number], radii: [number, number, number], exponents: [number, number],
+  tolerance: number, maxCells: number,
+): { patches: NurbsSurface[], report: {
+  cells: number, subdivisions: number, analyticInterpolationEstimateMm: number,
+  roundingCertified: false, continuousBound: false, stop: 'analyticEstimateReached' | 'cellBudget',
+  domains: { signs: number[], domain: number[][] }[],
+} } => callNurbsRust('superellipsoid_patches', { center, radii, exponents, tolerance, max_cells: maxCells })
+
 export const corrugatedBellows = (
   center: [number, number, number], meanRadius: number, amplitude: number, height: number,
   radialThickness: number, periods: number,

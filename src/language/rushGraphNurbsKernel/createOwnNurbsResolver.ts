@@ -102,6 +102,7 @@ import {
   cubicWaveNurbsSurface,
   opticalDome,
   corrugatedBellows,
+  superellipsoidPatches,
   opticalLens,
   approximateClothoidNurbsCurve,
   approximateConicalHelixNurbsCurve,
@@ -833,6 +834,12 @@ export function createOwnNurbsResolver(
               kind: 'patches',
               data: { patches: approximation.patches, faceIds: approximation.patches.map((_, i) => i) },
             }
+            break
+          }
+          case 'superellipsoid_patches': {
+            const { patches, report } = superellipsoidPatches(n.center, n.radii, n.exponents, n.tolerance, n.max_cells)
+            constructionReports[key] = report
+            result = { kind: 'patches', data: { patches, faceIds: patches.map((_, i) => i) } }
             break
           }
           case 'corrugated_bellows': {
