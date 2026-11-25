@@ -955,6 +955,16 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'lift_uv_edge': {
+            const surface = needSurface(n.target_geometry)
+            const source = needCurve(n.input)
+            const {curve, ...report} = callGeometryRust<{curve:NurbsCurve; workUsed:number}>(
+              n.op, {surface, source, piece:n.piece, max_work:n.max_work},
+            )
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'curve', data:curve}
+            break
+          }
           case 'piecewise_clock_curve':
           case 'relayout_clock_curve':
           case 'certify_uv_chart':

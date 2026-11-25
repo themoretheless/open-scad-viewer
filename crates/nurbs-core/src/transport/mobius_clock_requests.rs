@@ -139,3 +139,25 @@ pub(super) fn trim(v: &Value, op: &str) -> Result<Value> {
         json!({"curve":curve,"loopPieces":counts,"selectedLoop":ring,"selectedPiece":piece,"domain":curve.domain(),"workUsed":r.work_used}),
     )
 }
+
+pub(super) fn lift(v: &Value) -> Result<Value> {
+    let r = clock::lift_pcurve_to_surface(
+        &field(v, "surface")?,
+        &field(v, "source")?,
+        field(v, "max_work")?,
+    )?;
+    let mut pieces = r
+        .pieces
+        .ok_or_else(|| input(format!("Space edge lift refused: {:?}", r.refusal)))?;
+    let count = pieces.len();
+    let index = field(v, "piece")?;
+    if index >= count {
+        return Err(input(
+            "Selected space edge piece is outside the lifted trace",
+        ));
+    }
+    let curve = pieces.swap_remove(index);
+    Ok(
+        json!({"curve":curve,"domain":curve.domain(),"degree":curve.degree,"pieceCount":count,"workUsed":r.work_used}),
+    )
+}

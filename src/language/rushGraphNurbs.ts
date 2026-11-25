@@ -1781,6 +1781,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('classify_uv_seam'),input:id,direction:z.enum(['u','v']),seam_coordinate:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('isolate_uv_seam'),input:id,direction:z.enum(['u','v']),seam_coordinate:scalar,parameter_width:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('split_uv_seam'),input:id,direction:z.enum(['u','v']),seam_coordinate:scalar,piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('lift_uv_edge'),input:id,target_geometry:id,piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('compress_tensor_surface'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('merge_patch_strip'),input:id,inputs:z.array(id).max(31),direction:z.enum(['u','v']),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('merge_patch_grid'),input:id,inputs:z.array(id).max(31),columns:z.number().int().min(2).max(16),max_work:z.number().int().min(1).max(1000000)}).strict(),

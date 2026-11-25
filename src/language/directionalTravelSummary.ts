@@ -71,6 +71,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'classify_uv_seam') return russian ? 'Характер контакта UV-кривой со швом' : 'Classify UV seam contact'
   if (operation === 'isolate_uv_seam') return russian ? 'Локализация контакта UV-кривой со швом' : 'Isolate UV seam contact'
   if (operation === 'split_uv_seam') return russian ? 'Разделение UV-кривой по шву' : 'Split UV curve at seam'
+  if (operation === 'lift_uv_edge') return russian ? 'Пространственное ребро по UV-кривой' : 'Lift UV curve onto surface'
   if (operation === 'compress_tensor_surface') return russian ? 'Точное упрощение поверхности' : 'Exact surface compression'
   if (operation === 'merge_patch_strip') return russian ? 'Объединение полосы патчей' : 'Merge patch strip'
   if (operation === 'merge_patch_grid') return russian ? 'Объединение сетки патчей' : 'Merge patch grid'

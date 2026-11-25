@@ -373,6 +373,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "classify_uv_seam" => &["direction","seam_coordinate","max_work"],
         "isolate_uv_seam" => &["direction","seam_coordinate","parameter_width","max_work"],
         "split_uv_seam" => &["direction","seam_coordinate","piece","max_work"],
+        "lift_uv_edge" => &["target_geometry","piece","max_work"],
         "compress_tensor_surface" => &["max_work"],
         "merge_patch_strip" => &["inputs","direction","max_work"],
         "merge_patch_grid" => &["inputs","columns","max_work"],

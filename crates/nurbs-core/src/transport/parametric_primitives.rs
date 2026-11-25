@@ -73,6 +73,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"piecewise_clock_curve" | "relayout_clock_curve" | "piecewise_clock_surface" | "relayout_clock_surface" | "mobius_bezier_curve" | "mobius_spline_curve" | "fit_mobius_curve" | "mobius_bezier_surface" | "mobius_spline_surface" | "fit_mobius_surface") { return Some(mobius_clock_requests::apply(v,op)); }
     if matches!(op,"reclock_trim_surface" | "reclock_trim_piece" | "certify_uv_chart") { return Some(mobius_clock_requests::trim(v,op)); }
     if matches!(op,"classify_uv_seam" | "isolate_uv_seam" | "split_uv_seam") { return Some(pcurve_seam_requests::apply(v,op)); }
+    if op == "lift_uv_edge" { return Some(mobius_clock_requests::lift(v)); }
     if op == "pullback_uv_clock" { return Some(mobius_clock_requests::pullback(v)); }
     if op == "projective_curve_exact" {
         return Some((|| {
