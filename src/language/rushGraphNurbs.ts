@@ -1672,6 +1672,8 @@ export const rushGraphNurbsSchema = z
             installed_weights:z.array(z.array(z.tuple([scalar,scalar])).length(4)).length(2).optional(),
           }).strict(),
           z.object({ id, op: z.literal('curve_axial_derivative_peak'), input: id, axis_vector: z.array(scalar).min(2).max(3), interval, order: z.number().int().min(1).max(3), tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), parameter_tolerance: scalar.optional() }).strict(),
+          z.object({ id, op:z.literal('surface_edit_deviation'), input:id, target_geometry:id }).strict(),
+          z.object({ id, op:z.literal('curve_edit_deviation'), input:id, target_geometry:id, tolerance_mm:scalar, max_cells:z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op:z.literal('surface_seam_g0'), input:id, target_geometry:id, source_edge:z.enum(['u_min','u_max','v_min','v_max']), target_edge:z.enum(['u_min','u_max','v_min','v_max']), reverse:z.boolean(), tolerance_mm:scalar, max_cells:z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op:z.literal('surface_seam_g1'), input:id, target_geometry:id, source_edge:z.enum(['u_min','u_max','v_min','v_max']), target_edge:z.enum(['u_min','u_max','v_min','v_max']), reverse:z.boolean(), tolerance_mm:scalar, normal_tolerance:scalar, max_cells:z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op:z.literal('surface_seam_g2'), input:id, target_geometry:id, source_edge:z.enum(['u_min','u_max','v_min','v_max']), target_edge:z.enum(['u_min','u_max','v_min','v_max']), reverse:z.boolean(), tolerance_mm:scalar, normal_tolerance:scalar, curvature_tolerance_per_mm:scalar, segments:z.number().int().min(1).max(1024), max_cells:z.number().int().min(1).max(100000) }).strict(),

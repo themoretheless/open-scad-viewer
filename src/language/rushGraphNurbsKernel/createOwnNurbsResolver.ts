@@ -649,6 +649,7 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'surface_edit_deviation':
           case 'surface_seam_g0':
           case 'surface_seam_g1':
           case 'surface_seam_g2': {
@@ -659,6 +660,7 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'curve_edit_deviation':
           case 'curve_join_continuity': {
             const {id:_id,op,input,target_geometry,...options} = n
             const curve = needCurve(input)

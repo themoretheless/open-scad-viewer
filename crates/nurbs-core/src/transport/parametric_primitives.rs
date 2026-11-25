@@ -11,6 +11,20 @@ mod intersection_measurements;
 mod surface_seam_measurements;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op == "curve_edit_deviation" {
+        return Some((|| {
+            let report = crate::curve_deviation::inspect(
+                &field(v, "curve")?, &field(v, "target")?, field(v, "tolerance_mm")?, field(v, "max_cells")?,
+            )?;
+            Ok(json!({"boundsMm":report.bounds,"converged":report.converged,"cells":report.cells,"reason":format!("{:?}",report.reason)}))
+        })());
+    }
+    if op == "surface_edit_deviation" {
+        return Some((|| {
+            let upper = crate::continuity::deviation::positional_upper(&field(v,"surface")?, &field(v,"target")?)?;
+            Ok(json!({"upperMm":upper}))
+        })());
+    }
     if matches!(op, "surface_seam_g0" | "surface_seam_g1" | "surface_seam_g2") {
         return Some(surface_seam_measurements::inspect(v, op));
     }
