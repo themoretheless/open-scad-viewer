@@ -160,6 +160,20 @@ fn try_dispatch_affine_pipes_and_helicoids(v: &Value, op: &str) -> Option<Result
                 field(v, "max_deviation")?,
             )?)
         })(),
+        "corrugated_bellows" => (|| {
+            let shell = crate::bellows::cubic(crate::bellows::Request {
+                center: field(v, "center")?,
+                mean_radius: field(v, "mean_radius")?,
+                amplitude: field(v, "amplitude")?,
+                height: field(v, "height")?,
+                radial_thickness: field(v, "radial_thickness")?,
+                periods: field(v, "periods")?,
+            })?;
+            let mut patches = shell.outer;
+            patches.extend(shell.inner);
+            patches.extend([shell.bottom, shell.top]);
+            encode(patches)
+        })(),
         "optical_dome" => (|| encode(crate::optical_shapes::dome(
             field(v, "center")?, field(v, "base_axes")?, field(v, "height")?,
         )?))(),

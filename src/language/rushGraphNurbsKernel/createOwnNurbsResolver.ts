@@ -101,6 +101,7 @@ import {
   approximateCatenoidNurbsSurface,
   cubicWaveNurbsSurface,
   opticalDome,
+  corrugatedBellows,
   opticalLens,
   approximateClothoidNurbsCurve,
   approximateConicalHelixNurbsCurve,
@@ -832,6 +833,11 @@ export function createOwnNurbsResolver(
               kind: 'patches',
               data: { patches: approximation.patches, faceIds: approximation.patches.map((_, i) => i) },
             }
+            break
+          }
+          case 'corrugated_bellows': {
+            const patches = corrugatedBellows(n.center, n.mean_radius, n.amplitude, n.height, n.radial_thickness, n.periods)
+            result = { kind: 'patches', data: { patches, faceIds: patches.map((_, i) => i) } }
             break
           }
           case 'optical_dome':

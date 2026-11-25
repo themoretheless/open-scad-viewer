@@ -108,6 +108,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "circle_transition_surface" => &["start_center","start_normal","start_seam","start_radius","end_center","end_normal","end_seam","end_radius"],
         "helicoid_surface" => &["center", "inner_radius", "outer_radius", "height", "turns", "phase_degrees", "max_deviation"],
         "catenoid_patches" => &["center", "scale", "start_z", "end_z", "max_deviation"],
+        "corrugated_bellows" => &["center", "mean_radius", "amplitude", "height", "radial_thickness", "periods"],
         "optical_dome" => &["center", "base_axes", "height"],
         "optical_lens" => &["center", "base_axes", "sags", "vertex_thickness"],
         "cubic_wave_surface" => &["origin", "width", "length", "amplitude", "periods"],

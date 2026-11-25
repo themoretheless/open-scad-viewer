@@ -1095,6 +1095,13 @@ export const approximateCatenaryNurbsCurve = (
 ): NurbsHelixApproximation =>
   callNurbsRust('curve_catenary', { center, scale, start_x: startX, end_x: endX, max_deviation: maxDeviation })
 
+export const corrugatedBellows = (
+  center: [number, number, number], meanRadius: number, amplitude: number, height: number,
+  radialThickness: number, periods: number,
+): NurbsSurface[] => callNurbsRust('corrugated_bellows', {
+  center, mean_radius: meanRadius, amplitude, height, radial_thickness: radialThickness, periods,
+})
+
 export const opticalDome = (center: [number, number, number], baseAxes: [number, number], height: number): NurbsSurface =>
   callNurbsRust('optical_dome', { center, base_axes: baseAxes, height })
 export const opticalLens = (
