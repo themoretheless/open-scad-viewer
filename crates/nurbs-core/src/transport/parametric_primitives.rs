@@ -55,6 +55,9 @@ mod interpolation_error_requests;
 #[path = "oriented_volume_request.rs"]
 mod oriented_volume_request;
 
+#[path = "umbilic_requests.rs"]
+mod umbilic_requests;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"bounded_surface_partial_field" | "surface_partial_field" | "bounded_surface_area_normal_field" | "surface_area_normal_field" | "bounded_surface_gaussian_field" | "bounded_surface_mean_squared_field" | "bounded_surface_principal_gap_squared_field" | "bounded_surface_metric_field" | "surface_gaussian_field" | "surface_mean_squared_field" | "surface_principal_gap_squared_field" | "surface_metric_field" | "bounded_surface_mixed_partial_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }
     if matches!(op,"bounded_curve_derivative_field" | "curve_derivative_field" | "bounded_curve_torsion_field" | "bounded_curve_speed_squared_field" | "curve_torsion_field" | "curve_speed_squared_field" | "bounded_curve_binormal_field" | "curve_binormal_field" | "bounded_curve_curvature_squared_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
@@ -74,6 +77,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     }
     if matches!(op,"surface_cell_interpolation_error" | "surface_triangle_interpolation_error" | "surface_grid_interpolation_error") { return Some(interpolation_error_requests::inspect(v,op)); }
     if op == "signed_shell_volume" { return Some(oriented_volume_request::volume(v)); }
+    if matches!(op,"surface_umbilic_cells" | "surface_umbilic_regions" | "surface_gap_comparison" | "surface_gap_ranges" | "surface_gap_regions") { return Some(umbilic_requests::inspect(v,op)); }
     if op == "surface_quadric_support" {
         return Some((|| {
             let r = crate::analysis::implicit_quadric::inspect(&field(v,"surface")?,field(v,"quadric")?,field(v,"max_work")?,field(v,"max_cells")?)?;

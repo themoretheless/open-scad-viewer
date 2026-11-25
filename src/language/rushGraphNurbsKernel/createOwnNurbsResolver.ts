@@ -933,6 +933,11 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'surface_umbilic_cells':
+          case 'surface_umbilic_regions':
+          case 'surface_gap_comparison':
+          case 'surface_gap_ranges':
+          case 'surface_gap_regions':
           case 'surface_cell_interpolation_error':
           case 'surface_triangle_interpolation_error':
           case 'surface_grid_interpolation_error': {
