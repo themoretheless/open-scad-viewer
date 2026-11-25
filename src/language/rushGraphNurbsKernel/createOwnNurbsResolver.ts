@@ -491,6 +491,16 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'uv_loop_closure':
+          case 'uv_loop_simplicity':
+          case 'uv_trim_location': {
+            const {id:_id,input,op,loops,...options}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{loops:loops.map(loop=>loop.map(needCurve)),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'trimmed_surface_area_in_window':
           case 'trimmed_surface_centroid':
           case 'trimmed_surface_area_inertia': {

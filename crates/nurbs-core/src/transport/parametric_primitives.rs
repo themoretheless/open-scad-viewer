@@ -10,7 +10,13 @@ mod intersection_measurements;
 #[path = "surface_seam_measurements.rs"]
 mod surface_seam_measurements;
 
+#[path = "uv_loop_queries.rs"]
+mod uv_loop_queries;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op, "uv_loop_closure" | "uv_loop_simplicity" | "uv_trim_location") {
+        return Some(uv_loop_queries::inspect(v, op));
+    }
     if op == "curve_edit_deviation" {
         return Some((|| {
             let report = crate::curve_deviation::inspect(
