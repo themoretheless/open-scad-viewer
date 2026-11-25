@@ -955,6 +955,28 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'mobius_bezier_curve':
+          case 'mobius_spline_curve':
+          case 'fit_mobius_curve': {
+            const {op, input, id: _id, ...settings} = n
+            const {curve, ...report} = callGeometryRust<{curve: NurbsCurve; workUsed: number}>(
+              op, {source: needCurve(input), ...settings},
+            )
+            constructionReports[key] = {measurement: {operation: op, report}}
+            result = {kind: 'curve', data: curve}
+            break
+          }
+          case 'mobius_bezier_surface':
+          case 'mobius_spline_surface':
+          case 'fit_mobius_surface': {
+            const {op, input, id: _id, ...settings} = n
+            const {surface, ...report} = callGeometryRust<{surface: NurbsSurface; workUsed: number}>(
+              op, {source: needSurface(input), ...settings},
+            )
+            constructionReports[key] = {measurement: {operation: op, report}}
+            result = {kind: 'surface', data: surface}
+            break
+          }
           case 'compress_tensor_surface':
           case 'compress_tensor_surface_batch': {
             const settings = n.op === 'compress_tensor_surface'

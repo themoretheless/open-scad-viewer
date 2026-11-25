@@ -61,9 +61,13 @@ mod umbilic_requests;
 #[path = "curvature_contour_requests.rs"]
 mod curvature_contour_requests;
 
+#[path = "mobius_clock_requests.rs"]
+mod mobius_clock_requests;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"bounded_surface_partial_field" | "surface_partial_field" | "bounded_surface_area_normal_field" | "surface_area_normal_field" | "bounded_surface_gaussian_field" | "bounded_surface_mean_squared_field" | "bounded_surface_principal_gap_squared_field" | "bounded_surface_metric_field" | "surface_gaussian_field" | "surface_mean_squared_field" | "surface_principal_gap_squared_field" | "surface_metric_field" | "bounded_surface_mixed_partial_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }
     if matches!(op,"bounded_curve_derivative_field" | "curve_derivative_field" | "bounded_curve_torsion_field" | "bounded_curve_speed_squared_field" | "curve_torsion_field" | "curve_speed_squared_field" | "bounded_curve_binormal_field" | "curve_binormal_field" | "bounded_curve_curvature_squared_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
+    if matches!(op,"mobius_bezier_curve" | "mobius_spline_curve" | "fit_mobius_curve" | "mobius_bezier_surface" | "mobius_spline_surface" | "fit_mobius_surface") { return Some(mobius_clock_requests::apply(v,op)); }
     if op == "projective_curve_exact" {
         return Some((|| {
             let report = crate::editing::exact_projective::curve(&field(v,"source")?,field(v,"coefficients")?,field(v,"max_work")?)?;
