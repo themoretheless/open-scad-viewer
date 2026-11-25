@@ -1369,6 +1369,9 @@ export const rushGraphNurbsSchema = z
               clearance: scalar.default(0.25),
               backlash: scalar.default(0),
               verified_profile: z.boolean().optional(),
+              inspect_spans: z.boolean().optional(),
+              span_count: z.number().int().min(1).max(256).optional(),
+              measured_span_mm: z.tuple([scalar, scalar]).optional(),
             })
             .strict(),
           z.object({id,op:z.literal('radial_cam_profile'),center:z.tuple([scalar,scalar,scalar]),base_radius:scalar,roller_radius:scalar,phase:scalar,end_angles:z.array(scalar).min(1).max(64),end_lifts:z.array(scalar).min(1).max(64),laws:z.array(z.enum(['dwell','harmonic','cycloidal','polynomial345','polynomial4567'])).min(1).max(64),tolerance_mm:scalar,max_spans:z.number().int().min(1).max(4096),piece:z.number().int().nonnegative()}).strict(),

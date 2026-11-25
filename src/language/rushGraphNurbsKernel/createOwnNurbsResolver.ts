@@ -1742,11 +1742,20 @@ export function createOwnNurbsResolver(
                 clearance: n.clearance,
                 backlash: n.backlash,
             }
+            const inspect = n.inspect_spans || n.span_count !== undefined || n.measured_span_mm !== undefined
+            const span = inspect ? callGeometryRust<{counts:number[]; nominalWidthMm:[number,number]|null; inferredThinningMm:[number,number]|null}>('brep_nurbs_gear_span', {
+              ...spec,
+              ...(n.span_count !== undefined && {spanCount:n.span_count}),
+              ...(n.measured_span_mm && {measuredSpanMm:n.measured_span_mm}),
+            }) : undefined
             if (n.verified_profile) {
               const {model,...report}=callGeometryRust<{model:NurbsBrep;profileErrorUpperMm:number;idealWallErrorUpperMm:number;profileWinding:number[];solidGeometryCertified:boolean}>('brep_nurbs_verified_gear',spec)
               result={kind:'brep',data:model}
-              constructionReports[key]={measurement:{operation:'brep_nurbs_verified_gear',report}}
-            } else result={kind:'brep',data:createBrepGear(spec)}
+              constructionReports[key]={measurement:{operation:'brep_nurbs_verified_gear',report:{...report,...span}}}
+            } else {
+              result={kind:'brep',data:createBrepGear(spec)}
+              if (span) constructionReports[key]={measurement:{operation:'brep_nurbs_gear_span',report:span}}
+            }
             break
           }
           case 'brep_torus':

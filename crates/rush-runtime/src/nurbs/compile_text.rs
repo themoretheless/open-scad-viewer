@@ -288,7 +288,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 continue;
             }
             if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
-            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "laws", "left_handed", "verified_profile", "herringbone", "internal", "use_pcurve", "edge_id", "exact_parameter", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
+            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "laws", "left_handed", "verified_profile", "inspect_spans", "herringbone", "internal", "use_pcurve", "edge_id", "exact_parameter", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
                 continue;
             }
             if key=="section_mappings" {
@@ -410,6 +410,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "top_radius",
                     "inner_radius",
                     "outer_radius",
+                    "measured_span_mm",
                     "module",
                     "bore",
                     "rim_width",

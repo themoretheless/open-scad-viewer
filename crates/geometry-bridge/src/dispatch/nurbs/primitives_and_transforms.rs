@@ -36,6 +36,7 @@ pub(super) const OPS: &[&str] = &[
     "finite_internal_thread",
     "verified_bevel_gear",
     "brep_nurbs_gear",
+    "brep_nurbs_gear_span",
     "brep_nurbs_verified_gear",
     "brep_nurbs_torus",
     "brep_nurbs_cylinder",
@@ -114,7 +115,7 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "finite_external_thread" => finite_thread::build(&v, false),
         "finite_internal_thread" => finite_thread::build(&v, true),
         "verified_bevel_gear" => rack_bevel::bevel(&v),
-        "brep_nurbs_gear" | "brep_nurbs_verified_gear" => handle_gear(&v),
+        "brep_nurbs_gear" | "brep_nurbs_gear_span" | "brep_nurbs_verified_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,
             field(&v, "minorRadius")?,
@@ -244,6 +245,9 @@ fn handle_gear(v: &Value) -> Result<Value> {
         clearance: number("clearance", 0.25),
         backlash: number("backlash", 0.),
     };
+    if v["op"].as_str() == Some("brep_nurbs_gear_span") {
+        return gear_span_report(&spec, v);
+    }
     if v["op"].as_str() == Some("brep_nurbs_verified_gear") {
         let gear = brep_core::gear::gear_with_verified_profile(&spec, Default::default())?;
         return Ok(value_codec::json!({
@@ -253,4 +257,21 @@ fn handle_gear(v: &Value) -> Result<Value> {
         }));
     }
     encode(brep_core::gear(&spec)?)
+}
+
+fn gear_span_report(spec: &brep_core::GearSpec, v: &Value) -> Result<Value> {
+    use nurbs_core::involute::{external_spur_span, measurable_spur_spans, tooth_thinning_from_span};
+    if spec.internal || spec.helix_angle_deg != 0. || spec.herringbone {
+        return Err(crate::input("Base tangent measurement requires an external spur gear"));
+    }
+    let counts = measurable_spur_spans(spec.module, spec.teeth, spec.pressure_angle_deg, spec.clearance, spec.backlash)?;
+    let count = v.get("spanCount").map(|_| field::<usize>(v, "spanCount")).transpose()?;
+    let width = count.map(|k| external_spur_span(spec.module, spec.teeth, spec.pressure_angle_deg, spec.clearance, spec.backlash, k)).transpose()?;
+    let thinning = if v.get("measuredSpanMm").is_some() {
+        let k = count.ok_or_else(|| crate::input("Measured span requires its tooth count"))?;
+        Some(tooth_thinning_from_span(spec.module, spec.teeth, spec.pressure_angle_deg, spec.clearance, k, field(v, "measuredSpanMm")?)?)
+    } else {
+        None
+    };
+    Ok(value_codec::json!({"counts":counts,"nominalWidthMm":width,"inferredThinningMm":thinning}))
 }
