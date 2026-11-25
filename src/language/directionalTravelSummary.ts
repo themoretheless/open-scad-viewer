@@ -8,6 +8,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'phase_aligned_section') return russian ? 'Фаза замкнутого сечения' : 'Closed section phase'
   if (operation === 'compatible_section') return russian ? 'Согласование степени и узлов сечений' : 'Compatible section basis'
   if (operation === 'oriented_section') return russian ? 'Ориентация сечения' : 'Section orientation'
   if (operation === 'uv_loop_closure') return russian ? 'Замкнутость UV-контура' : 'UV loop closure'

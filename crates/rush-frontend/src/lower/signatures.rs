@@ -268,6 +268,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_trim_set_properties" => &["contours", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "moment_tolerance", "axis_point", "axis_vector", "reference_point", "radius_of_gyration"],
         "surface_measure_trimmed_mass" => &["contours", "component_densities", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "plane_point", "plane_normal", "axis_point", "axis_vector", "reference_point", "moment_tolerance", "radius_of_gyration", "balance_tolerance", "static_unbalance", "couple_unbalance", "plane_offsets", "plane_tolerances", "weight_radii", "weight_mass_limits", "installed_weights", "principal_axes", "probe_point", "probe_direction"],
         "curve_axial_derivative_peak" => &["axis_vector", "interval", "order", "tolerance_mm", "max_cells", "parameter_tolerance"],
+        "phase_aligned_section" => &["inputs", "piece", "landmarks", "search_tolerance_mm", "shape_tolerance_mm", "max_cells"],
         "compatible_section" => &["inputs", "piece"],
         "oriented_section" => &["inputs", "piece", "tolerance_mm"],
         "uv_loop_closure" => &["loops"],

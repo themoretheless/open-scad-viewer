@@ -14,6 +14,22 @@ mod surface_seam_measurements;
 mod uv_loop_queries;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op == "phase_aligned_section" {
+        return Some((|| {
+            let curves: Vec<crate::curve::Curve> = field(v,"curves")?;
+            let piece: usize = field(v,"piece")?;
+            check(piece < curves.len(), "Selected section index exceeds the section count")?;
+            let landmarks: Vec<Vec<f64>> = field(v,"landmarks")?;
+            let result = crate::section_phase::align(&curves, &landmarks, field(v,"search_tolerance_mm")?,
+                field(v,"shape_tolerance_mm")?, field(v,"max_cells")?)?;
+            let phases = result.phases.iter().map(|p| json!({
+                "status":format!("{:?}",p.status),"parameter":p.parameter,"searchBoundsMm":p.nearest.distance_interval,
+                "shapeErrorUpperMm":p.shape.as_ref().map(|proof|proof.error_upper),
+                "finalDistanceMm":p.final_distance_interval,"minimumGapUpperMm":p.final_minimum_gap_upper
+            })).collect::<Vec<_>>();
+            Ok(json!({"curve":result.curves.as_ref().map(|curves| &curves[piece]),"phases":phases}))
+        })());
+    }
     if matches!(op, "compatible_section" | "oriented_section") {
         return Some((|| {
             let curves: Vec<crate::curve::Curve> = field(v, "curves")?;

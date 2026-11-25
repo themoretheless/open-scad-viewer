@@ -1672,6 +1672,7 @@ export const rushGraphNurbsSchema = z
             installed_weights:z.array(z.array(z.tuple([scalar,scalar])).length(4)).length(2).optional(),
           }).strict(),
           z.object({ id, op: z.literal('curve_axial_derivative_peak'), input: id, axis_vector: z.array(scalar).min(2).max(3), interval, order: z.number().int().min(1).max(3), tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), parameter_tolerance: scalar.optional() }).strict(),
+          z.object({id,op:z.literal('phase_aligned_section'),input:id,inputs:z.array(id).min(1).max(31),piece:z.number().int().min(0).max(31),landmarks:z.array(z.array(scalar).min(2).max(3)).min(2).max(32),search_tolerance_mm:scalar,shape_tolerance_mm:scalar,max_cells:z.number().int().min(1).max(100000)}).strict(),
           z.object({id,op:z.literal('compatible_section'),input:id,inputs:z.array(id).min(1).max(31),piece:z.number().int().min(0).max(31)}).strict(),
           z.object({id,op:z.literal('oriented_section'),input:id,inputs:z.array(id).min(1).max(31),piece:z.number().int().min(0).max(31),tolerance_mm:scalar}).strict(),
           z.object({ id, op:z.literal('uv_loop_closure'), input:id, loops:z.array(z.array(id).min(1).max(256)).min(1).max(1),  }).strict(),

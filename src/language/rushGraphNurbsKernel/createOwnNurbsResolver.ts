@@ -491,6 +491,16 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'phase_aligned_section': {
+            const {id:_id,op,input,inputs,...options}=n
+            const {curve,phases}=callGeometryRust<{curve:NurbsCurve|null;phases:{status:string}[]}>(op,{
+              curves:[input,...inputs].map(needCurve),...options,
+            })
+            if (!curve) throw new Error('Section phase alignment unresolved: '+phases.map(p=>p.status).join(', '))
+            constructionReports[key]={measurement:{operation:op,report:{phases}}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'compatible_section':
           case 'oriented_section': {
             const {id:_id,op,input,inputs,...options}=n
