@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "721641f1c5e8bcfcba1217da709ab51034d77f8bfa96605b8445b8ee82929e13",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/parallel-plane-sections.r",
+      "exampleSha256": "813946cf5825afd0f45f8318496d8dcc3b7cfe0d13d0d4ffc01abee38549c755",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 438 ms"
+    }
+  ]
+}

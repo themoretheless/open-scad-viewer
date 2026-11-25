@@ -5749,7 +5749,7 @@
     {
       "id": "NURBS-0190",
       "name": "параллельные сечения поверхности плоскостями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5764,7 +5764,9 @@
         "docs/design/nurbs-parallel-sections.md",
         "docs/qualification/nurbs-parallel-sections-2026-10-15/native-tests.json",
         "docs/qualification/nurbs-parallel-sections-2026-10-15/native-tests.log",
-        "docs/qualification/nurbs-parallel-sections-2026-10-15/cargo-check.log"
+        "docs/qualification/nurbs-parallel-sections-2026-10-15/cargo-check.log",
+        "examples/rush/parallel-plane-sections.r",
+        "tests/rushPlaneStack.test.ts"
       ]
     },
     {
