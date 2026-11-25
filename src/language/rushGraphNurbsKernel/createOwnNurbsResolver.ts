@@ -941,6 +941,10 @@ export function createOwnNurbsResolver(
           case 'surface_gap_edge_roots':
           case 'surface_gap_contour_graph':
           case 'surface_gap_contour_samples':
+          case 'surface_gap_uv_polyline':
+          case 'surface_gap_adaptive_polyline':
+          case 'surface_gap_second_derivative':
+          case 'surface_gap_second_order_polyline':
           case 'surface_gap_contour_slope':
           case 'surface_cell_interpolation_error':
           case 'surface_triangle_interpolation_error':

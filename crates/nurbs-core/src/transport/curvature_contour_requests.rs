@@ -79,6 +79,53 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
                 json!({"domain":r.domain,"graph":graph(r.graph,r.refusal)?,"slope":r.slope,"workUsed":r.work_used}),
             )
         }
+        "surface_gap_uv_polyline" => {
+            let stations: Vec<f64> = field(v, "transverse")?;
+            let r = gap::certify_curvature_gap_polyline(
+                &s,
+                span,
+                axis,
+                level,
+                &stations,
+                field(v, "max_depth")?,
+                budget,
+            )?;
+            polyline(r, None)
+        }
+        "surface_gap_adaptive_polyline" | "surface_gap_second_order_polyline" => {
+            let options = gap::AdaptiveCurvaturePolylineOptions {
+                max_error: field(v, "uv_error")?,
+                max_vertices: field(v, "max_vertices")?,
+                root_depth: field(v, "max_depth")?,
+                max_work: budget,
+            };
+            let r = if op == "surface_gap_adaptive_polyline" {
+                gap::adapt_curvature_gap_polyline(&s, span, axis, level, options)?
+            } else {
+                gap::adapt_curvature_gap_polyline_second_order(&s, span, axis, level, options)?
+            };
+            polyline(r.polyline, r.stop)
+        }
+        "surface_gap_second_derivative" => {
+            let r = gap::curvature_gap_graph_second_derivative(&s, span, axis, level, budget)?;
+            Ok(
+                json!({"domain":r.domain,"graph":graph(r.graph,r.refusal)?,"secondDerivative":r.second_derivative,"workUsed":r.work_used}),
+            )
+        }
         _ => Err(input("Unknown curvature contour query")),
     }
+}
+
+fn polyline(
+    r: gap::CurvatureGapPolyline,
+    stop: Option<gap::CurvaturePolylineStop>,
+) -> Result<Value> {
+    let samples = r.samples.map(|rows| {
+        rows.into_iter()
+            .map(|p| json!({"transverse":p.transverse,"unitRootInterval":p.root_interval}))
+            .collect::<Vec<_>>()
+    });
+    Ok(
+        json!({"domain":r.domain,"graph":graph(r.graph,r.refusal)?,"samples":samples,"segmentErrorUpperUv":r.segment_error_upper,"stop":stop.map(|v|format!("{v:?}")),"workUsed":r.work_used}),
+    )
 }
