@@ -14,6 +14,21 @@ mod surface_seam_measurements;
 mod uv_loop_queries;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op, "compatible_section" | "oriented_section") {
+        return Some((|| {
+            let curves: Vec<crate::curve::Curve> = field(v, "curves")?;
+            let piece: usize = field(v, "piece")?;
+            check(piece < curves.len(), "Selected section index exceeds the section count")?;
+            let (sections, orientation) = if op == "compatible_section" {
+                (crate::sections::compatible(&curves)?, None)
+            } else {
+                let oriented = crate::sections::orient(&curves, field(v,"tolerance_mm")?)?;
+                (oriented.curves, Some(format!("{:?}", oriented.orientations[piece])))
+            };
+            let curve = &sections[piece];
+            Ok(json!({"curve":curve,"degree":curve.degree,"knots":curve.knots,"orientation":orientation}))
+        })());
+    }
     if matches!(op, "uv_loop_closure" | "uv_loop_simplicity" | "uv_trim_location") {
         return Some(uv_loop_queries::inspect(v, op));
     }

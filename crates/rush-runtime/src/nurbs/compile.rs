@@ -273,11 +273,10 @@ pub fn compile(mut document: J) -> Result<J> {
             return Err(Error::new("depth_limit", path, "Maximum graph depth 32."));
         }
         active.insert(key);
-        let mut refs = if let Some(xs) = node["inputs"].as_array() {
-            xs.iter().filter_map(J::as_str).collect::<Vec<_>>()
-        } else {
-            node["input"].as_str().into_iter().collect()
-        };
+        let mut refs: Vec<_> = node["input"].as_str().into_iter().collect();
+        if let Some(inputs) = node["inputs"].as_array() {
+            refs.extend(inputs.iter().filter_map(J::as_str));
+        }
         if ["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {if let Some(id)=node["orientation_guide"].as_str(){refs.push(id);}}
         if let Some(target) = node["target_geometry"].as_str() { refs.push(target); }
         if s(node,"op")=="ribbon_surface" {refs.push(s(node,"width_law"));}

@@ -491,6 +491,16 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'compatible_section':
+          case 'oriented_section': {
+            const {id:_id,op,input,inputs,...options}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;degree:number;knots:number[];orientation?:string}>(op,{
+              curves:[input,...inputs].map(needCurve),...options,
+            })
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'uv_loop_closure':
           case 'uv_loop_simplicity':
           case 'uv_trim_location': {
