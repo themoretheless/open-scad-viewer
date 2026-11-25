@@ -50,8 +50,8 @@ mod exact_merge_requests;
 mod exact_field_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
-    if matches!(op,"surface_partial_field" | "surface_area_normal_field" | "surface_metric_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }
-    if matches!(op,"curve_derivative_field" | "curve_speed_squared_field" | "curve_binormal_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
+    if matches!(op,"bounded_surface_partial_field" | "surface_partial_field" | "bounded_surface_area_normal_field" | "surface_area_normal_field" | "bounded_surface_metric_field" | "surface_metric_field" | "bounded_surface_mixed_partial_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }
+    if matches!(op,"bounded_curve_derivative_field" | "curve_derivative_field" | "bounded_curve_speed_squared_field" | "curve_speed_squared_field" | "bounded_curve_binormal_field" | "curve_binormal_field" | "bounded_curve_curvature_squared_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
     if op == "projective_curve_exact" {
         return Some((|| {
             let report = crate::editing::exact_projective::curve(&field(v,"source")?,field(v,"coefficients")?,field(v,"max_work")?)?;

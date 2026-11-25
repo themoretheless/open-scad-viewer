@@ -873,9 +873,13 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'bounded_surface_partial_field':
           case 'surface_partial_field':
+          case 'bounded_surface_area_normal_field':
           case 'surface_area_normal_field':
+          case 'bounded_surface_metric_field':
           case 'surface_metric_field':
+          case 'bounded_surface_mixed_partial_field':
           case 'surface_mixed_partial_field': {
             const {id:_id,op,input,return_field,...settings} = n
             const source = needSurface(input)
@@ -884,9 +888,13 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:return_field ? surface : source}
             break
           }
+          case 'bounded_curve_derivative_field':
           case 'curve_derivative_field':
+          case 'bounded_curve_speed_squared_field':
           case 'curve_speed_squared_field':
+          case 'bounded_curve_binormal_field':
           case 'curve_binormal_field':
+          case 'bounded_curve_curvature_squared_field':
           case 'curve_curvature_squared_field': {
             const {id:_id,op,input,return_field,...settings} = n
             const source = needCurve(input)
