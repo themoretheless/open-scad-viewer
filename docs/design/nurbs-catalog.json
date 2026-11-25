@@ -5849,7 +5849,7 @@
     {
       "id": "NURBS-0195",
       "name": "ограничивающий объём рациональной геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5859,7 +5859,9 @@
       "evidence": [
         "crates/nurbs-geometry/src/bounds.rs",
         "crates/nurbs-core/tests/affine_bounds.rs",
-        "docs/design/nurbs-affine-bounds.md"
+        "docs/design/nurbs-affine-bounds.md",
+        "examples/rush/coordinate-frame-bounds.r",
+        "tests/rushCoordinateAnalysis.test.ts"
       ]
     },
     {
@@ -5925,7 +5927,7 @@
     {
       "id": "NURBS-0199",
       "name": "диагностика плохо обусловленной рациональной геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Точность",
       "remainingQualification": [
@@ -5935,13 +5937,15 @@
       "evidence": [
         "crates/nurbs-geometry/src/conditioning.rs",
         "crates/nurbs-core/tests/conditioning.rs",
-        "docs/design/nurbs-conditioning.md"
+        "docs/design/nurbs-conditioning.md",
+        "examples/rush/coordinate-frame-bounds.r",
+        "tests/rushCoordinateAnalysis.test.ts"
       ]
     },
     {
       "id": "NURBS-0200",
       "name": "нормализация масштаба и единиц геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Точность",
       "remainingQualification": [
@@ -5952,7 +5956,9 @@
       "evidence": [
         "crates/nurbs-geometry/src/coordinate_frame.rs",
         "crates/nurbs-core/tests/coordinate_frame.rs",
-        "docs/design/nurbs-coordinate-frame.md"
+        "docs/design/nurbs-coordinate-frame.md",
+        "examples/rush/coordinate-frame-bounds.r",
+        "tests/rushCoordinateAnalysis.test.ts"
       ]
     },
     {

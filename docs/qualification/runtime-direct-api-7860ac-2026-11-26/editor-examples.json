@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "7860ac57a8ac9b1ca2416f54702e1e8a4d77934ccf566fb75f413ded2f7a4571",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/coordinate-frame-bounds.r",
+      "exampleSha256": "dde566baa0142c51443779b5a9d049398b31011b0ec5951db2a0a6fe47ceefa6",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 8 ms"
+    }
+  ]
+}
