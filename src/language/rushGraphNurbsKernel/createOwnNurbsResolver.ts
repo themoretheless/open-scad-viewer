@@ -958,6 +958,9 @@ export function createOwnNurbsResolver(
           case 'piecewise_clock_curve':
           case 'relayout_clock_curve':
           case 'certify_uv_chart':
+          case 'classify_uv_seam':
+          case 'isolate_uv_seam':
+          case 'split_uv_seam':
           case 'pullback_uv_clock':
           case 'mobius_bezier_curve':
           case 'mobius_spline_curve':
