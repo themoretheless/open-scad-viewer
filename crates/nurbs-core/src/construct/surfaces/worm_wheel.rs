@@ -416,7 +416,7 @@ pub use fit::{
 
 mod axial_source;
 mod axial_network;
-pub use axial_network::{AxialSideNetwork, axial_side_network};
+pub use axial_network::{AxialNetworkBuild, AxialSideNetwork, axial_side_network};
 pub use axial_source::{AxialInstance, AxialSource, axial_instance};
 pub use fit::{QualifiedAxialGrid, qualify_axial_grid, regrid_axial_source};
 

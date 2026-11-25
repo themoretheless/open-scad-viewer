@@ -1,3 +1,4 @@
+import { PendingWheel, type WheelResolver } from './wheelBuild'
 import { reparameterizeNurbsCurveExact } from '../../kernel/nurbsFoundation'
 import { approximateCurveEdit, approximateSurfaceEdit } from './approximateEdits'
 import { callGeometryRust } from '../../kernel/geometry/kernel'
@@ -187,6 +188,7 @@ export function createOwnNurbsResolver(
   resolveBody?: BodyResolver,
   resolveMiter?: MiterResolver,
   resolveStations?: StationResolver,
+  resolveWheel?: WheelResolver,
 ) {
   const cache = new Map<string, Value>()
   const needCurve = (key: string) => {
@@ -1704,7 +1706,9 @@ export function createOwnNurbsResolver(
           case 'finite_za_worm':
           case 'finite_za_wheel': {
             const {id:_id,op,...spec}=n
-            const {model,...report}=callGeometryRust<{model:NurbsBrep;wallErrorUpperMm:number;solidGeometryCertified:boolean}>(op,spec)
+            const {model,...report} = op === 'finite_za_wheel' && resolveWheel
+              ? resolveWheel(key, spec)
+              : callGeometryRust<{model:NurbsBrep;wallErrorUpperMm:number;solidGeometryCertified:boolean}>(op, spec)
             constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'brep',data:model}
             break
@@ -1992,6 +1996,7 @@ export function createOwnNurbsResolver(
         }
     } catch (error) {
       if (
+        error instanceof PendingWheel ||
         error instanceof PendingProgressiveStations ||
         error instanceof PendingProgressiveSweep ||
         error instanceof PendingProgressiveBody ||

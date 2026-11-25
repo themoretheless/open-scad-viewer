@@ -30,3 +30,16 @@ for (const kind of ['worm','wheel']) {
     }
   },240000)
 }
+
+it('releases the native wheel builder when the editor cancels after a completed step', async () => {
+  const source = readFileSync('examples/rush/finite-za-wheel.r', 'utf8')
+  const document = compileRushFrontend(source).document
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let checkpoints = 0
+    await expect(buildTextNurbsScene(document, 'full', {
+      onYield: () => { checkpoints++ },
+      shouldAbort: () => checkpoints >= 2,
+    })).rejects.toThrow(/cancel/i)
+    expect(checkpoints).toBe(2)
+  }
+}, 180000)

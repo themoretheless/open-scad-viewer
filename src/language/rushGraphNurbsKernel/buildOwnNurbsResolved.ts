@@ -1,3 +1,4 @@
+import type { WheelResolver } from './wheelBuild'
 import { inspectRushGraphOffsetDeviation } from '../rushGraphOffsetDeviation'
 import {
   readMiterAffineReplayRouting,
@@ -293,12 +294,13 @@ export function buildOwnNurbsResolved(
   resolveBody?: BodyResolver,
   resolveMiter?: MiterResolver,
   resolveStations?: StationResolver,
+  resolveWheel?: WheelResolver,
 ) {
   if (!['build', 'evaluate', 'export'].includes(request.action) || (request.evaluations?.length ?? 0) > 64)
     throw new Error('Invalid NURBS request or evaluation budget exceeded.')
   const compiled = compileRushGraphNurbs(document)
   const nodes = new Map(compiled.resolved_document.nodes.map(n => [n.id, n]))
-  const resolver = createOwnNurbsResolver(nodes, request, resolveSweep, resolveBody, resolveMiter, resolveStations)
+  const resolver = createOwnNurbsResolver(nodes, request, resolveSweep, resolveBody, resolveMiter, resolveStations, resolveWheel)
   const needCurve = (key: string) => {
     const result = resolver.get(key)
     if (result.kind !== 'curve') throw new Error(`Expected curve at ${key}.`)

@@ -1,3 +1,4 @@
+import { PendingWheel, buildWheel, type WheelResult } from './wheelBuild'
 import { PendingProgressiveStations } from '../rushGraphNurbsKernel'
 import {
   reconstructCertifiedProgressiveStations,
@@ -25,6 +26,7 @@ export async function buildOwnNurbsAsync(
   request: OwnNurbsRequest,
   control: OwnNurbsBuildControl = {},
 ) {
+  const wheels = new Map<string, WheelResult>()
   const stations = new Map<string, ReturnType<typeof reconstructCertifiedProgressiveStations>>()
   const completed = new Map<string, ReturnType<typeof progressiveSweepNurbsProfiles>>()
   const bodies = new Map<string, ReturnType<typeof createProgressiveBrepProfileBody>>()
@@ -71,6 +73,11 @@ export async function buildOwnNurbsAsync(
           if (ready) return ready
           throw new PendingProgressiveStations(nodeId, args)
         },
+        (nodeId, spec) => {
+          const ready = wheels.get(nodeId)
+          if (ready) return ready
+          throw new PendingWheel(nodeId, spec)
+        },
       )
     } catch (error) {
       if (error instanceof PendingProgressiveSweep) {
@@ -99,6 +106,8 @@ export async function buildOwnNurbsAsync(
         )
       } else if (error instanceof PendingProgressiveStations) {
         stations.set(error.nodeId, await reconstructCertifiedProgressiveStationsAsync(...error.args, control))
+      } else if (error instanceof PendingWheel) {
+        wheels.set(error.nodeId, await buildWheel(error.spec, control))
       } else throw error
     }
   }

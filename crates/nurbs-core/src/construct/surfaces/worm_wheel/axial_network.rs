@@ -130,111 +130,184 @@ pub fn axial_side_network(
     tolerance: f64,
     max_patches_per_family: usize,
 ) -> Result<AxialSideNetwork> {
-    check(y.len() >= 2 && y.len() <= 4097, "Invalid wheel axial grid")?;
-    check(
-        (12..=256).contains(&spec.teeth) && tolerance.is_finite() && tolerance > 0.,
-        "Invalid wheel count or tolerance",
-    )?;
-    check(
-        y.iter().all(|x| x.is_finite()) && y.windows(2).all(|w| w[0] < w[1]),
-        "Invalid common physical-Y breaks",
-    )?;
-    let mut cells = 0usize;
-    for breaks in &t {
+    let mut build =
+        AxialNetworkBuild::new(spec, y, stock_radius, t, tolerance, max_patches_per_family)?;
+    while !build.advance()? {}
+    build.finish()
+}
+
+/// Owns all stitched controls until every family has passed its original-source checks.
+pub struct AxialNetworkBuild {
+    sources: [AxialSource; 6],
+    placed: std::vec::IntoIter<Vec<Surface>>,
+    grids: Vec<QualifiedAxialGrid>,
+    teeth: usize,
+    t: [Vec<f64>; 6],
+    y: Vec<f64>,
+    tolerance: f64,
+    max_patches_per_family: usize,
+}
+
+impl AxialNetworkBuild {
+    pub fn new(
+        spec: Spec,
+        y: Vec<f64>,
+        stock_radius: f64,
+        t: [Vec<f64>; 6],
+        tolerance: f64,
+        max_patches_per_family: usize,
+    ) -> Result<Self> {
+        check(y.len() >= 2 && y.len() <= 4097, "Invalid wheel axial grid")?;
         check(
-            breaks.len() >= 2
-                && breaks.len() <= 4097
-                && breaks[0] == 0.
-                && breaks[breaks.len() - 1] == 1.
-                && breaks.iter().all(|x| x.is_finite())
-                && breaks.windows(2).all(|w| w[0] < w[1]),
-            "Incomplete wheel family breaks",
+            (12..=256).contains(&spec.teeth) && tolerance.is_finite() && tolerance > 0.,
+            "Invalid wheel count or tolerance",
         )?;
-        let n = (breaks.len() - 1) * (y.len() - 1);
         check(
-            n <= max_patches_per_family && max_patches_per_family <= 4096,
-            "Wheel family patch budget exceeded",
+            y.iter().all(|x| x.is_finite()) && y.windows(2).all(|w| w[0] < w[1]),
+            "Invalid common physical-Y breaks",
         )?;
-        cells += n;
-    }
-    check(
-        cells * spec.teeth <= 16384,
-        "Wheel network exceeds 16384 patches",
-    )?;
-    let domain = [y[0], y[y.len() - 1]];
-    let d = axial_stock_intersection(spec, Flank::Descending, domain, stock_radius, 128)?;
-    let a = axial_stock_intersection(spec, Flank::Ascending, domain, stock_radius, 128)?;
-    let tip = axial_tip_chart(&d, &a, 32)?;
-    let sources = [
-        AxialSource::Root(axial_root_chart(
-            spec,
-            RootPart::CrestEdge(Flank::Descending),
-            domain,
-        )?),
-        AxialSource::Working(d),
-        AxialSource::Tip(tip),
-        AxialSource::Working(a),
-        AxialSource::Root(axial_root_chart(
-            spec,
-            RootPart::CrestEdge(Flank::Ascending),
-            domain,
-        )?),
-        AxialSource::Root(axial_root_chart(spec, RootPart::CrestCylinder, domain)?),
-    ];
-    let mut templates = Vec::with_capacity(6);
-    for i in 0..6 {
-        templates.push(regrid_axial_source(
-            &sources[i],
-            t[i].clone(),
-            y.clone(),
-            tolerance,
-            max_patches_per_family,
-        )?);
-    }
-    let nv = y.len() - 1;
-    let mut placed = Vec::with_capacity(spec.teeth * 6);
-    for j in 0..spec.teeth {
+        let mut cells = 0usize;
+        for breaks in &t {
+            check(
+                breaks.len() >= 2
+                    && breaks.len() <= 4097
+                    && breaks[0] == 0.
+                    && breaks[breaks.len() - 1] == 1.
+                    && breaks.iter().all(|x| x.is_finite())
+                    && breaks.windows(2).all(|w| w[0] < w[1]),
+                "Incomplete wheel family breaks",
+            )?;
+            let n = (breaks.len() - 1) * (y.len() - 1);
+            check(
+                n <= max_patches_per_family && max_patches_per_family <= 4096,
+                "Wheel family patch budget exceeded",
+            )?;
+            cells += n;
+        }
+        check(
+            cells * spec.teeth <= 16384,
+            "Wheel network exceeds 16384 patches",
+        )?;
+        let domain = [y[0], y[y.len() - 1]];
+        let d = axial_stock_intersection(spec, Flank::Descending, domain, stock_radius, 128)?;
+        let a = axial_stock_intersection(spec, Flank::Ascending, domain, stock_radius, 128)?;
+        let tip = axial_tip_chart(&d, &a, 32)?;
+        let sources = [
+            AxialSource::Root(axial_root_chart(
+                spec,
+                RootPart::CrestEdge(Flank::Descending),
+                domain,
+            )?),
+            AxialSource::Working(d),
+            AxialSource::Tip(tip),
+            AxialSource::Working(a),
+            AxialSource::Root(axial_root_chart(
+                spec,
+                RootPart::CrestEdge(Flank::Ascending),
+                domain,
+            )?),
+            AxialSource::Root(axial_root_chart(spec, RootPart::CrestCylinder, domain)?),
+        ];
+        let mut templates = Vec::with_capacity(6);
         for i in 0..6 {
-            placed.push(place_axial_surfaces(
-                &axial_instance(&sources[i], j)?,
-                templates[i].surfaces(),
+            templates.push(regrid_axial_source(
+                &sources[i],
+                t[i].clone(),
+                y.clone(),
+                tolerance,
+                max_patches_per_family,
             )?);
         }
-    }
-    for j in 0..spec.teeth {
-        let joins = [
-            (j * 6 + JOINS[0].0, JOINS[0].1, j * 6 + JOINS[0].2, JOINS[0].3),
-            (j * 6 + JOINS[1].0, JOINS[1].1, j * 6 + JOINS[1].2, JOINS[1].3),
-            (j * 6 + JOINS[2].0, JOINS[2].1, j * 6 + JOINS[2].2, JOINS[2].3),
-            (j * 6 + JOINS[3].0, JOINS[3].1, j * 6 + JOINS[3].2, JOINS[3].3),
-            (j * 6 + JOINS[4].0, JOINS[4].1, j * 6 + JOINS[4].2, JOINS[4].3),
-            (j * 6 + 5, true, ((j + 1) % spec.teeth) * 6, false),
-        ];
-        for (l, le, r, re) in joins {
-            for iv in 0..nv {
-                let controls = row(&placed[l], le, iv, nv).clone();
-                let iu = if re { placed[r].len() / nv - 1 } else { 0 };
-                placed[r][iu * nv + iv].control_points[if re { 5 } else { 0 }] = controls;
+        let nv = y.len() - 1;
+        let mut placed = Vec::with_capacity(spec.teeth * 6);
+        for j in 0..spec.teeth {
+            for i in 0..6 {
+                placed.push(place_axial_surfaces(
+                    &axial_instance(&sources[i], j)?,
+                    templates[i].surfaces(),
+                )?);
             }
         }
-    }
-    let mut grids = Vec::with_capacity(placed.len());
-    for (i, surfaces) in placed.into_iter().enumerate() {
-        grids.push(qualify_axial_instance(
-            &axial_instance(&sources[i % 6], i / 6)?,
-            t[i % 6].clone(),
-            y.clone(),
-            surfaces,
+        for j in 0..spec.teeth {
+            let joins = [
+                (
+                    j * 6 + JOINS[0].0,
+                    JOINS[0].1,
+                    j * 6 + JOINS[0].2,
+                    JOINS[0].3,
+                ),
+                (
+                    j * 6 + JOINS[1].0,
+                    JOINS[1].1,
+                    j * 6 + JOINS[1].2,
+                    JOINS[1].3,
+                ),
+                (
+                    j * 6 + JOINS[2].0,
+                    JOINS[2].1,
+                    j * 6 + JOINS[2].2,
+                    JOINS[2].3,
+                ),
+                (
+                    j * 6 + JOINS[3].0,
+                    JOINS[3].1,
+                    j * 6 + JOINS[3].2,
+                    JOINS[3].3,
+                ),
+                (
+                    j * 6 + JOINS[4].0,
+                    JOINS[4].1,
+                    j * 6 + JOINS[4].2,
+                    JOINS[4].3,
+                ),
+                (j * 6 + 5, true, ((j + 1) % spec.teeth) * 6, false),
+            ];
+            for (l, le, r, re) in joins {
+                for iv in 0..nv {
+                    let controls = row(&placed[l], le, iv, nv).clone();
+                    let iu = if re { placed[r].len() / nv - 1 } else { 0 };
+                    placed[r][iu * nv + iv].control_points[if re { 5 } else { 0 }] = controls;
+                }
+            }
+        }
+        Ok(Self {
+            sources,
+            grids: Vec::with_capacity(placed.len()),
+            placed: placed.into_iter(),
+            teeth: spec.teeth,
+            t,
+            y,
             tolerance,
             max_patches_per_family,
-        )?);
+        })
     }
-    let network = AxialSideNetwork {
-        grids,
-        teeth: spec.teeth,
-    };
-    // Each actual world grid was just freshly admitted above. Check the
-    // completed interface ledger here; explicit replay still rechecks sources.
-    network.verify_stitches()?;
-    Ok(network)
+
+    /// Verify one family. A failed or incomplete build cannot produce a network.
+    pub fn advance(&mut self) -> Result<bool> {
+        if let Some(surfaces) = self.placed.next() {
+            let i = self.grids.len();
+            self.grids.push(qualify_axial_instance(
+                &axial_instance(&self.sources[i % 6], i / 6)?,
+                self.t[i % 6].clone(),
+                self.y.clone(),
+                surfaces,
+                self.tolerance,
+                self.max_patches_per_family,
+            )?);
+        }
+        Ok(self.placed.len() == 0)
+    }
+
+    pub fn finish(self) -> Result<AxialSideNetwork> {
+        check(
+            self.grids.len() == self.teeth * 6,
+            "Incomplete wheel side network",
+        )?;
+        let network = AxialSideNetwork {
+            grids: self.grids,
+            teeth: self.teeth,
+        };
+        network.verify_stitches()?;
+        Ok(network)
+    }
 }
