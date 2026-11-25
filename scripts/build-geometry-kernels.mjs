@@ -4,6 +4,7 @@ import {mkdirSync,rmSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {buildWasmBrotli} from './build-wasm-brotli.mjs'
+import {compactWasmTables} from './compact-wasm-tables.mjs'
 import {optimizeWasm} from './wasm-optimize.mjs'
 import {packGeometryKernel} from './pack-geometry-kernel.mjs'
 import {geometryKernelCargo} from './geometry-kernel-cargo.mjs'
@@ -29,7 +30,7 @@ mkdirSync(output,{recursive:true})
 mkdirSync(publicWasm,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm')
-const wasm=optimizeWasm(built)
+const wasm=compactWasmTables(optimizeWasm(built))
 console.log(`geometry-kernels artifact: sha256=${createHash('sha256').update(wasm).digest('hex')} bytes=${wasm.byteLength}`)
 // Skip WebAssembly.Module compilation, brotli quality 11 and base85 encoding
 // when the optimized wasm is byte-identical to the last packaged run.

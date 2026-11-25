@@ -1,0 +1,16 @@
+{
+  "controlSha256": "888b59eac5c833b36b763c17146b4436d6668417aaa930d8d21f56590185155f",
+  "candidateSha256": "c3379c50569e39eb004398c23cbf130515fd7691a20d663107cb8f9d180e8cf4",
+  "originalBytes": 20994907,
+  "compactBytes": 20802121,
+  "savedBytes": 192786,
+  "initialLinearMemoryBytes": 3080192,
+  "identicalInitialMemory": true,
+  "instantiateMedianMs": [
+    0.41395800000003646,
+    0.47020800000007057
+  ],
+  "warmupPairs": 5,
+  "measuredPairs": 25,
+  "node": "v26.13.1"
+}

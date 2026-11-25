@@ -873,6 +873,17 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'surface_partial_field':
+          case 'surface_area_normal_field':
+          case 'surface_metric_field':
+          case 'surface_mixed_partial_field': {
+            const {id:_id,op,input,return_field,...settings} = n
+            const source = needSurface(input)
+            const {surface,...report} = callGeometryRust<{surface:NurbsSurface;patchCount:number}>(op,{source,...settings})
+            constructionReports[key] = {measurement:{operation:op,report}}
+            result = {kind:'surface',data:return_field ? surface : source}
+            break
+          }
           case 'curve_derivative_field':
           case 'curve_speed_squared_field':
           case 'curve_binormal_field':
