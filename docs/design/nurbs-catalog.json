@@ -6066,7 +6066,7 @@
     {
       "id": "NURBS-0206",
       "name": "восстановление сферы по облаку точек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-reconstruction",
       "category": "Восстановление аналитической формы",
       "nativeApi": "nurbs_core::analysis::primitive_fit::fit_sphere",
@@ -6074,7 +6074,9 @@
         "crates/nurbs-core/src/analysis/primitive_fit.rs",
         "crates/nurbs-core/tests/primitive_fit_contracts.rs",
         "docs/design/nurbs-primitive-fitting.md",
-        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/fit-sphere-cloud.r",
+        "tests/rushPrimitiveCloudFit.test.ts"
       ],
       "remainingQualification": [
         "local sampled least-squares result only; no global optimum or continuous error certificate",
@@ -6084,7 +6086,7 @@
     {
       "id": "NURBS-0207",
       "name": "восстановление кругового цилиндра по облаку точек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-reconstruction",
       "category": "Восстановление аналитической формы",
       "nativeApi": "nurbs_core::analysis::primitive_fit::fit_cylinder",
@@ -6092,7 +6094,9 @@
         "crates/nurbs-core/src/analysis/primitive_fit.rs",
         "crates/nurbs-core/tests/primitive_fit_contracts.rs",
         "docs/design/nurbs-primitive-fitting.md",
-        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/fit-cylinder-cloud.r",
+        "tests/rushPrimitiveCloudFit.test.ts"
       ],
       "remainingQualification": [
         "local sampled least-squares result only; no global optimum or continuous error certificate",
@@ -6102,7 +6106,7 @@
     {
       "id": "NURBS-0208",
       "name": "восстановление кругового конуса по облаку точек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-reconstruction",
       "category": "Восстановление аналитической формы",
       "nativeApi": "nurbs_core::analysis::primitive_fit::fit_cone",
@@ -6110,7 +6114,9 @@
         "crates/nurbs-core/src/analysis/primitive_fit.rs",
         "crates/nurbs-core/tests/primitive_fit_contracts.rs",
         "docs/design/nurbs-primitive-fitting.md",
-        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/fit-cone-cloud.r",
+        "tests/rushPrimitiveCloudFit.test.ts"
       ],
       "remainingQualification": [
         "local sampled least-squares result only; no global optimum or continuous error certificate",
@@ -6120,7 +6126,7 @@
     {
       "id": "NURBS-0209",
       "name": "восстановление кругового тора по облаку точек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-reconstruction",
       "category": "Восстановление аналитической формы",
       "nativeApi": "nurbs_core::analysis::primitive_fit::fit_torus",
@@ -6128,7 +6134,9 @@
         "crates/nurbs-core/src/analysis/primitive_fit.rs",
         "crates/nurbs-core/tests/primitive_fit_contracts.rs",
         "docs/design/nurbs-primitive-fitting.md",
-        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/fit-torus-cloud.r",
+        "tests/rushPrimitiveCloudFit.test.ts"
       ],
       "remainingQualification": [
         "local sampled least-squares result only; no global optimum or continuous error certificate",
@@ -6138,7 +6146,7 @@
     {
       "id": "NURBS-0210",
       "name": "аппроксимация плоскости по облаку точек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-reconstruction",
       "category": "Восстановление аналитической формы",
       "nativeApi": "nurbs_core::analysis::primitive_fit::fit_plane",
@@ -6146,7 +6154,9 @@
         "crates/nurbs-core/src/analysis/primitive_fit.rs",
         "crates/nurbs-core/tests/primitive_fit_contracts.rs",
         "docs/design/nurbs-primitive-fitting.md",
-        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/fit-plane-cloud.r",
+        "tests/rushPrimitiveCloudFit.test.ts"
       ],
       "remainingQualification": [
         "local sampled least-squares result only; no global optimum or continuous error certificate",

@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "78ca45b71ee4b8a188324b4c478165104f825ad55a7ab2f9e3d3e2cbcf201093",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/fit-sphere-cloud.r",
+      "exampleSha256": "a48fc0d272897a615f2d03f4ff6dfcc19a2a12970ce7b63751a4650bba374578",
+      "editorStats": "Объекты\n1\nТреугольники\n736\nОбъём\n32,79\nПлощадь\n49,83\nГотово · 62 ms"
+    },
+    {
+      "example": "examples/rush/fit-cylinder-cloud.r",
+      "exampleSha256": "395e8e6bfdc311865da53979a808bfbc67069ea0c42f088e1628ded9859b156e",
+      "editorStats": "Объекты\n1\nТреугольники\n768\nОбъём\n0\nПлощадь\n120,12\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/fit-cone-cloud.r",
+      "exampleSha256": "783862a2f745b9fe318e781f35f70023dcf083bc36a6dd4cf829f140d176e988",
+      "editorStats": "Объекты\n1\nТреугольники\n752\nОбъём\n0\nПлощадь\n59,59\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/fit-torus-cloud.r",
+      "exampleSha256": "3794e0aeb559f58e66fd17a88ae1ecc46767e3bf575d23520b6a55d111fdee54",
+      "editorStats": "Объекты\n1\nТреугольники\n768\nОбъём\n76,17\nПлощадь\n157,27\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/fit-plane-cloud.r",
+      "exampleSha256": "96ffcf65440ef30e3968b9a542cd21cb9010478f843294a1d3c3ca2823ade34b",
+      "editorStats": "Объекты\n1\nТреугольники\n768\nОбъём\n0\nПлощадь\n8\nГотово · 5 ms"
+    }
+  ]
+}
