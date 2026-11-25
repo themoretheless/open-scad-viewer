@@ -5522,7 +5522,7 @@
     {
       "id": "NURBS-0180",
       "name": "проверка G0 между поверхностями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5533,13 +5533,15 @@
       "evidence": [
         "crates/nurbs-core/src/join/surface_join.rs",
         "crates/nurbs-core/tests/surface_join.rs",
-        "docs/design/nurbs-surface-g0.md"
+        "docs/design/nurbs-surface-g0.md",
+        "examples/rush/surface-seam-continuity.r",
+        "tests/rushSurfaceSeams.test.ts"
       ]
     },
     {
       "id": "NURBS-0181",
       "name": "проверка G1 между поверхностями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5551,14 +5553,16 @@
       "evidence": [
         "crates/nurbs-core/src/join/surface_g1.rs",
         "crates/nurbs-core/tests/surface_g1.rs",
-        "docs/design/nurbs-surface-g1.md"
+        "docs/design/nurbs-surface-g1.md",
+        "examples/rush/surface-seam-continuity.r",
+        "tests/rushSurfaceSeams.test.ts"
       ],
       "nativeApi": "nurbs_core::surface_g1::inspect"
     },
     {
       "id": "NURBS-0182",
       "name": "проверка G2 между поверхностями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5577,7 +5581,9 @@
         "crates/nurbs-core/tests/surface_g2.rs",
         "docs/design/nurbs-surface-g2-affine.md",
         "docs/qualification/nurbs-g2-nonaffine-2026-10-15/native-tests.json",
-        "docs/qualification/nurbs-g2-nonaffine-2026-10-15/native-tests.log"
+        "docs/qualification/nurbs-g2-nonaffine-2026-10-15/native-tests.log",
+        "examples/rush/surface-seam-continuity.r",
+        "tests/rushSurfaceSeams.test.ts"
       ],
       "partialGeometricApi": "nurbs_core::surface_shape_operator::at",
       "partialContinuousGeometricApi": "nurbs_core::surface_shape_operator::boundary_bounds",

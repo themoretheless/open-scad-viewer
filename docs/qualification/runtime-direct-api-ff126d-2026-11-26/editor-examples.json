@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "ff126d7f3ea8611f95c4ee373adfc00691ff31af43ba11d6e1f78defb6d33fe0",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/surface-seam-continuity.r",
+      "exampleSha256": "75b956d1ccadb45b5160bb48934dcd3dcb5f51e7c818636fecf1844ef2a5e250",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n1\nГотово · 70 ms"
+    }
+  ]
+}
