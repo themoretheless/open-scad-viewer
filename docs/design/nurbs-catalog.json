@@ -6925,7 +6925,7 @@
     {
       "id": "NURBS-0242",
       "name": "Точное построение рациональных кривых поля производной на всех исходных пролётах с сохранением абсолютного параметра и односторонних следов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точное дифференцирование",
       "nativeApi": "nurbs_core::editing::exact_derivative::curve",
@@ -6941,7 +6941,9 @@
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/exact-curve-fields.r",
+        "tests/rushExactCurveFields.test.ts"
       ],
       "remainingQualification": [
         "Validated2D/3D curves, full fundamental-domain span cover, multispan/unclamped/periodic storage. Piecewise clamped output keeps original absolute clock and distinct one-sided traces; no invented derivative continuity. Exact de Boor extraction, common-factor cancellation and fresh stored-bit polynomial identity under unchanged1m-work/4096-bit/degree25/geometry caps. Exact storage or atomic whole-result refusal.",
@@ -7066,7 +7068,7 @@
     {
       "id": "NURBS-0247",
       "name": "Точное построение полей второй и третьей производных NURBS-кривой на всех исходных узловых участках",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точное дифференцирование",
       "nativeApi": "nurbs_core::editing::exact_derivative::curve_order",
@@ -7082,7 +7084,9 @@
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/exact-curve-fields.r",
+        "tests/rushExactCurveFields.test.ts"
       ],
       "remainingQualification": [
         "One family covers orders1..3 for validated2D/3D curves, matching existing rational jets; order1 preserves prior output/work. Rational derivatives can be nonzero above source polynomial degree. Every nonempty original fundamental span, physical absolute clocks and one-sided repeated/periodic traces. Direct original homogeneous recurrence, joint content reduction and fresh actual stored-bit proof against uncancelled original-source derivative targets. Unchanged1m-work/4096-bit/degree25/geometry caps; exact storage or atomic whole-result refusal.",
@@ -7092,7 +7096,7 @@
     {
       "id": "NURBS-0248",
       "name": "Точное построение скалярного поля квадрата скорости NURBS-кривой на всех исходных узловых участках",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точная дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_derivative::squared_speed",
@@ -7108,7 +7112,9 @@
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/exact-curve-fields.r",
+        "tests/rushExactCurveFields.test.ts"
       ],
       "remainingQualification": [
         "Scalar carrier [dot(Cprime,Cprime),0] or [dot(Cprime,Cprime),0,0] for validated2D/3D curves, not spatial positions or speed square root. Every original nonempty fundamental span, absolute physical clocks and one-sided repeated/periodic traces. Direct original homogeneous velocity numerators squared over W^4; no rounded intermediate derivative. Zero/stationary speeds accepted, including negative control poles for a nonnegative field. Joint content reduction, one whole-piece gauge and actual stored-bit proof against original uncancelled target. Unchanged1m-work/4096-bit/degree25/geometry bounds; exact storage or atomic whole-result refusal.",
@@ -7118,7 +7124,7 @@
     {
       "id": "NURBS-0249",
       "name": "Точное поле ненормированной бинормали пространственной NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точная дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_derivative::binormal",
@@ -7136,7 +7142,9 @@
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/exact-curve-fields.r",
+        "tests/rushExactCurveFields.test.ts"
       ],
       "remainingQualification": [
         "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",
@@ -7146,7 +7154,7 @@
     {
       "id": "NURBS-0250",
       "name": "Точное скалярное поле квадрата кривизны NURBS-кривой с доказательством регулярности исходного участка",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точная дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_derivative::squared_curvature",
@@ -7164,7 +7172,9 @@
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
         "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py",
+        "examples/rush/exact-circle-curvature.r",
+        "tests/rushExactCurveFields.test.ts"
       ],
       "remainingQualification": [
         "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",

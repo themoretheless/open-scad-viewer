@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "2f27771952ef6111de7807d6879ed8a366fec214dfb450b112ba7be06ab7a2a8",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/exact-curve-fields.r",
+      "exampleSha256": "e8aa619c458329670b61e8a6353cef70ebb77d9303a53b027938948a6af0923d",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n1,48\nГотово · 420 ms"
+    },
+    {
+      "example": "examples/rush/exact-circle-curvature.r",
+      "exampleSha256": "4423f891f9bc3386275a58059a1a78439d99f930a30fcea7047fed1491fdcc8b",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n3,14\nГотово · 8 ms"
+    }
+  ]
+}

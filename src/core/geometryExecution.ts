@@ -1,3 +1,4 @@
+import { RUNTIME_GEOMETRY_EVIDENCE_V66 } from './runtimeGeometryEvidenceV66'
 import { RUNTIME_GEOMETRY_EVIDENCE_V65 } from './runtimeGeometryEvidenceV65'
 import { RUNTIME_GEOMETRY_EVIDENCE_V64 } from './runtimeGeometryEvidenceV64'
 import { RUNTIME_GEOMETRY_EVIDENCE_V63 } from './runtimeGeometryEvidenceV63'
@@ -1250,16 +1251,31 @@ const ownRustCadRuntimeV66 = bindCurrentRuntime(
   ownRustCadManifestV1,
   'own-rust-node-v66',
   'own-rust-cad-v66',
-  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+  RUNTIME_GEOMETRY_EVIDENCE_V66,
 )
 const brepClosedRuntimeV66 = bindCurrentRuntime(
   brepClosedManifestV1,
   'brep-closed-v66',
   'rust-brep-closed-v66',
+  RUNTIME_GEOMETRY_EVIDENCE_V66,
+)
+
+const ownRustCadRuntimeV67 = bindCurrentRuntime(
+  ownRustCadManifestV1,
+  'own-rust-node-v67',
+  'own-rust-cad-v67',
+  CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
+)
+const brepClosedRuntimeV67 = bindCurrentRuntime(
+  brepClosedManifestV1,
+  'brep-closed-v67',
+  'rust-brep-closed-v67',
   CURRENT_RUNTIME_GEOMETRY_EVIDENCE,
 )
 
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v67': ownRustCadRuntimeV67,
+  'brep-closed-v67': brepClosedRuntimeV67,
   'own-rust-node-v66': ownRustCadRuntimeV66,
   'brep-closed-v66': brepClosedRuntimeV66,
   'own-rust-node-v65': ownRustCadRuntimeV65,
@@ -1448,8 +1464,8 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v66',
-  brep: 'brep-closed-v66',
+  mesh: 'own-rust-node-v67',
+  brep: 'brep-closed-v67',
 } as const)
 
 export type GeometryProviderAdmissionMode = 'legacy-grandfathered' | 'qualified' | 'denied'
