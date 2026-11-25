@@ -40,10 +40,14 @@ mod terminal_span_edit;
 #[path = "airfoil_section_requests.rs"]
 mod airfoil_section_requests;
 
+#[path = "signed_curvature_fit.rs"]
+mod signed_curvature_fit;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
     if matches!(op,"surface_highlight_lines" | "surface_reflection_lines" | "surface_isophote_analysis" | "surface_dent_detection") { return Some(optical_surface_analysis::inspect(v,op)); }
+    if matches!(op,"curve_from_curvature_samples" | "fit_biarc_piece") { return Some(signed_curvature_fit::build(v,op)); }
     if matches!(op,"simplify_linear_curve" | "extend_terminal_curve" | "extend_surface_boundary") { return Some(terminal_span_edit::apply(v,op)); }
     if matches!(op,"affine_control_support" | "surface_trace_agreement" | "geometry_bounds_union" | "geometry_conditioning" | "coordinate_frame_local" | "coordinate_frame_world") {
         return Some(coordinate_analysis::apply(v,op));

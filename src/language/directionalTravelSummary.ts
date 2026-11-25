@@ -20,6 +20,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'surface_reflection_lines') return russian ? 'Линии отражения' : 'Reflection lines'
   if (operation === 'surface_isophote_analysis') return russian ? 'Изофоты поверхности' : 'Surface isophotes'
   if (operation === 'surface_dent_detection') return russian ? 'Зоны вмятин' : 'Dent zones'
+  if (operation === 'curve_from_curvature_samples') return russian ? 'Кривая по знаковой кривизне' : 'Curve from signed curvature'
+  if (operation === 'fit_biarc_piece') return russian ? 'Участок биарки' : 'Fitted biarc piece'
   if (operation === 'simplify_linear_curve') return russian ? 'Точное упрощение линейной кривой' : 'Exact linear curve simplification'
   if (operation === 'extend_terminal_curve') return russian ? 'Продление конца кривой' : 'Terminal curve extension'
   if (operation === 'extend_surface_boundary') return russian ? 'Продление границы поверхности' : 'Surface boundary extension'

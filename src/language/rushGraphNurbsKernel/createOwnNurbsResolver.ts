@@ -522,6 +522,20 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'curve_from_curvature_samples': {
+            const {id:_id,op,...options}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;fitConverged:boolean}>(op,options)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'fit_biarc_piece': {
+            const {id:_id,input,op,...options}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;pieces:number}>(op,{curve:needCurve(input),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'simplify_linear_curve':
           case 'extend_terminal_curve': {
             const {op,id:_id,input,...options}=n

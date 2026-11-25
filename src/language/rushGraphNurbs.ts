@@ -1676,6 +1676,8 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('surface_reflection_lines'),input:id,light:z.tuple([scalar,scalar,scalar]),view_direction:z.tuple([scalar,scalar,scalar]),level:scalar,grid:z.tuple([z.number().int().min(2).max(256),z.number().int().min(2).max(256)]),jump_threshold:scalar}).strict(),
           z.object({id,op:z.literal('surface_isophote_analysis'),input:id,light:z.tuple([scalar,scalar,scalar]),cos_levels:z.array(scalar).min(2).max(64),grid:z.tuple([z.number().int().min(2).max(256),z.number().int().min(2).max(256)]),uneven_tolerance:scalar}).strict(),
           z.object({id,op:z.literal('surface_dent_detection'),input:id,grid:z.tuple([z.number().int().min(2).max(256),z.number().int().min(2).max(256)]),sigma_cells:scalar,residual_per_mm2:scalar}).strict(),
+          z.object({id,op:z.literal('fit_biarc_piece'),input:id,tolerance_mm:scalar,max_arcs:z.number().int().min(1).max(256),piece:z.number().int().nonnegative()}).strict(),
+          z.object({id,op:z.literal('curve_from_curvature_samples'),stations_mm:z.array(scalar).min(3).max(4096),curvatures_per_mm:z.array(scalar).min(3).max(4096),origin:z.tuple([scalar,scalar]),start_angle_rad:scalar,tolerance_mm:scalar}).strict(),
           z.object({id,op:z.literal('simplify_linear_curve'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('extend_terminal_curve'),input:id,source_end:z.enum(['start','end']),distance_mm:scalar,continuity_class:z.enum(['G1','G2','C2'])}).strict(),
           z.object({id,op:z.literal('extend_surface_boundary'),input:id,source_edge:z.enum(['u_min','u_max','v_min','v_max']),distance_mm:scalar,continuity_class:z.enum(['G1','G2','C2'])}).strict(),

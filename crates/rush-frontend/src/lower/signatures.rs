@@ -280,6 +280,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_reflection_lines" => &["light", "view_direction", "level", "grid", "jump_threshold"],
         "surface_isophote_analysis" => &["light", "cos_levels", "grid", "uneven_tolerance"],
         "surface_dent_detection" => &["grid", "sigma_cells", "residual_per_mm2"],
+        "fit_biarc_piece" => &["tolerance_mm","max_arcs","piece"],
+        "curve_from_curvature_samples" => &["stations_mm","curvatures_per_mm","origin","start_angle_rad","tolerance_mm"],
         "simplify_linear_curve" => &["max_work"],
         "extend_terminal_curve" => &["source_end", "distance_mm", "continuity_class"],
         "extend_surface_boundary" => &["source_edge", "distance_mm", "continuity_class"],
