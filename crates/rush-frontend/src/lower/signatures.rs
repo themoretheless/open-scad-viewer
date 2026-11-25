@@ -268,6 +268,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_trim_set_properties" => &["contours", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "moment_tolerance", "axis_point", "axis_vector", "reference_point", "radius_of_gyration"],
         "surface_measure_trimmed_mass" => &["contours", "component_densities", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "plane_point", "plane_normal", "axis_point", "axis_vector", "reference_point", "moment_tolerance", "radius_of_gyration", "balance_tolerance", "static_unbalance", "couple_unbalance", "plane_offsets", "plane_tolerances", "weight_radii", "weight_mass_limits", "installed_weights", "principal_axes", "probe_point", "probe_direction"],
         "curve_axial_derivative_peak" => &["axis_vector", "interval", "order", "tolerance_mm", "max_cells", "parameter_tolerance"],
+        "clean_offset_boundary" => &["inputs","distance_mm","even_odd","component","piece","max_pairs","max_edges","max_checks"],
+        "planar_toolpath_edge" => &["inputs","tool_radius_mm","stock_mm","stepover_mm","passes","tolerance_mm","pass_index","piece"],
         "embed_xy_curve" => &["height"],
         "planar_offset_piece" => &["distance_mm", "tolerance_mm", "max_cells", "piece"],
         "planar_knot_miter" => &["knot", "distance_mm", "extension_limit_mm", "tolerance_mm"],

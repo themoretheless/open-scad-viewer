@@ -8,6 +8,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'clean_offset_boundary') return russian ? 'Граница очищенной эквидистанты' : 'Clean offset boundary'
+  if (operation === 'planar_toolpath_edge') return russian ? 'Эквидистантная дорожка инструмента' : 'Planar toolpath'
   if (operation === 'planar_offset_piece') return russian ? 'Участок плоской эквидистанты' : 'Planar offset piece'
   if (operation === 'planar_knot_miter') return russian ? 'Угловой стык эквидистанты' : 'Offset miter at knot'
   if (operation === 'phase_aligned_section') return russian ? 'Фаза замкнутого сечения' : 'Closed section phase'

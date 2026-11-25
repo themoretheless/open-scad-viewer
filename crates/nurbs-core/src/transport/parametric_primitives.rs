@@ -13,7 +13,13 @@ mod surface_seam_measurements;
 #[path = "uv_loop_queries.rs"]
 mod uv_loop_queries;
 
+#[path = "planar_path_selection.rs"]
+mod planar_path_selection;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op,"clean_offset_boundary" | "planar_toolpath_edge") {
+        return Some(planar_path_selection::select(v,op));
+    }
     if op == "embed_xy_curve" {
         return Some((|| {
             let mut curve: crate::curve::Curve = field(v,"curve")?;

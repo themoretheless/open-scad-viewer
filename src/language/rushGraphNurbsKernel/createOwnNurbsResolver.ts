@@ -491,6 +491,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'clean_offset_boundary':
+          case 'planar_toolpath_edge': {
+            const {input,inputs,id:_id,op,...settings}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve|null;stop:string}>(op,{curves:[input,...inputs].map(needCurve),...settings})
+            if (!curve) throw new Error(op+': '+report.stop)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'embed_xy_curve': {
             result={kind:'curve',data:callGeometryRust<NurbsCurve>(n.op,{curve:needCurve(n.input),height:n.height})}
             break

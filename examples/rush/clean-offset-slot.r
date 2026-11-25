@@ -1,0 +1,11 @@
+// @rush/1
+edge0 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[0mm,0mm],[8mm,0mm]],weights:[1,1])
+edge1 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[8mm,0mm],[8mm,8mm]],weights:[1,1])
+edge2 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[8mm,8mm],[5mm,8mm]],weights:[1,1])
+edge3 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[5mm,8mm],[5mm,2mm]],weights:[1,1])
+edge4 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[5mm,2mm],[3mm,2mm]],weights:[1,1])
+edge5 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[3mm,2mm],[3mm,8mm]],weights:[1,1])
+edge6 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[3mm,8mm],[0mm,8mm]],weights:[1,1])
+edge7 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[0mm,8mm],[0mm,0mm]],weights:[1,1])
+path = edge0.clean_offset_boundary(distance_mm:1mm,even_odd:false,component:1,piece:0,max_pairs:10000,max_edges:1000,max_checks:10000,inputs:[edge1,edge2,edge3,edge4,edge5,edge6,edge7])
+show path.embed_xy_curve(height:0mm).surface_extrude(vector:[0mm,0mm,1mm]).tessellate(16,4)
