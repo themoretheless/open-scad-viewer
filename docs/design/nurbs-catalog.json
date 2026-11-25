@@ -5772,7 +5772,7 @@
     {
       "id": "NURBS-0191",
       "name": "адаптивная тесселяция кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5783,13 +5783,15 @@
       "evidence": [
         "crates/nurbs-core/src/tessellation/curve_tessellation.rs",
         "crates/nurbs-core/tests/curve_tessellation.rs",
-        "docs/design/nurbs-curve-tessellation-native.md"
+        "docs/design/nurbs-curve-tessellation-native.md",
+        "examples/rush/bounded-chord-mesh.r",
+        "tests/rushBoundedMesh.test.ts"
       ]
     },
     {
       "id": "NURBS-0192",
       "name": "адаптивная тесселяция поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5801,7 +5803,9 @@
       "evidence": [
         "crates/nurbs-core/src/tessellation/surface_tessellation.rs",
         "crates/nurbs-core/tests/surface_tessellation.rs",
-        "docs/design/nurbs-surface-tessellation-native.md"
+        "docs/design/nurbs-surface-tessellation-native.md",
+        "examples/rush/bounded-chord-mesh.r",
+        "tests/rushBoundedMesh.test.ts"
       ]
     },
     {

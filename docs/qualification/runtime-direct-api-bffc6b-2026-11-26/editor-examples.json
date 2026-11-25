@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "bffc6b58c4335e86454fe17e9e90b0524edac054e079fedc5cda7248bb2d7705",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/bounded-chord-mesh.r",
+      "exampleSha256": "0eea105072e9b75c4b8c4ef913e8ad582199eae1bf3b5aa93c20c67e486b8af0",
+      "editorStats": "Объекты\n1\nТреугольники\n32\nОбъём\n0\nПлощадь\n0,17\nГотово · 79 ms"
+    }
+  ]
+}
