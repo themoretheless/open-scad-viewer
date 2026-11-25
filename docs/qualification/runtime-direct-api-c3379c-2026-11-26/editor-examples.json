@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "c3379c50569e39eb004398c23cbf130515fd7691a20d663107cb8f9d180e8cf4",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/saddle-fields.r",
+      "exampleSha256": "f686e977f399f65109dc613cc2094e2a04aa5ac432310794cc1aab2e2926321d",
+      "editorStats": "Объекты\n1\nТреугольники\n576\nОбъём\n0\nПлощадь\n1,28\nГотово · 64 ms"
+    }
+  ]
+}
