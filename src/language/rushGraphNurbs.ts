@@ -330,6 +330,17 @@ export const rushGraphNurbsSchema = z
               max_deviation: scalar,
             })
             .strict(),
+          z.object({
+            id, op: z.literal('optical_dome'), center: vector, base_axes: z.tuple([scalar, scalar]), height: scalar,
+          }).strict(),
+          z.object({
+            id, op: z.literal('optical_lens'), center: vector, base_axes: z.tuple([scalar, scalar]),
+            sags: z.tuple([scalar, scalar]), vertex_thickness: scalar,
+          }).strict(),
+          z.object({
+            id, op: z.literal('cubic_wave_surface'), origin: vector,
+            width: scalar, length: scalar, amplitude: scalar, periods: scalar,
+          }).strict(),
           z
             .object({
               id,

@@ -160,6 +160,27 @@ fn try_dispatch_affine_pipes_and_helicoids(v: &Value, op: &str) -> Option<Result
                 field(v, "max_deviation")?,
             )?)
         })(),
+        "optical_dome" => (|| encode(crate::optical_shapes::dome(
+            field(v, "center")?, field(v, "base_axes")?, field(v, "height")?,
+        )?))(),
+        "optical_lens" => (|| {
+            let lens = crate::optical_shapes::lens(
+                field(v, "center")?, field(v, "base_axes")?,
+                field(v, "sags")?, field(v, "vertex_thickness")?,
+            )?;
+            let mut patches = vec![lens.upper, lens.lower];
+            patches.extend(lens.barrel);
+            encode(patches)
+        })(),
+        "cubic_wave_surface" => (|| {
+            encode(crate::wave_surface::cubic(
+                field(v, "origin")?,
+                field(v, "width")?,
+                field(v, "length")?,
+                field(v, "amplitude")?,
+                field(v, "periods")?,
+            )?)
+        })(),
         "surface_catenoid" => (|| {
             encode(catenoid::approximate(
                 field(v, "center")?,

@@ -1095,6 +1095,16 @@ export const approximateCatenaryNurbsCurve = (
 ): NurbsHelixApproximation =>
   callNurbsRust('curve_catenary', { center, scale, start_x: startX, end_x: endX, max_deviation: maxDeviation })
 
+export const opticalDome = (center: [number, number, number], baseAxes: [number, number], height: number): NurbsSurface =>
+  callNurbsRust('optical_dome', { center, base_axes: baseAxes, height })
+export const opticalLens = (
+  center: [number, number, number], baseAxes: [number, number], sags: [number, number], vertexThickness: number,
+): NurbsSurface[] => callNurbsRust('optical_lens', { center, base_axes: baseAxes, sags, vertex_thickness: vertexThickness })
+
+export const cubicWaveNurbsSurface = (
+  origin: [number, number, number], width: number, length: number, amplitude: number, periods: number,
+): NurbsSurface => callNurbsRust('cubic_wave_surface', { origin, width, length, amplitude, periods })
+
 export interface NurbsCatenoidApproximation {
   surface: NurbsSurface
   report: NurbsHelixApproximation['report']

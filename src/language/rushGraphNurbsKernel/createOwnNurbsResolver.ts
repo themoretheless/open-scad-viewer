@@ -99,6 +99,9 @@ import {
   approximateCatenaryNurbsCurve,
   approximateCatenoidNurbsPatches,
   approximateCatenoidNurbsSurface,
+  cubicWaveNurbsSurface,
+  opticalDome,
+  opticalLens,
   approximateClothoidNurbsCurve,
   approximateConicalHelixNurbsCurve,
   approximateCycloidNurbsCurve,
@@ -831,6 +834,17 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'optical_dome':
+            result = { kind: 'surface', data: opticalDome(n.center, n.base_axes, n.height) }
+            break
+          case 'optical_lens': {
+            const patches = opticalLens(n.center, n.base_axes, n.sags, n.vertex_thickness)
+            result = { kind: 'patches', data: { patches, faceIds: patches.map((_, i) => i) } }
+            break
+          }
+          case 'cubic_wave_surface':
+            result = { kind: 'surface', data: cubicWaveNurbsSurface(n.origin, n.width, n.length, n.amplitude, n.periods) }
+            break
           case 'catenoid_surface': {
             const approximation = approximateCatenoidNurbsSurface(
               n.center,
