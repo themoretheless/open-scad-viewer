@@ -20,6 +20,18 @@ fn differential_side(v: &Value, key: &str) -> Result<crate::curve_differential::
 
 fn try_dispatch_distance_trim_and_probes(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
+        "curve_self_contacts" => (|| {
+            use crate::curve_self_intersection::{inspect, Status};
+            let r = inspect(&field(v,"curve")?, field(v,"tolerance_mm")?, field(v,"max_cells")?, field(v,"max_pairs")?)?;
+            let status = match r.status { Status::Absent => "absent", Status::Present => "present", Status::Unresolved => "unresolved" };
+            Ok(json!({"status":status,"axis":r.axis,"cells":r.cells,"pairs":r.pairs,
+                "witnessSpans":r.witness_spans,"witnessPoint":r.witness_point}))
+        })(),
+        "surface_span_regularity" => (|| {
+            let r = crate::surface_regularity::inspect(&field(v,"surface")?, field(v,"max_cells")?)?;
+            Ok(json!({"spanwiseRegular":r.spanwise_regular,"interiorBasisC1":r.interior_basis_c1,
+                "cells":r.cells,"provenCells":r.proven_cells,"unresolved":r.unresolved.iter().map(|c|c.domain).collect::<Vec<_>>()}))
+        })(),
         "curve_curvature_torsion" => (|| {
             let r = crate::curve_differential::at(&field(v,"curve")?, field(v,"parameter")?, differential_side(v,"query_side")?)?;
             Ok(json!({"parameter":r.parameter,"side":format!("{:?}",r.side),"continuity":r.continuity,

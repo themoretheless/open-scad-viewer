@@ -649,6 +649,24 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'curve_self_contacts': {
+            const { id:_id, op, input, ...options } = n
+            const curve = needCurve(input)
+            const report = callGeometryRust<object>(op,{curve,...options})
+            constructionReports[key] = {measurement:{operation:op,report}}
+            result = {kind:'curve',data:curve}
+            break
+          }
+          case 'surface_self_contacts':
+          case 'surface_span_regularity': {
+            const surface = needSurface(n.input)
+            const report = n.op === 'surface_self_contacts'
+              ? callGeometryRust<object>('nurbs_surface_self_intersection_audit',{surface,maxSpans:n.max_spans})
+              : callGeometryRust<object>(n.op,{surface,max_cells:n.max_cells})
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'surface_ray_hits': {
             const {id:_id,op,input,...parameters} = n
             const surface = needSurface(input)

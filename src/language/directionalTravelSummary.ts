@@ -8,6 +8,9 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'curve_self_contacts') return russian ? 'Самопересечения кривой' : 'Curve self-intersections'
+  if (operation === 'surface_self_contacts') return russian ? 'Самопересечения поверхности' : 'Surface self-intersections'
+  if (operation === 'surface_span_regularity') return russian ? 'Регулярность поверхности' : 'Surface regularity'
   if (operation === 'curve_plane_roots') return russian ? 'Пересечение кривой с плоскостью' : 'Curve–plane intersections'
   if (operation === 'curve_pair_crossings') return russian ? 'Пересечения кривых' : 'Curve crossings'
   if (operation === 'curve_plane_chart_crossings') return russian ? 'Пересечение кривой с плоской гранью' : 'Curve–planar patch intersections'
