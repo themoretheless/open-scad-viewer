@@ -873,6 +873,17 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'curve_derivative_field':
+          case 'curve_speed_squared_field':
+          case 'curve_binormal_field':
+          case 'curve_curvature_squared_field': {
+            const {id:_id,op,input,return_field,...settings} = n
+            const source = needCurve(input)
+            const {curve,...report} = callGeometryRust<{curve:NurbsCurve;spanCount:number}>(op,{source,...settings})
+            constructionReports[key] = {measurement:{operation:op,report}}
+            result = {kind:'curve',data:return_field ? curve : source}
+            break
+          }
           case 'projective_curve_exact': {
             const source = needCurve(n.input)
             const {curve,...report} = callGeometryRust<{curve:NurbsCurve;workUsed:number}>(n.op,{source,coefficients:n.coefficients,max_work:n.max_work})

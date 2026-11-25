@@ -46,7 +46,11 @@ mod signed_curvature_fit;
 #[path = "exact_merge_requests.rs"]
 mod exact_merge_requests;
 
+#[path = "exact_field_requests.rs"]
+mod exact_field_requests;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op,"curve_derivative_field" | "curve_speed_squared_field" | "curve_binormal_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
     if op == "projective_curve_exact" {
         return Some((|| {
             let report = crate::editing::exact_projective::curve(&field(v,"source")?,field(v,"coefficients")?,field(v,"max_work")?)?;
