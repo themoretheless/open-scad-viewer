@@ -279,6 +279,7 @@ pub fn compile(mut document: J) -> Result<J> {
             node["input"].as_str().into_iter().collect()
         };
         if ["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {if let Some(id)=node["orientation_guide"].as_str(){refs.push(id);}}
+        if let Some(target) = node["target_geometry"].as_str() { refs.push(target); }
         if s(node,"op")=="ribbon_surface" {refs.push(s(node,"width_law"));}
         if s(node,"op")=="variable_pipe_surface" {refs.push(s(node,"radius_law"));}
         if let Some(maps)=node.get("section_mappings") {

@@ -10,6 +10,23 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
 
 fn try_dispatch_distance_trim_and_probes(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
+        "curve_nearest_point" => (|| {
+            let point: Vec<f64> = field(v, "point")?;
+            let r = curve_distance::nearest_point(&field(v,"geometry")?, &point, field(v,"toleranceMm")?, field(v,"maxCells")?)?;
+            Ok(json!({"parameter":r.parameter,"point":r.point,"pointEnclosure":r.point_enclosure,
+                "distanceIntervalMm":r.distance_interval,"converged":r.converged,"reason":r.reason,"cells":r.cells}))
+        })(),
+        "surface_nearest_point" => (|| {
+            let r = surface_distance::nearest_point(&field(v,"geometry")?, field(v,"point")?, field(v,"toleranceMm")?, field(v,"maxCells")?)?;
+            Ok(json!({"parameters":r.parameters,"point":r.point,"pointEnclosure":r.point_enclosure,
+                "distanceIntervalMm":r.distance_interval,"converged":r.converged,"reason":r.reason,"cells":r.cells}))
+        })(),
+        "curve_surface_distance" => (|| {
+            let r = crate::curve_surface_distance::distance(&field(v,"a")?, &field(v,"b")?, field(v,"toleranceMm")?, field(v,"maxCells")?)?;
+            Ok(json!({"curveParameter":r.curve_parameter,"surfaceParameters":r.surface_parameters,"points":r.points,
+                "pointEnclosures":r.point_enclosures,"distanceIntervalMm":r.distance_interval,
+                "converged":r.converged,"reason":r.reason,"cells":r.cells}))
+        })(),
         "surface_distance" => (|| {
             Ok(surface_distance::distance(
                 &field(v, "a")?,

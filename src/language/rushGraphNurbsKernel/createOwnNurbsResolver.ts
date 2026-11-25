@@ -649,6 +649,26 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: curve }
             break
           }
+          case 'curve_nearest_point':
+          case 'surface_nearest_point':
+          case 'curve_pair_distance':
+          case 'curve_surface_distance':
+          case 'surface_pair_distance': {
+            const surfaceInput = n.op === 'surface_nearest_point' || n.op === 'surface_pair_distance'
+            const source = surfaceInput
+              ? { kind:'surface' as const, data:needSurface(n.input) }
+              : { kind:'curve' as const, data:needCurve(n.input) }
+            const options = { toleranceMm:n.tolerance_mm, maxCells:n.max_cells }
+            const report = 'probe_point' in n
+              ? callGeometryRust<object>(n.op, { geometry:source.data, point:n.probe_point, ...options })
+              : callGeometryRust<object>(n.op === 'curve_pair_distance' ? 'curve_distance' :
+                  n.op === 'surface_pair_distance' ? 'surface_distance' : n.op, {
+                    a:source.data, b:n.op === 'curve_pair_distance' ? needCurve(n.target_geometry) : needSurface(n.target_geometry), ...options,
+                  })
+            constructionReports[key] = { measurement:{operation:n.op,report} }
+            result = source
+            break
+          }
           case 'surface_area_bounds': {
             const surface = needSurface(n.input)
             const report = callGeometryRust<object>(n.op, { surface, tolerance_mm2:n.tolerance_mm2, max_cells:n.max_cells })

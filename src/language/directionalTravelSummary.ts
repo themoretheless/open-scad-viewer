@@ -8,6 +8,11 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'curve_nearest_point') return russian ? 'Ближайшая точка кривой' : 'Nearest curve point'
+  if (operation === 'surface_nearest_point') return russian ? 'Ближайшая точка поверхности' : 'Nearest surface point'
+  if (operation === 'curve_pair_distance') return russian ? 'Расстояние между кривыми' : 'Curve-to-curve distance'
+  if (operation === 'curve_surface_distance') return russian ? 'Расстояние от кривой до поверхности' : 'Curve-to-surface distance'
+  if (operation === 'surface_pair_distance') return russian ? 'Расстояние между поверхностями' : 'Surface-to-surface distance'
   if (operation === 'curve_length_bounds') return russian ? 'Длина кривой' : 'Curve length'
   if (operation === 'curve_station_at_length') return russian ? 'Точка на заданной длине' : 'Point at arc length'
   if (operation === 'curve_divide_by_length') return russian ? 'Деление по длине' : 'Equal arc-length division'

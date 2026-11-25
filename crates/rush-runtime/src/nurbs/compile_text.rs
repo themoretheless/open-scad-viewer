@@ -59,6 +59,9 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             if let Some(input) = node["input"].as_str() {
                 n["input"] = json!(select(input, depth + 1, by_id, params, found, selected)?)
             }
+            if let Some(target) = node["target_geometry"].as_str() {
+                n["target_geometry"] = json!(select(target, depth+1, by_id, params, found, selected)?);
+            }
             if s(node,"op")=="ribbon_surface" {n["width_law"]=json!(select(s(node,"width_law"),depth+1,by_id,params,found,selected)?);}
             if s(node,"op")=="variable_pipe_surface" {
                 n["radius_law"]=json!(select(s(node,"radius_law"),depth+1,by_id,params,found,selected)?);
@@ -172,7 +175,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "polygon_extrude",
             "polygon_sweep",
             "polygon_loft",
-            "ribbon_surface", "variable_pipe_surface", "pipe_surface", "screw_surface", "clothoid_curve", "spherical_spiral_curve", "toroidal_spiral_curve", "torus_knot_curve", "helicoid_patches", "circle_rectangle_transition", "ellipse_transition_surface", "circle_transition_surface", "helicoid_surface", "catenoid_patches", "superellipsoid_patches", "corrugated_bellows", "curve_length_bounds", "curve_station_at_length", "curve_divide_by_length", "surface_area_bounds", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface", "catenary_curve", "archimedean_spiral_curve", "epicycloid_curve", "hypocycloid_curve", "trochoid_curve", "cycloid_curve", "lissajous_curve", "logarithmic_spiral_curve", "involute_curve", "elliptic_helix_curve", "variable_pitch_helix_curve", "conical_helix_curve", "helix_curve", "surface_sweep", "brep_progressive_sweep", "progressive_sweep", "profile_sweep", "framed_sweep", "scaled_sweep", "two_guide_sweep", "twist_sweep",
+            "ribbon_surface", "variable_pipe_surface", "pipe_surface", "screw_surface", "clothoid_curve", "spherical_spiral_curve", "toroidal_spiral_curve", "torus_knot_curve", "helicoid_patches", "circle_rectangle_transition", "ellipse_transition_surface", "circle_transition_surface", "helicoid_surface", "catenoid_patches", "superellipsoid_patches", "corrugated_bellows", "curve_nearest_point", "surface_nearest_point", "curve_pair_distance", "curve_surface_distance", "surface_pair_distance", "curve_length_bounds", "curve_station_at_length", "curve_divide_by_length", "surface_area_bounds", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface", "catenary_curve", "archimedean_spiral_curve", "epicycloid_curve", "hypocycloid_curve", "trochoid_curve", "cycloid_curve", "lissajous_curve", "logarithmic_spiral_curve", "involute_curve", "elliptic_helix_curve", "variable_pitch_helix_curve", "conical_helix_curve", "helix_curve", "surface_sweep", "brep_progressive_sweep", "progressive_sweep", "profile_sweep", "framed_sweep", "scaled_sweep", "two_guide_sweep", "twist_sweep",
             "surface_loft",
             "ruled_surface",
             "coons_patch",
@@ -291,7 +294,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 continue;
             }
             if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
-            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "laws", "left_handed", "verified_profile", "inspect_spans", "herringbone", "internal", "use_pcurve", "edge_id", "exact_parameter", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
+            if ["id", "op", "orientation", "spacing", "target_geometry", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "laws", "left_handed", "verified_profile", "inspect_spans", "herringbone", "internal", "use_pcurve", "edge_id", "exact_parameter", "range_start", "range_end", "principal_axes", "static_unbalance", "couple_unbalance", "radius_of_gyration", "lower", "closed", "periodic", "periodic_u", "periodic_v", "construction", "cap_correction_authored_frame"].contains(&key.as_str()) {
                 continue;
             }
             if key=="section_mappings" {

@@ -1,0 +1,11 @@
+// @rush/1
+edge = line_curve(start:[0mm,0mm,0mm],end:[4mm,0mm,0mm])
+upper = line_curve(start:[0mm,0mm,3mm],end:[4mm,0mm,3mm])
+upper_wall = upper.surface_extrude(vector:[0mm,2mm,0mm])
+probe = edge.curve_nearest_point(probe_point:[2mm,0mm,3mm],tolerance_mm:0.001mm,max_cells:1024)
+gap = probe.curve_pair_distance(target_geometry:upper,tolerance_mm:0.001mm,max_cells:1024)
+clearance = gap.curve_surface_distance(target_geometry:upper_wall,tolerance_mm:0.001mm,max_cells:1024)
+lower_wall = clearance.surface_extrude(vector:[0mm,2mm,0mm])
+nearest = lower_wall.surface_nearest_point(probe_point:[2mm,1mm,3mm],tolerance_mm:0.001mm,max_cells:1024)
+result = nearest.surface_pair_distance(target_geometry:upper_wall,tolerance_mm:0.001mm,max_cells:1024)
+show result.tessellate(8,4)
