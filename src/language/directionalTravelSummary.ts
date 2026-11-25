@@ -60,6 +60,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'extend_surface_boundary') return russian ? 'Продление границы поверхности' : 'Surface boundary extension'
   if (operation === 'affine_control_support') return russian ? 'Аффинная размерность контрольных точек' : 'Affine dimension of controls'
   if (operation === 'surface_trace_agreement') return russian ? 'Согласованность пространственной и UV-кривой' : 'Surface trace agreement'
+  if (operation === 'signed_shell_volume') return russian ? 'Знаковый объём ориентированной оболочки' : 'Signed volume of an oriented shell'
   if (operation === 'geometry_bounds_union') return russian ? 'Общие габариты' : 'Combined geometry bounds'
   if (operation === 'geometry_conditioning') return russian ? 'Численные масштабы NURBS' : 'NURBS conditioning indicators'
   if (operation === 'shared_patch_mesh') return russian ? 'Сетка с общей границей патчей' : 'Shared patch mesh'

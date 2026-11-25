@@ -1683,6 +1683,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('extend_surface_boundary'),input:id,source_edge:z.enum(['u_min','u_max','v_min','v_max']),distance_mm:scalar,continuity_class:z.enum(['G1','G2','C2'])}).strict(),
           z.object({id,op:z.literal('affine_control_support'),input:id,max_work:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict(),
           z.object({id,op:z.literal('surface_trace_agreement'),input:id,inputs:z.tuple([id,id]),reverse:z.boolean(),tolerance_mm:scalar,max_cells:z.number().int().min(1).max(100000)}).strict(),
+          z.object({id,op:z.literal('signed_shell_volume'),input:id,inputs:z.array(id).max(2047),reversed_faces:z.array(z.number().int().nonnegative()).max(2048),flux_axis:z.tuple([scalar,scalar,scalar]).optional(),tolerance_mm3:scalar,max_cells:z.number().int().min(1).max(200000)}).strict(),
           z.object({id,op:z.literal('geometry_bounds_union'),input:id,inputs:z.array(id).max(2047)}).strict(),
           z.object({id,op:z.literal('geometry_conditioning'),input:id}).strict(),
           z.object({id,op:z.literal('coordinate_frame_local'),input:id,origin:z.array(scalar).min(2).max(3),frame_scale:scalar}).strict(),

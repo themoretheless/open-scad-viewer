@@ -288,6 +288,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "extend_surface_boundary" => &["source_edge", "distance_mm", "continuity_class"],
         "affine_control_support" => &["max_work"],
         "surface_trace_agreement" => &["inputs","reverse","tolerance_mm","max_cells"],
+        "signed_shell_volume" => &["inputs","reversed_faces","flux_axis","tolerance_mm3","max_cells"],
         "geometry_bounds_union" => &["inputs"],
         "geometry_conditioning" => &[],
         "coordinate_frame_local" | "coordinate_frame_world" => &["origin","frame_scale"],

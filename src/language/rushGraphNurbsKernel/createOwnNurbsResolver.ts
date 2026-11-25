@@ -568,6 +568,14 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'signed_shell_volume': {
+            const {input,inputs,id:_id,op,...settings}=n
+            const surfaces=[input,...inputs].map(ref=>needSurface(ref))
+            const report=callGeometryRust<object>(op,{surfaces,...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surfaces[0]!}
+            break
+          }
           case 'geometry_bounds_union':
           case 'geometry_conditioning':
           case 'coordinate_frame_local':
