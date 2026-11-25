@@ -925,6 +925,16 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'surface_cell_interpolation_error':
+          case 'surface_triangle_interpolation_error':
+          case 'surface_grid_interpolation_error': {
+            const {op,input,id:_id,...settings}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_quadric_support': {
             const surface = needSurface(n.input)
             const report = callGeometryRust<object>(n.op,{surface,quadric:n.quadric,max_work:n.max_work,max_cells:n.max_cells})
