@@ -377,6 +377,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/7BuhttlD.js':177_400,'assets/DEZSYXAD.js':203_600,'assets/mainSolid.worker-CpYWBzZ2.js':182_700}),
   }),
+  // Corrugated bellows inner and outer skins and annular rims: 20,523,458 raw bytes, 7,386,205 packed bytes and 14,334,287 total asset bytes.
+  '7dc9354d07964db84e3b6e251ead0f4b71d1e9c4c9604dd0b98c8dc37588b502':Object.freeze({
+    version:54,geometryChunkBytes:7_387_000,totalAssetBytes:14_335_000,rawGeometryBytes:20_524_000,
+    namedJsChunkBytes:Object.freeze({
+      index:271_800,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/X38o5o91.js':177_700,'assets/dYq9hK0k.js':203_600,'assets/mainSolid.worker-Bv9WsNA6.js':183_300}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

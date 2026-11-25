@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "7dc9354d07964db84e3b6e251ead0f4b71d1e9c4c9604dd0b98c8dc37588b502",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/corrugated-bellows.r",
+      "exampleSha256": "b055fe02267a6d7f9580538719fe32fa42c9e6f753eaacd24edbca06410ce6ce",
+      "editorStats": "Объекты\n1\nТреугольники\n6 144\nОбъём\n1 116,45\nПлощадь\n5 289,32\nГотово · 66 ms"
+    }
+  ]
+}

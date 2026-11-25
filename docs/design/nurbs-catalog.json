@@ -3458,17 +3458,19 @@
     {
       "id": "NURBS-0097",
       "name": "гофрированная оболочка",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::bellows::cubic",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/bellows.rs",
         "crates/nurbs-core/tests/bellows.rs",
-        "docs/design/nurbs-bellows.md"
+        "docs/design/nurbs-bellows.md",
+        "examples/rush/corrugated-bellows.r",
+        "tests/rushBellows.test.ts"
       ],
       "remainingQualification": [
         "explicit cubic corrugation with radial wall thickness; constant normal thickness is not supplied",
         "data-matched oriented surface collection, not a B-rep shell with owned incidence/manifold/solid certificate",
-        "binary64 conic/control rounding, viewer and export integration remain outside native completion"
+        "Binary64 conic/control rounding and export qualification remain open"
       ]
     },
     {
