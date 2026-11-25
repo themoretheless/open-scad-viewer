@@ -3423,11 +3423,13 @@
     {
       "id": "NURBS-0095",
       "name": "купол",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/optical_shapes.rs",
         "crates/nurbs-core/tests/optical_shapes.rs",
-        "docs/design/nurbs-optical-shapes.md"
+        "docs/design/nurbs-optical-shapes.md",
+        "examples/rush/optical-dome.r",
+        "tests/rushOpticalShapes.test.ts"
       ],
       "remainingQualification": [
         "rational surface construction is exact in real arithmetic; binary64 rounding is not certified",
@@ -3438,11 +3440,13 @@
     {
       "id": "NURBS-0096",
       "name": "линза",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/optical_shapes.rs",
         "crates/nurbs-core/tests/optical_shapes.rs",
-        "docs/design/nurbs-optical-shapes.md"
+        "docs/design/nurbs-optical-shapes.md",
+        "examples/rush/optical-lens.r",
+        "tests/rushOpticalShapes.test.ts"
       ],
       "remainingQualification": [
         "rational surface construction is exact in real arithmetic; binary64 rounding is not certified",
@@ -3470,17 +3474,19 @@
     {
       "id": "NURBS-0098",
       "name": "волновая поверхность",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::wave_surface::cubic",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/wave_surface.rs",
         "crates/nurbs-core/tests/wave_surface.rs",
-        "docs/design/nurbs-wave-surface.md"
+        "docs/design/nurbs-wave-surface.md",
+        "examples/rush/cubic-wave-surface.r",
+        "tests/rushCubicWave.test.ts"
       ],
       "remainingQualification": [
         "sinusoidal approximation not provided; explicit C1 cubic wave only",
         "binary64 continuous rounding certificate not provided",
-        "JSON/WASM/TypeScript/Rush/editor and export qualification"
+        "Export qualification"
       ]
     },
     {

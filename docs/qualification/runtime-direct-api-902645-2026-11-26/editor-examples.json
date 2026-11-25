@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "90264575ed4c93bffcad7a6cddbfbf50d747dc545720963329c44beeb522ae18",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/cubic-wave-surface.r",
+      "exampleSha256": "8f64042ef9e31cf10290850ec65ede9579a2d3bb9498829dc35d51c3ece3711b",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n279,26\nГотово · 31 ms"
+    },
+    {
+      "example": "examples/rush/optical-dome.r",
+      "exampleSha256": "6226bdc34d539199837da446e3758e5028b3ce83ed2c113194a34b56a9e1c08f",
+      "editorStats": "Объекты\n1\nТреугольники\n2 016\nОбъём\n0\nПлощадь\n108,73\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/optical-lens.r",
+      "exampleSha256": "bbcab6f5c269ee2340fe7d9a45f70fe19bf47e9f3222efa9c362001863c84ece",
+      "editorStats": "Объекты\n1\nТреугольники\n3 040\nОбъём\n0\nПлощадь\n127,44\nГотово · 15 ms"
+    }
+  ]
+}
