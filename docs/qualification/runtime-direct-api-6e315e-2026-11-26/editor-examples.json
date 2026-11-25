@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "6e315e84e3ccefff900ac47dec038a90df9bd10f11da275e6158f34943259bc4",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/exact-planar-torsion.r",
+      "exampleSha256": "128e88a4a0cff228b7ba82c42368afede80a0a69e3609a72e71ced915ab117cf",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,44\nГотово · 83 ms"
+    },
+    {
+      "example": "examples/rush/bounded-cubic-torsion.r",
+      "exampleSha256": "3cb327d03a5b6e6a8ee7b8fa1eced4327fd8520a410490af12c4b1d611b7ff45",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,44\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/exact-plane-curvatures.r",
+      "exampleSha256": "5a4ccf95ec4d87ce06e5266a0e188a94f2832d289a7952bfd061fd6fc20e0f5a",
+      "editorStats": "Объекты\n1\nТреугольники\n1 024\nОбъём\n0\nПлощадь\n1\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/bounded-saddle-curvatures.r",
+      "exampleSha256": "ec99f96cda81214d5580119317e7a5e1f4badf90e66ac08f0eb1306e11f79b75",
+      "editorStats": "Объекты\n1\nТреугольники\n1 024\nОбъём\n0\nПлощадь\n1,28\nГотово · 74 ms"
+    }
+  ]
+}
