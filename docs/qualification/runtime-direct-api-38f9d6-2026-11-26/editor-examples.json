@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "38f9d6c17208966015e9cf035c7badf1d7dae1c13271f8795b006aef2b2a8691",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/original-intersections.r",
+      "exampleSha256": "1a4f20877b0283695f9caf6613ad458a322fef9d5a33d845362f9787a8a6c54e",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 58 ms"
+    }
+  ]
+}

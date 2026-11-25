@@ -5061,7 +5061,7 @@
     {
       "id": "NURBS-0162",
       "name": "пересечение кривой с плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5077,14 +5077,16 @@
         "crates/cad-predicates/src/bspline_plane_incidence.rs",
         "crates/nurbs-core/src/analysis/curve_plane/quadratic.rs",
         "crates/cad-predicates/src/bspline_plane_roots.rs",
-        "crates/nurbs-core/src/analysis/curve_plane/sturm.rs"
+        "crates/nurbs-core/src/analysis/curve_plane/sturm.rs",
+        "examples/rush/original-intersections.r",
+        "tests/rushOriginalIntersections.test.ts"
       ],
       "nativeApi": "nurbs_core::curve_plane::inspect"
     },
     {
       "id": "NURBS-0163",
       "name": "пересечение двух пространственных кривых",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "evidence": [
@@ -5094,7 +5096,9 @@
         "crates/nurbs-core/src/intersection/planar_curve_curve.rs",
         "crates/nurbs-core/tests/planar_curve_crossings.rs",
         "docs/design/nurbs-certified-curve-crossings.md",
-        "docs/qualification/nurbs-certified-curve-crossings-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-certified-curve-crossings-2026-10-15/native-tests.json",
+        "examples/rush/original-intersections.r",
+        "tests/rushOriginalIntersections.test.ts"
       ],
       "remainingQualification": [
         "general nonlinear noncoplanar roots, nonliteral overlap, singular/tangent and knot-boundary contact qualification outside admitted native scope",
@@ -5106,7 +5110,7 @@
     {
       "id": "NURBS-0164",
       "name": "пересечение кривой с поверхностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5119,7 +5123,9 @@
         "crates/nurbs-core/src/intersection/certified_curve_plane.rs",
         "crates/nurbs-core/tests/certified_curve_plane.rs",
         "docs/design/nurbs-certified-curve-plane.md",
-        "docs/qualification/nurbs-certified-curve-plane-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-certified-curve-plane-2026-10-15/native-tests.json",
+        "examples/rush/original-intersections.r",
+        "tests/rushOriginalIntersections.test.ts"
       ],
       "nativeApi": "nurbs_core::intersection::intersect_curve_plane_certified_report",
       "nativeScope": "Complete original positive-rational 3D curve intersection with a containing axis-aligned rectangular affine plane chart: outward scalar Newton existence/uniqueness, exact clamped endpoints, spatial and nonunit UV bounds, subnormal gap exclusion, and full original coincident curve with continuously checked rational UV trace. Clipped/nonaffine/general surfaces retain explicit obligations."
@@ -5127,7 +5133,7 @@
     {
       "id": "NURBS-0165",
       "name": "пересечение луча с поверхностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5138,7 +5144,9 @@
       "evidence": [
         "crates/nurbs-core/src/analysis/ray_surface.rs",
         "crates/nurbs-core/tests/ray_surface.rs",
-        "docs/design/nurbs-ray-surface.md"
+        "docs/design/nurbs-ray-surface.md",
+        "examples/rush/original-intersections.r",
+        "tests/rushOriginalIntersections.test.ts"
       ]
     },
     {
