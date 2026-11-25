@@ -103,3 +103,39 @@ pub(super) fn pullback(v: &Value) -> Result<Value> {
         "domain":curve.domain(),"workUsed":r.work_used}),
     )
 }
+
+pub(super) fn trim(v: &Value, op: &str) -> Result<Value> {
+    let budget = field(v, "max_work")?;
+    if op == "certify_uv_chart" {
+        let curve = field(v, "source")?;
+        let r = clock::certify_pcurve_chart_domain(&curve, field(v, "uv_domain")?, budget)?;
+        let inside = r
+            .inside
+            .ok_or_else(|| input(format!("UV containment proof refused: {:?}", r.refusal)))?;
+        return Ok(json!({"curve":curve,"inside":inside,"workUsed":r.work_used}));
+    }
+    let loops: Vec<Vec<crate::curve::Curve>> = field(v, "loops")?;
+    let r = clock::mobius_trimmed_surface(
+        &field(v, "source")?,
+        &loops,
+        field(v, "clock_factor")?,
+        budget,
+    )?;
+    let result = r
+        .geometry
+        .ok_or_else(|| input(format!("Trim transfer refused: {:?}", r.refusal)))?;
+    let counts: Vec<_> = result.loops.iter().map(Vec::len).collect();
+    if op == "reclock_trim_surface" {
+        return Ok(json!({"surface":result.surface,"loopPieces":counts,"workUsed":r.work_used}));
+    }
+    let ring: usize = field(v, "loop_index")?;
+    let piece: usize = field(v, "piece")?;
+    let curve = result
+        .loops
+        .get(ring)
+        .and_then(|edges| edges.get(piece))
+        .ok_or_else(|| input("Selected trim piece is outside the transferred loops"))?;
+    Ok(
+        json!({"curve":curve,"loopPieces":counts,"selectedLoop":ring,"selectedPiece":piece,"domain":curve.domain(),"workUsed":r.work_used}),
+    )
+}

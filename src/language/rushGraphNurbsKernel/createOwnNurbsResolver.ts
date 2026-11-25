@@ -957,6 +957,7 @@ export function createOwnNurbsResolver(
           }
           case 'piecewise_clock_curve':
           case 'relayout_clock_curve':
+          case 'certify_uv_chart':
           case 'pullback_uv_clock':
           case 'mobius_bezier_curve':
           case 'mobius_spline_curve':
@@ -980,6 +981,21 @@ export function createOwnNurbsResolver(
             )
             constructionReports[key] = {measurement: {operation: op, report}}
             result = {kind: 'surface', data: surface}
+            break
+          }
+          case 'reclock_trim_surface':
+          case 'reclock_trim_piece': {
+            const {input, loops, op, id: _id, ...settings} = n
+            const args = {source: needSurface(input), loops: loops.map(loop => loop.map(needCurve)), ...settings}
+            if (op === 'reclock_trim_piece') {
+              const {curve, ...report} = callGeometryRust<{curve: NurbsCurve; workUsed: number}>(op,args)
+              constructionReports[key] = {measurement:{operation:op,report}}
+              result = {kind:'curve',data:curve}
+            } else {
+              const {surface, ...report} = callGeometryRust<{surface: NurbsSurface; workUsed: number}>(op,args)
+              constructionReports[key] = {measurement:{operation:op,report}}
+              result = {kind:'surface',data:surface}
+            }
             break
           }
           case 'compress_tensor_surface':
