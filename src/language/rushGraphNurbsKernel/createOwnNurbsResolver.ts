@@ -513,6 +513,21 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'simplify_linear_curve':
+          case 'extend_terminal_curve': {
+            const {op,id:_id,input,...options}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;complete?:boolean;stable?:boolean}>(op,{curve:needCurve(input),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'extend_surface_boundary': {
+            const {op,id:_id,input,...options}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface;stable:boolean}>(op,{surface:needSurface(input),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'affine_control_support': {
             const source=get(n.input)
             if(source.kind!=='curve' && source.kind!=='surface') throw new Error('Affine support needs a curve or surface')

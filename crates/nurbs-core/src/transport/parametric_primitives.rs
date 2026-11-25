@@ -34,9 +34,13 @@ mod optical_surface_analysis;
 #[path = "cloud_fit_surfaces.rs"]
 mod cloud_fit_surfaces;
 
+#[path = "terminal_span_edit.rs"]
+mod terminal_span_edit;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
     if matches!(op,"surface_highlight_lines" | "surface_reflection_lines" | "surface_isophote_analysis" | "surface_dent_detection") { return Some(optical_surface_analysis::inspect(v,op)); }
+    if matches!(op,"simplify_linear_curve" | "extend_terminal_curve" | "extend_surface_boundary") { return Some(terminal_span_edit::apply(v,op)); }
     if matches!(op,"affine_control_support" | "surface_trace_agreement" | "geometry_bounds_union" | "geometry_conditioning" | "coordinate_frame_local" | "coordinate_frame_world") {
         return Some(coordinate_analysis::apply(v,op));
     }
