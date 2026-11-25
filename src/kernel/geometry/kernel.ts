@@ -275,6 +275,11 @@ export function decodeNurbsResult<T>(result: unknown): T {
   }
   return envelope.value
 }
+/** Release the owned wheel build even when cancellation has closed the computation lease. */
+export function cancelWheelBuild(job: number): void {
+  decodeNurbsResult(request(0, { op: 'za_wheel_cancel', job }))
+}
+
 export function callGeometryRust<T>(op: string, args: object): T {
   if (isGeometryKernelCancelled()) {
     throw new GeometryLeaseError('Geometry kernel cancelled; refuse WASM request')

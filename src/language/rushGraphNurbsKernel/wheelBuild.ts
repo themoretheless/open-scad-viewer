@@ -1,4 +1,4 @@
-import { callGeometryRust } from '../../kernel/geometry/kernel'
+import { callGeometryRust, cancelWheelBuild } from '../../kernel/geometry/kernel'
 import type { NurbsBrep } from '../../kernel/geometry/brep'
 import type { OwnNurbsBuildControl } from '../rushGraphNurbsKernel'
 
@@ -24,6 +24,6 @@ export async function buildWheel(spec: object, control: OwnNurbsBuildControl): P
       if (result) return result
     }
   } finally {
-    callGeometryRust('za_wheel_cancel', {job})
+    cancelWheelBuild(job)
   }
 }
