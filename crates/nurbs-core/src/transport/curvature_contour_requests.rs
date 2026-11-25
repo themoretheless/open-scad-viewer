@@ -112,6 +112,67 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
                 json!({"domain":r.domain,"graph":graph(r.graph,r.refusal)?,"secondDerivative":r.second_derivative,"workUsed":r.work_used}),
             )
         }
+        "surface_gap_world_polyline"
+        | "surface_gap_world_length"
+        | "surface_gap_world_distance"
+        | "surface_gap_world_bounds" => {
+            let stations: Vec<f64> = field(v, "transverse")?;
+            let depth = field(v, "max_depth")?;
+            match op {
+                "surface_gap_world_polyline" => {
+                    let r = gap::certify_curvature_gap_world_polyline(
+                        &s, span, axis, level, &stations, depth, budget,
+                    )?;
+                    let status = graph(r.uv.graph, r.uv.refusal)?;
+                    let curve = if field::<bool>(v, "return_field")? {
+                        r.points
+                            .as_ref()
+                            .map(|rows| {
+                                crate::curve::Curve::from_polyline(
+                                    rows.iter().map(|p| p.to_vec()).collect(),
+                                )
+                            })
+                            .transpose()?
+                    } else {
+                        None
+                    };
+                    Ok(
+                        json!({"curve":curve,"domain":r.uv.domain,"graph":status,"pointsMm":r.points,"worldErrorUpperMm":r.world_error_upper,"workUsed":r.uv.work_used}),
+                    )
+                }
+                "surface_gap_world_length" => {
+                    let r = gap::measure_curvature_gap_contour(
+                        &s, span, axis, level, &stations, depth, budget,
+                    )?;
+                    Ok(
+                        json!({"graph":graph(r.graph,r.refusal)?,"lengthBoundsMm":r.length_bounds,"segmentBoundsMm":r.segment_bounds,"workUsed":r.work_used}),
+                    )
+                }
+                "surface_gap_world_distance" => {
+                    let r = gap::distance_to_curvature_gap_contour(
+                        &s,
+                        span,
+                        axis,
+                        level,
+                        field(v, "probe_point")?,
+                        &stations,
+                        depth,
+                        budget,
+                    )?;
+                    Ok(
+                        json!({"graph":graph(r.graph,r.refusal)?,"distanceBoundsMm":r.distance_bounds,"upperSegment":r.upper_segment,"workUsed":r.work_used}),
+                    )
+                }
+                _ => {
+                    let r = gap::bound_curvature_gap_contour(
+                        &s, span, axis, level, &stations, depth, budget,
+                    )?;
+                    Ok(
+                        json!({"domain":r.uv.domain,"graph":graph(r.uv.graph,r.uv.refusal)?,"worldBoundsMm":r.bounds,"segmentBoxesMm":r.segment_bounds,"workUsed":r.uv.work_used}),
+                    )
+                }
+            }
+        }
         _ => Err(input("Unknown curvature contour query")),
     }
 }

@@ -933,6 +933,15 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'surface_gap_world_polyline': {
+            const {op,id:_id,input,return_field,...settings}=n
+            const surface=needSurface(input)
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve|null;worldErrorUpperMm:number[]|null}>(op,{surface,...settings,return_field})
+            constructionReports[key]={measurement:{operation:op,report}}
+            if(return_field && !curve) throw new Error('The selected cell has no certified world polyline')
+            result=return_field && curve ? {kind:'curve',data:curve} : {kind:'surface',data:surface}
+            break
+          }
           case 'surface_umbilic_cells':
           case 'surface_umbilic_regions':
           case 'surface_gap_comparison':
@@ -941,6 +950,9 @@ export function createOwnNurbsResolver(
           case 'surface_gap_edge_roots':
           case 'surface_gap_contour_graph':
           case 'surface_gap_contour_samples':
+          case 'surface_gap_world_length':
+          case 'surface_gap_world_distance':
+          case 'surface_gap_world_bounds':
           case 'surface_gap_uv_polyline':
           case 'surface_gap_adaptive_polyline':
           case 'surface_gap_second_derivative':

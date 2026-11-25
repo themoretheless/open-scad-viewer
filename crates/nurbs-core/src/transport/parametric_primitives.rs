@@ -81,7 +81,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"surface_cell_interpolation_error" | "surface_triangle_interpolation_error" | "surface_grid_interpolation_error") { return Some(interpolation_error_requests::inspect(v,op)); }
     if op == "signed_shell_volume" { return Some(oriented_volume_request::volume(v)); }
     if matches!(op,"surface_umbilic_cells" | "surface_umbilic_regions" | "surface_gap_comparison" | "surface_gap_ranges" | "surface_gap_regions") { return Some(umbilic_requests::inspect(v,op)); }
-    if matches!(op,"surface_gap_edge_roots" | "surface_gap_contour_graph" | "surface_gap_contour_samples" | "surface_gap_uv_polyline" | "surface_gap_adaptive_polyline" | "surface_gap_second_derivative" | "surface_gap_second_order_polyline" | "surface_gap_contour_slope") { return Some(curvature_contour_requests::inspect(v,op)); }
+    if matches!(op,"surface_gap_edge_roots" | "surface_gap_contour_graph" | "surface_gap_contour_samples" | "surface_gap_world_polyline" | "surface_gap_world_length" | "surface_gap_world_distance" | "surface_gap_world_bounds" | "surface_gap_uv_polyline" | "surface_gap_adaptive_polyline" | "surface_gap_second_derivative" | "surface_gap_second_order_polyline" | "surface_gap_contour_slope") { return Some(curvature_contour_requests::inspect(v,op)); }
     if op == "surface_quadric_support" {
         return Some((|| {
             let r = crate::analysis::implicit_quadric::inspect(&field(v,"surface")?,field(v,"quadric")?,field(v,"max_work")?,field(v,"max_cells")?)?;
