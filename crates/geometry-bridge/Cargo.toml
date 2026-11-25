@@ -14,6 +14,7 @@ gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]
 
 [dependencies]
+brotli = { version = "=8.0.4", default-features = false, features = ["std"] }
 num-rational = "0.4.2"
 flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }
 brep-intersect = { workspace = true, features = ["codec"] }

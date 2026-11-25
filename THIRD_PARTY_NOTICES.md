@@ -57,6 +57,8 @@ imports. Its compressed bytes are separate from the geometry artifact; the
 ordinary repository-owned DEFLATE decoder loads this bootstrap. The complete
 license notice is copied into the browser distribution by Vite's public assets.
 
+The geometry kernel also uses `brotli` 8.0.4 for lossless compression of large native snapshots. The encoder’s BSD and MIT notices are included in [public/third-party/brotli.txt](public/third-party/brotli.txt).
+
 ## Linear truss numerical solver
 
 - Crate: `nalgebra` 0.35.0, pinned in `crates/Cargo.lock`

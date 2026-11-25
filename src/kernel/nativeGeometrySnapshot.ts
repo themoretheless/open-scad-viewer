@@ -12,7 +12,7 @@ export type ProbedJson = any
 export function readNativeGeometryData(artifact: NativeGeometryArtifact): ProbedJson {
   if (!isNativeGeometryArtifact(artifact)) throw new Error('Invalid native geometry snapshot')
   const data = JSON.parse(artifact.geometryJson)
-  return data?.encoding === 'native-deflate-json/1'
+  return (data?.encoding === 'native-deflate-json/1' || data?.encoding === 'native-brotli-json/1')
     ? JSON.parse(callGeometryRust<string>('native_geometry_snapshot_unpack', { snapshot: data }))
     : data
 }

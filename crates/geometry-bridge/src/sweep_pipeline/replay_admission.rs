@@ -7,7 +7,7 @@ pub(super) fn inspect(v: &Value) -> Result<Option<Value>> {
     }
     let packet: Value = value_codec::from_str(&field::<String>(v, "geometryJson")?)
         .map_err(|_| input("Invalid sweep snapshot binding"))?;
-    let packet=if packet["encoding"]==json!("native-deflate-json/1") {
+    let packet=if crate::native_snapshot::is_packed(&packet) {
         let decoded=crate::native_snapshot::unpack(json!({"snapshot":packet}))?;
         value_codec::from_str::<Value>(decoded.as_str().ok_or_else(||input("Invalid decoded native snapshot"))?)
             .map_err(|_|input("Invalid decoded native snapshot JSON"))?

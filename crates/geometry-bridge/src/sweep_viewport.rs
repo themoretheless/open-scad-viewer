@@ -69,7 +69,7 @@ pub fn read(v: Value) -> Result<Value> {
     let Ok(document) = value_codec::from_str::<Value>(&text) else {
         return Ok(Value::Null);
     };
-    let document=if document["encoding"]==json!("native-deflate-json/1") {
+    let document=if crate::native_snapshot::is_packed(&document) {
         let decoded=crate::native_snapshot::unpack(json!({"snapshot":document}))?;
         value_codec::from_str::<Value>(decoded.as_str().ok_or_else(||crate::input("Invalid decoded sweep viewport packet"))?)
             .map_err(|_|crate::input("Invalid decoded sweep viewport JSON"))?

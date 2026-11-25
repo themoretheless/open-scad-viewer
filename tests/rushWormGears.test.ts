@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildTextNurbsScene} from '../src/language/rushFrontendScene'
 
@@ -7,9 +8,13 @@ for (const kind of ['worm','wheel']) {
   it(`builds the finite ZA ${kind} from the Rush profile and preserves its original walls`,async()=>{
     const source=readFileSync(`examples/rush/finite-za-${kind}.r`,'utf8')
     const scene=await buildTextNurbsScene(compileRushFrontend(source).document)
-    const model=JSON.parse(scene.meshes[0]!.nativeGeometry!.geometryJson).geometry
+    const model=readNativeGeometryData(scene.meshes[0]!.nativeGeometry!).geometry
     const report=JSON.parse(scene.measurements![0]!.report)
     expect(model.bodies).toHaveLength(1)
+    if (kind === 'wheel') {
+      expect(model.edges).toHaveLength(1680)
+      expect(model.faces).toHaveLength(722)
+    }
     expect(model.shells[0].closed).toBe(true)
     expect(report.wallErrorUpperMm).toBeGreaterThan(0)
     expect(report.wallErrorUpperMm).toBeLessThanOrEqual(1e-4)
