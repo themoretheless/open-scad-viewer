@@ -877,7 +877,13 @@ export function createOwnNurbsResolver(
           case 'surface_partial_field':
           case 'bounded_surface_area_normal_field':
           case 'surface_area_normal_field':
+          case 'bounded_surface_gaussian_field':
+          case 'bounded_surface_mean_squared_field':
+          case 'bounded_surface_principal_gap_squared_field':
           case 'bounded_surface_metric_field':
+          case 'surface_gaussian_field':
+          case 'surface_mean_squared_field':
+          case 'surface_principal_gap_squared_field':
           case 'surface_metric_field':
           case 'bounded_surface_mixed_partial_field':
           case 'surface_mixed_partial_field': {
@@ -890,7 +896,9 @@ export function createOwnNurbsResolver(
           }
           case 'bounded_curve_derivative_field':
           case 'curve_derivative_field':
+          case 'bounded_curve_torsion_field':
           case 'bounded_curve_speed_squared_field':
+          case 'curve_torsion_field':
           case 'curve_speed_squared_field':
           case 'bounded_curve_binormal_field':
           case 'curve_binormal_field':

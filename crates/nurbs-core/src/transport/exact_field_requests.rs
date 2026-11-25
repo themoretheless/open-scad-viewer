@@ -6,14 +6,23 @@ pub(super) fn curve_field(v: &Value, op: &str) -> Result<Value> {
     let budget = field(v, "max_work")?;
     let (pieces, error_upper, work_used) = if op.starts_with("bounded_") {
         use crate::editing::bounded_differential as bounded;
-        let kind = match op {
-            "bounded_curve_derivative_field" => bounded::Field::Derivative(field(v, "order")?),
-            "bounded_curve_speed_squared_field" => bounded::Field::SquaredSpeed,
-            "bounded_curve_binormal_field" => bounded::Field::Binormal,
-            "bounded_curve_curvature_squared_field" => bounded::Field::SquaredCurvature,
-            _ => return Err(input("Unknown bounded curve field")),
+        let r = match op {
+            "bounded_curve_torsion_field" => {
+                bounded::torsion(&source, field(v, "field_error")?, budget)?
+            }
+            _ => {
+                let kind = match op {
+                    "bounded_curve_derivative_field" => {
+                        bounded::Field::Derivative(field(v, "order")?)
+                    }
+                    "bounded_curve_speed_squared_field" => bounded::Field::SquaredSpeed,
+                    "bounded_curve_binormal_field" => bounded::Field::Binormal,
+                    "bounded_curve_curvature_squared_field" => bounded::Field::SquaredCurvature,
+                    _ => return Err(input("Unknown bounded curve field")),
+                };
+                bounded::curve(&source, kind, field(v, "field_error")?, budget)?
+            }
         };
-        let r = bounded::curve(&source, kind, field(v, "field_error")?, budget)?;
         (
             r.pieces
                 .ok_or_else(|| input(format!("Bounded field refused: {:?}", r.refusal)))?,
@@ -30,6 +39,7 @@ pub(super) fn curve_field(v: &Value, op: &str) -> Result<Value> {
             "curve_curvature_squared_field" => {
                 exact_derivative::squared_curvature(&source, budget)?
             }
+            "curve_torsion_field" => exact_derivative::torsion(&source, budget)?,
             _ => return Err(input("Unknown exact curve field")),
         };
         (
@@ -63,18 +73,35 @@ pub(super) fn surface_field(v: &Value, op: &str) -> Result<Value> {
     let budget = field(v, "max_work")?;
     let (patches, error_upper, work_used) = if op.starts_with("bounded_") {
         use crate::editing::bounded_surface_differential as bounded;
-        let kind = match op {
-            "bounded_surface_partial_field" => match field::<String>(v, "direction")?.as_str() {
-                "u" => bounded::Field::Partial(Axis::U),
-                "v" => bounded::Field::Partial(Axis::V),
-                _ => return Err(input("Unknown derivative direction")),
-            },
-            "bounded_surface_mixed_partial_field" => bounded::Field::Mixed(field(v, "orders")?),
-            "bounded_surface_area_normal_field" => bounded::Field::AreaNormal,
-            "bounded_surface_metric_field" => bounded::Field::Metric,
-            _ => return Err(input("Unknown bounded surface field")),
+        let r = match op {
+            "bounded_surface_gaussian_field" => {
+                bounded::gaussian_curvature(&source, field(v, "field_error")?, budget)?
+            }
+            "bounded_surface_mean_squared_field" => {
+                bounded::squared_mean_curvature(&source, field(v, "field_error")?, budget)?
+            }
+            "bounded_surface_principal_gap_squared_field" => {
+                bounded::squared_principal_curvature_gap(&source, field(v, "field_error")?, budget)?
+            }
+            _ => {
+                let kind = match op {
+                    "bounded_surface_partial_field" => {
+                        match field::<String>(v, "direction")?.as_str() {
+                            "u" => bounded::Field::Partial(Axis::U),
+                            "v" => bounded::Field::Partial(Axis::V),
+                            _ => return Err(input("Unknown derivative direction")),
+                        }
+                    }
+                    "bounded_surface_mixed_partial_field" => {
+                        bounded::Field::Mixed(field(v, "orders")?)
+                    }
+                    "bounded_surface_area_normal_field" => bounded::Field::AreaNormal,
+                    "bounded_surface_metric_field" => bounded::Field::Metric,
+                    _ => return Err(input("Unknown bounded surface field")),
+                };
+                bounded::surface(&source, kind, field(v, "field_error")?, budget)?
+            }
         };
-        let r = bounded::surface(&source, kind, field(v, "field_error")?, budget)?;
         (
             r.patches
                 .ok_or_else(|| input(format!("Bounded field refused: {:?}", r.refusal)))?,
@@ -96,6 +123,11 @@ pub(super) fn surface_field(v: &Value, op: &str) -> Result<Value> {
             "surface_metric_field" => field_ops::metric(&source, budget)?,
             "surface_mixed_partial_field" => {
                 field_ops::mixed_partial(&source, field(v, "orders")?, budget)?
+            }
+            "surface_gaussian_field" => field_ops::gaussian_curvature(&source, budget)?,
+            "surface_mean_squared_field" => field_ops::squared_mean_curvature(&source, budget)?,
+            "surface_principal_gap_squared_field" => {
+                field_ops::squared_principal_curvature_gap(&source, budget)?
             }
             _ => return Err(input("Unknown exact surface field")),
         };
