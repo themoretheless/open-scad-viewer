@@ -6284,7 +6284,7 @@
     {
       "id": "NURBS-0217",
       "name": "восстановление плоской кривой по знаковой кривизне с отчётом интегрирования",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-curvature-biarc",
       "category": "Восстановление и аппроксимация кривых",
       "nativeApi": "nurbs_core::curve_reconstruction::reconstruct_from_curvature",
@@ -6293,7 +6293,9 @@
         "crates/nurbs-core/tests/curvature_reconstruction_contracts.rs",
         "docs/design/nurbs-curvature-reconstruction.md",
         "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json",
-        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json",
+        "examples/rush/curvature-biarc.r",
+        "tests/rushCurvatureFit.test.ts"
       ],
       "remainingQualification": [
         "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
@@ -6303,7 +6305,7 @@
     {
       "id": "NURBS-0218",
       "name": "численная аппроксимация конечными биарками с проверкой концов дуг",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-curvature-biarc",
       "category": "Восстановление и аппроксимация кривых",
       "nativeApi": "nurbs_core::biarc::fit_biares_report",
@@ -6312,7 +6314,9 @@
         "crates/nurbs-core/tests/biarc_contracts.rs",
         "docs/design/nurbs-biarc-fitting.md",
         "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json",
-        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json"
+        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json",
+        "examples/rush/curvature-biarc.r",
+        "tests/rushCurvatureFit.test.ts"
       ],
       "remainingQualification": [
         "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",

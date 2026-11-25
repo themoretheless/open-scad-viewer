@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "10e39fc869d216239a2d98f1e40c176b77f5961a0dfad890fca3263fc9279dae",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/curvature-biarc.r",
+      "exampleSha256": "cd4d8296570713eafb14104d1c904dddf82c665d3dcc6a9af20da647d1033301",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 46 ms"
+    }
+  ]
+}
