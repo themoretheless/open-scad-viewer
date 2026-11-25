@@ -1672,6 +1672,8 @@ export const rushGraphNurbsSchema = z
             installed_weights:z.array(z.array(z.tuple([scalar,scalar])).length(4)).length(2).optional(),
           }).strict(),
           z.object({ id, op: z.literal('curve_axial_derivative_peak'), input: id, axis_vector: z.array(scalar).min(2).max(3), interval, order: z.number().int().min(1).max(3), tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000), parameter_tolerance: scalar.optional() }).strict(),
+          z.object({id,op:z.literal('parallel_plane_sections'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offsets:z.array(scalar).min(1).max(1024),tolerance_mm:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('parallel_section_piece'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offsets:z.array(scalar).min(1).max(1024),tolerance_mm:scalar,max_work:z.number().int().min(1).max(1000000),section_index:z.number().int().nonnegative(),piece:z.number().int().nonnegative()}).strict(),
           z.object({id,op:z.literal('clean_offset_boundary'),input:id,inputs:z.array(id).min(3).max(255),distance_mm:scalar,even_odd:z.boolean(),component:z.number().int().nonnegative(),piece:z.number().int().nonnegative(),max_pairs:z.number().int().positive(),max_edges:z.number().int().positive(),max_checks:z.number().int().positive()}).strict(),
           z.object({id,op:z.literal('planar_toolpath_edge'),input:id,inputs:z.array(id).max(255),tool_radius_mm:scalar,stock_mm:scalar,stepover_mm:scalar,passes:z.number().int().positive(),tolerance_mm:scalar,pass_index:z.number().int().nonnegative(),piece:z.number().int().nonnegative()}).strict(),
           z.object({id,op:z.literal('embed_xy_curve'),input:id,height:scalar}).strict(),

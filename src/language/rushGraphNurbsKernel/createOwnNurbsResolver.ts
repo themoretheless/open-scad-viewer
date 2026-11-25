@@ -491,6 +491,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'parallel_plane_sections':
+          case 'parallel_section_piece': {
+            const {id:_id,op,input,...settings}=n
+            const surface=needSurface(input)
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve|null;complete:boolean;sections:object[]}>(op,{surface,...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result=curve ? {kind:'curve',data:curve} : {kind:'surface',data:surface}
+            break
+          }
           case 'clean_offset_boundary':
           case 'planar_toolpath_edge': {
             const {input,inputs,id:_id,op,...settings}=n
