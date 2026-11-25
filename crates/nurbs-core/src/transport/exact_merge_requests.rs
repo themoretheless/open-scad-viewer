@@ -73,3 +73,32 @@ pub(super) fn grid(v: &Value, op: &str) -> Result<Value> {
         }
     }
 }
+
+pub(super) fn split(v: &Value, op: &str) -> Result<Value> {
+    use crate::editing::exact_surface_knot_insertion::{split_tensor_surface, tile_tensor_surface};
+    let source = field(v, "source")?;
+    let budget = field(v, "max_work")?;
+    let (surface, columns, rows, index, used) = if op == "split_tensor_surface" {
+        let index: usize = field(v, "part")?;
+        if index > 1 { return Err(input("A tensor split has two parts")); }
+        let axis = match field::<String>(v, "direction")?.as_str() {
+            "u" => Axis::U, "v" => Axis::V, _ => return Err(input("Unknown split axis")),
+        };
+        let (columns, rows) = match axis { Axis::U => (2,1), Axis::V => (1,2) };
+        let r = split_tensor_surface(&source, axis, field(v,"parameter")?, budget)?;
+        let parts = r.parts.ok_or_else(|| input(format!("Exact tensor split refused: {:?}",r.refusal)))?;
+        let [left, right] = parts;
+        (if index==0 {left} else {right}, columns, rows, index, r.work_used)
+    } else {
+        let cuts_u: Vec<f64> = field(v,"cuts_u")?;
+        let cuts_v: Vec<f64> = field(v,"cuts_v")?;
+        let index = field(v,"patch_index")?;
+        let r = tile_tensor_surface(&source,&cuts_u,&cuts_v,budget)?;
+        let mut parts = r.patches.ok_or_else(|| input(format!("Exact tensor tiling refused: {:?}",r.refusal)))?;
+        if index >= parts.len() { return Err(input("Selected patch is outside the UV grid")); }
+        (parts.swap_remove(index),r.columns,r.rows,index,r.work_used)
+    };
+    let domain = [[surface.knots_u[surface.degree_u],surface.knots_u[surface.control_points.len()]],
+        [surface.knots_v[surface.degree_v],surface.knots_v[surface.control_points[0].len()]]];
+    Ok(json!({"surface":surface,"domain":domain,"columns":columns,"rows":rows,"selectedPatch":index,"workUsed":used}))
+}

@@ -945,6 +945,16 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface ?? surfaces[0]!}
             break
           }
+          case 'split_tensor_surface':
+          case 'tile_tensor_surface': {
+            const {input, op, id: _id, ...settings} = n
+            const {surface, ...report} = callGeometryRust<{surface: NurbsSurface; workUsed: number}>(
+              op, {source: needSurface(input), ...settings},
+            )
+            constructionReports[key] = {measurement: {operation: op, report}}
+            result = {kind: 'surface', data: surface}
+            break
+          }
           case 'compress_tensor_surface':
           case 'compress_tensor_surface_batch': {
             const settings = n.op === 'compress_tensor_surface'
