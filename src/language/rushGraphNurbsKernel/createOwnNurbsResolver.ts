@@ -491,6 +491,17 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'fit_sphere_cloud':
+          case 'fit_cylinder_cloud':
+          case 'fit_cone_cloud':
+          case 'fit_torus_cloud':
+          case 'fit_plane_cloud': {
+            const {id:_id,op,...settings}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface;rmsMm:number;maxDeviationMm:number}>(op,settings)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_highlight_lines':
           case 'surface_reflection_lines':
           case 'surface_isophote_analysis':

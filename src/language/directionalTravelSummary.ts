@@ -8,6 +8,11 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'fit_sphere_cloud') return russian ? 'Сфера по облаку точек' : 'Sphere fitted to cloud'
+  if (operation === 'fit_cylinder_cloud') return russian ? 'Цилиндр по облаку точек' : 'Cylinder fitted to cloud'
+  if (operation === 'fit_cone_cloud') return russian ? 'Конус по облаку точек' : 'Cone fitted to cloud'
+  if (operation === 'fit_torus_cloud') return russian ? 'Тор по облаку точек' : 'Torus fitted to cloud'
+  if (operation === 'fit_plane_cloud') return russian ? 'Плоскость по облаку точек' : 'Plane fitted to cloud'
   if (operation === 'surface_highlight_lines') return russian ? 'Бликовые линии' : 'Highlight lines'
   if (operation === 'surface_reflection_lines') return russian ? 'Линии отражения' : 'Reflection lines'
   if (operation === 'surface_isophote_analysis') return russian ? 'Изофоты поверхности' : 'Surface isophotes'

@@ -26,7 +26,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
     "circle_transition_surface",
     "helicoid_surface",
     "catenoid_patches",
-    "superellipsoid_patches", "corrugated_bellows", "curve_nearest_point", "surface_nearest_point", "curve_pair_distance", "curve_surface_distance", "surface_pair_distance", "curve_length_bounds", "curve_station_at_length", "curve_divide_by_length", "surface_area_bounds", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface",
+    "fit_sphere_cloud", "fit_cylinder_cloud", "fit_cone_cloud", "fit_torus_cloud", "fit_plane_cloud", "superellipsoid_patches", "corrugated_bellows", "curve_nearest_point", "surface_nearest_point", "curve_pair_distance", "curve_surface_distance", "surface_pair_distance", "curve_length_bounds", "curve_station_at_length", "curve_divide_by_length", "surface_area_bounds", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface",
     "catenary_curve",
     "archimedean_spiral_curve",
     "epicycloid_curve",
