@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "ee07007dbc630cd634fd56a3f300abf32844d7ee7ea9a8db03fa446c35f59950",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/terminal-span-edit.r",
+      "exampleSha256": "8e5fc166bf2b2a32c08c191e30dacf257900dc0efdc864674b35f6344f4e3438",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,5\nГотово · 406 ms"
+    }
+  ]
+}
