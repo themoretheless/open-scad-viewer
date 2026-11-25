@@ -20,6 +20,16 @@ fn differential_side(v: &Value, key: &str) -> Result<crate::curve_differential::
 
 fn try_dispatch_distance_trim_and_probes(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
+        "curve_join_continuity" => (|| {
+            use crate::curve_join::{inspect,Endpoint,Tolerances};
+            let endpoint = |key| match field::<String>(v,key)?.as_str() {
+                "start" => Ok(Endpoint::Start), "end" => Ok(Endpoint::End), _ => Err(input("Invalid curve endpoint")),
+            };
+            let r = inspect(&field(v,"curve")?, endpoint("source_end")?, &field(v,"target")?, endpoint("target_end")?,
+                Tolerances {position:field(v,"tolerance_mm")?, tangent:field(v,"tangent_tolerance")?, curvature:field(v,"curvature_tolerance_per_mm")?})?;
+            Ok(json!({"g0":format!("{:?}",r.g0),"g1":format!("{:?}",r.g1),"g2":format!("{:?}",r.g2),
+                "positionErrorMm":r.position_error,"tangentError":r.tangent_error,"curvatureErrorPerMm":r.curvature_error}))
+        })(),
         "curve_self_contacts" => (|| {
             use crate::curve_self_intersection::{inspect, Status};
             let r = inspect(&field(v,"curve")?, field(v,"tolerance_mm")?, field(v,"max_cells")?, field(v,"max_pairs")?)?;
