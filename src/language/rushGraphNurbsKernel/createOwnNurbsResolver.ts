@@ -957,6 +957,7 @@ export function createOwnNurbsResolver(
           }
           case 'piecewise_clock_curve':
           case 'relayout_clock_curve':
+          case 'pullback_uv_clock':
           case 'mobius_bezier_curve':
           case 'mobius_spline_curve':
           case 'fit_mobius_curve': {

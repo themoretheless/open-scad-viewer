@@ -366,6 +366,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "relayout_clock_curve" => &["span_factors","span_breaks","max_work"],
         "piecewise_clock_surface" => &["u_factors","v_factors","max_work"],
         "relayout_clock_surface" => &["u_factors","v_factors","u_breaks","v_breaks","max_work"],
+        "pullback_uv_clock" => &["uv_domain","clock_factor","piece","max_work"],
         "compress_tensor_surface" => &["max_work"],
         "merge_patch_strip" => &["inputs","direction","max_work"],
         "merge_patch_grid" => &["inputs","columns","max_work"],

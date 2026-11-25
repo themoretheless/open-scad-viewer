@@ -64,6 +64,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'relayout_clock_curve') return russian ? 'Перенос границ пролётов кривой' : 'relayout clock curve'
   if (operation === 'piecewise_clock_surface') return russian ? 'Параметризация пролётов поверхности' : 'piecewise clock surface'
   if (operation === 'relayout_clock_surface') return russian ? 'Перенос границ пролётов поверхности' : 'relayout clock surface'
+  if (operation === 'pullback_uv_clock') return russian ? 'Перенос UV-контура в новую параметризацию' : 'Transfer UV contour to new parameters'
   if (operation === 'compress_tensor_surface') return russian ? 'Точное упрощение поверхности' : 'Exact surface compression'
   if (operation === 'merge_patch_strip') return russian ? 'Объединение полосы патчей' : 'Merge patch strip'
   if (operation === 'merge_patch_grid') return russian ? 'Объединение сетки патчей' : 'Merge patch grid'

@@ -79,3 +79,27 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
         json!({"surface":surface,"uKnots":surface.knots_u,"vKnots":surface.knots_v,"workUsed":r.work_used}),
     )
 }
+
+pub(super) fn pullback(v: &Value) -> Result<Value> {
+    let r = clock::pullback_mobius_pcurve(
+        &field(v, "source")?,
+        field(v, "uv_domain")?,
+        field(v, "clock_factor")?,
+        field(v, "max_work")?,
+    )?;
+    let mut pieces = r
+        .pieces
+        .ok_or_else(|| input(format!("UV contour transfer refused: {:?}", r.refusal)))?;
+    let index: usize = field(v, "piece")?;
+    if index >= pieces.len() {
+        return Err(input(
+            "Requested UV piece is outside the transferred contour",
+        ));
+    }
+    let count = pieces.len();
+    let curve = pieces.swap_remove(index);
+    Ok(
+        json!({"curve":curve,"pieceCount":count,"selectedPiece":index,"degree":curve.degree,
+        "domain":curve.domain(),"workUsed":r.work_used}),
+    )
+}

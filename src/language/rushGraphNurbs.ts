@@ -1774,6 +1774,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('relayout_clock_curve'),input:id,span_factors:z.array(scalar).min(1).max(256),span_breaks:z.array(scalar).min(2).max(256),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('piecewise_clock_surface'),input:id,u_factors:z.array(scalar).min(1).max(256),v_factors:z.array(scalar).min(1).max(256),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('relayout_clock_surface'),input:id,u_factors:z.array(scalar).min(1).max(256),v_factors:z.array(scalar).min(1).max(256),u_breaks:z.array(scalar).min(2).max(256),v_breaks:z.array(scalar).min(2).max(256),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('pullback_uv_clock'),input:id,uv_domain:z.tuple([uv,uv]),clock_factor:uv,piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('compress_tensor_surface'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('merge_patch_strip'),input:id,inputs:z.array(id).max(31),direction:z.enum(['u','v']),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('merge_patch_grid'),input:id,inputs:z.array(id).max(31),columns:z.number().int().min(2).max(16),max_work:z.number().int().min(1).max(1000000)}).strict(),
