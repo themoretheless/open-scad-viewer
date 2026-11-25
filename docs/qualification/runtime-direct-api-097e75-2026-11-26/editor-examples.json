@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "097e751e8db7cbbcdf617b2cbab6156619916feeab278fc4453b6e877b165977",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/closed-section-phase.r",
+      "exampleSha256": "ffa62125476625903ec447f42464d7f6844c65cbdceef155b0d1357c23cae629",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 62 ms"
+    }
+  ]
+}

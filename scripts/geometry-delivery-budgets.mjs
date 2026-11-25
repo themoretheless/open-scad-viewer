@@ -473,6 +473,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/B6KMcSQD.js':181_500,'assets/BzIyG4MO.js':203_600,'assets/mainSolid.worker-DFkod1WV.js':190_200}),
   }),
+  // Closed-section landmark alignment and continuous shape error: 20,683,871 raw bytes, 7,440,630 packed bytes and 14,429,395 total asset bytes.
+  '097e751e8db7cbbcdf617b2cbab6156619916feeab278fc4453b6e877b165977':Object.freeze({
+    version:66,geometryChunkBytes:7_441_000,totalAssetBytes:14_430_000,rawGeometryBytes:20_684_000,
+    namedJsChunkBytes:Object.freeze({
+      index:275_100,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DuYYNNzv.js':181_800,'assets/EkORlYFN.js':203_600,'assets/mainSolid.worker-cRk-2lXm.js':190_900}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

@@ -5459,7 +5459,7 @@
     {
       "id": "NURBS-0176",
       "name": "согласование фазы замкнутых сечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5471,7 +5471,9 @@
       "evidence": [
         "crates/nurbs-core/src/join/section_phase.rs",
         "crates/nurbs-core/tests/section_phase.rs",
-        "docs/design/nurbs-section-phase.md"
+        "docs/design/nurbs-section-phase.md",
+        "examples/rush/closed-section-phase.r",
+        "tests/rushSectionPhase.test.ts"
       ]
     },
     {
