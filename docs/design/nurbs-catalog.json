@@ -5700,7 +5700,7 @@
     {
       "id": "NURBS-0188",
       "name": "очистка самопересечений offset-контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5714,7 +5714,9 @@
         "crates/nurbs-core/src/offset/orthogonal_cleanup.rs",
         "crates/nurbs-core/tests/orthogonal_offset_cleanup.rs",
         "docs/design/nurbs-orthogonal-offset-cleanup.md",
-        "docs/qualification/nurbs-orthogonal-offset-cleanup-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-orthogonal-offset-cleanup-2026-10-15/native-tests.json",
+        "examples/rush/clean-offset-slot.r",
+        "tests/rushOffsetPaths.test.ts"
       ],
       "nativeApi": "nurbs_core::curve_offset::cleanup_orthogonal_miter_offset",
       "nativeScope": "Exact original orthogonal affine NURBS line-wire miter offset construction and full source-to-arrangement image/incidence identity, including exact crossings, contacts, coincident multiplicities, independently admitted winding fill and explicit precision/resource/degeneracy refusals. This certifies nominal miter-chain regularization, not general smooth offset topology or Minkowski buffering."
@@ -5722,7 +5724,7 @@
     {
       "id": "NURBS-0189",
       "name": "плоская эквидистантная дорожка обработки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5739,7 +5741,9 @@
         "crates/nurbs-core/tests/curve_clearance.rs",
         "docs/design/nurbs-planar-toolpath.md",
         "docs/qualification/nurbs-planar-toolpath-2026-10-15/native-tests.json",
-        "docs/qualification/nurbs-planar-toolpath-2026-10-15/native-tests.log"
+        "docs/qualification/nurbs-planar-toolpath-2026-10-15/native-tests.log",
+        "examples/rush/square-toolpath.r",
+        "tests/rushOffsetPaths.test.ts"
       ]
     },
     {

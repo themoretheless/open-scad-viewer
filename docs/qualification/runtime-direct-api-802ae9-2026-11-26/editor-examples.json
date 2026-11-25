@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "802ae98e65e1b6a842bf4b042ff53dd798a1a2fd7dad7e0c34602f522f3ab587",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/clean-offset-slot.r",
+      "exampleSha256": "a53de4db54f2bff9a7692dbfb93440cd6f1b14e1691f7405f693c532db234d87",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n14\nГотово · 51 ms"
+    },
+    {
+      "example": "examples/rush/square-toolpath.r",
+      "exampleSha256": "6b09c02cb4522b4bc0c2b635e61f403e0b2415dbdc8f8ff7920feb9a05a1dee7",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n50,26\nГотово · 12 ms"
+    }
+  ]
+}
