@@ -8,6 +8,10 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   }
   if (['locate_input_parameter', 'locate_edge_parameter', 'locate_input_range', 'extract_input_range_curves', 'extract_input_range_curve_pairs'].includes(operation)) return russian ? 'Привязка ребра' : 'Edge binding'
   if (['evaluate_input_point','evaluate_input_tangents','classify_input_tangent_join','classify_input_vertex_join'].includes(operation)) return russian ? 'Геометрия ребра' : 'Edge geometry'
+  if (operation === 'surface_highlight_lines') return russian ? 'Бликовые линии' : 'Highlight lines'
+  if (operation === 'surface_reflection_lines') return russian ? 'Линии отражения' : 'Reflection lines'
+  if (operation === 'surface_isophote_analysis') return russian ? 'Изофоты поверхности' : 'Surface isophotes'
+  if (operation === 'surface_dent_detection') return russian ? 'Зоны вмятин' : 'Dent zones'
   if (operation === 'geometry_bounds_union') return russian ? 'Общие габариты' : 'Combined geometry bounds'
   if (operation === 'geometry_conditioning') return russian ? 'Численные масштабы NURBS' : 'NURBS conditioning indicators'
   if (operation === 'shared_patch_mesh') return russian ? 'Сетка с общей границей патчей' : 'Shared patch mesh'

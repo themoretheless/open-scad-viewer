@@ -491,6 +491,17 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'surface_highlight_lines':
+          case 'surface_reflection_lines':
+          case 'surface_isophote_analysis':
+          case 'surface_dent_detection': {
+            const {id:_id,input,op,...options}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'geometry_bounds_union':
           case 'geometry_conditioning':
           case 'coordinate_frame_local':
