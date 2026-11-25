@@ -37,7 +37,11 @@ mod cloud_fit_surfaces;
 #[path = "terminal_span_edit.rs"]
 mod terminal_span_edit;
 
+#[path = "airfoil_section_requests.rs"]
+mod airfoil_section_requests;
+
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op,"naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
     if matches!(op,"surface_highlight_lines" | "surface_reflection_lines" | "surface_isophote_analysis" | "surface_dent_detection") { return Some(optical_surface_analysis::inspect(v,op)); }
     if matches!(op,"simplify_linear_curve" | "extend_terminal_curve" | "extend_surface_boundary") { return Some(terminal_span_edit::apply(v,op)); }

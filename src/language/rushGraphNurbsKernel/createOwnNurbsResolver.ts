@@ -491,6 +491,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'naca_five_digit_profile':
+          case 'cst_spline_profile':
+          case 'cst_section_integrals': {
+            const {op,id:_id,...settings}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;chordMm:number}>(op,settings)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'fit_sphere_cloud':
           case 'fit_cylinder_cloud':
           case 'fit_cone_cloud':
