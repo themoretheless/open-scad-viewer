@@ -2011,16 +2011,18 @@
     {
       "id": "NURBS-0050",
       "name": "суперэллипсоид",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/superellipsoid.rs",
         "crates/nurbs-core/tests/superellipsoid.rs",
-        "docs/design/nurbs-superellipsoid.md"
+        "docs/design/nurbs-superellipsoid.md",
+        "examples/rush/superellipsoid-patches.r",
+        "tests/rushSuperellipsoid.test.ts"
       ],
       "remainingQualification": [
         "analytic interpolation estimate assumes exact samples; libm and binary64 control/evaluation rounding are not certified and no full within-tolerance certificate is claimed",
         "surface set is not a closed B-rep solid; pole singularities and octant orientation/topology are explicit",
-        "WASM, Rush, editor and export integration remain outside native completion"
+        "Export qualification remains open"
       ],
       "nativeApi": "nurbs_core::superellipsoid::approximate"
     },

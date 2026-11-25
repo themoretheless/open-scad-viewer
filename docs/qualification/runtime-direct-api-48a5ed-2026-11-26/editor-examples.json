@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "48a5edb3db99a38df2538b741e0dd111e22cddac6e96057f3d4826ce0acc6d7d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/superellipsoid-patches.r",
+      "exampleSha256": "37ffc19b08de9758fafb605206ac508cc82a49d50ecde47f4cc380ab052bd90a",
+      "editorStats": "Объекты\n1\nТреугольники\n8 064\nОбъём\n0\nПлощадь\n111,34\nГотово · 100 ms"
+    }
+  ]
+}
