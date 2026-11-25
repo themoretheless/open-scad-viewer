@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "ef7a8795a09165d78de98a03dbade07bb9ff7f7e20a903ff1c05e6070c607d75",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/gear-span-inspection.r",
+      "exampleSha256": "41d43f4c247b3e041369898c808e2e3777b9a5fa10b037a2b396f9eff810b3c6",
+      "editorStats": "Объекты\n1\nТреугольники\n1 536\nОбъём\n5 330,58\nПлощадь\n4 402,86\nГотово · 198 ms"
+    }
+  ]
+}

@@ -23168,7 +23168,7 @@
     {
       "id": "NURBS-0998",
       "name": "Интервальная длина общей нормали наружной шестерни",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::external_spur_span",
@@ -23176,7 +23176,9 @@
         "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs",
         "crates/nurbs-core/tests/gear_span.rs",
         "docs/qualification/nurbs-spur-span-998-1000/receipt.json",
-        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz"
+        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz",
+        "examples/rush/gear-span-inspection.r",
+        "tests/rushGearSpan.test.ts"
       ],
       "remainingQualification": [
         "Nominal external unshifted spur gears, ideal symmetric involute contacts. Actual jaw interference and inspection uncertainty beyond the supplied measurement interval require separate qualification."
@@ -23185,7 +23187,7 @@
     {
       "id": "NURBS-0999",
       "name": "Подбор измеримых охватов зубьев по активным эвольвентам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::measurable_spur_spans",
@@ -23193,7 +23195,9 @@
         "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs",
         "crates/nurbs-core/tests/gear_span.rs",
         "docs/qualification/nurbs-spur-span-998-1000/receipt.json",
-        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz"
+        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz",
+        "examples/rush/gear-span-inspection.r",
+        "tests/rushGearSpan.test.ts"
       ],
       "remainingQualification": [
         "Nominal external unshifted spur gears, ideal symmetric involute contacts. Actual jaw interference and inspection uncertainty beyond the supplied measurement interval require separate qualification."
@@ -23202,7 +23206,7 @@
     {
       "id": "NURBS-1000",
       "name": "Восстановление утонения зуба по допуску измеренной общей нормали",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::tooth_thinning_from_span",
@@ -23210,7 +23214,9 @@
         "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs",
         "crates/nurbs-core/tests/gear_span.rs",
         "docs/qualification/nurbs-spur-span-998-1000/receipt.json",
-        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz"
+        "docs/qualification/nurbs-spur-span-998-1000/span.log.gz",
+        "examples/rush/gear-span-inspection.r",
+        "tests/rushGearSpan.test.ts"
       ],
       "remainingQualification": [
         "Nominal external unshifted spur gears, ideal symmetric involute contacts. Actual jaw interference and inspection uncertainty beyond the supplied measurement interval require separate qualification."
