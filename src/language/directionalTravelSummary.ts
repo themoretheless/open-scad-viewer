@@ -17,6 +17,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'surface_reflection_lines') return russian ? 'Линии отражения' : 'Reflection lines'
   if (operation === 'surface_isophote_analysis') return russian ? 'Изофоты поверхности' : 'Surface isophotes'
   if (operation === 'surface_dent_detection') return russian ? 'Зоны вмятин' : 'Dent zones'
+  if (operation === 'affine_control_support') return russian ? 'Аффинная размерность контрольных точек' : 'Affine dimension of controls'
+  if (operation === 'surface_trace_agreement') return russian ? 'Согласованность пространственной и UV-кривой' : 'Surface trace agreement'
   if (operation === 'geometry_bounds_union') return russian ? 'Общие габариты' : 'Combined geometry bounds'
   if (operation === 'geometry_conditioning') return russian ? 'Численные масштабы NURBS' : 'NURBS conditioning indicators'
   if (operation === 'shared_patch_mesh') return russian ? 'Сетка с общей границей патчей' : 'Shared patch mesh'

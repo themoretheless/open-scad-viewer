@@ -19,6 +19,20 @@ impl Geometry {
 }
 
 pub(super) fn apply(v:&Value,op:&str)->Result<Value>{
+    if op=="surface_trace_agreement" {
+        let r=crate::curve_surface_agreement::verify(&field(v,"curve")?,&field(v,"pcurve")?,&field(v,"surface")?,
+            field(v,"reverse")?,field(v,"tolerance_mm")?,field(v,"max_cells")?)?;
+        return Ok(json!({"status":format!("{:?}",r.status),"cells":r.cells,"witness":r.witness,"witnessDistanceMm":r.witness_distance}));
+    }
+    if op=="affine_control_support" {
+        let work=field(v,"max_work")?;
+        let r=match Geometry::decode(v)? {
+            Geometry::Curve(c)=>crate::analysis::affine_support::curve(&c,work)?,
+            Geometry::Surface(s)=>crate::analysis::affine_support::surface(&s,work)?,
+        };
+        return Ok(json!({"dimension":r.dimension,"witnessIndices":r.witness_indices,"complete":r.complete,
+            "reason":r.reason.map(|s|format!("{s:?}")),"work":r.work_used,"controlCount":r.control_count}));
+    }
     if op=="geometry_bounds_union" {
         let items: Vec<Value>=field(v,"items")?;
         check((1..=2048).contains(&items.len()),"Bounds require 1..2048 geometries")?;

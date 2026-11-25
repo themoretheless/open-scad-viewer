@@ -513,6 +513,22 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'affine_control_support': {
+            const source=get(n.input)
+            if(source.kind!=='curve' && source.kind!=='surface') throw new Error('Affine support needs a curve or surface')
+            const report=callGeometryRust<object>(n.op,{[source.kind]:source.data,max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result=source
+            break
+          }
+          case 'surface_trace_agreement': {
+            const {id:_id,input,inputs,op,...settings}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,curve:needCurve(inputs[0]),pcurve:needCurve(inputs[1]),...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'geometry_bounds_union':
           case 'geometry_conditioning':
           case 'coordinate_frame_local':

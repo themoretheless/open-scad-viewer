@@ -1676,6 +1676,8 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('surface_reflection_lines'),input:id,light:z.tuple([scalar,scalar,scalar]),view_direction:z.tuple([scalar,scalar,scalar]),level:scalar,grid:z.tuple([z.number().int().min(2).max(256),z.number().int().min(2).max(256)]),jump_threshold:scalar}).strict(),
           z.object({id,op:z.literal('surface_isophote_analysis'),input:id,light:z.tuple([scalar,scalar,scalar]),cos_levels:z.array(scalar).min(2).max(64),grid:z.tuple([z.number().int().min(2).max(256),z.number().int().min(2).max(256)]),uneven_tolerance:scalar}).strict(),
           z.object({id,op:z.literal('surface_dent_detection'),input:id,grid:z.tuple([z.number().int().min(2).max(256),z.number().int().min(2).max(256)]),sigma_cells:scalar,residual_per_mm2:scalar}).strict(),
+          z.object({id,op:z.literal('affine_control_support'),input:id,max_work:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict(),
+          z.object({id,op:z.literal('surface_trace_agreement'),input:id,inputs:z.tuple([id,id]),reverse:z.boolean(),tolerance_mm:scalar,max_cells:z.number().int().min(1).max(100000)}).strict(),
           z.object({id,op:z.literal('geometry_bounds_union'),input:id,inputs:z.array(id).max(2047)}).strict(),
           z.object({id,op:z.literal('geometry_conditioning'),input:id}).strict(),
           z.object({id,op:z.literal('coordinate_frame_local'),input:id,origin:z.array(scalar).min(2).max(3),frame_scale:scalar}).strict(),

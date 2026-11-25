@@ -277,6 +277,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_reflection_lines" => &["light", "view_direction", "level", "grid", "jump_threshold"],
         "surface_isophote_analysis" => &["light", "cos_levels", "grid", "uneven_tolerance"],
         "surface_dent_detection" => &["grid", "sigma_cells", "residual_per_mm2"],
+        "affine_control_support" => &["max_work"],
+        "surface_trace_agreement" => &["inputs","reverse","tolerance_mm","max_cells"],
         "geometry_bounds_union" => &["inputs"],
         "geometry_conditioning" => &[],
         "coordinate_frame_local" | "coordinate_frame_world" => &["origin","frame_scale"],

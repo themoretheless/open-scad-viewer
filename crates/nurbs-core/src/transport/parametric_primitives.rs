@@ -37,7 +37,7 @@ mod cloud_fit_surfaces;
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
     if matches!(op,"surface_highlight_lines" | "surface_reflection_lines" | "surface_isophote_analysis" | "surface_dent_detection") { return Some(optical_surface_analysis::inspect(v,op)); }
-    if matches!(op,"geometry_bounds_union" | "geometry_conditioning" | "coordinate_frame_local" | "coordinate_frame_world") {
+    if matches!(op,"affine_control_support" | "surface_trace_agreement" | "geometry_bounds_union" | "geometry_conditioning" | "coordinate_frame_local" | "coordinate_frame_world") {
         return Some(coordinate_analysis::apply(v,op));
     }
     if op == "shared_patch_mesh" { return Some(shared_patch_mesh::build(v)); }
