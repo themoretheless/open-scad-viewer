@@ -917,6 +917,18 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'merge_curve_exact': {
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;seam:number}>(n.op,{left:needCurve(n.input),right:needCurve(n.target_geometry)})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'merge_surface_exact': {
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface;seam:number}>(n.op,{left:needSurface(n.input),right:needSurface(n.target_geometry),direction:n.direction})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'curve_nearest_point':
           case 'surface_nearest_point':
           case 'curve_pair_distance':

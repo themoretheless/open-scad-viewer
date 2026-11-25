@@ -11,6 +11,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'naca_five_digit_profile') return russian ? 'Пятизначный профиль NACA' : 'Five-digit NACA section'
   if (operation === 'cst_spline_profile') return russian ? 'Сплайн по профилю CST' : 'CST spline profile'
   if (operation === 'fit_cst_sides') return russian ? 'Подбор профиля CST по двум сторонам' : 'CST fit to upper and lower samples'
+  if (operation === 'merge_curve_exact') return russian ? 'Точное объединение кривых' : 'Exact curve merge'
+  if (operation === 'merge_surface_exact') return russian ? 'Точное объединение поверхностей' : 'Exact surface merge'
   if (operation === 'cst_section_integrals') return russian ? 'Площадь и моменты сечения CST' : 'CST section area and moments'
   if (operation === 'fit_sphere_cloud') return russian ? 'Сфера по облаку точек' : 'Sphere fitted to cloud'
   if (operation === 'fit_cylinder_cloud') return russian ? 'Цилиндр по облаку точек' : 'Cylinder fitted to cloud'

@@ -1733,6 +1733,8 @@ export const rushGraphNurbsSchema = z
             u_side: z.enum(['automatic','left','right']).optional(), v_side: z.enum(['automatic','left','right']).optional() }).strict(),
           z.object({ id, op: z.literal('curve_nearest_point'), input: id, probe_point: z.array(scalar).min(2).max(3), tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('surface_nearest_point'), input: id, probe_point: vector, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
+          z.object({id,op:z.literal('merge_curve_exact'),input:id,target_geometry:id}).strict(),
+          z.object({id,op:z.literal('merge_surface_exact'),input:id,target_geometry:id,direction:z.enum(['u','v'])}).strict(),
           z.object({ id, op: z.literal('curve_pair_distance'), input: id, target_geometry: id, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('curve_surface_distance'), input: id, target_geometry: id, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op: z.literal('surface_pair_distance'), input: id, target_geometry: id, tolerance_mm: scalar, max_cells: z.number().int().min(1).max(100000) }).strict(),
