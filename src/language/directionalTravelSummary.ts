@@ -18,6 +18,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation.startsWith('radial_cam_')) return russian ? 'Профиль кулачка' : 'Cam profile'
   if (operation === 'rack_profile' || operation === 'brep_rack') return russian ? 'Зубчатая рейка' : 'Gear rack'
   if (operation === 'verified_bevel_gear') return russian ? 'Точность конической шестерни' : 'Bevel gear accuracy'
+  if (operation === 'brep_nurbs_gear_span') return russian ? 'Длина общей нормали' : 'Base tangent measurement'
   if (operation === 'brep_nurbs_verified_gear') return russian ? 'Точность зубчатого профиля' : 'Gear profile accuracy'
   if (operation === 'surface_trim_range_length') return russian ? 'Длина участка контура' : 'Contour range length'
   if (operation.startsWith('surface_trim_sheet')) return russian ? 'Обрезанная оболочка' : 'Trimmed sheet'
@@ -129,10 +130,17 @@ export function directionalTravelSummary(operation: string, report: string, russ
     (russian ? 'Погрешность стенок ≤ ' : 'Wall deviation ≤ ') + format(parsed.wallErrorUpperMm) + ' ' + unit,
   ]
   if (operation === 'verified_bevel_gear') return [(russian ? 'Погрешность ≤ ' : 'Deviation ≤ ') + format(parsed.worldErrorUpperMm) + ' ' + unit]
-  if (operation === 'brep_nurbs_verified_gear') return [
-    (russian ? 'Профиль ≤ ' : 'Profile ≤ ') + format(parsed.profileErrorUpperMm) + ' ' + unit,
-    (russian ? 'Боковая поверхность ≤ ' : 'Flank surface ≤ ') + format(parsed.idealWallErrorUpperMm) + ' ' + unit,
-  ]
+  if (operation === 'brep_nurbs_gear_span' || operation === 'brep_nurbs_verified_gear') {
+    const lines: string[] = []
+    if (operation === 'brep_nurbs_verified_gear') {
+      lines.push((russian ? 'Профиль ≤ ' : 'Profile ≤ ') + format(parsed.profileErrorUpperMm) + ' ' + unit)
+      lines.push((russian ? 'Боковая поверхность ≤ ' : 'Flank surface ≤ ') + format(parsed.idealWallErrorUpperMm) + ' ' + unit)
+    }
+    if (Array.isArray(parsed.counts)) lines.push((russian ? 'Охват в зубьях · ' : 'Measurable tooth counts · ') + parsed.counts.join(', '))
+    if (pair(parsed.nominalWidthMm)) lines.push((russian ? 'Общая нормаль · ' : 'Nominal span · ') + bounds(parsed.nominalWidthMm) + ' ' + unit)
+    if (pair(parsed.inferredThinningMm)) lines.push((russian ? 'Утонение зуба · ' : 'Tooth thinning · ') + bounds(parsed.inferredThinningMm) + ' ' + unit)
+    return lines
+  }
   if (operation === 'surface_trim_range_length') return pair(parsed?.length?.boundsMm)
     ? [(russian ? 'Длина · ' : 'Length · ') + bounds(parsed.length.boundsMm) + ' ' + unit]
     : [russian ? 'Длина неопределённа' : 'Length unresolved']
