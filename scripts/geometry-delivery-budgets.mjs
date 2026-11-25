@@ -337,6 +337,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/DSjI2jWL.js':204_000,'assets/DwdnO0M6.js':175_500,'assets/mainSolid.worker-CnQLZS06.js':180_500}),
   }),
+  // Rack, bevel gear and radial cam: 19,311,891 raw bytes, 6,889,996 packed bytes and 13,816,855 total asset bytes.
+  'b12aeb458afec60a271f415fcb4330201d8c0997d08de242aa937e2b839429c4':Object.freeze({
+    version:49,geometryChunkBytes:6_890_000,totalAssetBytes:13_817_000,rawGeometryBytes:19_312_000,
+    namedJsChunkBytes:Object.freeze({
+      index:270_400,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CHRq6vwt.js':203_600,'assets/mainSolid.worker-CLIcZhRT.js':180_200,'assets/nhGMEiGw.js':175_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

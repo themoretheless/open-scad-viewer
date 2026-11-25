@@ -3154,20 +3154,22 @@
     {
       "id": "NURBS-0085",
       "name": "рейка",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::rack::profile",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/rack.rs",
         "crates/nurbs-core/tests/rack.rs",
         "docs/design/nurbs-rack.md",
         "crates/brep-core/src/parts/rack.rs",
-        "crates/brep-core/tests/rack.rs"
+        "crates/brep-core/tests/rack.rs",
+        "examples/rush/exact-gear-rack.r",
+        "tests/rushRackBevel.test.ts"
       ]
     },
     {
       "id": "NURBS-0086",
       "name": "коническая шестерня",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::gear::bevel_with_verified_profile",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/involute/spherical.rs",
@@ -3195,7 +3197,9 @@
         "crates/brep-core/src/parts/bevel_body.rs",
         "crates/brep-core/tests/bevel_body.rs",
         "crates/brep-core/tests/bevel_verified.rs",
-        "docs/qualification/nurbs-bevel-body-2026-10-16/native-tests.json"
+        "docs/qualification/nurbs-bevel-body-2026-10-16/native-tests.json",
+        "examples/rush/verified-bevel-gear.r",
+        "tests/rushRackBevel.test.ts"
       ],
       "partialNativeApi": "brep_core::gear::bevel_body_candidate",
       "remainingQualification": [
@@ -3340,11 +3344,13 @@
     {
       "id": "NURBS-0091",
       "name": "кулачок",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/construct/curves/radial_cam.rs",
         "crates/nurbs-core/tests/radial_cam.rs",
-        "docs/design/nurbs-radial-cam.md"
+        "docs/design/nurbs-radial-cam.md",
+        "examples/rush/radial-cam.r",
+        "tests/rushRadialCam.test.ts"
       ],
       "remainingQualification": [
         "adaptive Hermite error, pressure angle and undercut diagnostics are sampled; continuous error/undercut-free/global topology are not certified",
