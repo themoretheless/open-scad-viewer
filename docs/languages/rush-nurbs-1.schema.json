@@ -60328,6 +60328,134 @@
               },
               "op": {
                 "type": "string",
+                "const": "merge_patch_strip"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "maxItems": 31,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "u",
+                  "v"
+                ]
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "direction",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "merge_patch_grid"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "maxItems": 31,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "columns": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 16
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "columns",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "inspect_patch_grid"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "maxItems": 31,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "compress_tensor_surface_batch"
               },
               "input": {

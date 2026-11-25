@@ -45,3 +45,31 @@ pub(super) fn compress(v: &Value, op: &str) -> Result<Value> {
     let patches=r.patches.ok_or_else(||input("Exact batch compression exhausted its shared work budget"))?;
     Ok(json!({"surface":patches[index].surface,"patches":patches.iter().map(summary).collect::<Vec<_>>(),"selectedPatch":index,"workUsed":r.work_used}))
 }
+
+pub(super) fn grid(v: &Value, op: &str) -> Result<Value> {
+    let sources: Vec<crate::surface::Surface> = field(v, "surfaces")?;
+    if sources.is_empty() || sources.len() > 32 {
+        return Err(input("Patch layout requires 1 to 32 source surfaces"));
+    }
+    let budget = field(v, "max_work")?;
+    match op {
+        "merge_patch_strip" => {
+            let axis = match field::<String>(v, "direction")?.as_str() {
+                "u" => Axis::U, "v" => Axis::V, _ => return Err(input("Unknown strip axis")),
+            };
+            let r = exact_surface_merge::merge_surface_strip(&sources, axis, budget)?;
+            let surface = r.surface.ok_or_else(|| input(format!("Exact strip refused: {:?}", r.refusal)))?;
+            Ok(json!({"surface":surface,"removedKnots":r.removed_knots,"workUsed":r.work_used}))
+        }
+        "merge_patch_grid" => {
+            let r = exact_surface_merge::merge_surface_grid(&sources, field(v,"columns")?, budget)?;
+            let surface = r.surface.ok_or_else(|| input(format!("Exact grid refused: {:?}", r.refusal)))?;
+            Ok(json!({"surface":surface,"alignmentInsertions":r.inserted_knots_for_alignment,"workUsed":r.work_used}))
+        }
+        _ => {
+            let r = exact_surface_merge::infer_surface_grid_layout(&sources,budget)?;
+            let layout = r.layout.ok_or_else(|| input(format!("Patch layout refused: {:?}",r.refusal)))?;
+            Ok(json!({"order":layout.order,"uBreaks":layout.u_breaks,"vBreaks":layout.v_breaks,"workUsed":r.work_used}))
+        }
+    }
+}

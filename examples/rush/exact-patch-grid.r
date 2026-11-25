@@ -1,0 +1,10 @@
+// @rush/1
+panel = bezier_surface(points:[[[0mm,0mm,0mm],[0mm,8mm,0mm]],[[10mm,0mm,0mm],[10mm,8mm,4mm]]])
+left = panel.surface_split(direction:"v",parameter:0.25,part:0)
+right = panel.surface_split(direction:"v",parameter:0.25,part:1)
+a = left.surface_split(direction:"u",parameter:0.5,part:0)
+b = left.surface_split(direction:"u",parameter:0.5,part:1)
+c = right.surface_split(direction:"u",parameter:0.5,part:0)
+d = right.surface_split(direction:"u",parameter:0.5,part:1)
+joined = a.merge_patch_grid(inputs:[b,c,d],columns:2,max_work:1000000)
+show joined.tessellate(8,8)
