@@ -955,6 +955,8 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'piecewise_clock_curve':
+          case 'relayout_clock_curve':
           case 'mobius_bezier_curve':
           case 'mobius_spline_curve':
           case 'fit_mobius_curve': {
@@ -966,6 +968,8 @@ export function createOwnNurbsResolver(
             result = {kind: 'curve', data: curve}
             break
           }
+          case 'piecewise_clock_surface':
+          case 'relayout_clock_surface':
           case 'mobius_bezier_surface':
           case 'mobius_spline_surface':
           case 'fit_mobius_surface': {

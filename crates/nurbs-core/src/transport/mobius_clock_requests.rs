@@ -10,6 +10,19 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     if op.ends_with("_curve") {
         let source = field(v, "source")?;
         let r = match op {
+            "piecewise_clock_curve" => clock::mobius_piecewise_bezier_curve(
+                &source,
+                &field::<Vec<f64>>(v, "span_factors")?,
+                budget,
+            )?,
+            "relayout_clock_curve" => clock::relayout_bezier_curve(
+                &source,
+                clock::BezierSpanLayout {
+                    breaks: &field::<Vec<f64>>(v, "span_breaks")?,
+                    factors: &field::<Vec<f64>>(v, "span_factors")?,
+                },
+                budget,
+            )?,
             "mobius_bezier_curve" => {
                 clock::mobius_bezier_curve(&source, field(v, "clock_factor")?, budget)?
             }
@@ -27,6 +40,26 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     }
     let source = field(v, "source")?;
     let r = match op {
+        "piecewise_clock_surface" => clock::mobius_piecewise_bezier_surface(
+            &source,
+            &field::<Vec<f64>>(v, "u_factors")?,
+            &field::<Vec<f64>>(v, "v_factors")?,
+            budget,
+        )?,
+        "relayout_clock_surface" => clock::relayout_bezier_surface(
+            &source,
+            [
+                clock::BezierSpanLayout {
+                    breaks: &field::<Vec<f64>>(v, "u_breaks")?,
+                    factors: &field::<Vec<f64>>(v, "u_factors")?,
+                },
+                clock::BezierSpanLayout {
+                    breaks: &field::<Vec<f64>>(v, "v_breaks")?,
+                    factors: &field::<Vec<f64>>(v, "v_factors")?,
+                },
+            ],
+            budget,
+        )?,
         "mobius_bezier_surface" => {
             clock::mobius_bezier_surface(&source, field(v, "clock_factor")?, budget)?
         }
