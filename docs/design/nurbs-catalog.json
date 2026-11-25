@@ -5964,7 +5964,7 @@
     {
       "id": "NURBS-0201",
       "name": "бликовые изолинии поверхности и выборочные изломы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-analysis",
       "category": "Диагностика качества поверхностей",
       "nativeApi": "nurbs_core::analysis::class_a::highlight_lines",
@@ -5973,7 +5973,9 @@
         "crates/nurbs-core/src/analysis/tests/class_a.rs",
         "crates/nurbs-core/tests/class_a_contracts.rs",
         "docs/design/nurbs-class-a-diagnostics.md",
-        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/surface-optical-analysis.r",
+        "tests/rushOpticalAnalysis.test.ts"
       ],
       "remainingQualification": [
         "sampled diagnostic only; no continuous Class-A or G2 certificate",
@@ -5983,7 +5985,7 @@
     {
       "id": "NURBS-0202",
       "name": "локализация скачков отражённых линий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-analysis",
       "category": "Диагностика качества поверхностей",
       "nativeApi": "nurbs_core::analysis::class_a::reflection_lines",
@@ -5992,7 +5994,9 @@
         "crates/nurbs-core/src/analysis/tests/class_a.rs",
         "crates/nurbs-core/tests/class_a_contracts.rs",
         "docs/design/nurbs-class-a-diagnostics.md",
-        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/surface-optical-analysis.r",
+        "tests/rushOpticalAnalysis.test.ts"
       ],
       "remainingQualification": [
         "sampled diagnostic only; no continuous Class-A or G2 certificate",
@@ -6002,7 +6006,7 @@
     {
       "id": "NURBS-0203",
       "name": "изофоты поверхности и диагностика шага",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-analysis",
       "category": "Диагностика качества поверхностей",
       "nativeApi": "nurbs_core::analysis::class_a::isophote_analysis",
@@ -6011,7 +6015,9 @@
         "crates/nurbs-core/src/analysis/tests/class_a.rs",
         "crates/nurbs-core/tests/class_a_contracts.rs",
         "docs/design/nurbs-class-a-diagnostics.md",
-        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/surface-optical-analysis.r",
+        "tests/rushOpticalAnalysis.test.ts"
       ],
       "remainingQualification": [
         "sampled diagnostic only; no continuous Class-A or G2 certificate",
@@ -6021,7 +6027,7 @@
     {
       "id": "NURBS-0204",
       "name": "зоны локальных вмятин по карте гауссовой кривизны",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-analysis",
       "category": "Диагностика качества поверхностей",
       "nativeApi": "nurbs_core::analysis::class_a::dent_detection",
@@ -6030,7 +6036,9 @@
         "crates/nurbs-core/src/analysis/tests/class_a.rs",
         "crates/nurbs-core/tests/class_a_contracts.rs",
         "docs/design/nurbs-class-a-diagnostics.md",
-        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json",
+        "examples/rush/surface-dent-map.r",
+        "tests/rushOpticalAnalysis.test.ts"
       ],
       "remainingQualification": [
         "sampled diagnostic only; no continuous Class-A or G2 certificate",

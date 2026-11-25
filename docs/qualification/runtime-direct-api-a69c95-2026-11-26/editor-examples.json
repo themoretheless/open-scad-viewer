@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "a69c95b927ef121c760991238329c520d12cf7783fbba5d9232581d806bce624",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/surface-optical-analysis.r",
+      "exampleSha256": "491bca17d2315d28902ca6848c2c3145338b23868ea52eb2dfdf0780a207c1ac",
+      "editorStats": "Объекты\n1\nТреугольники\n1 984\nОбъём\n4,15\nПлощадь\n12,54\nГотово · 96 ms"
+    },
+    {
+      "example": "examples/rush/surface-dent-map.r",
+      "exampleSha256": "af1f801b81114c346d0ed9806f3db455a9801f2f95208f927c01034e108e9517",
+      "editorStats": "Объекты\n1\nТреугольники\n1 024\nОбъём\n0\nПлощадь\n16,08\nГотово · 9 ms"
+    }
+  ]
+}
