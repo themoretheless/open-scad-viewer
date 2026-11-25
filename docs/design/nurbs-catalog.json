@@ -5188,7 +5188,7 @@
     {
       "id": "NURBS-0168",
       "name": "проверка замкнутости UV-контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5199,13 +5199,15 @@
       "evidence": [
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/uv_closure.rs",
-        "docs/design/nurbs-uv-closure.md"
+        "docs/design/nurbs-uv-closure.md",
+        "examples/rush/uv-trim-domain.r",
+        "tests/rushUvTrimDomain.test.ts"
       ]
     },
     {
       "id": "NURBS-0169",
       "name": "проверка простоты UV-контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5216,13 +5218,15 @@
       "evidence": [
         "crates/nurbs-core/src/trim/trim_simplicity.rs",
         "crates/nurbs-core/tests/uv_simplicity.rs",
-        "docs/design/nurbs-uv-simplicity.md"
+        "docs/design/nurbs-uv-simplicity.md",
+        "examples/rush/uv-trim-domain.r",
+        "tests/rushUvTrimDomain.test.ts"
       ]
     },
     {
       "id": "NURBS-0170",
       "name": "проверка принадлежности UV-точки trim-области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5233,13 +5237,15 @@
       "evidence": [
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/uv_point.rs",
-        "docs/design/nurbs-uv-point.md"
+        "docs/design/nurbs-uv-point.md",
+        "examples/rush/uv-trim-domain.r",
+        "tests/rushUvTrimDomain.test.ts"
       ]
     },
     {
       "id": "NURBS-0171",
       "name": "trim-область с внутренними отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5250,7 +5256,9 @@
       "evidence": [
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/uv_point.rs",
-        "docs/design/nurbs-uv-point.md"
+        "docs/design/nurbs-uv-point.md",
+        "examples/rush/uv-trim-domain.r",
+        "tests/rushUvTrimDomain.test.ts"
       ]
     },
     {

@@ -7,7 +7,7 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
         let domain = trim_domain::TrimDomain::new(&loops, field(v, "tolerance_uv")?)?;
         let report = domain.classify_point([field(v, "u")?, field(v, "v")?], field(v, "max_cells")?)?;
         return Ok(json!({"location":format!("{:?}",report.location),"reason":format!("{:?}",report.reason),
-            "winding":report.winding,"cells":report.cells,"uncertain":report.uncertain}));
+            "winding":report.winding,"cells":report.cells,"uncertain":report.uncertain.map(|(contour,curve,range)|json!({"contour":contour,"curve":curve,"parameter":range}))}));
     }
     let [contour] = loops.as_slice() else { return Err(input("Expected exactly one UV contour")); };
     if op == "uv_loop_closure" {

@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "0b04ef1cd52aa5ee88f416b4483d80eaed5a308630883712b45c63558cdb6548",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/uv-trim-domain.r",
+      "exampleSha256": "4a72ca591405aa97c47bdb56173ac7e144783beec5b40763e479d03563acfa92",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 62 ms"
+    }
+  ]
+}
