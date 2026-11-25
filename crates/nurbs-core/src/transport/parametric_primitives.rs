@@ -14,6 +14,25 @@ mod surface_seam_measurements;
 mod uv_loop_queries;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op == "embed_xy_curve" {
+        return Some((|| {
+            let mut curve: crate::curve::Curve = field(v,"curve")?;
+            let height: f64 = field(v,"height")?;
+            curve.validate()?;
+            check(curve.control_points[0].len()==2, "XY embedding requires a two-dimensional curve")?;
+            for point in &mut curve.control_points { point.push(height); }
+            curve.validate()?;
+            encode(curve)
+        })());
+    }
+    if op == "planar_knot_miter" {
+        return Some((|| {
+            let join = crate::curve_offset_join::miter_at_knot(&field(v,"curve")?, field(v,"knot")?,
+                field(v,"distance_mm")?, field(v,"extension_limit_mm")?, field(v,"tolerance_mm")?)?;
+            let curve = crate::curve::Curve::from_polyline(join.points.iter().map(|p| p.to_vec()).collect())?;
+            Ok(json!({"curve":curve,"points":join.points,"errorUpperMm":join.error_upper_mm}))
+        })());
+    }
     if op == "phase_aligned_section" {
         return Some((|| {
             let curves: Vec<crate::curve::Curve> = field(v,"curves")?;

@@ -491,6 +491,27 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'embed_xy_curve': {
+            result={kind:'curve',data:callGeometryRust<NurbsCurve>(n.op,{curve:needCurve(n.input),height:n.height})}
+            break
+          }
+          case 'planar_offset_piece': {
+            const {curves,report}=callGeometryRust<{curves:NurbsCurve[];report:object}>('curve_offset_bounded',{
+              curve:needCurve(n.input),distance:n.distance_mm,toleranceMm:n.tolerance_mm,maxCells:n.max_cells,
+            })
+            const curve=curves[n.piece]
+            if (!curve) throw new Error('Selected offset piece is outside the constructed curve list')
+            constructionReports[key]={measurement:{operation:n.op,report:{...report,pieces:curves.length}}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'planar_knot_miter': {
+            const {input,id:_id,op,...args}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;points:number[][];errorUpperMm:number}>(op,{curve:needCurve(input),...args})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'phase_aligned_section': {
             const {id:_id,op,input,inputs,...options}=n
             const {curve,phases}=callGeometryRust<{curve:NurbsCurve|null;phases:{status:string}[]}>(op,{
