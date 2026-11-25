@@ -5465,7 +5465,7 @@
     {
       "id": "NURBS-0177",
       "name": "проверка G0 между кривыми",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5476,13 +5476,15 @@
       "evidence": [
         "crates/nurbs-core/src/join/curve_join.rs",
         "crates/nurbs-core/tests/curve_join.rs",
-        "docs/design/nurbs-curve-join.md"
+        "docs/design/nurbs-curve-join.md",
+        "examples/rush/curve-join-continuity.r",
+        "tests/rushCurveJoinContinuity.test.ts"
       ]
     },
     {
       "id": "NURBS-0178",
       "name": "проверка G1 между кривыми",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5493,13 +5495,15 @@
       "evidence": [
         "crates/nurbs-core/src/join/curve_join.rs",
         "crates/nurbs-core/tests/curve_join.rs",
-        "docs/design/nurbs-curve-join.md"
+        "docs/design/nurbs-curve-join.md",
+        "examples/rush/curve-join-continuity.r",
+        "tests/rushCurveJoinContinuity.test.ts"
       ]
     },
     {
       "id": "NURBS-0179",
       "name": "проверка G2 между кривыми",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Совместимость и качество",
       "remainingQualification": [
@@ -5510,7 +5514,9 @@
       "evidence": [
         "crates/nurbs-core/src/join/curve_join.rs",
         "crates/nurbs-core/tests/curve_join.rs",
-        "docs/design/nurbs-curve-join.md"
+        "docs/design/nurbs-curve-join.md",
+        "examples/rush/curve-join-continuity.r",
+        "tests/rushCurveJoinContinuity.test.ts"
       ]
     },
     {
