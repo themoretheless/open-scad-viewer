@@ -7273,14 +7273,16 @@
     {
       "id": "NURBS-0254",
       "name": "Сертифицированная оценка знакового объёма замкнутой оболочки из NURBS-патчей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-certified-measurements",
       "category": "Измерения и запросы",
       "nativeApi": "nurbs_core::surface_volume::enclosed_volume_oriented",
       "evidence": [
         "crates/nurbs-core/src/analysis/surface_volume.rs",
         "docs/qualification/nurbs-signed-volume-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-signed-volume-2026-11-15/signed-volume.log.gz"
+        "docs/qualification/nurbs-signed-volume-2026-11-15/signed-volume.log.gz",
+        "examples/rush/signed-box-volume.r",
+        "tests/rushShellVolume.test.ts"
       ],
       "remainingQualification": [
         "The native API integrates the oriented NURBS flux and reports a rigorous signed-volume enclosure. The caller supplies shell closure, orientation and any zero-flux face omissions. Reaching the cell limit can leave the requested tolerance unmet. General trimmed faces and application transport are outside this contract."

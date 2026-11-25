@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "3805c9ef7cb1d61be0c3cd25ed7b5cc726e7c66434e178d9a0dc7a4a3b0f0d3a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/signed-box-volume.r",
+      "exampleSha256": "c215b55066ed8f9f5afb820974bbd176112ad3d23f0254408e660569db3f2a75",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n62\nГотово · 78 ms"
+    }
+  ]
+}
