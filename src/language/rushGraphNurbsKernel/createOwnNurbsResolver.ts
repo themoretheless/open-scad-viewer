@@ -938,6 +938,10 @@ export function createOwnNurbsResolver(
           case 'surface_gap_comparison':
           case 'surface_gap_ranges':
           case 'surface_gap_regions':
+          case 'surface_gap_edge_roots':
+          case 'surface_gap_contour_graph':
+          case 'surface_gap_contour_samples':
+          case 'surface_gap_contour_slope':
           case 'surface_cell_interpolation_error':
           case 'surface_triangle_interpolation_error':
           case 'surface_grid_interpolation_error': {
