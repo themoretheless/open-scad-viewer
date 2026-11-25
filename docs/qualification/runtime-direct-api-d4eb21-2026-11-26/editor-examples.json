@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "d4eb215b2ad65efea3b481adf3c9da01da8f4dde81cf6baae60fefb06782722d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/naca-five-digit.r",
+      "exampleSha256": "8ceaae5a186a5000bc015c03721822ad9555ed0bdf093f64e6545a5e6bda5b73",
+      "editorStats": "Объекты\n1\nТреугольники\n1 024\nОбъём\n0\nПлощадь\n4,08\nГотово · 60 ms"
+    },
+    {
+      "example": "examples/rush/cst-spline-section.r",
+      "exampleSha256": "b8aab346ac03d68b6bd8b0e2a5cb22c7b5201b4c8e080409b3a3bc5bef4ab7b2",
+      "editorStats": "Объекты\n1\nТреугольники\n1 024\nОбъём\n0\nПлощадь\n4,1\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/cst-section-integrals.r",
+      "exampleSha256": "e893840e9928c86f4bb77ca70e8bcd47bbcc765aab969aa39a8b4e3ecffa8884",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n4,04\nГотово · 7 ms"
+    }
+  ]
+}

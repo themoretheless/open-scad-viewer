@@ -6322,7 +6322,7 @@
     {
       "id": "NURBS-0219",
       "name": "стандартные нерефлексные профили NACA5 с аналитическими сечениями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-standard-airfoils",
       "category": "Аналитические профили и восстановление",
       "nativeApi": "nurbs_core::construct::curves::airfoil::naca5_airfoil",
@@ -6331,7 +6331,9 @@
         "crates/nurbs-core/tests/airfoil_standard_contracts.rs",
         "docs/design/nurbs-naca5-standard.md",
         "docs/qualification/nurbs-naca5-native-2026-11-02/native-contract-tests.json",
-        "docs/qualification/nurbs-naca5-native-2026-11-02/full-library-check.json"
+        "docs/qualification/nurbs-naca5-native-2026-11-02/full-library-check.json",
+        "examples/rush/naca-five-digit.r",
+        "tests/rushSectionProfiles.test.ts"
       ],
       "remainingQualification": [
         "nominal published coefficients and numerical fit only; no continuous error, closed B-rep or aerodynamic certificate",
@@ -6341,7 +6343,7 @@
     {
       "id": "NURBS-0220",
       "name": "построение CST-профиля в NURBS: численное и прямое алгебраическое",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-cst",
       "category": "Профили и восстановление",
       "nativeApi": "nurbs_core::construct::curves::airfoil::cst_airfoil",
@@ -6356,7 +6358,9 @@
         "crates/nurbs-core/tests/cst_algebraic_contracts.rs",
         "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/default-public-check.json",
         "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/full-library-check.json",
-        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/no-codec-check.json"
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/no-codec-check.json",
+        "examples/rush/cst-spline-section.r",
+        "tests/rushSectionProfiles.test.ts"
       ],
       "remainingQualification": [
         "sampled fit has discrete diagnostics; algebraic subset has a nominal continuous position bound only, excluding evaluator roundoff, derivatives, exact frame and B-rep authority",
@@ -6386,7 +6390,7 @@
     {
       "id": "NURBS-0222",
       "name": "площадь и центроид исходного CST-сечения с интервальными границами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-source-section-properties",
       "category": "Анализ профилей",
       "nativeApi": "nurbs_core::construct::curves::airfoil::cst_section_properties",
@@ -6396,7 +6400,9 @@
         "crates/nurbs-core/tests/cst_section_contracts.rs",
         "docs/design/nurbs-cst-profiles.md",
         "docs/qualification/nurbs-cst-section-native-2026-11-02/no-codec-check.json",
-        "docs/qualification/nurbs-cst-section-native-2026-11-02/default-library-public-check.json"
+        "docs/qualification/nurbs-cst-section-native-2026-11-02/default-library-public-check.json",
+        "examples/rush/cst-section-integrals.r",
+        "tests/rushSectionProfiles.test.ts"
       ],
       "remainingQualification": [
         "original CST algebraic subset and sufficient coefficientwise side ordering only; no transformed frame, second moments, B-rep or volume authority",
@@ -6453,7 +6459,7 @@
     {
       "id": "NURBS-0225",
       "name": "вторые моменты площади исходного CST-сечения с интервальными границами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-section-mechanics",
       "category": "Геометрические характеристики сечений",
       "nativeApi": "nurbs_core::construct::curves::airfoil::cst_section_moments",
@@ -6464,7 +6470,9 @@
         "docs/design/nurbs-cst-second-moments.md",
         "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact_beta_oracle.py",
         "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact-beta-oracle.json",
-        "docs/qualification/nurbs-cst-moments-native-2026-11-02/checks.json"
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/checks.json",
+        "examples/rush/cst-section-integrals.r",
+        "tests/rushSectionProfiles.test.ts"
       ],
       "remainingQualification": [
         "original algebraic CST law and coefficientwise ordered section only; no frame transform, solid mass inertia, principal axes or B-rep authority",

@@ -34,7 +34,7 @@ it('keeps historical manifests byte-identical when current evidence changes', as
   }
 })
 
-it('keeps v6 through v59 runtime records immutable when current v60 evidence changes', async () => {
+it('keeps v6 through v60 runtime records immutable when current v61 evidence changes', async () => {
   const oldMesh = GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v6']
   const oldBrep = GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v6']
   const oldMeshV7 = GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v7']
@@ -223,7 +223,10 @@ it('keeps v6 through v59 runtime records immutable when current v60 evidence cha
     for (const id of ['own-rust-node-v59', 'brep-closed-v59'] as const) {
       expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
     }
-    expect(refreshed['own-rust-node-v60'].qualification.recordId).toBe('candidate-test')
+    for (const id of ['own-rust-node-v60', 'brep-closed-v60'] as const) {
+      expect(refreshed[id]).toEqual(GEOMETRY_MANIFEST_ARCHIVE[id])
+    }
+    expect(refreshed['own-rust-node-v61'].qualification.recordId).toBe('candidate-test')
   } finally {
     vi.doUnmock('../src/core/currentRuntimeGeometryEvidence')
     vi.resetModules()
