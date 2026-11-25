@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "621306c598cfc6e982fd42c5088cbd1f2c413b07db319ce966598b9e7d205e85",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/exact-curve-join.r",
+      "exampleSha256": "9d523354e9678f328abd010768e28e3f93027c17aca4426bd99e6cb799816b89",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n6,71\nГотово · 68 ms"
+    },
+    {
+      "example": "examples/rush/exact-panel-join.r",
+      "exampleSha256": "776992bdc78775c55e29178bd5a46d0a17247062afe6b51d38286ce1617c2e88",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n85,24\nГотово · 7 ms"
+    }
+  ]
+}
