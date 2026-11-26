@@ -39,6 +39,10 @@ if (wasm.length > 20 * 1024 * 1024) {
   if (wasm.length > 20 * 1024 * 1024) {
     const merged = compactWasmTables(optimizeWasm(built, {input: second, mergeSimilar: true}))
     if (merged.length < wasm.length) wasm = merged
+    if (wasm.length > 20 * 1024 * 1024) {
+      const folded = compactWasmTables(optimizeWasm(built, {input: second, mergeSimilar: true, foldCode: true}))
+      if (folded.length < wasm.length) wasm = folded
+    }
   }
 }
 console.log(`geometry-kernels artifact: sha256=${createHash('sha256').update(wasm).digest('hex')} bytes=${wasm.byteLength}`)

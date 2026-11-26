@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "6e0517bb687747ad97be5458f853077b0cfca839295c6bc9d3a8663ac078bf27",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/partition-axis-position.r",
+      "exampleSha256": "74b2496b738afd0b4d57f772ed77257435852d9b300ded8bef9efbaf273304ad",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 68 ms"
+    },
+    {
+      "example": "examples/rush/partition-axis-positions.r",
+      "exampleSha256": "30de4e70febd1434f1a18b4a292c392592c419ce6c56a953f5d72749e7d98fef",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/partition-trajectory-bounds.r",
+      "exampleSha256": "7996392702fb385f758619857e1ab5ccf01a06691fa7c976c721057394a677f7",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    }
+  ]
+}
