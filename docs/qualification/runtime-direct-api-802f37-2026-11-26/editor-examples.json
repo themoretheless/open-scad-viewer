@@ -1,0 +1,56 @@
+{
+  "kernelSha256": "802f372be39717b14700290f18f0f60ca26b75b6c990965f514a483798c8c97b",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/orient-fill-contour.r",
+      "exampleSha256": "8c6ee426a21eba158b63379cae340a124b257dae0bf6c0b41ad1476c6ebc0019",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 85 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-area.r",
+      "exampleSha256": "18214b3619523ddbc581ba9b227c767340c38afb0bf798fd4208cc3bf43d9104",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 14 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-centroid.r",
+      "exampleSha256": "8c8aabd3201cf08c366e24e00517d4c4bbecd7a48a42e4590641d91eab18c208",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/contour-central-moments.r",
+      "exampleSha256": "569eda42b8ec04c5ec7c650af09208339ca8a94b1a06d1b5ed997652bbeaabac",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/contour-principal-moments.r",
+      "exampleSha256": "99c7fac0002d1cd4f53d5ba7e922d698226d2c48cdcea2f3e78debd763e920f5",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/contour-principal-axes.r",
+      "exampleSha256": "9d951a2ea8b83d5a2a9556878b56008fe0b62996540d1d70c3f65d3545386629",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/contour-nonzero-area.r",
+      "exampleSha256": "d5cfc112e40479ebf2cb268bb4ea5c20cd551bd5d410c0ad54f10609bb2eeef9",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-perimeter.r",
+      "exampleSha256": "c374911322255e9b73fdc26b6f2ab99cc8ea85454b34c40c2e122af004039d13",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-topology.r",
+      "exampleSha256": "513c3f5c2f7848bd5bce61d9060b4f894b1c704139762680e2c46d4bd523c51c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/contour-boundary-signed-distance.r",
+      "exampleSha256": "91ed6be8c2cbebc409389b82f74f05a9438e717869c069b76f981496d5f11262",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 10 ms"
+    }
+  ]
+}
