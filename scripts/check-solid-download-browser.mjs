@@ -5,6 +5,9 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-blender-qualification')
+const assemblyDirectory=process.argv.find(arg=>arg.startsWith('--assembly='))?.slice(11)
+const assemblyOnly=process.argv.includes('--assembly-only')
+assert.ok(!assemblyOnly||assemblyDirectory,'--assembly-only requires --assembly=<fixture directory>')
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
@@ -24,7 +27,7 @@ try {
  const page=await browser.newPage({acceptDownloads:true})
  const origin=`http://127.0.0.1:${server.address().port}`
  await page.goto(origin)
- await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
+ if(theme!=='system')await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
  let tabPresses=0
  async function tabTo(locator){
   for(let i=0;i<250;i++){
@@ -56,6 +59,28 @@ try {
   const text=await readFile(path.join(directory,file),'utf8')
   return json?JSON.parse(text):text
  }
+ async function downloadAssembly(){
+  await openMenu()
+  await solid.locator('input[accept=".json,application/json"]').setInputFiles(path.join(assemblyDirectory,'scene.json'))
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
+  let imported
+  for(let attempt=0;attempt<10;attempt++){
+   imported=await download('Скачать проект JSON','assembly-imported.json')
+   if(imported.bodies.length===4)break
+   await page.waitForTimeout(500)
+  }
+  assert.equal(imported.bodies.length,4)
+  assert.equal(imported.bodies[0].name,"Кронштейн 'A' #1")
+  const assembly=await download('STEP сборки · тела и группы','browser-assembly.step',false)
+  await writeFile(path.join(assemblyDirectory,'scene.step'),assembly)
+ }
+ if(assemblyOnly){
+  await downloadAssembly()
+  const report={assemblyDownloaded:true,assemblyOnly:true,browser:browser.version(),downloads,theme,interaction:keyboard?'keyboard':'mouse'}
+  await writeFile(path.join(directory,'browser-download-verification.json'),JSON.stringify(report,null,2)+'\n')
+  console.log('SOLID_BROWSER_ASSEMBLY_VERIFIED',report)
+ }else{
  const snapshots=[],stepParts=[]
  for(const width of [2,7]){
   await openMenu()
@@ -143,15 +168,9 @@ try {
  const holeVolume=Math.abs(volume6/6)
  assert.ok(Math.abs(holeVolume-600)<1e-5,`Hole extrusion volume: ${holeVolume}`)
  await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:stepParts},null,2)+'\n')
- const assemblyDirectory=process.argv.find(arg=>arg.startsWith('--assembly='))?.slice(11)
- if(assemblyDirectory){
-  await openMenu()
-  await solid.locator('input[accept=".json,application/json"]').setInputFiles(path.join(assemblyDirectory,'scene.json'))
-  await solid.getByRole('button',{name:"Кронштейн 'A' #1",exact:true}).waitFor()
-  const assembly=await download('STEP сборки · тела и группы','browser-assembly.step',false)
-  await writeFile(path.join(assemblyDirectory,'scene.step'),assembly)
- }
+ if(assemblyDirectory)await downloadAssembly()
  const report={assemblyDownloaded:!!assemblyDirectory,holeExtrusionVolumeMm3:holeVolume,svgImported:true,svgUndo:true,svgDimensions,tabPresses,sequentialTabNavigation:keyboard,escapeRestoresFileFocus:keyboard,interaction:keyboard?'keyboard':'mouse',theme,uiScaleEdit:2,stepDownloads:stepParts.length,browser:browser.version(),downloads,sourceWidthsMm:[2,7],stableProjectId:true,reloadPreserved:true}
  await writeFile(path.join(directory,'browser-download-verification.json'),JSON.stringify(report,null,2)+'\n')
  console.log('SOLID_BROWSER_DOWNLOAD_VERIFIED',report)
+ }
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
