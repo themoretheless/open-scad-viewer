@@ -13399,7 +13399,7 @@
     {
       "id": "NURBS-0483",
       "name": "Точное наклонное сечение выдавленного булева профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::section_exact_coplanar_polyline_boolean_extrusion",
@@ -13417,7 +13417,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-483-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-483-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-483-2026-11-17/native.log.gz",
+        "examples/rush/section-profile-extrusion.r",
+        "tests/rushProfileSections.test.ts"
       ],
       "remainingQualification": [
         "Construct exact positive-area sections of Boolean extrusions transverse to the sweep.",
@@ -13428,7 +13430,7 @@
     {
       "id": "NURBS-0484",
       "name": "Точное продольное сечение выдавленного булева профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::section_parallel_exact_coplanar_polyline_boolean_extrusion",
@@ -13447,7 +13449,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-484-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-484-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-484-2026-11-17/native.log.gz",
+        "examples/rush/section-profile-extrusion-parallel.r",
+        "tests/rushProfileSections.test.ts"
       ],
       "remainingQualification": [
         "Construct exact parallel-to-sweep sections, retaining positive-area coincident walls.",
@@ -13458,7 +13462,7 @@
     {
       "id": "NURBS-0485",
       "name": "Точное разбиение объёма выдавленного булева профиля плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::split_volume_of_exact_coplanar_polyline_boolean_extrusion",
@@ -13476,7 +13480,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-485-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-485-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-485-2026-11-17/native.log.gz",
+        "examples/rush/split-profile-extrusion-volume.r",
+        "tests/rushProfileSections.test.ts"
       ],
       "remainingQualification": [
         "Integrate exact material volume on both sides of an arbitrary section plane.",
