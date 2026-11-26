@@ -221,6 +221,6 @@ export default {
     namedJsChunkBytes:Object.freeze({
       index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
     }),
-    exactJsChunkBytes:Object.freeze({'assets/B6i14N82.js':115_000,'assets/CdTObQ_W.js':226_300,'assets/CqUHDBjh.js':148_000,'assets/DvumSr0D.js':119_200,'assets/QUiMeq2m.js':203_600,'assets/mainSolid.worker-BYTkFChR.js':292_500}),
+    exactJsChunkBytes:Object.freeze({'assets/BOymnUT_.js':115_000,'assets/C7zO7wKs.js':226_300,'assets/CtwI2tF8.js':119_200,'assets/D3SLdcH8.js':203_600,'assets/cnaX7Mf6.js':148_000,'assets/mainSolid.worker-D79Rvray.js':292_500,'assets/B6i14N82.js':115_000,'assets/CdTObQ_W.js':226_300,'assets/CqUHDBjh.js':148_000,'assets/DvumSr0D.js':119_200,'assets/QUiMeq2m.js':203_600,'assets/mainSolid.worker-BYTkFChR.js':292_500}),
   }),
 }

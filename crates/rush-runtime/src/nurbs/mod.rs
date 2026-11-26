@@ -13,6 +13,7 @@ mod tests;
 
 mod compile;
 mod compile_text;
+mod references;
 #[cfg(test)]
 mod cartesian_loft_tests;
 pub use compile::*;
