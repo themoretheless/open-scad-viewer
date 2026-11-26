@@ -1523,8 +1523,12 @@ export function createOwnNurbsResolver(
           case 'point_workspace':
           case 'point_obstacles':
           case 'ball_obstacles':
+          case 'profiled_ball_workspace':
+          case 'minimum_profiled_ball_workspace':
           case 'ball_workspace':
           case 'capsule_workspace':
+          case 'profiled_hull_workspace':
+          case 'minimum_profiled_hull_workspace':
           case 'hull_workspace':
           case 'hull_obstacles':
           case 'partition_axis_position':
