@@ -1,0 +1,9 @@
+{
+  "kernelSha256": "c970329364ff0b2a401372c5c0700a49c46b9d50bb4102f2eea3ddebc2a01bad",
+  "runner": "Chromium",
+  "scenes": [
+    "step-parts-list Объекты 1 Треугольники 12 Объём 2 Площадь 10 Готово · 140 ms",
+    "compress-step-definition Объекты 1 Треугольники 12 Объём 64 Площадь 112 Готово · 84 ms",
+    "compress-brep-carriers Объекты 1 Треугольники 12 Объём 64 Площадь 112 Готово · 25 ms"
+  ]
+}

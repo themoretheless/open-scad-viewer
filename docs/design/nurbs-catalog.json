@@ -23936,7 +23936,7 @@
     {
       "id": "NURBS-0973",
       "name": "Оценка повторения граней и контрольных точек NURBS по деталям STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::surface_usage",
@@ -23948,7 +23948,9 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/integration.log.gz",
         "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/native.log.gz",
-        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/receipt.json"
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/receipt.json",
+        "examples/rush/step-parts-list.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Counts face carrier grids per referenced definition and per placement. Excludes edge and trim curves. Counts are structural, not serialized bytes."
@@ -23957,7 +23959,7 @@
     {
       "id": "NURBS-0974",
       "name": "Точное сжатие выбранных обрезанных граней тела с сохранением параметризации и топологии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Упрощение геометрии",
       "nativeApi": "brep_core::Model::compress_face_surfaces",
@@ -23968,7 +23970,9 @@
         "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
         "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/contracts.log.gz",
         "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-trimmed-solid-face-compression-974-2026-11-19/native.log.gz",
+        "tests/fixtures/rush-step/refined-edge.step",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic tensor carriers. Only redundant knots and degrees accepted by the exact homogeneous proofs are removed. Existing face count and trimming topology are preserved."
@@ -23977,7 +23981,7 @@
     {
       "id": "NURBS-0975",
       "name": "Точное сжатие пространственного ребра и его параметрических кривых на смежных гранях",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Упрощение геометрии",
       "nativeApi": "brep_core::Model::compress_edge_with_trims",
@@ -23988,7 +23992,9 @@
         "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
         "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/contracts.log.gz",
         "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/native.log.gz",
+        "tests/fixtures/rush-step/refined-edge.step",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Clamped curves. Preserves each spatial and UV parameter law independently; existing incidence, orientation and explicit trim intervals are retained."
@@ -23997,7 +24003,7 @@
     {
       "id": "NURBS-0976",
       "name": "Точное упрощение общего определения детали в импортированной STEP-сборке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Упрощение геометрии",
       "nativeApi": "cad_step::StepSharedAssembly::compress_definition_faces",
@@ -24010,7 +24016,9 @@
         "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/occt.log",
         "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/receipt.json",
         "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/native.log.gz",
-        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/edited-gear.log.gz"
+        "docs/qualification/nurbs-shared-definition-compression-976-2026-11-19/edited-gear.log.gz",
+        "tests/fixtures/rush-step/refined-shared-definition.step",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Selected clamped nonperiodic carriers of one shared local definition; all occurrences inherit the same representation. Named flat assembly STEP round trip."
