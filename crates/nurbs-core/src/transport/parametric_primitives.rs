@@ -31,6 +31,9 @@ mod uv_loop_queries;
 #[path = "planar_path_selection.rs"]
 mod planar_path_selection;
 
+#[path = "plane_branch_queries.rs"]
+mod plane_branch_queries;
+
 #[path = "plane_side_queries.rs"]
 mod plane_side_queries;
 
@@ -146,6 +149,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"bounded_curve_chord" | "bounded_surface_mesh") {
         return Some(bounded_mesh_construction::build(v,op));
     }
+    if matches!(op,"sample_plane_branch"|"plane_branch_uv_polyline"|"plane_branch_xyz_polyline"){return Some(plane_branch_queries::inspect(v,op));}
     if matches!(op,"audit_plane_side"|"refine_plane_side"|"audit_plane_graphs"){return Some(plane_side_queries::inspect(v,op));}
     if matches!(op,"parallel_plane_sections" | "parallel_section_piece") {
         return Some(parallel_section_queries::inspect(v,op));

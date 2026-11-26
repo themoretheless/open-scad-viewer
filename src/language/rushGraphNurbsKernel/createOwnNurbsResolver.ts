@@ -627,6 +627,9 @@ export function createOwnNurbsResolver(
             result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
             break
           }
+          case 'sample_plane_branch':
+          case 'plane_branch_uv_polyline':
+          case 'plane_branch_xyz_polyline':
           case 'audit_plane_side':
           case 'refine_plane_side':
           case 'audit_plane_graphs': {
