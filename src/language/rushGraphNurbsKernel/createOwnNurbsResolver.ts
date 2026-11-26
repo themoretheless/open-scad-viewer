@@ -1486,6 +1486,20 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'profile_spring_surface':
+          case 'sphere_envelope_surface': {
+            const {op,id:_id,input}=n
+            const args = n.op === 'profile_spring_surface'
+              ? {profile:needCurve(input),center:n.center,radius:n.radius,height:n.height,turns:n.turns,
+                 phase_degrees:n.phase_degrees,tolerance_mm:n.tolerance_mm,max_spans:n.max_spans}
+              : {path:needCurve(input),radius_curve:needCurve(n.target_geometry),normal:n.normal,
+                 tolerance_mm:n.tolerance_mm,max_patches:n.max_patches,max_domain_cells:n.max_domain_cells}
+            const {patches,...report}=callGeometryRust<{patches:NurbsSurface[]}>(op,args)
+            if (!patches.length) throw new Error('Could not prove the sphere envelope domain: '+JSON.stringify(report))
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'patches',data:{patches,faceIds:patches.map((_,i)=>i)}}
+            break
+          }
           case 'blend_surface_boundaries': {
             const {op,id:_id,input,target_geometry,...settings}=n
             const {patches,...report}=callGeometryRust<{patches:NurbsSurface[]}>(op,{surface:needSurface(input),target:needSurface(target_geometry),...settings})

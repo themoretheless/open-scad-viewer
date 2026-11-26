@@ -77,6 +77,8 @@ mod spatial_distances;
 mod blend_offset_requests;
 #[path="qualified_intersection_requests.rs"]
 mod qualified_intersection_requests;
+#[path="carried_surface_requests.rs"]
+mod carried_surface_requests;
 #[path="pullback_requests.rs"]
 mod pullback_requests;
 #[path="cloud_diagnostics_requests.rs"]
@@ -162,6 +164,8 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"routed_tube_pair"|"routed_tube_bundle") { return Some(routed_tubes::apply(v,op)); }
     if op == "blend_surface_boundaries" { return Some(blend_offset_requests::blend(v)); }
     if op == "offset_nurbs_surface" { return Some(blend_offset_requests::offset(v)); }
+    if op == "profile_spring_surface" { return Some(carried_surface_requests::spring(v)); }
+    if op == "sphere_envelope_surface" { return Some(carried_surface_requests::envelope(v)); }
     if op == "inspect_surface_intersection" { return Some(qualified_intersection_requests::inspect(v)); }
     if op == "pullback_curve_to_uv" { return Some(pullback_requests::inspect(v)); }
     if matches!(op, "detect_cloud_primitives" | "orient_cloud_normals" | "segment_point_cloud") {
