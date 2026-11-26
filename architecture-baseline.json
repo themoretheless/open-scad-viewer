@@ -393,7 +393,6 @@
     "crates/sketch-core/src/solver.rs::solve_prepared@1": 153,
     "crates/slicer-core/src/infill.rs::generate_infill@1": 182,
     "crates/subdivision-core/src/lib.rs::subdivide_with_creases@1": 162,
-    "src/app/boxGenerator.ts::generateBox@1": 446,
     "src/app/bushingGenerator.ts::generateBushing@1": 390,
     "src/app/directModeling.ts::directDocumentValidation@1": 180,
     "src/composables/useBuildAndRendererLifecycle.ts::useBuildAndRendererLifecycle@1": 304,
