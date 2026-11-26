@@ -5,7 +5,7 @@ use crate::curve::Curve;
 pub(super) const OPS:&[&str]=&["rotating_hull_workspace","minimum_rotating_hull_gap","rotating_hull_obstacles","rounded_rotating_obstacles",
     "rotating_face_obstacles","rotating_corner_obstacles","rotating_asymmetric_obstacles","rotating_skew_obstacles","rotating_chord_obstacles","rotating_clipped_chord_obstacles","rotating_exact_chord_obstacles","profiled_rotating_obstacles","profiled_rotating_workspace","minimum_profiled_rotating_gap"];
 
-fn xy_curve(mut curve:Curve)->Result<Curve>{
+pub(super) fn xy_curve(mut curve:Curve)->Result<Curve>{
     curve.validate()?;
     for point in &mut curve.control_points {
         check(point.len()==2 || (point.len()==3 && point[2]==0.),"Rotating tools require curves in the XY plane")?;

@@ -1514,6 +1514,13 @@ export function createOwnNurbsResolver(
           case 'minimum_oriented_box_gap':
           case 'minimum_capsule_gap':
           case 'variable_sphere_clearance':
+          case 'angular_speed_limit':
+          case 'angular_acceleration_limit':
+          case 'angular_jerk_limit':
+          case 'angular_motion_limits':
+          case 'angular_slowdown_bounds':
+          case 'angular_duration_bounds':
+          case 'angular_motion_deadline':
           case 'sphere_path_clearance':
           case 'capsule_path_clearance':
           case 'box_path_clearance':

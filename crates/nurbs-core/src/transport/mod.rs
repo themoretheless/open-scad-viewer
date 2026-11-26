@@ -19,6 +19,7 @@ mod scheduled_clearance;
 mod tool_pair_clearance;
 mod tool_workspaces;
 mod rotating_tools;
+mod angular_limits;
 mod trajectory_ranges;
 mod motion_turns;
 mod trimmed_surface_integrals;
