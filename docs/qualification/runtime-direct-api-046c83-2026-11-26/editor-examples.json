@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "046c83be905df2b2132bc17876bff2eba2e89769e678cb8c668a7f876e99c2bd",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/point-workspace.r",
+      "exampleSha256": "d6f1c96938e8edd69ea15bc57923ae352f8d616db7806659667bc974dea060c8",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 76 ms"
+    },
+    {
+      "example": "examples/rush/point-obstacles.r",
+      "exampleSha256": "2727e21190437a041f24637dc0584b38ec28da9db3dcfed1106268e952dbd2e6",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/ball-obstacles.r",
+      "exampleSha256": "a445ce16e162b8cf1ab790a70aa039b655e0e97ef9652ae623f0b5b5b5e3b48b",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/ball-workspace.r",
+      "exampleSha256": "f24e28183c03ab2267bae5c85d9bcf96813b5af93d5d485e2830d0ad6b1e6b76",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/capsule-workspace.r",
+      "exampleSha256": "3b95e6ce9277738770614d0ff506b36aa2b69971c95dccd1bccd504650fc4a62",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/hull-workspace.r",
+      "exampleSha256": "b301b071bbec56bfaf8ed7a11bdc1b7c8c3b6f281af8834cd65d6bd34e937715",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/hull-obstacles.r",
+      "exampleSha256": "f274711cfc7e480dd714fffca8e228652277d38b68da2ebe8fe6b29b038db927",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 5 ms"
+    }
+  ]
+}

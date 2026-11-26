@@ -18347,7 +18347,7 @@
     {
       "id": "NURBS-0705",
       "name": "Сертифицированная проверка выпуклой рабочей области NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_convex_workspace",
@@ -18355,7 +18355,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-705-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-705-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-705-2026-11-17/native.log.gz",
+        "examples/rush/point-workspace.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Classify a curve window against intersecting closed offset half-spaces on a shared subdivision.",
@@ -18366,7 +18368,7 @@
     {
       "id": "NURBS-0706",
       "name": "Сертифицированная проверка NURBS-траектории относительно выпуклых препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_obstacle_clearance",
@@ -18374,7 +18376,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-706-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-706-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-706-2026-11-17/native.log.gz",
+        "examples/rush/point-obstacles.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Locate occupied, clear and unresolved intervals against a union of closed convex obstacles.",
@@ -18385,7 +18389,7 @@
     {
       "id": "NURBS-0707",
       "name": "Сертифицированный зазор сферического инструмента до выпуклых препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_ball_obstacle_clearance",
@@ -18393,7 +18397,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-707-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-707-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-707-2026-11-17/native.log.gz",
+        "examples/rush/ball-obstacles.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Certify separation for a swept ball with plane-normal scaling and conservative contact classification.",
@@ -18404,7 +18410,7 @@
     {
       "id": "NURBS-0708",
       "name": "Проверка сферического инструмента внутри выпуклой рабочей области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_ball_convex_workspace",
@@ -18412,7 +18418,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-708-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-708-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-708-2026-11-17/native.log.gz",
+        "examples/rush/ball-workspace.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Certify containment of a swept ball using plane support radii.",
@@ -18423,7 +18431,7 @@
     {
       "id": "NURBS-0709",
       "name": "Проверка капсульного инструмента внутри выпуклой рабочей области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_capsule_convex_workspace",
@@ -18431,7 +18439,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-709-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-709-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-709-2026-11-17/native.log.gz",
+        "examples/rush/capsule-workspace.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Certify containment of a translating fixed-orientation capsule with asymmetric endpoint offsets.",
@@ -18442,7 +18452,7 @@
     {
       "id": "NURBS-0710",
       "name": "Проверка выпуклого профиля инструмента вдоль NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_rounded_hull_workspace",
@@ -18450,7 +18460,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-710-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-710-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-710-2026-11-17/native.log.gz",
+        "examples/rush/hull-workspace.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Certify containment of a translating convex vertex hull with optional spherical rounding.",
@@ -18461,7 +18473,7 @@
     {
       "id": "NURBS-0711",
       "name": "Проверка зазора выпуклого инструмента до препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_rounded_hull_obstacle_clearance",
@@ -18469,7 +18481,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-711-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-711-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-711-2026-11-17/native.log.gz",
+        "examples/rush/hull-obstacles.r",
+        "tests/rushToolWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Certify separation and vertex-witnessed collision for translating rounded convex tools.",
