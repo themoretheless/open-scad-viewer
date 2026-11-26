@@ -21,7 +21,7 @@ pub type RootTopology =
 pub struct RootBrep {
     topology: RootTopology,
 }
-fn unproved(message: &str) -> Error {
+pub(crate) fn unproved(message: &str) -> Error {
     Error::new("BREP_ROOT_BINDING_UNPROVED", message)
 }
 impl RootBrep {

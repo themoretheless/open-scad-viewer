@@ -2,6 +2,8 @@
 //! Six exact support planes plus fresh closed embedding/volume admission.
 use crate::{Error, Model, Result, source_body_restore};
 use std::collections::BTreeSet;
+use nurbs_core::ss_intersection as ss;
+use crate::root_model::{QualifiedRootShellPositiveFlux, RootPeriodicBandLimits, unproved};
 pub struct Limits {
     pub operations: usize,
     pub body: source_body_restore::Limits,
@@ -274,3 +276,113 @@ pub fn qualify<'a>(source: &'a Model, limits: &'a Limits) -> Result<QualifiedSto
 
 #[cfg(test)]
 mod tests;
+
+impl QualifiedRootShellPositiveFlux {
+    /// Intersect a complete periodic wall with a stock box whose two axial
+    /// faces cut it strictly inside its original caps. The wall control hull
+    /// must lie strictly between the other four stock faces.
+    pub fn intersect_periodic_stock_band(
+        source: &crate::closed_solid::QualifiedClosedSolid,
+        stock: &QualifiedStockBox<'_>,
+        section_limits: ss::PeriodicSSBuildLimits,
+        mut limits: RootPeriodicBandLimits,
+    ) -> Result<Self> {
+        let model = source.model();
+        if model.faces.len() != 3
+            || model.shells.len() != 1
+            || model.bodies.len() != 1
+            || model.faces.iter().any(|face| !face.holes.is_empty())
+        {
+            return Err(unproved(
+                "Periodic stock intersection needs a full wall and two caps",
+            ));
+        }
+        let mut walls = model
+            .faces
+            .iter()
+            .enumerate()
+            .filter(|(_, face)| face.surface.periodic_u || face.surface.periodic_v);
+        let (face, wall) = walls
+            .next()
+            .filter(|_| walls.next().is_none())
+            .ok_or_else(|| unproved("Periodic stock intersection needs one periodic wall"))?;
+        let wall = &wall.surface;
+        let axis = match (wall.periodic_u, wall.periodic_v) {
+            (true, false) => 0,
+            (false, true) => 1,
+            _ => {
+                return Err(unproved(
+                    "Stock intersection needs exactly one periodic axis",
+                ));
+            }
+        };
+        let natural = crate::boolean_robustness::surface_uv_domains(wall);
+        if crate::face_domain::FaceDomain::new(model, face, 1e-8)?.literal_rectangle()
+            != Some(natural)
+        {
+            return Err(unproved(
+                "The original wall does not cover its complete periodic rectangle",
+            ));
+        }
+        let carrier = nurbs_core::surface_injectivity::certify_periodic_extrusion(
+            wall,
+            axis,
+            section_limits.max_pairs,
+            section_limits.max_cells,
+        )?;
+        let axial = carrier
+            .axial_coordinate
+            .filter(|_| carrier.proven && carrier.regular_interior)
+            .ok_or_else(|| unproved("The periodic wall lacks a proved axial section family"))?;
+        let pole = |row: usize| {
+            if axis == 0 {
+                &wall.control_points[0][row]
+            } else {
+                &wall.control_points[row][0]
+            }
+        };
+        let mut ends = [pole(0)[axial], pole(1)[axial]];
+        ends.sort_by(f64::total_cmp);
+        let [low, high] = stock.bounds()[axial];
+        if !(ends[0] < low && high < ends[1]) {
+            return Err(unproved(
+                "Both axial stock faces must cut strictly inside the original wall",
+            ));
+        }
+        let other_faces = model
+            .faces
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| *index != face)
+            .map(|(_, cap)| &cap.surface)
+            .collect::<Vec<_>>();
+        if !ends.into_iter().all(|end| {
+            other_faces
+                .iter()
+                .any(|cap| cap.control_points.iter().flatten().all(|p| p[axial] == end))
+        }) {
+            return Err(unproved(
+                "Both original caps must be on the wall's axial ends",
+            ));
+        }
+        if !wall.control_points.iter().flatten().all(|p| {
+            (0..3)
+                .all(|k| k == axial || (stock.bounds()[k][0] < p[k] && p[k] < stock.bounds()[k][1]))
+        }) {
+            return Err(unproved(
+                "A lateral stock face may intersect the periodic wall",
+            ));
+        }
+        let section = |end: usize| {
+            let plane = &stock.source().faces[stock.planes()[2 * axial + end]].surface;
+            let pair = ss::FiberSources::new(wall, plane)?;
+            ss::qualify_periodic_plane_ss(&pair, section_limits)
+        };
+        let lower = section(0)?;
+        let upper = section(1)?;
+        let tolerance = model.tolerance_mm.max(stock.source().tolerance_mm);
+        limits.flux.axis = axial;
+        limits.flux.origin = low.midpoint(high);
+        Self::qualify_periodic_band([&lower, &upper], tolerance, limits)
+    }
+}
