@@ -731,6 +731,15 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'orient_fill_contour': {
+            const {id:_id,op,input,inputs,...parameters}=n
+            const delivery=callGeometryRust<{curve:NurbsCurve;report:object}>(op,{
+              curves:[input,...inputs].map(id=>needCurve(id)),...parameters,
+            })
+            constructionReports[key]={measurement:{operation:op,report:delivery.report}}
+            result={kind:'curve',data:delivery.curve}
+            break
+          }
           case 'embed_xy_curve': {
             result={kind:'curve',data:callGeometryRust<NurbsCurve>(n.op,{curve:needCurve(n.input),height:n.height})}
             break
@@ -1531,6 +1540,15 @@ export function createOwnNurbsResolver(
           case 'planar_contour_sets_distance':
           case 'contour_placement':
           case 'contour_nesting':
+          case 'contour_fill_area':
+          case 'contour_fill_centroid':
+          case 'contour_central_moments':
+          case 'contour_principal_moments':
+          case 'contour_principal_axes':
+          case 'contour_nonzero_area':
+          case 'contour_fill_perimeter':
+          case 'contour_fill_topology':
+          case 'contour_boundary_signed_distance':
           case 'contour_hierarchy':
           case 'contour_fill_orientations':
           case 'signed_contour_distance':
