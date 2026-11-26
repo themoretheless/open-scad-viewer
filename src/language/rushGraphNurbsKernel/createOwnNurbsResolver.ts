@@ -3274,6 +3274,14 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'sew_periodic_source_face': {
+            const {op,id:_id,input,loops,...options}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,loops:loops.map(wire=>wire.map(needCurve)),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'assemble_owned_trimmed_shell': {
             const {op,id:_id,input,...options}=n
             const {model,...report}=callGeometryRust<{model:NurbsBrep|null;closure:string}>(
