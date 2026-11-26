@@ -18116,7 +18116,7 @@
     {
       "id": "NURBS-0694",
       "name": "Сертифицированная проверка скачков производных в узлах NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_knot_jumps",
@@ -18124,7 +18124,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-694-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-694-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-694-2026-11-17/native.log.gz",
+        "examples/rush/inspect-knot-jumps.r",
+        "tests/rushMotionJumps.test.ts"
       ],
       "remainingQualification": [
         "Enclose signed axial derivative jumps at interior knots and classify against absolute limits.",
@@ -18135,7 +18137,7 @@
     {
       "id": "NURBS-0695",
       "name": "Сертифицированная проверка стыка NURBS-траекторий с независимыми часами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_join",
@@ -18143,7 +18145,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-695-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-695-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-695-2026-11-17/native.log.gz",
+        "examples/rush/inspect-motion-join.r",
+        "tests/rushMotionJumps.test.ts"
       ],
       "remainingQualification": [
         "Enclose the spatial gap and axial derivative jumps of two independently timed curve windows.",
@@ -18154,7 +18158,7 @@
     {
       "id": "NURBS-0696",
       "name": "Проверка стыков открытой и замкнутой NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_chain",
@@ -18162,7 +18166,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-696-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-696-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-696-2026-11-17/native.log.gz",
+        "examples/rush/inspect-motion-chain.r",
+        "tests/rushMotionJumps.test.ts"
       ],
       "remainingQualification": [
         "Check spatial continuity and axial derivative jumps along a timed chain, including optional loop closure.",
@@ -18192,7 +18198,7 @@
     {
       "id": "NURBS-0698",
       "name": "Скачки производных в узлах NURBS-сегмента с заданной длительностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_timed_motion_knot_jumps",
@@ -18200,7 +18206,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-698-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-698-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-698-2026-11-17/native.log.gz",
+        "examples/rush/inspect-timed-knot-jumps.r",
+        "tests/rushMotionJumps.test.ts"
       ],
       "remainingQualification": [
         "Classify interior derivative jumps in the traversal clock of a timed curve window.",
