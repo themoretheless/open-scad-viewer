@@ -1517,6 +1517,11 @@ export function createOwnNurbsResolver(
           case 'angular_speed_limit':
           case 'angular_acceleration_limit':
           case 'angular_jerk_limit':
+          case 'orientation_sector':
+          case 'relative_orientation_sector':
+          case 'relative_angular_limits':
+          case 'angular_travel':
+          case 'relative_angular_travel':
           case 'angular_motion_limits':
           case 'angular_slowdown_bounds':
           case 'angular_duration_bounds':
