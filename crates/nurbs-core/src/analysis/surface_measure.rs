@@ -237,7 +237,7 @@ pub struct TrimmedAreaReport {
 /// A UV rectangle unresolved by the trim classifier contributes zero to the
 /// lower bound and its entire surface area to the upper bound.
 pub fn periodic_trim_patch_area(
-    patch: &crate::editing::exact_periodic_surface::PeriodicTrimPatch,
+    patch: &crate::trim::periodic_patch::PeriodicTrimPatch,
     tolerance: f64,
     tolerance_uv: f64,
     max_surface_cells: usize,
@@ -2044,7 +2044,7 @@ pub struct TrimmedPatchSetAreaReport {
 /// Each patch contributes its own retained area, so overlapping world images
 /// count with multiplicity. Both cell budgets are shared across all patches.
 pub fn periodic_trim_patch_set_area(
-    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    patches: &[crate::trim::periodic_patch::PeriodicTrimPatch],
     tolerance: f64,
     tolerance_uv: f64,
     max_surface_cells: usize,
@@ -2069,7 +2069,7 @@ pub struct TrimmedPatchSetCentroidReport {
 /// Enclose the common area centroid of all patches under shared work limits.
 /// The combined area must be separated from zero.
 pub fn periodic_trim_patch_set_centroid(
-    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    patches: &[crate::trim::periodic_patch::PeriodicTrimPatch],
     tolerance: f64,
     tolerance_uv: f64,
     max_surface_cells: usize,
@@ -2182,7 +2182,7 @@ impl TrimmedPatchSetCentralInertiaReport {
 /// Enclose the central inertia of the complete patch set on a shared
 /// integration partition. Component offsets from the common centroid are included.
 pub fn periodic_trim_patch_set_central_inertia(
-    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    patches: &[crate::trim::periodic_patch::PeriodicTrimPatch],
     tolerance: f64,
     tolerance_uv: f64,
     max_surface_cells: usize,
@@ -2442,7 +2442,7 @@ fn mass_fraction_endpoint(mass: f64, other: f64) -> Result<Interval> {
 /// per patch in input order. The tolerance applies to geometric area, and the
 /// two integration limits are shared across the entire set.
 pub fn periodic_trim_patch_set_mass_with_density(
-    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    patches: &[crate::trim::periodic_patch::PeriodicTrimPatch],
     densities: &[[f64; 2]],
     tolerance: f64,
     tolerance_uv: f64,
@@ -2517,7 +2517,7 @@ pub fn periodic_trim_patch_set_mass_with_density(
 }
 
 fn measure_periodic_patch_set_centroid(
-    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    patches: &[crate::trim::periodic_patch::PeriodicTrimPatch],
     tolerance: f64,
     tolerance_uv: f64,
     max_surface_cells: usize,
@@ -2553,7 +2553,7 @@ fn measure_periodic_patch_set_centroid(
 }
 
 fn measure_periodic_patch_set(
-    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    patches: &[crate::trim::periodic_patch::PeriodicTrimPatch],
     tolerance: f64,
     tolerance_uv: f64,
     max_surface_cells: usize,

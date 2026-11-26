@@ -1,4 +1,6 @@
 //! Exact edits of periodic tensor-product surface axes.
+pub use crate::trim::periodic_patch::{PeriodicTrimComponent, PeriodicTrimPatch};
+
 use super::{
     exact_curve_merge::{GaugeMergeRefusal, Refusal, rotate_periodic_curve_at_exact_knot},
     exact_tensor_edit::row,
@@ -3741,14 +3743,6 @@ fn lift_hole_into_component(
 }
 
 #[derive(Clone, Debug)]
-pub struct PeriodicTrimComponent {
-    /// Original contour indices in the same order as `loops`.
-    pub contours: Vec<usize>,
-    /// Counterclockwise outer loop followed by clockwise holes.
-    pub loops: Vec<Vec<crate::curve::Curve>>,
-}
-
-#[derive(Clone, Debug)]
 pub struct PeriodicTrimComponentsReport {
     pub components: Option<Vec<PeriodicTrimComponent>>,
     pub work_used: u64,
@@ -3861,14 +3855,6 @@ fn store_periodic_trim_loop(
         })
         .collect::<std::result::Result<Vec<_>, _>>()?;
     Ok((curves, reversed))
-}
-
-#[derive(Clone, Debug)]
-pub struct PeriodicTrimPatch {
-    pub surface: Surface,
-    pub trim: PeriodicTrimComponent,
-    /// Offset applied to the component's original UV lift to obtain this chart.
-    pub uv_translation: [BigRational; 2],
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

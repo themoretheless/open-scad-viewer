@@ -8,6 +8,7 @@ pub mod trim_point;
 pub mod trim_region_audit;
 pub mod trim_simplicity;
 
+pub mod periodic_patch;
 pub mod periodic_trim;
 
 pub mod planar_mass_bounds;
