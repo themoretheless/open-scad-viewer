@@ -8590,7 +8590,7 @@
     {
       "id": "NURBS-0308",
       "name": "Точная аффинная смена диапазона и направления параметра NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::affine_curve_clock",
@@ -8599,7 +8599,9 @@
         "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
         "crates/nurbs-core/tests/exact_affine_curve_clock_contracts.rs",
         "docs/qualification/nurbs-curvature-field-308-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-308-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-308-2026-11-16/native.log.gz",
+        "examples/rush/affine-clock-curve.r",
+        "tests/rushAffineClocks.test.ts"
       ],
       "remainingQualification": [
         "Assign a new absolute curve parameter range and direction, preserving the complete rational trace with exact knot storage.",
@@ -8632,7 +8634,7 @@
     {
       "id": "NURBS-0310",
       "name": "Точная независимая аффинная перепараметризация осей NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::affine_surface_clock",
@@ -8642,7 +8644,9 @@
         "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
         "crates/nurbs-core/tests/exact_affine_surface_clock_contracts.rs",
         "docs/qualification/nurbs-curvature-field-310-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-310-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-310-2026-11-16/native.log.gz",
+        "examples/rush/affine-clock-surface.r",
+        "tests/rushAffineClocks.test.ts"
       ],
       "remainingQualification": [
         "Map both tensor axes to independent absolute ranges and directions with exact knot storage and a matching control-net permutation.",

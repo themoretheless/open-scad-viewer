@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "f5056df61cdf9be5f1a13fba6c8a779878eb9d8b14d6fc2d251c224b8b2e3f7e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/affine-clock-curve.r",
+      "exampleSha256": "e331b1592176efac30b797e738f213f7b844ef123b77431a1794bc279f0da62c",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n3,64\nГотово · 49 ms"
+    },
+    {
+      "example": "examples/rush/affine-clock-surface.r",
+      "exampleSha256": "81c6dd003b136420129aaaad1094d3aab79261f13da8d1ad7328bfd7269034fd",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,14\nГотово · 9 ms"
+    }
+  ]
+}
