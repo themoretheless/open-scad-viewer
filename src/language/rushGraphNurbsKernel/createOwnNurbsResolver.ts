@@ -627,6 +627,15 @@ export function createOwnNurbsResolver(
             result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
             break
           }
+          case 'split_cell_by_plane': {
+            const {id:_id,op,input,...settings}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<{trimLoops:NurbsCurve[][];workUsed:number}>(op,{surface,...settings})
+            transferredTrimLoops.set(key,report.trimLoops)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'store_plane_branch':
           case 'pair_plane_branch': {
             const {id:_id,op,input,...settings}=n
@@ -2699,8 +2708,15 @@ export function createOwnNurbsResolver(
             const sampleRing = (ring: NurbsCurve[]) => ring.flatMap(curve => {
               const start = curve.knots[curve.degree]!
               const end = curve.knots[curve.controlPoints.length]!
-              const count = curve.degree === 1 && curve.controlPoints.length === 2 ? 1 : n.trim_segments
-              return evaluateNurbsCurvePoints(curve, Array.from({length:count}, (_,i) => start + (end-start)*i/count))
+              const spans = curve.knots.slice(curve.degree, curve.controlPoints.length)
+                .filter(t => t >= start && t < end)
+              const parameters = new Set(spans)
+              if (curve.degree > 1) {
+                for (let i = 0; i < n.trim_segments; i++) {
+                  parameters.add(start + (end - start) * i / n.trim_segments)
+                }
+              }
+              return evaluateNurbsCurvePoints(curve, [...parameters].sort((a,b) => a-b))
             })
             const trim = n.trim_curves
               ? { outer: sample(n.trim_curves.outer), holes: n.trim_curves.holes.map(sample) }

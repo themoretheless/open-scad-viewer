@@ -15,7 +15,10 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
         Some("v") => UvAxis::V,
         _ => return Err(input("Expected a U or V direction")),
     };
-    if matches!(op, "store_plane_branch" | "pair_plane_branch") {
+    if matches!(
+        op,
+        "split_cell_by_plane" | "store_plane_branch" | "pair_plane_branch"
+    ) {
         let options = plane::SurfacePlaneWorldPolylineOptions {
             span,
             solve_axis,
@@ -23,6 +26,31 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
             max_segments: field(v, "max_segments")?,
             max_work,
         };
+        if op == "split_cell_by_plane" {
+            let r = plane::split_surface_cell_by_plane(
+                &surface,
+                normal,
+                offset,
+                options,
+                field(v, "gap_tolerance_mm")?,
+            )?;
+            let cut = r
+                .outcome
+                .map_err(|reason| input(format!("Cell split refused: {reason:?}")))?;
+            let positive: bool = field(v, "positive_side")?;
+            let selected = if positive {
+                &cut.positive
+            } else {
+                &cut.negative
+            };
+            let pair = cut.section;
+            return Ok(
+                json!({"trimLoops":[selected],"positive":cut.positive,"negative":cut.negative,
+                "positiveSide":positive,"sectionCurve":pair.spatial.curve,"sectionPcurve":pair.pcurve,
+                "xyzErrorUpper":pair.spatial.xyz_error_upper.to_string(),"planeResidualUpper":pair.spatial.plane_residual_upper.to_string(),
+                "gapTolerance":pair.correspondence_tolerance.to_string(),"workUsed":r.work_used}),
+            );
+        }
         let (spatial, paired, used) = if op == "store_plane_branch" {
             let r = plane::store_surface_plane_section_curve(&surface, normal, offset, options)?;
             (

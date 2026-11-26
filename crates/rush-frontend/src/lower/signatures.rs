@@ -298,6 +298,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "sample_plane_branch" => &["plane_normal","plane_offset_mm","knot_span","direction","transverse_ratios","parameter_width","max_work"],
         "plane_branch_uv_polyline" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_uv","max_segments","max_work"],
         "store_plane_branch" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_mm","max_segments","max_work"],
+        "split_cell_by_plane" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_mm","max_segments","gap_tolerance_mm","positive_side","max_work"],
         "pair_plane_branch" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_mm","max_segments","gap_tolerance_mm","use_pcurve","max_work"],
         "plane_branch_xyz_polyline" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_mm","max_segments","max_work"],
         "audit_plane_side" => &["plane_normal","plane_offset_mm","max_work"],
