@@ -402,3 +402,36 @@ function coalesceStaticSegments(input, maxGap) {
   const result=Buffer.concat([bytes.subarray(0,8),...list.flatMap(s=>[Buffer.from([s.id]),unsigned(s.data.length),s.data])])
   return WebAssembly.validate(result) ? result : bytes
 }
+
+// Data indices can only be referenced when a DataCount section is present.
+// Otherwise keep their indices using empty passive segments. Both have zero
+// accessible bytes after instantiation, including for memory.init and data.drop.
+export function pruneEmptyWasmSegments(input) {
+  const original = Buffer.from(input.buffer, input.byteOffset, input.byteLength)
+  const list = sections(original)
+  const section = list.find(s => s.id === 11)
+  if (!section) return original
+  const indexed = list.some(s => s.id === 12)
+  let changed = false
+  const cursor = {at:0}, kept = []
+  const count = readUnsigned(section.data,cursor)
+  for (let i=0;i<count;i++) {
+    const start=cursor.at
+    if (readUnsigned(section.data,cursor)!==0 || section.data[cursor.at++]!==65) return original
+    const offset=readUnsigned(section.data,cursor)
+    if (section.data[cursor.at++]!==11) return original
+    const length=readUnsigned(section.data,cursor)
+    cursor.at+=length
+    if (cursor.at>section.data.length) return original
+    if (length || offset!==0) kept.push(section.data.subarray(start,cursor.at))
+    else {
+      changed = true
+      if (indexed) kept.push(Buffer.from([1,0]))
+    }
+  }
+  if (cursor.at!==section.data.length || !changed) return original
+  section.data=Buffer.concat([unsigned(kept.length),...kept])
+  const result=Buffer.concat([original.subarray(0,8),...list.flatMap(s=>[Buffer.from([s.id]),unsigned(s.data.length),s.data])])
+  if (!WebAssembly.validate(result)) throw new Error('Invalid compact geometry data section')
+  return result
+}

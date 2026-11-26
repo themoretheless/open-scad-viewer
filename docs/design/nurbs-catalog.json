@@ -19355,7 +19355,7 @@
     {
       "id": "NURBS-0753",
       "name": "Проверка зазора инструмента с линейно меняющимся радиусом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_variable_radius_spherical_clearance",
@@ -19363,7 +19363,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-753-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-753-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-753-2026-11-17/native.log.gz",
+        "examples/rush/variable-sphere-clearance.r",
+        "tests/rushRadiusProfiles.test.ts"
       ],
       "remainingQualification": [
         "Classify clearance against balls while the moving tool radius varies affinely.",
@@ -19374,7 +19376,7 @@
     {
       "id": "NURBS-0754",
       "name": "Минимальный зазор инструмента с линейно меняющимся радиусом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_variable_radius_spherical_clearance",
@@ -19382,7 +19384,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-754-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-754-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-754-2026-11-17/native.log.gz",
+        "examples/rush/minimum-variable-sphere-gap.r",
+        "tests/rushRadiusProfiles.test.ts"
       ],
       "remainingQualification": [
         "Refine the signed gap minimum while evaluating radius and position at the same witness parameter.",
@@ -19393,7 +19397,7 @@
     {
       "id": "NURBS-0755",
       "name": "Проверка зазора инструмента с переменным радиусом в смешанной сцене",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_variable_radius_toolpath_clearance",
@@ -19401,7 +19405,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-755-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-755-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-755-2026-11-17/native.log.gz",
+        "examples/rush/variable-scene-clearance.r",
+        "tests/rushRadiusProfiles.test.ts"
       ],
       "remainingQualification": [
         "Classify clearance against mixed obstacles while the tool radius varies affinely.",
@@ -19412,7 +19418,7 @@
     {
       "id": "NURBS-0756",
       "name": "Минимальный зазор инструмента с переменным радиусом в смешанной сцене",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_variable_radius_toolpath_clearance",
@@ -19420,7 +19426,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-756-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-756-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-756-2026-11-17/native.log.gz",
+        "examples/rush/minimum-variable-scene-gap.r",
+        "tests/rushRadiusProfiles.test.ts"
       ],
       "remainingQualification": [
         "Refine minimum signed clearance to mixed obstacles with position and tool radius coupled at the witness.",
@@ -19431,7 +19439,7 @@
     {
       "id": "NURBS-0757",
       "name": "Проверка зазора с кусочно-линейным профилем радиуса инструмента",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_radius_toolpath_clearance",
@@ -19439,7 +19447,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-757-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-757-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-757-2026-11-17/native.log.gz",
+        "examples/rush/profiled-scene-clearance.r",
+        "tests/rushRadiusProfiles.test.ts"
       ],
       "remainingQualification": [
         "Classify mixed-obstacle clearance with a continuous piecewise-linear tool radius.",
@@ -19450,7 +19460,7 @@
     {
       "id": "NURBS-0758",
       "name": "Минимальный зазор прибора с кусочно-линейным профилем радиуса",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_radius_toolpath_clearance",
@@ -19458,7 +19468,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-758-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-758-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-758-2026-11-17/native.log.gz",
+        "examples/rush/minimum-profiled-scene-gap.r",
+        "tests/rushRadiusProfiles.test.ts"
       ],
       "remainingQualification": [
         "Refine minimum mixed-obstacle clearance across all curve and radius profile spans.",
