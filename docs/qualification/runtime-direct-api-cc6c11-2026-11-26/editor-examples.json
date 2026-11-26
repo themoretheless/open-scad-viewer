@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "cc6c11f2fc66bc20d6f7b629de9c42b5b6b2d121f9cc4836e82289a9460907c2",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/weighted-curve-join.r",
+      "exampleSha256": "ce0ab72394c2d5c29bf4ca008760709fa4dc2f2f8c57ab885bd8a3aac4734bdd",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 50 ms"
+    },
+    {
+      "example": "examples/rush/weighted-chain-join.r",
+      "exampleSha256": "658653789f659f0cfdebbb4e318b78c1aeadd95b6694e3bbe8ecff819b4d24c5",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3\nГотово · 7 ms"
+    }
+  ]
+}

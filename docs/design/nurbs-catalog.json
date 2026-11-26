@@ -13653,7 +13653,7 @@
     {
       "id": "NURBS-0492",
       "name": "Точная склейка NURBS-кривых с согласованием масштаба рациональных весов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_weight_scaling",
@@ -13662,7 +13662,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-492-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-492-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-492-2026-11-17/native.log.gz",
+        "examples/rush/weighted-curve-join.r",
+        "tests/rushWeightedJoins.test.ts"
       ],
       "remainingQualification": [
         "Join clamped adjacent NURBS curves with different weight gauges without rounding.",
@@ -13673,7 +13675,7 @@
     {
       "id": "NURBS-0493",
       "name": "Точная склейка цепочки NURBS-кривых с общим масштабом весов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_chain_with_weight_scaling",
@@ -13682,7 +13684,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-493-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-493-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-493-2026-11-17/native.log.gz",
+        "examples/rush/weighted-chain-join.r",
+        "tests/rushWeightedJoins.test.ts"
       ],
       "remainingQualification": [
         "Join an ordered chain of NURBS curves using one exact global weight gauge.",
