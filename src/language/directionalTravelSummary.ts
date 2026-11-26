@@ -113,6 +113,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'lift_planar_wire') return russian ? 'Подъём плоского контура в 3D' : 'lift planar wire'
   if (operation === 'active_surface_hull') return russian ? 'Аффинная размерность поверхности' : 'active surface hull'
   if (operation === 'project_plane_chart') return russian ? 'Плоская проекция поверхности' : 'project plane chart'
+  if (operation === 'intersect_support_planes') return russian ? 'Пересечение опорных плоскостей' : 'Support plane intersection'
   if (operation === 'lift_plane_chart') return russian ? 'Подъём плоской поверхности' : 'lift plane chart'
   if (operation === 'shared_plane_chart') return russian ? 'Общая плоскость поверхностей' : 'shared plane chart'
   if (operation === 'compress_tensor_surface') return russian ? 'Точное упрощение поверхности' : 'Exact surface compression'

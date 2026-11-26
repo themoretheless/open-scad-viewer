@@ -415,6 +415,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "lift_planar_wire" => &["loops","loop_index","piece","max_work"],
         "active_surface_hull" => &["max_work"],
         "project_plane_chart" => &["max_work"],
+        "intersect_support_planes" => &["target_geometry","max_work"],
         "lift_plane_chart" => &["target_geometry","max_work"],
         "shared_plane_chart" => &["inputs","patch_index","max_work"],
         "compress_tensor_surface" => &["max_work"],

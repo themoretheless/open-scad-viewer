@@ -1098,6 +1098,13 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'intersect_support_planes': {
+            const surface=needSurface(n.input)
+            const report=callGeometryRust<object>(n.op,{source:surface,right:needSurface(n.target_geometry),max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'active_surface_hull':
           case 'project_plane_chart':
           case 'lift_plane_chart':
