@@ -89790,6 +89790,662 @@
               },
               "op": {
                 "type": "string",
+                "const": "detect_cloud_primitives"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "points": {
+                "minItems": 4,
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "normals": {
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "primitive_kind": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "plane",
+                  "sphere",
+                  "cylinder",
+                  "cone"
+                ]
+              },
+              "tolerance_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "min_inliers": {
+                "type": "integer",
+                "minimum": 4,
+                "maximum": 4096
+              },
+              "max_iterations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "max_primitives": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "points",
+              "normals",
+              "primitive_kind",
+              "tolerance_mm",
+              "min_inliers",
+              "max_iterations",
+              "max_primitives"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "orient_cloud_normals"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "points": {
+                "minItems": 4,
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "normals": {
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "points",
+              "normals"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "segment_point_cloud"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "points": {
+                "minItems": 4,
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "normals": {
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "normal_angle_deg": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "curvature_threshold": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "min_region_size": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "neighbor_count": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 64
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "points",
+              "normals",
+              "normal_angle_deg",
+              "curvature_threshold",
+              "min_region_size",
+              "neighbor_count"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "surface_edit_deviation"
               },
               "input": {

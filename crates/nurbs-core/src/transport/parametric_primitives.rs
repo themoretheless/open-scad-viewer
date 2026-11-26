@@ -79,6 +79,8 @@ mod blend_offset_requests;
 mod qualified_intersection_requests;
 #[path="pullback_requests.rs"]
 mod pullback_requests;
+#[path="cloud_diagnostics_requests.rs"]
+mod cloud_diagnostics_requests;
 #[path="geodesic_requests.rs"]
 mod geodesic_requests;
 #[path="face_clearances.rs"]
@@ -160,6 +162,9 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if op == "offset_nurbs_surface" { return Some(blend_offset_requests::offset(v)); }
     if op == "inspect_surface_intersection" { return Some(qualified_intersection_requests::inspect(v)); }
     if op == "pullback_curve_to_uv" { return Some(pullback_requests::inspect(v)); }
+    if matches!(op, "detect_cloud_primitives" | "orient_cloud_normals" | "segment_point_cloud") {
+        return Some(cloud_diagnostics_requests::inspect(v, op));
+    }
     if op == "trace_geodesic" { return Some(geodesic_requests::trace(v)); }
     if face_clearances::OPS.contains(&op) { return Some(face_clearances::apply(v,op)); }
     if spatial_distances::OPS.contains(&op) { return Some(spatial_distances::apply(v,op)); }

@@ -573,6 +573,16 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'detect_cloud_primitives':
+          case 'orient_cloud_normals':
+          case 'segment_point_cloud': {
+            const {op,id:_id,input,...options}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,options)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'fit_surface_cloud': {
             const {op,points,controls_u,controls_v}=n
             const {surface,...report}=callGeometryRust<{surface:NurbsSurface}>('surface_fit_cloud_certified',{

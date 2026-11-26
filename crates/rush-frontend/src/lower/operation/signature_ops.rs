@@ -1,6 +1,7 @@
 use super::*;
 
 const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
+    "detect_cloud_primitives", "orient_cloud_normals", "segment_point_cloud",
     "edit_profile_sector","edit_closed_sector","edit_tangent_sector","certified_profile_edit","verified_gear_edit","edited_gear_step","export_iges_body","reopen_iges_body","open_iges_file","open_iges_curve","open_iges_surface","compact_body_step","compact_product_step","name_step_parts","read_step_names","step_parts_list","compress_step_definition","bake_step_scales","compress_brep_faces","inspect_shell_orientation","thicken_nurbs_patch","inspect_patch_closure","compress_brep_edge","select_step_parts","name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists","group_step_parts","style_step_occurrences","export_step_branch","replace_step_branch_leaf","move_step_branch","step_branch_parts","step_branch_bounds","step_branch_mass","measure_bearing_inertia","balance_two_planes","balance_fixed_sites","add_assembly_point_mass","combine_assembly_mass","place_assembly_mass","affine_assembly_mass","subtract_assembly_mass","read_occurrence_styles","piecewise_axis_radius","bore_wall_faces","cap_edge_pcurve","transfer_cap_loop","replace_bore_wall","cut_bore_cylinder","repeat_profile_segment","compress_rotated_segments","compress_profile_sectors","discover_profile_sectors","restore_lossless_sector","restore_bidirectional_sector",
     "curve_patch_clearance", "patch_pair_clearance", "trimmed_face_clearance", "curve_trimmed_face_distance", "swept_ball_face_clearance", "routed_tube_pair", "routed_tube_bundle", "spatial_contour_sets_distance","closest_spatial_contours","inspect_spatial_clearances","prove_spatial_clearance_along",
     "compress_profile_curve","compress_profile_segments","compress_profile_chain","orient_profile_chain","restore_profile_partition","assemble_open_profile","assemble_closed_profile","assemble_planar_profile","orient_planar_profile","assemble_projected_profile","assemble_oblique_profile","assemble_spatial_profile",
@@ -51,6 +52,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
 ];
 
 const MODIFIER_OPS: &[&str] = &[
+    "detect_cloud_primitives", "orient_cloud_normals", "segment_point_cloud",
     "edit_profile_sector","edit_closed_sector","edit_tangent_sector","certified_profile_edit","verified_gear_edit","edited_gear_step","export_iges_body","reopen_iges_body","compact_body_step","compact_product_step","name_step_parts","read_step_names","step_parts_list","compress_step_definition","bake_step_scales","compress_brep_faces","inspect_shell_orientation","thicken_nurbs_patch","inspect_patch_closure","compress_brep_edge","select_step_parts","name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists","group_step_parts","style_step_occurrences","export_step_branch","replace_step_branch_leaf","move_step_branch","step_branch_parts","step_branch_bounds","step_branch_mass","measure_bearing_inertia","balance_two_planes","balance_fixed_sites","add_assembly_point_mass","combine_assembly_mass","place_assembly_mass","affine_assembly_mass","subtract_assembly_mass","read_occurrence_styles","piecewise_axis_radius","bore_wall_faces","cap_edge_pcurve","transfer_cap_loop","replace_bore_wall","cut_bore_cylinder","repeat_profile_segment","compress_rotated_segments","compress_profile_sectors","discover_profile_sectors","restore_lossless_sector","restore_bidirectional_sector",
     "curve_patch_clearance", "patch_pair_clearance", "trimmed_face_clearance", "curve_trimmed_face_distance", "swept_ball_face_clearance", "routed_tube_pair", "routed_tube_bundle", "spatial_contour_sets_distance","closest_spatial_contours","inspect_spatial_clearances","prove_spatial_clearance_along",
     "compress_profile_curve","compress_profile_segments","compress_profile_chain","orient_profile_chain","restore_profile_partition","assemble_open_profile","assemble_closed_profile","assemble_planar_profile","orient_planar_profile","assemble_projected_profile","assemble_oblique_profile","assemble_spatial_profile",
@@ -158,6 +160,13 @@ impl Compiler {
             let value=raw(v)?;
             let text=value.as_str().or_else(||value.get("text").and_then(J::as_str)).ok_or_else(||crate::error("Expected STEP exchange text"))?;
             return Ok(J::String(text.to_owned()));
+        }
+        if name == "detect_cloud_primitives" && key == "primitive_kind" {
+            let value = raw(v)?;
+            if let Some(kind) = value.as_str().or_else(|| value.get("text").and_then(J::as_str)) {
+                return Ok(J::String(kind.to_owned()));
+            }
+            return Err(crate::error("Expected a cloud primitive kind"));
         }
         if key == "continuity_class" {
             let value=raw(v)?;
