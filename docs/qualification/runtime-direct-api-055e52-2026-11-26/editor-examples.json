@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "055e52a2c417ffe62bf331287df4012dfb0b8d910465ff4b535f508d9c9910cf",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/store-periodic-curve.r",
+      "exampleSha256": "2cb0628aa40291aebe375fd532c1cb36f9555d66e9abe994ca848437b7c38d49",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n35,41\nГотово · 59 ms"
+    },
+    {
+      "example": "examples/rush/rotate-periodic-knot.r",
+      "exampleSha256": "00b795c81dd6bd5f3855530a96b523c66a0336f04f307b17b2fde75b97812d72",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n6\nГотово · 14 ms"
+    },
+    {
+      "example": "examples/rush/insert-periodic-seam.r",
+      "exampleSha256": "0a40435248f2f11e475577f46b7ffbbf2f46ad587ad6bd230d1512173e6195a5",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n3,23\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/open-periodic-curve.r",
+      "exampleSha256": "718388e8d939e3ed9c70bb64fe7bb9dd5b62bb1de3fe2a0cea671c6a3bc4d8aa",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n3,24\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/trim-periodic-curve.r",
+      "exampleSha256": "c857ef17e107b86c55e7a4aef4c7553e22e34386507d62fec73b23f8e968b213",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n1\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/trim-periodic-turns.r",
+      "exampleSha256": "6b94484693e3c087f559cc160ea7e21c0c0836e3cf7c5d588535fff40543a794",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n9,43\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/partition-periodic-curve.r",
+      "exampleSha256": "36b4325f94f7e18be154372c2103e7bf2d313012b9ab6a8b5bcf466608c18cbd",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n1,49\nГотово · 7 ms"
+    }
+  ]
+}

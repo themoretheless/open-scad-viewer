@@ -13966,7 +13966,7 @@
     {
       "id": "NURBS-0506",
       "name": "Точное периодическое представление замкнутой NURBS-кривой со стыком C2",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::store_exact_periodic_c2_curve",
@@ -13975,7 +13975,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-506-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-506-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-506-2026-11-17/native.log.gz",
+        "examples/rush/store-periodic-curve.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Store a C2-closed clamped spline as an exactly equivalent cyclic spline, preserving the complete active parameter law.",
@@ -13986,7 +13988,7 @@
     {
       "id": "NURBS-0507",
       "name": "Точный перенос шва периодической NURBS-кривой на существующий узел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::rotate_periodic_curve_at_exact_knot",
@@ -13995,7 +13997,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-507-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-507-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-507-2026-11-17/native.log.gz",
+        "examples/rush/rotate-periodic-knot.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Rotate cyclic rational spline storage while requiring exact translated knot storage and an unchanged parameter period.",
@@ -14006,7 +14010,7 @@
     {
       "id": "NURBS-0508",
       "name": "Точный перенос шва периодической NURBS-кривой внутрь участка",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::insert_and_rotate_periodic_curve_seam",
@@ -14015,7 +14019,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-508-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-508-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-508-2026-11-17/native.log.gz",
+        "examples/rush/insert-periodic-seam.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Insert a cyclic Boehm knot in exact homogeneous arithmetic and rotate to the new seam without altering the curve.",
@@ -14026,7 +14032,7 @@
     {
       "id": "NURBS-0509",
       "name": "Точное раскрытие периода NURBS-кривой с зажатыми концами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::open_exact_periodic_curve",
@@ -14036,7 +14042,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
         "docs/qualification/nurbs-curvature-field-509-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-509-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-509-2026-11-17/native.log.gz",
+        "examples/rush/open-periodic-curve.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Clamp both endpoint spans in exact homogeneous arithmetic and keep the entire active parameter interval.",
@@ -14047,7 +14055,7 @@
     {
       "id": "NURBS-0510",
       "name": "Точное извлечение участка периодической NURBS-кривой через шов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::restrict_exact_periodic_curve",
@@ -14056,7 +14064,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-510-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-510-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-510-2026-11-17/native.log.gz",
+        "examples/rush/trim-periodic-curve.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Extract a clamped subcurve across the periodic seam with its unwrapped parameter coordinates preserved.",
@@ -14067,7 +14077,7 @@
     {
       "id": "NURBS-0511",
       "name": "Точное извлечение участка NURBS-кривой через несколько периодов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::restrict_exact_periodic_curve_over_turns",
@@ -14076,7 +14086,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-511-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-511-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-511-2026-11-17/native.log.gz",
+        "examples/rush/trim-periodic-turns.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Lift complete and partial periodic turns into one exactly clamped parameter interval under bounded storage and work.",
@@ -14087,7 +14099,7 @@
     {
       "id": "NURBS-0512",
       "name": "Точное разбиение периода NURBS-кривой на участки с зажатыми концами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::partition_exact_periodic_curve",
@@ -14096,7 +14108,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-512-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-512-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-512-2026-11-17/native.log.gz",
+        "examples/rush/partition-periodic-curve.r",
+        "tests/rushPeriodicCurves.test.ts"
       ],
       "remainingQualification": [
         "Partition one shifted period into ordered clamped subcurves under one budget without returning partial output.",
