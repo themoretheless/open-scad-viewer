@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "0a65cc5914c7af2c0b37a256a6fcdceba5732ff43478aaec5b1e1b9d9d69a4bf",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/orientation-winding.r",
+      "exampleSha256": "52c72c11b096cfc0b11fcdc4a9b4f2ec684a7f6fe6d72d19cf2a0e1bd6d22824",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 425 ms"
+    },
+    {
+      "example": "examples/rush/curve-winding-at-point.r",
+      "exampleSha256": "82948e9cfffea2719feb890c84a98e59d141db023ac0f4fef2503a29972c0595",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-at-point.r",
+      "exampleSha256": "6d494c0a4bce886d9eafbe201fc08f1e6167b9bff4ec10e950fe5ad6582eb151",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/curve-winding-over-box.r",
+      "exampleSha256": "e0f969ba262a8e64664631fdb5162cfcb7ed90c2320b68f642414ada29979ff8",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/signed-contour-distance.r",
+      "exampleSha256": "182afeb92fb0c97da80f83ade9448bd9030a783e63505d555fc39ca3a7ebe6f8",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-over-box.r",
+      "exampleSha256": "27d55774a1f02ced999f88d7e9b720e122a08db9085eb08316c60bde025af7ce",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/signed-contour-box-distance.r",
+      "exampleSha256": "e8f6f50d317f48c86bcf474606fea389906a13b00590f966b9833d3de789d605",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 8 ms"
+    }
+  ]
+}

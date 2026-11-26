@@ -9,6 +9,7 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [features]
+compact-object-fields = ["value-codec/compact-object-fields"]
 default = []
 gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]

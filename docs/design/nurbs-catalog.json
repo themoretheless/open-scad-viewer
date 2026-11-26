@@ -20111,7 +20111,7 @@
     {
       "id": "NURBS-0789",
       "name": "Подтверждение числа оборотов замкнутой плоской NURBS-ориентации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_orientation_winding",
@@ -20119,7 +20119,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-789-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-789-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-789-2026-11-17/native.log.gz",
+        "examples/rush/orientation-winding.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Certify winding by exact endpoint ray agreement, knot continuity and an enclosed signed angular integral.",
@@ -20130,7 +20132,7 @@
     {
       "id": "NURBS-0790",
       "name": "Число обходов замкнутой плоской NURBS-кривой вокруг точки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_winding_about_point",
@@ -20138,7 +20140,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-790-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-790-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-790-2026-11-17/native.log.gz",
+        "examples/rush/curve-winding-at-point.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Certify the winding of a closed rational planar contour about an arbitrary query point.",
@@ -20149,7 +20153,7 @@
     {
       "id": "NURBS-0791",
       "name": "Классификация заполнения по нескольким замкнутым NURBS-контурам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_curve_fill",
@@ -20157,7 +20161,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-791-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-791-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-791-2026-11-17/native.log.gz",
+        "examples/rush/contour-fill-at-point.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Classify a point by nonzero or even-odd rational contour winding under a shared work budget.",
@@ -20168,7 +20174,7 @@
     {
       "id": "NURBS-0792",
       "name": "Подтверждение общего числа обходов NURBS-контура для прямоугольной области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_winding_over_box",
@@ -20176,7 +20182,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-792-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-792-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-792-2026-11-17/native.log.gz",
+        "examples/rush/curve-winding-over-box.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Certify one winding number over an entire query box by continuous contour separation.",
@@ -20187,7 +20195,7 @@
     {
       "id": "NURBS-0793",
       "name": "Знаковое расстояние до набора замкнутых плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_fill_signed_distance",
@@ -20195,7 +20203,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-793-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-793-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-793-2026-11-17/native.log.gz",
+        "examples/rush/signed-contour-distance.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Enclose nearest contour distance and determine its sign from the selected fill rule.",
@@ -20206,7 +20216,7 @@
     {
       "id": "NURBS-0794",
       "name": "Сертификация заполнения прямоугольной области по нескольким NURBS-контурам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_curve_fill_over_box",
@@ -20214,7 +20224,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-794-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-794-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-794-2026-11-17/native.log.gz",
+        "examples/rush/contour-fill-over-box.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Certify the same fill rule outcome throughout a box separated from every supplied contour.",
@@ -20225,7 +20237,7 @@
     {
       "id": "NURBS-0795",
       "name": "Границы знакового расстояния до NURBS-контуров по прямоугольной области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_fill_signed_distance_over_box",
@@ -20233,7 +20245,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-795-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-795-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-795-2026-11-17/native.log.gz",
+        "examples/rush/signed-contour-box-distance.r",
+        "tests/rushContourFills.test.ts"
       ],
       "remainingQualification": [
         "Enclose the signed nearest contour distance over a separated query box using its certified fill and radius.",

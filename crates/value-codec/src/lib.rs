@@ -714,17 +714,38 @@ impl Parser<'_> {
     }
 }
 
+// Factor out key allocation, insertion and the drop of any previous value.
+// Browser geometry emits enough literal object fields for this to affect its delivery size.
+#[cfg(feature = "compact-object-fields")]
+#[doc(hidden)]
+#[inline(never)]
+pub fn insert_object_field(object: &mut Map<String, Value>, key: &str, value: Value) {
+    object.insert(key.to_owned(), value);
+}
+#[cfg(feature = "compact-object-fields")]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! insert_literal_field {
+    ($object:ident, $key:literal, $value:expr) => { $crate::insert_object_field(&mut $object, $key, $value) };
+}
+#[cfg(not(feature = "compact-object-fields"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! insert_literal_field {
+    ($object:ident, $key:literal, $value:expr) => { $object.insert($key.into(), $value) };
+}
+
 #[macro_export]
 macro_rules! json {
  (null) => {$crate::Value::Null};
  ([]) => {$crate::Value::Array(Vec::new())};
  ({$($fields:tt)*}) => {{ let mut object=$crate::Map::new();$crate::json!(@fields object; $($fields)*);$crate::Value::Object(object) }};
  ([$($items:tt)*]) => {{ let mut items=Vec::<$crate::Value>::new();$crate::json!(@items items; $($items)*);$crate::Value::Array(items) }};
- (@fields $o:ident; $k:literal : null $(, $($tail:tt)*)?) => {$o.insert($k.into(),$crate::Value::Null); $($crate::json!(@fields $o; $($tail)*);)?};
+ (@fields $o:ident; $k:literal : null $(, $($tail:tt)*)?) => {$crate::insert_literal_field!($o,$k,$crate::Value::Null); $($crate::json!(@fields $o; $($tail)*);)?};
  (@fields $o:ident;) => {};
- (@fields $o:ident; $k:literal : {$($v:tt)*} $(, $($tail:tt)*)?) => {$o.insert($k.into(),$crate::json!({$($v)*})); $($crate::json!(@fields $o; $($tail)*);)?};
- (@fields $o:ident; $k:literal : [$($v:tt)*] $(, $($tail:tt)*)?) => {$o.insert($k.into(),$crate::json!([$($v)*])); $($crate::json!(@fields $o; $($tail)*);)?};
- (@fields $o:ident; $k:literal : $v:expr $(, $($tail:tt)*)?) => {$o.insert($k.into(),$crate::json!($v)); $($crate::json!(@fields $o; $($tail)*);)?};
+ (@fields $o:ident; $k:literal : {$($v:tt)*} $(, $($tail:tt)*)?) => {$crate::insert_literal_field!($o,$k,$crate::json!({$($v)*})); $($crate::json!(@fields $o; $($tail)*);)?};
+ (@fields $o:ident; $k:literal : [$($v:tt)*] $(, $($tail:tt)*)?) => {$crate::insert_literal_field!($o,$k,$crate::json!([$($v)*])); $($crate::json!(@fields $o; $($tail)*);)?};
+ (@fields $o:ident; $k:literal : $v:expr $(, $($tail:tt)*)?) => {$crate::insert_literal_field!($o,$k,$crate::json!($v)); $($crate::json!(@fields $o; $($tail)*);)?};
  (@items $o:ident;) => {};
  (@items $o:ident; {$($v:tt)*} $(, $($tail:tt)*)?) => {$o.push($crate::json!({$($v)*})); $($crate::json!(@items $o; $($tail)*);)?};
  (@items $o:ident; [$($v:tt)*] $(, $($tail:tt)*)?) => {$o.push($crate::json!([$($v)*])); $($crate::json!(@items $o; $($tail)*);)?};
