@@ -1,9 +1,9 @@
 // Finite exact-artifact API baseline, broader qualification separate.
 export const CURRENT_RUNTIME_GEOMETRY_EVIDENCE = Object.freeze({
-  "wasmSha256": "9b29242f17aba8dfbbd9cbdf9c3e34ef2bd6df8b2ba8e14175a0136478767a63",
+  "wasmSha256": "55ef4a80f4f00dc28e11e7b618c25cba7e9a718df9c21a87dda8d49ebfb340f6",
   "noticesSha256": "f022e129c97f585a1dc8ec9a64f01dc487581beff8a7011f5128d06a37c66b48",
   "lockfileSha256": "5ec2184363daf18800f0bd0eb9ee1bf5997fabbb7b72fbf052799f144a9edf08",
   "rustLockfileSha256": "6afc82e4be007219a6049279d4c51d0c37510cbcf11f4ed64e02a1b07a474af7",
-  "recordId": "docs/qualification/runtime-provider-9b29242f17ab-2026-11-26.json",
-  "corpusVersion": "runtime-direct-api-9b29242f17ab-2026-11-26"
+  "recordId": "docs/qualification/runtime-provider-55ef4a80f4f0-2026-11-26.json",
+  "corpusVersion": "runtime-direct-api-55ef4a80f4f0-2026-11-26"
 } as const)
