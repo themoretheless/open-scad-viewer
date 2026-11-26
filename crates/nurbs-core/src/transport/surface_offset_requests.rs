@@ -224,12 +224,31 @@ fn handle_curve_offset_trimmed_bevel(v: &Value) -> Result<Value> {
 }
 
 fn handle_curve_offset_bevel_wire(v: &Value) -> Result<Value> {
-    let result = curve_offset_wire::bevel_wire(
-        &field(v, "curve")?,
+    let mut source: curve::Curve = field(v, "curve")?;
+    source.validate()?;
+    let elevation = source.control_points[0].get(2).copied();
+    if let Some(z) = elevation {
+        check(
+            source.control_points.iter().all(|point| point.len() == 3 && point[2] == z),
+            "Offset requires a curve in a constant-Z plane",
+        )?;
+        for point in &mut source.control_points {
+            point.truncate(2);
+        }
+    }
+    let mut result = curve_offset_wire::bevel_wire(
+        &source,
         field(v, "distance")?,
         field(v, "toleranceMm")?,
         field(v, "maxCells")?,
     )?;
+    if let Some(z) = elevation {
+        for curve in &mut result.curves {
+            for point in &mut curve.control_points {
+                point.push(z);
+            }
+        }
+    }
     let diagnostics = crate::curve_offset_diagnostics::inspect_chain(
         &result.edges,
         result.closed,

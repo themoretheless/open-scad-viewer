@@ -22,8 +22,11 @@ it('pulls back a world curve and lifts the certified UV curve onto its original 
 it('retains the authored bevel between two offset profile segments',async()=>{
   const scene=await run('bevel-offset-wire')
   const report=JSON.parse(scene.measurements!.find(row=>row.operation==='bevel_offset_wire')!.report)
-  expect(report).toMatchObject({accepted:true,wholeWire:true,closed:false,piece:1,pieceCount:3})
+  expect(report).toMatchObject({accepted:true,wholeWire:true,closed:false,piece:0,pieceCount:1})
   expect(report.cells.map((cell:{source:{kind:string}})=>cell.source.kind)).toEqual(['source-offset','bevel','source-offset'])
   expect(report.errorUpperMm).toBeLessThanOrEqual(0.001)
-  expect(scene.surfaceArea).toBeCloseTo(Math.SQRT2,6)
+  const zs=Array.from(scene.meshes[0]!.vertices).filter((_,index)=>index%6===2)
+  expect(Math.min(...zs)).toBeCloseTo(2,8)
+  expect(Math.max(...zs)).toBeCloseTo(3,8)
+  expect(scene.surfaceArea).toBeCloseTo(7+Math.SQRT2,6)
 },180000)
