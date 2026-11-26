@@ -3525,7 +3525,7 @@ pub fn orient_planar_contours_for_nonzero_fill(
             return Err(resource("Contour reversal work budget exhausted"));
         }
         let [start, end] = curve.domain();
-        let report = crate::editing::exact_projective::affine_curve_clock(curve, [end, start], remaining)?;
+        let report = crate::exact_geometry::exact_projective::affine_curve_clock(curve, [end, start], remaining)?;
         reversal_work += report.work_used;
         let reversed = report.geometry.ok_or_else(|| {
             resource("Contour reversal could not preserve the exact affine clock within the work budget")

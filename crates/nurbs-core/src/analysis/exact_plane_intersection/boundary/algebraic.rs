@@ -3,7 +3,7 @@ use super::{
     ExactSupportLine, ProjectedTrimmedFace, Refusal, SupportPlaneIntersection, Work,
     intersect_planar_supports,
 };
-pub use crate::editing::exact_projective::pcurve_seam_isolation::AlgebraicBoundaryClock;
+pub use crate::exact_geometry::exact_projective::pcurve_seam_isolation::AlgebraicBoundaryClock;
 use crate::{Result, analysis::planar_coplanar_ray::algebraic_boundary_clocks};
 
 #[derive(Clone, Debug, PartialEq, Eq)]

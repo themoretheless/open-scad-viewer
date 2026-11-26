@@ -16,6 +16,7 @@ pub use nurbs_foundation::distance;
 pub mod construct;
 pub mod analysis;
 pub mod editing;
+pub(crate) mod exact_geometry;
 pub mod join;
 pub mod trim;
 pub mod tessellation;

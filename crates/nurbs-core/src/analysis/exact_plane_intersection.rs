@@ -10,7 +10,7 @@ use super::{
 use crate::{
     Result, check,
     core::bounded_rational::{Error, Work},
-    editing::exact_derivative::Refusal,
+    exact_geometry::exact_derivative::Refusal,
     trim::trim_domain::Location,
 };
 use num_rational::BigRational as Q;

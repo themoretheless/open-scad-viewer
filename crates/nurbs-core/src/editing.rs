@@ -22,19 +22,19 @@ pub mod exact_surface_merge;
 pub mod exact_curve_merge;
 pub mod exact_periodic_surface;
 pub mod rational_gauge;
-pub mod rational_factor;
-mod rational_edit;
+pub use crate::exact_geometry::rational_factor;
+pub(crate) use crate::exact_geometry::rational_edit;
 pub mod exact_knot_insertion;
 
 pub mod exact_surface_knot_insertion;
 
 pub mod rational_surface_factor;
 
-pub mod exact_projective;
+pub use crate::exact_geometry::exact_projective;
 
-pub mod exact_derivative;
+pub use crate::exact_geometry::exact_derivative;
 
-pub mod exact_surface_derivative;
+pub use crate::exact_geometry::exact_surface_derivative;
 
 pub mod bounded_differential;
 

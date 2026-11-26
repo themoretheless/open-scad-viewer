@@ -10,7 +10,7 @@ use crate::{
     core::bounded_rational::Work,
     curve_distance::enclosure,
     distance_bounds::Interval,
-    editing::{
+    exact_geometry::{
         exact_derivative::Refusal,
         exact_projective::{
             PcurveSeamIsolation,

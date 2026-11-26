@@ -6,7 +6,7 @@ use super::{
 use crate::{
     Result,
     core::bounded_rational::Work,
-    editing::exact_derivative::{
+    exact_geometry::exact_derivative::{
         ExactPlanarMass, ExactPlanarMassOutcome, ExactPlanarSecondMoments, Refusal,
         exact_planar_boundary_inertia,
     },

@@ -12,7 +12,7 @@ export const MODULE_LAYERS = {
     intersection: 7, boolean: 8, body_analysis: 9, features: 10,
   },
   'nurbs-core': {
-    numerics: 0, core: 1, foundation: 2, certificates: 2, distance: 2, analysis: 3, trim: 3,
+    numerics: 0, core: 1, foundation: 2, certificates: 2, distance: 2, analysis: 3, trim: 3, exact_geometry: 3,
     intersection: 4, offset: 4, join: 4, editing: 4, construct: 5, sweeps: 5, tessellation: 5,
     transport: 6, domains: 7,
   },

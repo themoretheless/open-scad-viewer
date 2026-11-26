@@ -7,7 +7,7 @@ use crate::{
     Result, check,
     core::bounded_rational::Work,
     curve::Curve,
-    editing::exact_projective::{PcurvePullbackRefusal, lift_pcurve_to_surface},
+    exact_geometry::exact_projective::{PcurvePullbackRefusal, lift_pcurve_to_surface},
     surface::Surface,
     trim::trim_domain::exact_loop_joins,
 };
@@ -101,7 +101,7 @@ fn build(
                         contour,
                         curve,
                         reason: report.refusal.unwrap_or(PcurvePullbackRefusal::Geometry(
-                            crate::editing::exact_derivative::Refusal::UnprovedIdentity,
+                            crate::exact_geometry::exact_derivative::Refusal::UnprovedIdentity,
                         )),
                     });
                 };

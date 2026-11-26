@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     Result, analysis::planar_coplanar_ray::exact_boundary_ranges,
-    editing::exact_projective::pcurve_seam_isolation::SpanLineCoverage,
+    exact_geometry::exact_projective::pcurve_seam_isolation::SpanLineCoverage,
 };
 use num_rational::BigRational as Q;
 
