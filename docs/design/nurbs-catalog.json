@@ -19040,7 +19040,7 @@
     {
       "id": "NURBS-0738",
       "name": "Минимальный зазор NURBS-траекторий с разными временами начала и прохода",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_curve_clearance",
@@ -19048,7 +19048,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-738-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-738-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-738-2026-11-17/native.log.gz",
+        "examples/rush/minimum-scheduled-gap.r",
+        "tests/rushScheduledGaps.test.ts"
       ],
       "remainingQualification": [
         "Enclose clearance on the exact time overlap of independently scheduled curve traversals.",
@@ -19059,7 +19061,7 @@
     {
       "id": "NURBS-0739",
       "name": "Карта контактов NURBS-траекторий с независимым расписанием",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_curve_clearance",
@@ -19067,7 +19069,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-739-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-739-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-739-2026-11-17/native.log.gz",
+        "examples/rush/scheduled-contact-intervals.r",
+        "tests/rushScheduledGaps.test.ts"
       ],
       "remainingQualification": [
         "Classify contact cells on the exact scheduled overlap and enclose their absolute time endpoints.",
@@ -19078,7 +19082,7 @@
     {
       "id": "NURBS-0740",
       "name": "Проверка контактов с остановившимся инструментом на NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_clearance_with_holds",
@@ -19086,7 +19090,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-740-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-740-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-740-2026-11-17/native.log.gz",
+        "examples/rush/held-contact-intervals.r",
+        "tests/rushScheduledGaps.test.ts"
       ],
       "remainingQualification": [
         "Classify tool clearance through all scheduled phases with endpoint holds.",
@@ -19097,7 +19103,7 @@
     {
       "id": "NURBS-0741",
       "name": "Минимальный зазор в расписании с остановками инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_clearance_with_holds",
@@ -19105,7 +19111,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-741-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-741-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-741-2026-11-17/native.log.gz",
+        "examples/rush/minimum-held-gap.r",
+        "tests/rushScheduledGaps.test.ts"
       ],
       "remainingQualification": [
         "Refine a certified gap minimum across the full schedule, including endpoint holds.",
