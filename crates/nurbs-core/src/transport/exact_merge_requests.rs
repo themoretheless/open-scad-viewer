@@ -44,6 +44,32 @@ pub(super) fn merge(v: &Value, op: &str) -> Result<Value> {
             }
         };
     }
+    if matches!(op, "store_periodic_curve" | "rotate_periodic_knot" | "insert_periodic_seam" | "open_periodic_curve"
+        | "trim_periodic_curve" | "trim_periodic_turns" | "partition_periodic_curve") {
+        let source = field(v,"source")?;
+        let budget = field(v,"max_work")?;
+        let (curve,used,count) = if op == "partition_periodic_curve" {
+            let cuts: Vec<f64> = field(v,"cuts")?;
+            let index: usize = field(v,"part")?;
+            let r = exact_curve_merge::partition_exact_periodic_curve(&source,field(v,"parameter")?,&cuts,budget)?;
+            let mut pieces = r.pieces.ok_or_else(||input(format!("Periodic partition refused at {:?}: {:?}",r.refused_piece,r.refusal)))?;
+            let count = pieces.len();
+            if index >= count { return Err(input("Selected interval is outside the partition")); }
+            (pieces.swap_remove(index),r.work_used,count)
+        } else {
+            let r = match op {
+                "store_periodic_curve" => exact_curve_merge::store_exact_periodic_c2_curve(&source,budget)?,
+                "rotate_periodic_knot" => exact_curve_merge::rotate_periodic_curve_at_exact_knot(&source,field(v,"parameter")?,budget)?,
+                "insert_periodic_seam" => exact_curve_merge::insert_and_rotate_periodic_curve_seam(&source,field(v,"parameter")?,budget)?,
+                "open_periodic_curve" => exact_curve_merge::open_exact_periodic_curve(&source,budget)?,
+                "trim_periodic_curve" => exact_curve_merge::restrict_exact_periodic_curve(&source,field(v,"domain")?,budget)?,
+                _ => exact_curve_merge::restrict_exact_periodic_curve_over_turns(&source,field(v,"domain")?,budget)?,
+            };
+            (r.curve.ok_or_else(||input(format!("Periodic curve edit refused: {:?}",r.refusal)))?,r.work_used,1)
+        };
+        return Ok(json!({"curve":curve,"domain":curve.domain(),"periodic":curve.periodic,"knots":curve.knots,
+            "controlCount":curve.control_points.len(),"pieceCount":count,"workUsed":used}));
+    }
     if matches!(op, "join_projective_chain" | "compact_projective_chain" | "close_projective_chain") {
         let curves: Vec<crate::curve::Curve> = field(v, "curves")?;
         if curves.is_empty() || curves.len() > 32 { return Err(input("Expected 1 to 32 curves")); }

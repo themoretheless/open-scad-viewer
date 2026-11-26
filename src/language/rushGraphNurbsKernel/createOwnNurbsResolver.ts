@@ -1460,6 +1460,19 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'store_periodic_curve':
+          case 'rotate_periodic_knot':
+          case 'insert_periodic_seam':
+          case 'open_periodic_curve':
+          case 'trim_periodic_curve':
+          case 'trim_periodic_turns':
+          case 'partition_periodic_curve': {
+            const {id:_id,op,input,...parameters}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;domain:number[];workUsed:number}>(op,{source:needCurve(input),...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'join_affine_c1':
           case 'join_affine_c2':
           case 'join_projective_c2':
