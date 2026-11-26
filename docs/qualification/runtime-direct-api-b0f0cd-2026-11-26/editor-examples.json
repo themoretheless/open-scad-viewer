@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "b0f0cd49a2b6b54a84263a427c688d940d6fea2d4b3022c5002d9be9a819159e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/find-principal-axis.r",
+      "exampleSha256": "eadcffe6fff659fc98affde4fd8802646a004849efc5116a71bb9b11d934d10e",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 50 ms"
+    },
+    {
+      "example": "examples/rush/bound-axis-projector.r",
+      "exampleSha256": "ab48b610c51799cda6243b0fed72d7a191cbe52d4d28d5abf7fc49a86f51191e",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 7 ms"
+    }
+  ]
+}

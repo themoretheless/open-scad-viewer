@@ -53,7 +53,7 @@ describe('immutable geometry manifest archive', () => {
       packages: Record<string, { version?: string }>
     }
 
-    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v156')
+    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v157')
     expect(manifest.engineClass).toBe('mesh')
     expect(manifest.qualification).toMatchObject({
       status: 'qualified',

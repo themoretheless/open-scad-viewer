@@ -17164,7 +17164,7 @@
     {
       "id": "NURBS-0650",
       "name": "Автоматический поиск сертифицированной главной оси инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::find_certified_principal_axis",
@@ -17172,7 +17172,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-650-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-650-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-650-2026-11-17/native.log.gz",
+        "examples/rush/find-principal-axis.r",
+        "tests/rushAxisProjectors.test.ts"
       ],
       "remainingQualification": [
         "Generate candidate directions from row cross products of the shifted midpoint tensor and certify them against full intervals.",
@@ -17207,7 +17209,7 @@
     {
       "id": "NURBS-0652",
       "name": "Гарантированный ортогональный проектор на главную ось инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_axis_projector",
@@ -17215,7 +17217,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-652-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-652-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-652-2026-11-17/native.log.gz",
+        "examples/rush/bound-axis-projector.r",
+        "tests/rushAxisProjectors.test.ts"
       ],
       "remainingQualification": [
         "Convert a principal-axis angular certificate into a sign-invariant interval projector.",
