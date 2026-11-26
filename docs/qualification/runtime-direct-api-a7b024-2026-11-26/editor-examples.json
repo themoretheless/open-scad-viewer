@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "a7b0240ef365887f5e25f3376cffaee98e3ea88848b1eaedb7a34a749e31ea82",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/signed-planar-face-area.r",
+      "exampleSha256": "040b0ddce37ec15c5d649ef57f280337417ef58e59be3a5660aa8cf509befbd7",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 69 ms"
+    }
+  ]
+}

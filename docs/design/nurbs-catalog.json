@@ -8860,7 +8860,7 @@
     {
       "id": "NURBS-0320",
       "name": "Сертифицированная площадь наклонной плоской NURBS-грани с контурами обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::planar_face_area::measure_projected_face_area",
@@ -8870,7 +8870,9 @@
         "crates/nurbs-core/src/trim/planar_area.rs",
         "crates/nurbs-core/tests/exact_projected_face_area_contracts.rs",
         "docs/qualification/nurbs-curvature-field-320-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-320-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-320-2026-11-17/native.log.gz",
+        "examples/rush/signed-planar-face-area.r",
+        "tests/rushPlanarFaceArea.test.ts"
       ],
       "remainingQualification": [
         "Enclose physical signed area for projected rational trim contours using outward integration and the metric of the exact inverse plane chart.",
