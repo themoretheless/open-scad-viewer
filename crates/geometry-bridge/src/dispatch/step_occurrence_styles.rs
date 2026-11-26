@@ -36,3 +36,62 @@ pub(super) fn apply(v:&Value)->Result<Value>{
     Ok(json!({"model":model,"paths":paths,"colours":colours,"origins":locations,
         "definitionCount":scene.assembly.definitions().len(),"step":step}))
 }
+
+pub(super) const BRANCH_OPS: &[&str] = &[
+    "export_step_branch",
+    "replace_step_branch_leaf",
+    "move_step_branch",
+    "step_branch_parts",
+    "step_branch_bounds",
+    "step_branch_mass",
+];
+
+pub(super) fn branch(v: &Value) -> Result<Value> {
+    let source = v["step"].as_str().ok_or_else(|| input("Missing input STEP assembly"))?;
+    let path: Vec<String> = field(v, "product_path")?;
+    let path: Vec<_> = path.iter().map(String::as_str).collect();
+    let mut report = json!({});
+    let updated = match v["op"].as_str().unwrap_or("") {
+        "export_step_branch" => Some(cad_step::export_step_product_subassembly(source, &path)?),
+        "replace_step_branch_leaf" => Some(cad_step::replace_step_product_at_path(
+            source, &path, field(v, "model")?, &field::<String>(v, "product_name")?,
+        )?),
+        "move_step_branch" => Some(cad_step::move_step_product_branch(source, &path, field(v, "placement")?)?),
+        "step_branch_parts" => {
+            report["parts"] = json!(cad_step::step_branch_parts_list(source, &path)?
+                .into_iter().map(|row| json!({
+                    "definition": row.definition, "name": row.name, "inside": row.inside, "outside": row.outside,
+                })).collect::<Vec<_>>());
+            None
+        }
+        "step_branch_bounds" => {
+            report["boundsMm"] = json!(cad_step::step_branch_bounds(source, &path)?);
+            None
+        }
+        "step_branch_mass" => {
+            let mut densities = field::<Vec<f64>>(v, "densities")?.into_iter();
+            let properties = cad_step::step_branch_mass_properties(
+                source, &path, field(v, "relative_tolerance")?, field(v, "max_evaluations")?,
+                |_, _| densities.next().ok_or_else(|| input("Provide one density per selected STEP occurrence")),
+            )?;
+            if densities.next().is_some() {
+                return Err(input("Provide one density per selected STEP occurrence"));
+            }
+            report["massKg"] = json!(properties.mass);
+            report["centroidMm"] = json!(properties.centroid);
+            report["inertiaKgMm2"] = json!(properties.inertia);
+            None
+        }
+        _ => return Err(input("Unknown STEP branch operation")),
+    };
+    let step = updated.as_deref().unwrap_or(source);
+    let (scene, paths) = import_step_product_paths(step)?;
+    report["assemblyName"] = json!(scene.name);
+    report["definitionCount"] = json!(scene.assembly.definitions().len());
+    report["paths"] = json!(paths);
+    report["colours"] = json!(import_step_occurrence_colours(step)?);
+    report["placements"] = json!(scene.assembly.occurrences().iter().map(|part| part.transform).collect::<Vec<_>>());
+    report["model"] = json!(scene.assembly.materialize(field(v, "preview_index")?)?);
+    report["step"] = json!(step);
+    Ok(report)
+}

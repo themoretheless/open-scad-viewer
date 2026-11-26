@@ -63,6 +63,9 @@ pub(crate) fn route(v: Value) -> Routed {
         return Routed::Handled(compact_product_step::compress_brep(&v));
     }
     if matches!(v["op"].as_str(),Some("compact_body_step"|"compact_product_step")) { return Routed::Handled(compact_product_step::export(&v)); }
+    if step_occurrence_styles::BRANCH_OPS.contains(&v["op"].as_str().unwrap_or("")) {
+        return Routed::Handled(step_occurrence_styles::branch(&v));
+    }
     if matches!(v["op"].as_str(),Some("group_step_parts"|"style_step_occurrences"|"read_occurrence_styles")) {return Routed::Handled(step_occurrence_styles::apply(&v));}
     if named_step_parts::OPS.contains(&v["op"].as_str().unwrap_or("")) {return Routed::Handled(named_step_parts::apply(&v));}
     if shared_assembly_rays::OPS.contains(&v["op"].as_str().unwrap_or("")) { return Routed::Handled(shared_assembly_rays::apply(&v)); }
