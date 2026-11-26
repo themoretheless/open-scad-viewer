@@ -1,0 +1,33 @@
+{
+  "embeddedOnly": true,
+  "geometryRequests": 1,
+  "productionFilesUnchanged": true,
+  "candidate": "/Users/themoretheless/.codex/worktrees/nurbs-editor-contour-distance-1126/public/wasm/geometry-kernel.wasm",
+  "schema": "candidate-direct-browser-api/1",
+  "identity": {
+    "sha256": "98c5e3643430319c13d9de49d1ae6acdf18a7f3eed60d53d0b34039e3a7ab8ff",
+    "byteLength": 20934768
+  },
+  "browserVersion": "151.0.7922.34",
+  "scope": "Finite Chromium embedded-default API probes on main and independent worker. Only the explicit identity probe fetches raw bytes; no optional compiler is installed and the worker ignores the supplied module. Extra raw HTTP requests are blocked. No provider admission, production build or whole-UI qualification.",
+  "qualificationClaim": "none",
+  "result": {
+    "main": {
+      "passed": true,
+      "checks": 40
+    },
+    "thread": {
+      "ok": true,
+      "identity": {
+        "sha256": "98c5e3643430319c13d9de49d1ae6acdf18a7f3eed60d53d0b34039e3a7ab8ff",
+        "byteLength": 20934768
+      },
+      "result": {
+        "passed": true,
+        "checks": 40
+      }
+    }
+  },
+  "pageErrors": [],
+  "passed": true
+}

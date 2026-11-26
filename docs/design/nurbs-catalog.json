@@ -7866,7 +7866,7 @@
     {
       "id": "NURBS-0278",
       "name": "Сертифицированное минимальное расстояние между двумя пространственными контурами кривизны NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours",
@@ -7881,7 +7881,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_distance.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
         "docs/qualification/nurbs-curvature-field-278-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-278-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-278-2026-11-16/native.log.gz",
+        "examples/rush/curvature-contour-distance.r",
+        "tests/rushContourDistance.test.ts"
       ],
       "remainingQualification": [
         "Combines exact segment-pair projections and continuous world-space contour errors. Certified boxes prune pairs that cannot improve the upper bound.",
