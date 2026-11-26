@@ -492,9 +492,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'measure_planar_path_area':
+          case 'measure_planar_path_centroid':
           case 'simplify_exact_path':
+          case 'project_to_planar_region':
           case 'project_point_to_path':
+          case 'locate_planar_path_points':
+          case 'clip_path_to_planar_region':
           case 'intersect_spatial_paths':
+          case 'node_spatial_path':
           case 'find_path_self_intersections':
           case 'measure_spatial_path_distance':
           case 'simplify_path_with_tolerance': {

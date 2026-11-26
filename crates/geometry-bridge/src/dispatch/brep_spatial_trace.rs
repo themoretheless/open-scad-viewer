@@ -29,6 +29,58 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
     let points = path(v, "query_path_mm")?;
     let work = field(v, "max_work")?;
     let report = match op {
+        "node_spatial_path" => {
+            let r = a::node_exact_spatial_polyline(&points, work)?;
+            let edges=r.edges.into_iter().map(|e|json!({"sourceSpan":e.source_span,"parameters":e.parameters.map(|q|q.to_string()),"nodes":e.nodes})).collect::<Vec<_>>();
+            json!({"nodesMm":coordinates(r.nodes_mm),"edges":edges,"workUsed":r.exact_work})
+        }
+        "measure_planar_path_area" => {
+            let r = a::exact_planar_spatial_polyline_area(&points, work)?;
+            json!({"areaVectorMm2":r.area_vector_mm2.map(|q|q.to_string()),"areaSquaredMm4":r.area_squared_mm4.to_string(),"workUsed":r.exact_work})
+        }
+        "measure_planar_path_centroid" => {
+            let r = a::exact_planar_spatial_polyline_centroid(&points, work)?;
+            json!({"centroidMm":r.centroid_mm.map(|q|q.to_string()),"workUsed":r.exact_work})
+        }
+        "locate_planar_path_points" => {
+            let r = a::locate_points_in_exact_planar_spatial_polyline(
+                &points,
+                &path(v, "other_path_mm")?,
+                work,
+            )?;
+            let locations = r
+                .locations
+                .into_iter()
+                .map(|l| format!("{l:?}"))
+                .collect::<Vec<_>>();
+            json!({"locations":locations,"workUsed":r.exact_work})
+        }
+        "clip_path_to_planar_region" => {
+            let r = a::clip_spatial_path_to_exact_planar_polyline(
+                &points,
+                &path(v, "other_path_mm")?,
+                work,
+            )?;
+            let spans = r
+                .span_intervals
+                .into_iter()
+                .map(|intervals| {
+                    intervals
+                        .into_iter()
+                        .map(|p| p.map(|q| q.to_string()))
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            json!({"spans":spans,"workUsed":r.exact_work})
+        }
+        "project_to_planar_region" => {
+            let r = a::project_point_to_exact_planar_polyline_region(
+                &points,
+                &point(&v["query_point_mm"])?,
+                work,
+            )?;
+            json!({"closestMm":r.closest_mm.map(|q|q.to_string()),"location":format!("{:?}",r.location),"distanceSquaredMm2":r.distance_squared_mm2.to_string(),"workUsed":r.exact_work})
+        }
         "simplify_exact_path" => {
             let r = a::simplify_exact_spatial_polyline(&points, work)?;
             json!({"pointsMm":coordinates(r.points_mm),"sourceVertices":r.source_vertices,"workUsed":r.exact_work})
