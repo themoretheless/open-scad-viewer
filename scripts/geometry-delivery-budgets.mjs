@@ -1457,6 +1457,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/Bbrv1l9p.js':123_900,'assets/C9DSeyfW.js':203_600,'assets/Cu39RbC1.js':209_500,'assets/DscHD1lh.js':102_400,'assets/mainSolid.worker-D3vqfpZR.js':268_400}),
   }),
+  // rotating planar tools: 20,920,586 raw bytes, 8,016,597 packed bytes and 15,396,141 total asset bytes.
+  'ffe9e2f72cd9a40449c343e164c0dc004ad9437cd4badef0e79f4208eb5621bf':Object.freeze({
+    version:189,geometryChunkBytes:8_017_000,totalAssetBytes:15_397_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:327_000,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/-hpAqKg0.js':102_600,'assets/B-wfjTbV.js':124_600,'assets/B8qxZf8V.js':203_600,'assets/BgrSAiKf.js':209_700,'assets/mainSolid.worker-CNLsFgRe.js':269_000}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
