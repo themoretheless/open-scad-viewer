@@ -3,6 +3,20 @@ use crate::editing::{exact_curve_merge, exact_surface_merge};
 use crate::surface::Axis;
 
 pub(super) fn merge(v: &Value, op: &str) -> Result<Value> {
+    if matches!(op, "merge_weighted_curves" | "merge_weighted_chain") {
+        let curves: Vec<crate::curve::Curve> = field(v, "curves")?;
+        let budget = field(v, "max_work")?;
+        let report = if op == "merge_weighted_curves" {
+            let [left, right] = curves.as_slice() else { return Err(input("Expected two curves")); };
+            exact_curve_merge::merge_with_weight_scaling(left, right, budget)?
+        } else {
+            if curves.is_empty() || curves.len() > 32 { return Err(input("Expected 1 to 32 curves")); }
+            let sources = curves.iter().collect::<Vec<_>>();
+            exact_curve_merge::merge_chain_with_weight_scaling(&sources, budget)?
+        };
+        let curve = report.curve.ok_or_else(|| input(format!("Weighted curve merge refused: {:?}", report.refusal)))?;
+        return Ok(json!({"curve":curve,"domain":curve.domain(),"weights":curve.weights,"workUsed":report.work_used}));
+    }
     if op == "merge_curve_exact" {
         let left: crate::curve::Curve = field(v, "left")?;
         let right = field(v, "right")?;

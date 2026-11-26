@@ -588,6 +588,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_principal_curvatures" => &["uv", "u_side", "v_side"],
         "curve_nearest_point" => &["probe_point", "tolerance_mm", "max_cells"],
         "surface_nearest_point" => &["probe_point", "tolerance_mm", "max_cells"],
+        "merge_weighted_curves" => &["target_geometry","max_work"],
+        "merge_weighted_chain" => &["inputs","max_work"],
         "merge_curve_exact" => &["target_geometry"],
         "merge_surface_exact" => &["target_geometry","direction"],
         "curve_pair_distance" => &["target_geometry", "tolerance_mm", "max_cells"],

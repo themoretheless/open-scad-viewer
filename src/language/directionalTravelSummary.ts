@@ -11,6 +11,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'naca_five_digit_profile') return russian ? 'Пятизначный профиль NACA' : 'Five-digit NACA section'
   if (operation === 'cst_spline_profile') return russian ? 'Сплайн по профилю CST' : 'CST spline profile'
   if (operation === 'fit_cst_sides') return russian ? 'Подбор профиля CST по двум сторонам' : 'CST fit to upper and lower samples'
+  if (operation === 'merge_weighted_curves') return russian ? 'Склейка рациональных кривых' : 'Weighted curve merge'
+  if (operation === 'merge_weighted_chain') return russian ? 'Склейка цепочки рациональных кривых' : 'Weighted curve chain merge'
   if (operation === 'merge_curve_exact') return russian ? 'Точное объединение кривых' : 'Exact curve merge'
   if (operation === 'merge_surface_exact') return russian ? 'Точное объединение поверхностей' : 'Exact surface merge'
   if (operation === 'bounded_surface_partial_field') return russian ? 'С допуском · Поле частной производной' : 'Bounded Partial derivative field'

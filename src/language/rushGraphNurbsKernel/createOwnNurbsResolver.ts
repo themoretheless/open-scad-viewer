@@ -1460,6 +1460,14 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'merge_weighted_curves':
+          case 'merge_weighted_chain': {
+            const ids = n.op === 'merge_weighted_curves' ? [n.input,n.target_geometry] : [n.input,...n.inputs]
+            const {curve,...report} = callGeometryRust<{curve:NurbsCurve;weights:number[];domain:number[];workUsed:number}>(n.op,{curves:ids.map(id=>needCurve(id)),max_work:n.max_work})
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'curve',data:curve}
+            break
+          }
           case 'merge_curve_exact': {
             const {curve,...report}=callGeometryRust<{curve:NurbsCurve;seam:number}>(n.op,{left:needCurve(n.input),right:needCurve(n.target_geometry)})
             constructionReports[key]={measurement:{operation:n.op,report}}
