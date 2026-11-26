@@ -7892,7 +7892,7 @@
     {
       "id": "NURBS-0279",
       "name": "Сертифицированное сечение пространственного контура кривизны NURBS плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::section_curvature_gap_contour",
@@ -7905,7 +7905,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "docs/qualification/nurbs-curvature-field-279-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-279-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-279-2026-11-16/native.log.gz",
+        "examples/rush/curvature-contour-section.r",
+        "tests/rushContourPlane.test.ts"
       ],
       "remainingQualification": [
         "Bounds every possible plane intersection by clipping an outward affine signed enclosure. Opposite strict endpoint signs certify a crossing without claiming uniqueness.",
