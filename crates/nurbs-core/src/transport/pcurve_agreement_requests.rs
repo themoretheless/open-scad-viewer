@@ -13,6 +13,19 @@ fn agreement(r: proof::PcurveEdgeAgreementReport) -> Result<Value> {
     };
     Ok(json!({"outcome":outcome,"workUsed":r.work_used}))
 }
+fn orientation(outcome: proof::PcurveOrientationOutcome) -> Value {
+    use proof::{PcurveEdgeAgreement as Edge, PcurveOrientationOutcome as Orientation};
+    match outcome {
+        Orientation::Compared(Edge::Equal) => json!({"status":"equal"}),
+        Orientation::Compared(Edge::Different { parameter, coordinate }) =>
+            json!({"status":"different","parameter":parameter,"coordinate":coordinate}),
+        Orientation::Compared(Edge::Refused(reason)) =>
+            json!({"status":"comparisonRefused","reason":format!("{reason:?}")}),
+        Orientation::ClockRefused(reason) =>
+            json!({"status":"clockRefused","reason":format!("{reason:?}")}),
+    }
+}
+
 pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     let surface = field(v, "surface")?;
     let trace = field(v, "trace")?;
@@ -30,6 +43,11 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     let a = (&surface, &trace);
     let b = (&right, &right_trace);
     match op {
+        "compare_seam_orientations" => {
+            let report = proof::compare_pcurve_seam_orientations(a, b, budget)?;
+            return Ok(json!({"forward":orientation(report.forward),
+                             "reversed":orientation(report.reversed),"workUsed":report.work_used}));
+        }
         "check_seam_gap" => {
             use proof::PcurveGapOutcome::*;
             let r = proof::certify_pcurve_seam_gap(a, b, field(v, "tolerance_mm")?, budget)?;

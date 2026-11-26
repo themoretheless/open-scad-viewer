@@ -970,6 +970,7 @@ export function createOwnNurbsResolver(
           case 'isolate_seam_gap':
           case 'isolate_seam_angle':
           case 'verify_uv_edge':
+          case 'compare_seam_orientations':
           case 'compare_uv_traces':
           case 'compare_uv_tangents': {
             const surface = needSurface(n.input)

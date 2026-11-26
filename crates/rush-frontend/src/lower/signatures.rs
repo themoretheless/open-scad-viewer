@@ -380,6 +380,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "relayout_trim_surface" => &["loops","u_breaks","v_breaks","u_factors","v_factors","max_work"],
         "relayout_trim_piece" => &["loops","u_breaks","v_breaks","u_factors","v_factors","loop_index","piece","max_work"],
         "verify_uv_edge" => &["target_geometry","inputs","max_work"],
+        "compare_seam_orientations" => &["target_geometry","inputs","max_work"],
         "compare_uv_traces" => &["target_geometry","inputs","max_work"],
         "compare_uv_tangents" => &["target_geometry","inputs","max_work"],
         "check_seam_gap" => &["target_geometry","inputs","tolerance_mm","max_work"],

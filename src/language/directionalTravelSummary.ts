@@ -78,6 +78,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'relayout_trim_surface') return russian ? 'Смена UV-сетки поверхности с контурами' : 'Relayout trimmed surface'
   if (operation === 'relayout_trim_piece') return russian ? 'Участок контура на новой UV-сетке' : 'Relayout trim boundary piece'
   if (operation === 'verify_uv_edge') return russian ? 'Сверка ребра с UV-контуром' : 'Verify edge against surface trace'
+  if (operation === 'compare_seam_orientations') return russian ? 'Направления общего шва' : 'Seam orientation comparison'
   if (operation === 'compare_uv_traces') return russian ? 'Сверка пространственных следов UV-шва' : 'Compare surface traces at seam'
   if (operation === 'compare_uv_tangents') return russian ? 'Сверка касательных плоскостей UV-шва' : 'Compare seam tangent planes'
   if (operation === 'check_seam_gap') return russian ? 'Допуск зазора UV-шва' : 'Seam gap tolerance'
