@@ -1,0 +1,13 @@
+{
+  "kernelSha256": "915c11020e15f2df94589f1f3e266aa72cb5f3f195a8a26296d7266bc62b8b74",
+  "runner": "Chromium",
+  "scenes": [
+    "profile-spring-surface Объекты 1 Треугольники 512 Объём 0 Площадь 131,42 Готово · 49 ms",
+    "sphere-envelope-surface Объекты 1 Треугольники 1 024 Объём 0 Площадь 372,52 Готово · 10 ms",
+    "order-boundary-contacts Объекты 1 Треугольники 64 Объём 0 Площадь 2 Готово · 5 ms",
+    "sort-boundary-contacts Объекты 1 Треугольники 64 Объём 0 Площадь 2 Готово · 4 ms",
+    "detect_cloud_primitives Объекты 1 Треугольники 64 Объём 0 Площадь 9 Готово · 5 ms",
+    "orient_cloud_normals Объекты 1 Треугольники 64 Объём 0 Площадь 9 Готово · 5 ms",
+    "segment_point_cloud Объекты 1 Треугольники 64 Объём 0 Площадь 9 Готово · 4 ms"
+  ]
+}

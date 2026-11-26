@@ -2637,14 +2637,16 @@
     {
       "id": "NURBS-0068",
       "name": "огибающая сфер",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::sphere_envelope::approximate_with_domain_audit",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/sphere_envelope.rs",
         "crates/nurbs-core/tests/sphere_envelope.rs",
         "docs/design/nurbs-sphere-envelope.md",
         "crates/nurbs-core/src/construct/surfaces/sphere_envelope/domain.rs",
-        "docs/qualification/nurbs-sphere-envelope-2026-10-14/native-tests.json"
+        "docs/qualification/nurbs-sphere-envelope-2026-10-14/native-tests.json",
+        "tests/rushCarriedSurfaces.test.ts",
+        "examples/rush/sphere-envelope-surface.r"
       ],
       "remainingQualification": [
         "Continuous pathwise approximation and rounding-inclusive error bounds",
@@ -2700,11 +2702,13 @@
     {
       "id": "NURBS-0070",
       "name": "пружина с профилем",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/profile_spring.rs",
         "crates/nurbs-core/tests/profile_spring.rs",
-        "docs/design/nurbs-profile-spring.md"
+        "docs/design/nurbs-profile-spring.md",
+        "tests/rushCarriedSurfaces.test.ts",
+        "examples/rush/profile-spring-surface.r"
       ],
       "remainingQualification": [
         "continuous real-arithmetic Hermite transport estimate excludes libm/control/evaluation rounding; EstimateReached is not a rounding-inclusive certificate",
@@ -6189,7 +6193,7 @@
     {
       "id": "NURBS-0211",
       "name": "выделение аналитических примитивов RANSAC с выбросами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-cloud-processing",
       "category": "Облака точек и восстановление",
       "nativeApi": "nurbs_core::analysis::ransac_primitives::detect_primitives",
@@ -6197,7 +6201,8 @@
         "crates/nurbs-core/src/analysis/ransac_primitives.rs",
         "crates/nurbs-core/tests/cloud_processing_contracts.rs",
         "docs/design/nurbs-cloud-processing.md",
-        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json",
+        "tests/rushCloudDiagnostics.test.ts"
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
@@ -6207,7 +6212,7 @@
     {
       "id": "NURBS-0212",
       "name": "согласование знаков заданных нормалей облака",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-cloud-processing",
       "category": "Облака точек и восстановление",
       "nativeApi": "nurbs_core::analysis::cloud_normals::orient_normals_consistent",
@@ -6215,7 +6220,8 @@
         "crates/nurbs-core/src/analysis/cloud_normals.rs",
         "crates/nurbs-core/tests/cloud_processing_contracts.rs",
         "docs/design/nurbs-cloud-processing.md",
-        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json",
+        "tests/rushCloudDiagnostics.test.ts"
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
@@ -6225,7 +6231,7 @@
     {
       "id": "NURBS-0213",
       "name": "сегментация облака по нормалям и локальной кривизне",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-cloud-processing",
       "category": "Облака точек и восстановление",
       "nativeApi": "nurbs_core::analysis::cloud_segmentation::segment_cloud",
@@ -6233,7 +6239,8 @@
         "crates/nurbs-core/src/analysis/cloud_segmentation.rs",
         "crates/nurbs-core/tests/cloud_processing_contracts.rs",
         "docs/design/nurbs-cloud-processing.md",
-        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json",
+        "tests/rushCloudDiagnostics.test.ts"
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
@@ -9630,7 +9637,7 @@
     {
       "id": "NURBS-0352",
       "name": "Точная численная сортировка алгебраических координат контактов NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::order_algebraic_boundary_clocks",
@@ -9643,7 +9650,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
         "docs/qualification/nurbs-curvature-field-352-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-352-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-352-2026-11-17/native.log.gz",
+        "tests/rushContactClocks.test.ts",
+        "examples/rush/order-boundary-contacts.r"
       ],
       "remainingQualification": [
         "Order rational and quadratic support-clock values by exact polynomial signs, grouping truly equal coordinates.",
@@ -9654,7 +9663,7 @@
     {
       "id": "NURBS-0353",
       "name": "Разделение алгебраических точек контакта NURBS рациональными интервалами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::isolate_ordered_algebraic_boundary_clocks",
@@ -9667,7 +9676,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
         "docs/qualification/nurbs-curvature-field-353-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-353-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-353-2026-11-17/native.log.gz",
+        "tests/rushContactClocks.test.ts",
+        "examples/rush/order-boundary-contacts.r"
       ],
       "remainingQualification": [
         "Isolate ordered algebraic contact coordinates in disjoint rational clock intervals and construct exact witnesses between them.",

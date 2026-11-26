@@ -1729,6 +1729,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BSfH3rXo.js':145_500,'assets/DbTVgUSl.js':112_700,'assets/DdlMi5GI.js':203_600,'assets/Dj8mFMxy.js':224_000,'assets/DxfbHyn5.js':116_800,'assets/mainSolid.worker-DhHggJ8F.js':289_900}),
   }),
+  // NURBS sphere envelopes, springs, clouds and contact clocks: 20,629,014 raw bytes, 7,836,669 packed bytes and 15,364,117 total asset bytes.
+  '915c11020e15f2df94589f1f3e266aa72cb5f3f195a8a26296d7266bc62b8b74':Object.freeze({
+    version:223,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CFn9zTQV.js':146_100,'assets/CV_StQKf.js':203_600,'assets/Cgg2BFuq.js':117_900,'assets/D8JGhjtO.js':225_000,'assets/DgjMEo5f.js':113_700,'assets/mainSolid.worker-D9TfAkCx.js':290_600}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
