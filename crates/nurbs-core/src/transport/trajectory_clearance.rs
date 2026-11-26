@@ -13,14 +13,15 @@ use crate::analysis::curve_measure::{
 };
 
 pub(super) const OPS:&[&str]=&["sphere_path_clearance","capsule_path_clearance","box_path_clearance",
-    "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","violation_path_length","violation_obstacle_lengths","violation_path_duration","chain_violation_duration","last_chain_violation","chain_clearance_timeline","longest_chain_violation","minimum_synchronized_gap","synchronized_contact_intervals","minimum_tool_pair_gap","tool_pair_intervals","first_tool_pair_contact","last_tool_pair_contact","tool_contact_duration","longest_tool_contact","peak_tool_pair_count","simultaneous_tool_duration","simultaneous_tool_windows","peak_tool_contacts","tool_pairs_at_time","minimum_scheduled_gap","scheduled_contact_intervals","held_contact_intervals","minimum_held_gap","minimum_affine_gap","affine_contact_intervals","first_chain_violation","minimum_chain_gap","mixed_margin_clearance","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
+    "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","violation_path_length","violation_obstacle_lengths","violation_path_duration","chain_violation_duration","last_chain_violation","chain_clearance_timeline","longest_chain_violation","minimum_synchronized_gap","synchronized_contact_intervals","minimum_tool_pair_gap","tool_pair_intervals","first_tool_pair_contact","last_tool_pair_contact","tool_contact_duration","longest_tool_contact","peak_tool_pair_count","simultaneous_tool_duration","simultaneous_tool_windows","peak_tool_contacts","tool_pairs_at_time","minimum_scheduled_gap","scheduled_contact_intervals","held_contact_intervals","minimum_held_gap","minimum_affine_gap","affine_contact_intervals","first_chain_violation","minimum_chain_gap","mixed_margin_clearance","variable_sphere_clearance","minimum_variable_sphere_gap","variable_scene_clearance","minimum_variable_scene_gap","profiled_scene_clearance","minimum_profiled_scene_gap","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
 
-fn minimum(r:SphericalMinimumClearance)->Value{
+pub(super) fn minimum(r:SphericalMinimumClearance)->Value{
     json!({"gap":r.gap_bounds,"witnessParameter":r.witness_parameter,"witnessObstacle":r.witness_obstacle,
         "workUsed":r.work_obstacle_cells,"stopReason":format!("{:?}",r.stop_reason)})
 }
 
 pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
+    if super::radius_clearance::OPS.contains(&op) { return super::radius_clearance::dispatch(v,op); }
     if super::tool_pair_clearance::OPS.contains(&op) { return super::tool_pair_clearance::dispatch(v,op); }
     if matches!(op, "minimum_synchronized_gap" | "synchronized_contact_intervals" | "minimum_scheduled_gap" | "scheduled_contact_intervals" | "held_contact_intervals" | "minimum_held_gap" | "minimum_affine_gap" | "affine_contact_intervals") {
         return super::synchronized_clearance::dispatch(v, op);
@@ -105,12 +106,12 @@ pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
     Ok(partition_report(r))
 }
 
-fn partition_report(r:crate::analysis::curve_measure::SphericalClearancePartition)->Value{
+pub(super) fn partition_report(r:crate::analysis::curve_measure::SphericalClearancePartition)->Value{
     let cells=r.cells.into_iter().map(|c|json!({"domain":c.parameter_interval,"span":c.span,"gaps":c.gap_bounds,"status":format!("{:?}",c.status)})).collect::<Vec<_>>();
     json!({"cells":cells,"workUsed":r.work_obstacle_cells})
 }
 
-fn with_obstacles(v: &Value, run: impl FnOnce(&[ToolpathObstacle]) -> Result<Value>) -> Result<Value> {
+pub(super) fn with_obstacles(v: &Value, run: impl FnOnce(&[ToolpathObstacle]) -> Result<Value>) -> Result<Value> {
     let rows: Vec<Vec<f64>> = field(v, "obstacles")?;
     let frames: Vec<_> = rows.iter().map(|p| {
         (p.len() == 15).then(|| [&p[3..6], &p[6..9], &p[9..12]])

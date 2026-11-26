@@ -12,6 +12,7 @@ mod periodic_surface_edits;
 mod periodic_surface_assembly;
 mod motion_jumps;
 mod trajectory_clearance;
+mod radius_clearance;
 mod chain_clearance;
 mod synchronized_clearance;
 mod scheduled_clearance;

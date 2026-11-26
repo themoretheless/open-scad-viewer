@@ -1473,7 +1473,11 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'minimum_variable_scene_gap':
+          case 'minimum_profiled_scene_gap':
           case 'minimum_mixed_gap':
+          case 'variable_scene_clearance':
+          case 'profiled_scene_clearance':
           case 'mixed_path_clearance':
           case 'violation_path_length':
           case 'violation_obstacle_lengths':
@@ -1504,10 +1508,12 @@ export function createOwnNurbsResolver(
           case 'first_chain_violation':
           case 'minimum_chain_gap':
           case 'mixed_margin_clearance':
+          case 'minimum_variable_sphere_gap':
           case 'minimum_sphere_gap':
           case 'minimum_box_gap':
           case 'minimum_oriented_box_gap':
           case 'minimum_capsule_gap':
+          case 'variable_sphere_clearance':
           case 'sphere_path_clearance':
           case 'capsule_path_clearance':
           case 'box_path_clearance':
