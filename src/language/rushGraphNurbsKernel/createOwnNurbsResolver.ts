@@ -3037,6 +3037,24 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'name_step_parts':
+          case 'read_step_names':
+          case 'step_parts_list':
+          case 'select_step_parts':
+          case 'name_step_variant':
+          case 'append_named_parts':
+          case 'consolidate_named_parts':
+          case 'compare_parts_lists':
+          {
+            const {id:_id,input,op,...args}=n
+            const target='target_geometry' in args?args.target_geometry:undefined
+            const extra=target?(op==='name_step_variant'?{model:needBrep(target)}:{otherStep:requireStepFile(target)}):{}
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;step:string}>(op,{...args,step:requireStepFile(input),...extra})
+            sharedStepFiles.set(key,report.step)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'compact_body_step':
           case 'compact_product_step': {
             const {id:_id,input,op,...settings}=n

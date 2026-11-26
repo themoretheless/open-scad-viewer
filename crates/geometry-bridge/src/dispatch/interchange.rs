@@ -5,6 +5,8 @@ use crate::*;
 mod shared_assembly_rays;
 #[path="compact_product_step.rs"]
 mod compact_product_step;
+#[path="named_step_parts.rs"]
+mod named_step_parts;
 #[path="shared_assembly_material.rs"]
 mod shared_assembly_material;
 #[path="shared_assembly_properties.rs"]
@@ -54,6 +56,7 @@ const OPS: &[&str] = &[
 
 pub(crate) fn route(v: Value) -> Routed {
     if matches!(v["op"].as_str(),Some("compact_body_step"|"compact_product_step")) { return Routed::Handled(compact_product_step::export(&v)); }
+    if named_step_parts::OPS.contains(&v["op"].as_str().unwrap_or("")) {return Routed::Handled(named_step_parts::apply(&v));}
     if shared_assembly_rays::OPS.contains(&v["op"].as_str().unwrap_or("")) { return Routed::Handled(shared_assembly_rays::apply(&v)); }
     if shared_assembly_material::OPS.contains(&v["op"].as_str().unwrap_or("")) { return Routed::Handled(shared_assembly_material::apply(&v)); }
     if shared_assembly_properties::OPS.contains(&v["op"].as_str().unwrap_or("")) {
