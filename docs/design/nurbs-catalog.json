@@ -12744,7 +12744,7 @@
     {
       "id": "NURBS-0462",
       "name": "Точная триангуляция простого плоского пространственного контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::triangulate_exact_planar_spatial_polyline",
@@ -12762,7 +12762,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-462-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-462-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-462-2026-11-17/native.log.gz",
+        "examples/rush/triangulate-planar-path.r",
+        "tests/rushPlanarRegion.test.ts"
       ],
       "remainingQualification": [
         "Triangulate a simple planar profile using exact predicates and source vertex indices.",
@@ -12773,7 +12775,7 @@
     {
       "id": "NURBS-0463",
       "name": "Точные центральные вторые моменты площади плоского контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_second_moments",
@@ -12791,7 +12793,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-463-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-463-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-463-2026-11-17/native.log.gz",
+        "examples/rush/measure-path-second-moments.r",
+        "tests/rushPlanarRegion.test.ts"
       ],
       "remainingQualification": [
         "Integrate the exact area-normalized central second moment tensor in model coordinates.",
@@ -12802,7 +12806,7 @@
     {
       "id": "NURBS-0464",
       "name": "Гарантированные границы главных моментов площади плоского контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_planar_spatial_polyline_principal_moments",
@@ -12820,7 +12824,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-464-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-464-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-464-2026-11-17/native.log.gz",
+        "examples/rush/bound-path-principal-moments.r",
+        "tests/rushPlanarRegion.test.ts"
       ],
       "remainingQualification": [
         "Enclose the two area-normalized principal moments of a planar profile.",
@@ -12831,7 +12837,7 @@
     {
       "id": "NURBS-0465",
       "name": "Точные площадь и центр плоского профиля с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_region_mass",
@@ -12849,7 +12855,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-465-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-465-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-465-2026-11-17/native.log.gz",
+        "examples/rush/measure-region-mass.r",
+        "tests/rushPlanarRegion.test.ts"
       ],
       "remainingQualification": [
         "Compute exact net area and centroid of a planar polygon with disjoint holes.",
@@ -12860,7 +12868,7 @@
     {
       "id": "NURBS-0466",
       "name": "Точное отсечение пространственной ломаной плоским профилем с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::clip_spatial_path_to_exact_planar_polyline_region",
@@ -12879,7 +12887,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-466-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-466-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-466-2026-11-17/native.log.gz",
+        "examples/rush/clip-path-to-perforated-region.r",
+        "tests/rushPlanarRegion.test.ts"
       ],
       "remainingQualification": [
         "Clip coplanar and transverse paths to a closed planar polygon with holes.",
@@ -12890,7 +12900,7 @@
     {
       "id": "NURBS-0467",
       "name": "Точные центральные вторые моменты площади профиля с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_region_second_moments",
@@ -12908,7 +12918,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-467-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-467-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-467-2026-11-17/native.log.gz",
+        "examples/rush/measure-region-second-moments.r",
+        "tests/rushPlanarRegion.test.ts"
       ],
       "remainingQualification": [
         "Compute area-normalized central second moments of a profile with disjoint holes.",
