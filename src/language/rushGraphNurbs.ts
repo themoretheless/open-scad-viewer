@@ -2050,6 +2050,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('fit_cone_cloud'),points:z.array(z.tuple([scalar,scalar,scalar])).min(6).max(65536),height:scalar}).strict(),
           z.object({id,op:z.literal('fit_torus_cloud'),points:z.array(z.tuple([scalar,scalar,scalar])).min(6).max(65536)}).strict(),
           z.object({id,op:z.literal('fit_plane_cloud'),points:z.array(z.tuple([scalar,scalar,scalar])).min(3).max(65536),width:scalar,height:scalar}).strict(),
+          z.object({id,op:z.literal('fit_surface_cloud'),points:z.array(vector).min(4).max(4096),controls_u:z.number().int().min(2).max(8),controls_v:z.number().int().min(2).max(8)}).strict(),
           z.object({ id, op:z.literal('surface_edit_deviation'), input:id, target_geometry:id }).strict(),
           z.object({ id, op:z.literal('curve_edit_deviation'), input:id, target_geometry:id, tolerance_mm:scalar, max_cells:z.number().int().min(1).max(100000) }).strict(),
           z.object({ id, op:z.literal('surface_seam_g0'), input:id, target_geometry:id, source_edge:z.enum(['u_min','u_max','v_min','v_max']), target_edge:z.enum(['u_min','u_max','v_min','v_max']), reverse:z.boolean(), tolerance_mm:scalar, max_cells:z.number().int().min(1).max(100000) }).strict(),

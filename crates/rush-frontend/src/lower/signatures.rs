@@ -300,6 +300,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "fit_cone_cloud" => &["points", "height"],
         "fit_torus_cloud" => &["points"],
         "fit_plane_cloud" => &["points", "width", "height"],
+        "fit_surface_cloud" => &["points", "controls_u", "controls_v"],
         "superellipsoid_patches" => &["center", "radii", "exponents", "tolerance", "max_cells"],
         "corrugated_bellows" => &["center", "mean_radius", "amplitude", "height", "radial_thickness", "periods"],
         "optical_dome" => &["center", "base_axes", "height"],

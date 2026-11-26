@@ -573,6 +573,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'fit_surface_cloud': {
+            const {op,points,controls_u,controls_v}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface}>('surface_fit_cloud_certified',{
+              points,controlsU:controls_u,controlsV:controls_v,
+            })
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'surface_highlight_lines':
           case 'surface_reflection_lines':
           case 'surface_isophote_analysis':
