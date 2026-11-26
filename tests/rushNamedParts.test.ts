@@ -31,3 +31,11 @@ it('tracks named variants, merged assemblies, deduplication and parts list revis
   const changes=await run('compare-parts-lists')
   expect(changes.changes).toContainEqual(expect.objectContaining({name:'Pin',before:2,after:0}))
 },180000)
+
+it('reports stored and expanded NURBS faces and poles by shared definition',async()=>{
+  const {surfaceUsage}=await run('step-parts-list')
+  expect(surfaceUsage).toEqual([
+    {name:'Pin',definition:0,quantity:2,storedFaces:6,placedFaces:12,storedPoles:24,placedPoles:48},
+    {name:'Mount',definition:1,quantity:1,storedFaces:6,placedFaces:6,storedPoles:24,placedPoles:24},
+  ])
+},180000)

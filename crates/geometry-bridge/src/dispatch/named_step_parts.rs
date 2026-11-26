@@ -18,7 +18,20 @@ pub(super) fn apply(v:&Value)->Result<Value>{
     let mut report=json!({});
     let output=match op{
         "name_step_parts"=>write(&assembly)?,
-        "read_step_names"|"step_parts_list"=>text.to_owned(),
+        "read_step_names"=>text.to_owned(),
+        "step_parts_list"=>{
+            let rows:Vec<_>=assembly.surface_usage()?.iter().map(|row| json!({
+                "name":row.part.name,
+                "definition":row.part.definition,
+                "quantity":row.part.quantity,
+                "storedFaces":row.stored_faces,
+                "placedFaces":row.placed_faces,
+                "storedPoles":row.stored_poles,
+                "placedPoles":row.placed_poles,
+            })).collect();
+            report["surfaceUsage"]=json!(rows);
+            text.to_owned()
+        }
         "select_step_parts"=>assembly.export_selected_parts(&field::<Vec<usize>>(v,"definition_indices")?,&field::<String>(v,"product_name")?)?,
         "name_step_variant"=>{
             let id=assembly.replace_named_variant(&field::<Vec<usize>>(v,"selection")?,field(v,"model")?,field(v,"product_name")?)?;
