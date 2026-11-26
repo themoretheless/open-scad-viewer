@@ -12,6 +12,9 @@ use crate::{
 };
 use num_rational::BigRational;
 
+#[path = "stored_section_requests.rs"]
+mod storage;
+
 fn ranges(intervals: Vec<[BigRational; 2]>) -> Vec<[String; 2]> {
     intervals
         .into_iter()
@@ -54,6 +57,12 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
         max_winding_cells: field(v, "max_winding_cells")?,
         max_work: remaining,
     };
+    if matches!(
+        op,
+        "store_section_edge" | "optimize_section_edge" | "store_section_edges"
+    ) {
+        return storage::store(v, op, &first, &second, options, budget - remaining);
+    }
     let (mut out, used, winding) = if op == "clip_plane_section" {
         use section::TrimmedPlanarIntersection::*;
         let r = section::intersect_trimmed_planar_faces(&first, &second, options)?;

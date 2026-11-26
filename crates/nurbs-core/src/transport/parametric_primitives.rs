@@ -86,7 +86,7 @@ mod pcurve_seam_requests;
 mod pcurve_agreement_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
-    if matches!(op,"clip_plane_section" | "build_plane_section_segments") {return Some(trimmed_plane_sections::apply(v,op));}
+    if matches!(op,"store_section_edge" | "optimize_section_edge" | "store_section_edges" | "clip_plane_section" | "build_plane_section_segments") {return Some(trimmed_plane_sections::apply(v,op));}
     if op=="intersect_support_planes" {return Some(planar_chart_requests::support_line(v));}
     if matches!(op,"exact_wire_area" | "bound_wire_moments" | "exact_wire_mass" | "exact_wire_inertia") {return Some(wire_moment_requests::apply(v,op));}
     if matches!(op,"bound_world_face_mass" | "bound_principal_face_moments" | "bound_principal_face_directions" | "world_face_mass" | "principal_face_moments" | "principal_face_directions") {return Some(world_mass_requests::apply(v,op));}

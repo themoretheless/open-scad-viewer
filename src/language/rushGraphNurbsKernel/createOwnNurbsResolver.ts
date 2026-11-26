@@ -1098,6 +1098,17 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'store_section_edge':
+          case 'optimize_section_edge':
+          case 'store_section_edges': {
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;workUsed:number}>(n.op,{
+              source:needSurface(n.input),right:needSurface(n.target_geometry),loops:n.loops.map(r=>r.map(needCurve)),
+              left_loop_count:n.left_loop_count,parameter_width:n.parameter_width,tolerance_uv:n.tolerance_uv,
+              max_winding_cells:n.max_winding_cells,edge_index:n.edge_index,tolerance_mm:n.tolerance_mm,max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'clip_plane_section':
           case 'build_plane_section_segments': {
             const surface=needSurface(n.input)
