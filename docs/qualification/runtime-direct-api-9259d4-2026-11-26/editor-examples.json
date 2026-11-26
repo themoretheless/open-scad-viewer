@@ -1,0 +1,19 @@
+{
+  "kernelSha256": "9259d49583a538a6d09045e2fac46605217068f2ce0b19de0da446e764b15482",
+  "runner": "Chromium",
+  "scenes": [
+    "Треугольники",
+    "Треугольники"
+  ],
+  "downloadSha256": "1aeac3064403cb28eb96915fddb57aa3c5f5bf2631f382cfce938d0b357a2fa1",
+  "independentOcct": {
+    "solids": 4,
+    "volumesMm3": [
+      1.0000000000000002,
+      37.699111694981234,
+      904.7786806795496,
+      904.7786806795498
+    ],
+    "maxAbsoluteErrorMm3": 3.554310865183652e-06
+  }
+}

@@ -1681,6 +1681,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/B-V4_zrG.js':109_600,'assets/B0AmEfW2.js':113_700,'assets/B5da3E_6.js':141_700,'assets/BOi1KMfD.js':203_600,'assets/CHV8Q0M0.js':220_800,'assets/mainSolid.worker-C-IaTHGH.js':286_100}),
   }),
+  // rigid STEPs for scaled and mirrored assembly parts in the Rush editor: 20,463,602 raw bytes, 7,777,477 packed bytes and 15,278,054 total asset bytes.
+  '9259d49583a538a6d09045e2fac46605217068f2ce0b19de0da446e764b15482':Object.freeze({
+    version:217,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/B5Jbu7b3.js':203_600,'assets/CuhSjZ_V.js':113_800,'assets/Jl_y7Gxp.js':220_900,'assets/KKpXotjn.js':142_300,'assets/O54ZAOGD.js':109_600,'assets/mainSolid.worker-Cuv4pzf6.js':286_800}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

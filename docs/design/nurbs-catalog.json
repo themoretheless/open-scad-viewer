@@ -24050,7 +24050,7 @@
     {
       "id": "NURBS-0978",
       "name": "Экспорт неравномерно масштабированных и зеркальных деталей через общие NURBS-определения STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::StepSharedAssembly::export_step_with_baked_scales",
@@ -24062,7 +24062,9 @@
         "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/verify.py",
         "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/occt.log",
         "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-baked-step-scales-978-2026-11-19/native.log.gz",
+        "examples/rush/step-baked-scales.r",
+        "tests/rushBakedStepScales.test.ts"
       ],
       "remainingQualification": [
         "Flat orthogonal placements. Distinct linear maps become local definitions, with shared geometry for translation-only differences. OCCT checks reflected rational elliptic cylinder volume and three placed box variants."
@@ -24071,7 +24073,7 @@
     {
       "id": "NURBS-0979",
       "name": "Цвета отдельных экземпляров зеркальных и масштабированных NURBS-деталей в STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_styled_step_assembly",
@@ -24082,7 +24084,9 @@
         "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/verify.py",
         "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/occt.log",
         "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/native.log.gz",
+        "examples/rush/step-baked-scales.r",
+        "tests/rushBakedStepScales.test.ts"
       ],
       "remainingQualification": [
         "Occurrence-level surface colours for orthogonal scaled and reflected placements. OCCT checks colours, volume and centroids of shared mirrored elliptic cylinders. Grouped mixed styled and unstyled occurrences checked in Rust."
@@ -24091,7 +24095,7 @@
     {
       "id": "NURBS-0980",
       "name": "Сохранение имён и количества вариантов деталей при переносе масштаба и отражения в NURBS-геометрию STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::export_step_with_baked_scales",
@@ -24102,7 +24106,9 @@
         "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/verify.py",
         "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/occt.log",
         "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-named-scaled-step-980-2026-11-19/native.log.gz",
+        "examples/rush/step-baked-scales.r",
+        "tests/rushBakedStepScales.test.ts"
       ],
       "remainingQualification": [
         "Flat named shared assemblies. Each baked variant inherits its source product label. Quantities remain scoped to definition identity even when labels match."
@@ -24111,7 +24117,7 @@
     {
       "id": "NURBS-0981",
       "name": "Совместная передача имён изделий, групп и цветов экземпляров NURBS-сборки STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_named_styled_step_assembly",
@@ -24122,7 +24128,9 @@
         "docs/qualification/nurbs-named-styled-step-981-2026-11-19/verify.py",
         "docs/qualification/nurbs-named-styled-step-981-2026-11-19/occt.log",
         "docs/qualification/nurbs-named-styled-step-981-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/native.log.gz",
+        "examples/rush/step-baked-scales.r",
+        "tests/rushBakedStepScales.test.ts"
       ],
       "remainingQualification": [
         "One group level and direct occurrences. OCCT verifies shared product identity, names, positions and individual colours of two reflected scaled cylinders."
