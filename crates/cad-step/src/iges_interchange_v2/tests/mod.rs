@@ -906,6 +906,9 @@ fn trimmed_3d_only_is_refused_and_natural_outer_reuses_cuboid_edges() {
     assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
     assert_eq!((model.faces.len(), model.edges.len()), (6,12));
     assert!(loop_uv_area(&model, model.faces.last().unwrap().outer) > 0.);
+    if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_BOUNDARY_SOURCE") {
+        std::fs::write(path, &text).unwrap();
+    }
     if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_BOUNDARY_STEP") {
         std::fs::write(path, crate::export_step_v9(&model).unwrap().0).unwrap();
     }
@@ -1342,7 +1345,8 @@ fn natural_pole_faces_sew_into_a_closed_tetrahedron() {
     let shell = writer.emit(514, shell_data);
     writer.entities[(shell-1)/2].form = 2;
     writer.emit(186, vec!["186".into(), shell.to_string(), "1".into(), "0".into()]);
-    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    let text = render(writer).unwrap();
+    let model = import_iges_v2(&text).unwrap().0;
     assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(model.vertices.len(), 4);
     assert_eq!(model.edges.iter().filter(|edge| !edge.degenerate).count(), 6);
@@ -1354,6 +1358,9 @@ fn natural_pole_faces_sew_into_a_closed_tetrahedron() {
         assert_eq!(pole.vertices[0], pole.vertices[1]);
         let (a,b) = CurveDispatcher::endpoints(&poles[0].pcurve).unwrap();
         assert_ne!(a,b);
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_POLE_SOURCE") {
+        std::fs::write(path, &text).unwrap();
     }
     if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_POLE_STEP") {
         std::fs::write(path, crate::export_step_v9(&model).unwrap().0).unwrap();

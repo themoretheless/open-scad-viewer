@@ -60448,6 +60448,30 @@
               },
               "op": {
                 "type": "string",
+                "const": "open_iges_file"
+              },
+              "iges_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4194304
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "iges_text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "open_step_file"
               },
               "preview_index": {
@@ -116664,6 +116688,52 @@
               "offset_x_mm",
               "offset_y_mm",
               "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "reopen_iges_body"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "export_iges_body"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input"
             ],
             "additionalProperties": false
           },

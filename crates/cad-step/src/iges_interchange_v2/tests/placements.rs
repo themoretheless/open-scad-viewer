@@ -67,8 +67,8 @@ fn placed_arc_survives_a_composite_rim_and_preserves_the_cylinder() {
     // Place the arc in the composite frame, then rotate the composite in the rim frame.
     let grouped = attach(&attach(&chain, local, 0), composite, parent);
     let (grouped, outer) = append_composite(&grouped, &[composite]);
-    let grouped = rewire_reference(&grouped, edges, at, outer);
-    let grouped = import_iges_v2(&grouped).unwrap().0;
+    let grouped_text = rewire_reference(&grouped, edges, at, outer);
+    let grouped = import_iges_v2(&grouped_text).unwrap().0;
     assert_eq!(grouped.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(grouped.edges[(at - 2) / 5].curve.control_points, curve.control_points);
     let (start, end) = CurveDispatcher::endpoints(curve).unwrap();
@@ -79,6 +79,8 @@ fn placed_arc_survives_a_composite_rim_and_preserves_the_cylinder() {
         let dir = std::path::Path::new(&dir);
         std::fs::create_dir_all(dir).unwrap();
         std::fs::write(dir.join("placed.igs"), text).unwrap();
+        std::fs::write(dir.join("nested.igs"), chain).unwrap();
+        std::fs::write(dir.join("grouped.igs"), grouped_text).unwrap();
         std::fs::write(
             dir.join("restored.step"),
             crate::export_step_v9(&restored).unwrap().0,
@@ -198,6 +200,7 @@ fn placed_rational_surface_keeps_weights_charts_and_edge_incidence() {
         let dir = std::path::Path::new(&dir);
         std::fs::create_dir_all(dir).unwrap();
         std::fs::write(dir.join("placed.igs"), text).unwrap();
+        std::fs::write(dir.join("nested.igs"), chain).unwrap();
         std::fs::write(
             dir.join("restored.step"),
             crate::export_step_v9(&restored).unwrap().0,

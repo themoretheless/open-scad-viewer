@@ -140,6 +140,9 @@ import { curveMeasurementLabel, directionalTravelSummary } from './language/dire
 function downloadMeasurementStep(step:string,node:string) {
   downloadBlob(new Blob([step],{type:'model/step'}),node+'.step')
 }
+function downloadMeasurementIges(iges:string,node:string) {
+  downloadBlob(new Blob([iges],{type:'model/iges'}),node+'.igs')
+}
 const measurements = ref<import('./core/build').GeometryMeasurement[]>([])
 const warnings = ref<string[]>([])
 const meshCount = ref(0)
@@ -814,6 +817,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <summary>{{ measurement.node }} · {{ curveMeasurementLabel(measurement.operation, lang === 'ru') }}</summary>
           <div v-for="(line, i) in directionalTravelSummary(measurement.operation, measurement.report, lang === 'ru')" :key="i">{{ line }}</div>
           <button v-if="measurement.step" type="button" @click="downloadMeasurementStep(measurement.step,measurement.node)">{{ lang === 'ru' ? 'Скачать сборку STEP' : 'Download STEP assembly' }}</button>
+          <button v-if="measurement.iges" type="button" @click="downloadMeasurementIges(measurement.iges,measurement.node)">{{ lang === 'ru' ? 'Скачать IGES' : 'Download IGES' }}</button>
           <details><summary>{{ lang === 'ru' ? 'Подробный отчёт' : 'Detailed report' }}</summary><pre>{{ measurement.report }}</pre></details>
         </details>
         <div v-if="warnings.length" class="message warning" role="status">

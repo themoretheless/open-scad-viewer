@@ -222,6 +222,7 @@ export function createOwnNurbsResolver(
     return v.data
   }
   const measuredGearSources = new Map<string,string>()
+  const igesFiles = new Map<string,string>()
   const sharedStepFiles = new Map<string,string>()
   function requireStepFile(key:string):string {
     needBrep(key)
@@ -3063,6 +3064,24 @@ export function createOwnNurbsResolver(
             const {model,...report}=callGeometryRust<{model:NurbsBrep;step:string}>(op,{...args,step:requireStepFile(input)})
             sharedStepFiles.set(key,report.step)
             constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
+          case 'export_iges_body': {
+            const model=needBrep(n.input)
+            const {text,...report}=callGeometryRust<{text:string}>('brep_nurbs_export_iges_v2',{model})
+            igesFiles.set(key,text)
+            constructionReports[key]={measurement:{operation:n.op,report:{...report,iges:text}}}
+            result={kind:'brep',data:model}
+            break
+          }
+          case 'open_iges_file':
+          case 'reopen_iges_body': {
+            if(n.op==='reopen_iges_body') get(n.input)
+            const text=n.op==='open_iges_file'?n.iges_text:igesFiles.get(n.input)
+            if(text===undefined) throw new Error('Select an exported IGES body')
+            const {model,...report}=callGeometryRust<{model:NurbsBrep}>('brep_nurbs_import_iges_v2',{text})
+            constructionReports[key]={measurement:{operation:n.op,report}}
             result={kind:'brep',data:model}
             break
           }

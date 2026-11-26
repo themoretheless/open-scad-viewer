@@ -33,6 +33,7 @@ export interface ExactSolidPlan {
 
 export interface GeometryMeasurement {
   step?: string
+  iges?: string
   node: string
   operation: string
   report: string
