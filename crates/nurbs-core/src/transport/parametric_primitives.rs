@@ -149,7 +149,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"bounded_curve_chord" | "bounded_surface_mesh") {
         return Some(bounded_mesh_construction::build(v,op));
     }
-    if matches!(op,"trace_plane_strip"|"stitch_plane_strip"|"split_cell_by_plane"|"store_plane_branch"|"pair_plane_branch"|"sample_plane_branch"|"plane_branch_uv_polyline"|"plane_branch_xyz_polyline"){return Some(plane_branch_queries::inspect(v,op));}
+    if matches!(op,"close_plane_strip"|"store_closed_plane_piece"|"trace_plane_strip"|"stitch_plane_strip"|"split_cell_by_plane"|"store_plane_branch"|"pair_plane_branch"|"sample_plane_branch"|"plane_branch_uv_polyline"|"plane_branch_xyz_polyline"){return Some(plane_branch_queries::inspect(v,op));}
     if matches!(op,"audit_plane_side"|"refine_plane_side"|"audit_plane_graphs"){return Some(plane_side_queries::inspect(v,op));}
     if matches!(op,"parallel_plane_sections" | "parallel_section_piece") {
         return Some(parallel_section_queries::inspect(v,op));

@@ -15,7 +15,13 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
         Some("v") => UvAxis::V,
         _ => return Err(input("Expected a U or V direction")),
     };
-    if matches!(op, "stitch_plane_strip" | "trace_plane_strip") {
+    if matches!(
+        op,
+        "close_plane_strip"
+            | "store_closed_plane_piece"
+            | "stitch_plane_strip"
+            | "trace_plane_strip"
+    ) {
         let strip = plane::SurfacePlaneGraphStripOptions {
             solve_axis,
             solved_span: field(v, "solved_span")?,
@@ -28,16 +34,42 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
             let r = plane::stitch_surface_plane_graph_strip(&surface, normal, offset, strip)?;
             (r.outcome.map(describe), r.work_used)
         } else {
-            let r = plane::approximate_surface_plane_strip_xyz(
-                &surface,
-                normal,
-                offset,
-                plane::SurfacePlaneWorldStripOptions {
-                    strip,
-                    max_xyz_error: field(v, "tolerance_mm")?,
-                    max_segments_per_cell: field(v, "max_segments_per_cell")?,
-                },
-            )?;
+            let options = plane::SurfacePlaneWorldStripOptions {
+                strip,
+                max_xyz_error: field(v, "tolerance_mm")?,
+                max_segments_per_cell: field(v, "max_segments_per_cell")?,
+            };
+            if op == "store_closed_plane_piece" {
+                let r = plane::store_periodic_surface_plane_section(
+                    &surface,
+                    normal,
+                    offset,
+                    options,
+                    field(v, "gap_tolerance_mm")?,
+                )?;
+                let data = r
+                    .outcome
+                    .map_err(|e| input(format!("Periodic section storage refused: {e:?}")))?;
+                let index: usize = field(v, "piece")?;
+                let pair = data
+                    .pieces
+                    .get(index)
+                    .ok_or_else(|| input("Unknown periodic section piece"))?;
+                let curve = if field(v, "use_pcurve")? {
+                    &pair.pcurve
+                } else {
+                    &pair.spatial.curve
+                };
+                return Ok(
+                    json!({"curve":curve,"selectedPiece":index,"uvPeriod":data.uv_period.to_string(),"workUsed":r.work_used,
+                    "pieces":data.pieces.iter().map(|p|json!({"spatial":p.spatial.curve,"pcurve":p.pcurve,"domain":p.spatial.domain,"xyzErrorUpper":p.spatial.xyz_error_upper.to_string(),"planeResidualUpper":p.spatial.plane_residual_upper.to_string(),"gapTolerance":p.correspondence_tolerance.to_string()})).collect::<Vec<_>>()}),
+                );
+            }
+            let r = if op == "close_plane_strip" {
+                plane::close_periodic_surface_plane_strip_xyz(&surface, normal, offset, options)?
+            } else {
+                plane::approximate_surface_plane_strip_xyz(&surface, normal, offset, options)?
+            };
             (r.outcome.map(|w|json!({"strip":describe(w.strip),"uv":w.uv.into_iter().map(|p|p.map(|q|q.to_string())).collect::<Vec<_>>(),"xyz":w.xyz.into_iter().map(|p|p.map(|q|q.to_string())).collect::<Vec<_>>(),"cellVertices":w.cell_vertices,"cellErrorUpper":w.cell_error_upper.into_iter().map(|q|q.to_string()).collect::<Vec<_>>()})),r.work_used)
         };
         let mut out = match report {

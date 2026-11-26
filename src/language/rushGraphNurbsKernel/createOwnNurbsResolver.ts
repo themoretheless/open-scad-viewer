@@ -637,6 +637,7 @@ export function createOwnNurbsResolver(
             break
           }
           case 'store_plane_branch':
+          case 'store_closed_plane_piece':
           case 'pair_plane_branch': {
             const {id:_id,op,input,...settings}=n
             const {curve,...report}=callGeometryRust<{curve:NurbsCurve;workUsed:number}>(op,{surface:needSurface(input),...settings})
@@ -644,6 +645,7 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'close_plane_strip':
           case 'stitch_plane_strip':
           case 'trace_plane_strip':
           case 'sample_plane_branch':
