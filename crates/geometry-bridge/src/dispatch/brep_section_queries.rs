@@ -7,7 +7,7 @@ fn invalid() -> nurbs_core::Error {
         "Expected finite 3D coordinates or rational numerator/denominator strings",
     )
 }
-fn coordinate(v: &Value) -> Result<Q> {
+pub(super) fn coordinate(v: &Value) -> Result<Q> {
     if let Some(x) = v.as_f64() {
         return Q::from_float(x).ok_or_else(invalid);
     }
@@ -22,7 +22,7 @@ fn coordinate(v: &Value) -> Result<Q> {
     }
     text.parse().map_err(|_| invalid())
 }
-fn point(v: &Value) -> Result<[Q; 3]> {
+pub(super) fn point(v: &Value) -> Result<[Q; 3]> {
     let p = v.as_array().filter(|p| p.len() == 3).ok_or_else(invalid)?;
     Ok([coordinate(&p[0])?, coordinate(&p[1])?, coordinate(&p[2])?])
 }

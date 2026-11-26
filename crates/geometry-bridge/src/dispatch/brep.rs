@@ -14,6 +14,8 @@ mod inferred_rims;
 mod polyhedral_mass;
 #[path="brep_section_queries.rs"]
 mod section_queries;
+#[path="brep_body_queries.rs"]
+mod body_queries;
 const OPS: &[&str] = &[
     "attach_expanded_rims","discover_expanded_rims","close_expanded_planes","build_expanded_plane_solid","build_outward_plane_solid","build_outward_inferred_solid",
     "inspect_inferred_solid","expanded_section_sheets","build_expanded_solid",
@@ -26,6 +28,7 @@ const OPS: &[&str] = &[
     "project_polyhedral_body","measure_polyhedral_frame","measure_polyhedral_axis_gap","classify_polyhedral_plane","intersect_polyhedral_edges",
     "section_polyhedral_faces","assemble_polyhedral_section_loops","measure_polyhedral_section_area","measure_polyhedral_section_centroid","bound_polyhedral_section_perimeter",
     "locate_section_point","measure_section_contour_distance","measure_section_material_distance","clip_section_segment","clip_section_polyline","measure_section_path_length",
+    "clip_polyhedral_segment","locate_polyhedral_point","measure_polyhedral_boundary_distance","measure_polyhedral_signed_distance","sample_polyhedral_signed_distances","measure_polyhedral_ball_clearance",
     "close_section_planes",
     "build_bounded_section_solid",
     "close_bounded_planes",
@@ -143,6 +146,7 @@ fn handle(v: Value) -> Result<Value> {
         op @ ("project_polyhedral_body"|"measure_polyhedral_frame"|"measure_polyhedral_axis_gap"|"classify_polyhedral_plane"|"intersect_polyhedral_edges")=>polyhedral_mass::measure(&v,op),
         op @ ("section_polyhedral_faces"|"assemble_polyhedral_section_loops"|"measure_polyhedral_section_area"|"measure_polyhedral_section_centroid"|"bound_polyhedral_section_perimeter")=>polyhedral_mass::measure_section(&v,op),
         op @ ("locate_section_point"|"measure_section_contour_distance"|"measure_section_material_distance"|"clip_section_segment"|"clip_section_polyline"|"measure_section_path_length")=>section_queries::measure(&v,op),
+        op @ ("clip_polyhedral_segment"|"locate_polyhedral_point"|"measure_polyhedral_boundary_distance"|"measure_polyhedral_signed_distance"|"sample_polyhedral_signed_distances"|"measure_polyhedral_ball_clearance")=>body_queries::measure(&v,op),
         "build_section_solid" => rim_caps::solid(&v,"exact"),
         op @ ("infer_rim_planes" | "close_inferred_rims" | "close_bounded_inferred_rims") => inferred_rims::infer(&v,op),
         "build_inferred_solid" => rim_caps::solid(&v,"inferred"),

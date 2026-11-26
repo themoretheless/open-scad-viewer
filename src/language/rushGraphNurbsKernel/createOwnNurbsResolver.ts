@@ -1101,6 +1101,12 @@ export function createOwnNurbsResolver(
           case 'measure_polyhedral_section_area':
           case 'measure_polyhedral_section_centroid':
           case 'bound_polyhedral_section_perimeter':
+          case 'clip_polyhedral_segment':
+          case 'locate_polyhedral_point':
+          case 'measure_polyhedral_boundary_distance':
+          case 'measure_polyhedral_signed_distance':
+          case 'sample_polyhedral_signed_distances':
+          case 'measure_polyhedral_ball_clearance':
           case 'locate_section_point':
           case 'measure_section_contour_distance':
           case 'measure_section_material_distance':
