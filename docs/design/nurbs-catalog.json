@@ -2842,12 +2842,14 @@
     {
       "id": "NURBS-0074",
       "name": "смещённые профили",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::curve_offset_wire::bevel_wire",
       "evidence": [
         "crates/nurbs-core/src/offset/curve_offset_wire.rs",
         "crates/nurbs-core/tests/profile_offset.rs",
-        "docs/design/nurbs-profile-offset.md"
+        "docs/design/nurbs-profile-offset.md",
+        "tests/rushCurveTransfers.test.ts",
+        "examples/rush/bevel-offset-wire.r"
       ],
       "remainingQualification": [
         "viewer adapters and export qualification are outside native completion"
@@ -5276,7 +5278,7 @@
     {
       "id": "NURBS-0172",
       "name": "перенос пространственного контура в UV",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
@@ -5286,7 +5288,9 @@
       "evidence": [
         "crates/nurbs-core/src/analysis/curve_pullback.rs",
         "crates/nurbs-core/tests/curve_pullback.rs",
-        "docs/design/nurbs-curve-pullback.md"
+        "docs/design/nurbs-curve-pullback.md",
+        "tests/rushCurveTransfers.test.ts",
+        "examples/rush/pullback-curve-to-uv.r"
       ]
     },
     {

@@ -1,0 +1,8 @@
+{
+  "kernelSha256": "db86e422edc349e404182d4f7d987eae84745fb677bd75f20cc8e1e88b272040",
+  "runner": "Chromium",
+  "scenes": [
+    "bevel-offset-wire Объекты 1 Треугольники 96 Объём 0 Площадь 8,41 Готово · 58 ms",
+    "pullback-curve-to-uv Объекты 1 Треугольники 32 Объём 0 Площадь 4 Готово · 11 ms"
+  ]
+}

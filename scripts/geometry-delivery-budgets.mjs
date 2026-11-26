@@ -1721,6 +1721,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/3Uh9jR19.js':144_900,'assets/B3cWiEdZ.js':116_200,'assets/BfhOOgin.js':112_000,'assets/CdZhtlrG.js':203_600,'assets/Qb0eGlLS.js':223_300,'assets/mainSolid.worker-BweSRlU5.js':289_300}),
   }),
+  // NURBS bevel offsets and UV pullback: 20,569,956 raw bytes, 7,814,976 packed bytes and 15,336,958 total asset bytes.
+  'db86e422edc349e404182d4f7d987eae84745fb677bd75f20cc8e1e88b272040':Object.freeze({
+    version:222,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BSfH3rXo.js':145_500,'assets/DbTVgUSl.js':112_700,'assets/DdlMi5GI.js':203_600,'assets/Dj8mFMxy.js':224_000,'assets/DxfbHyn5.js':116_800,'assets/mainSolid.worker-DhHggJ8F.js':289_900}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
