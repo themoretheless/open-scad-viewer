@@ -30,7 +30,12 @@ mkdirSync(output,{recursive:true})
 mkdirSync(publicWasm,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm')
-const wasm=compactWasmTables(optimizeWasm(built))
+const optimized = optimizeWasm(built)
+let wasm = compactWasmTables(optimized)
+if (wasm.length > 20 * 1024 * 1024) {
+  const next = compactWasmTables(optimizeWasm(built, {input: optimized}))
+  if (next.length < wasm.length) wasm = next
+}
 console.log(`geometry-kernels artifact: sha256=${createHash('sha256').update(wasm).digest('hex')} bytes=${wasm.byteLength}`)
 // Skip WebAssembly.Module compilation, brotli quality 11 and base85 encoding
 // when the optimized wasm is byte-identical to the last packaged run.

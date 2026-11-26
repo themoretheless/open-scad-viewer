@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "e57a9199eeef7b6770149ac8d691ea2506f9694731302806a6fd3fa2818bb3ae",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/stitch-plane-strip.r",
+      "exampleSha256": "d62a68265badea3d8f7431d88dc0128a46a5bc478a0a64eeb59830abc68cc59a",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,18\nГотово · 49 ms"
+    },
+    {
+      "example": "examples/rush/trace-plane-strip.r",
+      "exampleSha256": "69f8f0cbcdd27ef0080841ee92f13e40d3d6991cadaca3b6b98dc48b5581aaf9",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,18\nГотово · 7 ms"
+    }
+  ]
+}

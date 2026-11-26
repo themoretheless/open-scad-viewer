@@ -10033,7 +10033,7 @@
     {
       "id": "NURBS-0368",
       "name": "Доказуемая сшивка ветвей плоского сечения NURBS через узловые швы",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::stitch_surface_plane_graph_strip",
@@ -10048,7 +10048,9 @@
         "crates/nurbs-geometry/src/curve.rs",
         "crates/nurbs-geometry/src/surface.rs",
         "docs/qualification/nurbs-curvature-field-368-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-368-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-368-2026-11-17/native.log.gz",
+        "examples/rush/stitch-plane-strip.r",
+        "tests/rushPlaneStrips.test.ts"
       ],
       "remainingQualification": [
         "Certify a continuous section graph across consecutive original knot cells using exact one-sided seam polynomials.",
@@ -10059,7 +10061,7 @@
     {
       "id": "NURBS-0369",
       "name": "Единая сертифицированная XYZ-полилиния сечения через узловые швы NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::approximate_surface_plane_strip_xyz",
@@ -10073,7 +10075,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_polyline.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_strip.rs",
         "docs/qualification/nurbs-curvature-field-369-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-369-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-369-2026-11-17/native.log.gz",
+        "examples/rush/trace-plane-strip.r",
+        "tests/rushPlaneStrips.test.ts"
       ],
       "remainingQualification": [
         "Build a continuous multi-cell XYZ section polyline with exactly shared seam vertices and certified per-cell error.",

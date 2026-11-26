@@ -8,10 +8,9 @@ import {cachedWasmOptimization} from './wasm-opt-cache.mjs'
 // the 8 MB ceiling browsers place on main-thread instantiation. Required, so every build of a
 // fingerprinted artifact produces the same bytes on every machine.
 const wasmOpt=fileURLToPath(new URL('../node_modules/binaryen/bin/wasm-opt',import.meta.url))
-export function optimizeWasm(file, {nativePath = process.env.OSV_WASM_OPT_NATIVE} = {}) {
+export function optimizeWasm(file, {nativePath = process.env.OSV_WASM_OPT_NATIVE, input = readFileSync(file)} = {}) {
   if(!existsSync(wasmOpt))throw new Error('wasm-opt (binaryen) is required to build the kernels: run `npm ci`.')
   const driver = optimizerDriver(nativePath)
-  const input = readFileSync(file)
   const flags = ['-Oz', '--enable-bulk-memory', '--enable-sign-ext', '--enable-nontrapping-float-to-int',
     '--enable-mutable-globals', '--enable-reference-types', '--enable-multivalue']
   return cachedWasmOptimization({ input, tool: readFileSync(driver.path), flags,
