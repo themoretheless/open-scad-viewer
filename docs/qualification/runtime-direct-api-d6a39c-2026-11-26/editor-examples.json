@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "d6a39cafff03aa97a22944e7d6864e1379a98b705475c5e4a762a57aee4209b7",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/close-plane-strip.r",
+      "exampleSha256": "0ec420a221b0b62d3c72b69a16718ef3be41a456d46591d8a8a92de8b311e1fa",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,31\nГотово · 54 ms"
+    },
+    {
+      "example": "examples/rush/store-closed-plane-piece.r",
+      "exampleSha256": "b30e235642230f34062641c386c1713d92b68de566c791c7f5cae035e49edb80",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1,41\nГотово · 12 ms"
+    }
+  ]
+}

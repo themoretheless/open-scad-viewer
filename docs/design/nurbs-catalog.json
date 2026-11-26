@@ -10088,7 +10088,7 @@
     {
       "id": "NURBS-0370",
       "name": "Замкнутое пространственное сечение через периодический шов NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::close_periodic_surface_plane_strip_xyz",
@@ -10102,7 +10102,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_strip.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/periodic_strip.rs",
         "docs/qualification/nurbs-curvature-field-370-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-370-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-370-2026-11-17/native.log.gz",
+        "examples/rush/close-plane-strip.r",
+        "tests/rushClosedStrip.test.ts"
       ],
       "remainingQualification": [
         "Close a full periodic section strip after proving exact equality of the homogeneous seam traces.",
@@ -10113,7 +10115,7 @@
     {
       "id": "NURBS-0371",
       "name": "Хранение замкнутого периодического сечения согласованными XYZ- и UV-кривыми NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::store_periodic_surface_plane_section",
@@ -10129,7 +10131,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_periodic.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs",
         "docs/qualification/nurbs-curvature-field-371-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-371-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-371-2026-11-17/native.log.gz",
+        "examples/rush/store-closed-plane-piece.r",
+        "tests/rushClosedStrip.test.ts"
       ],
       "remainingQualification": [
         "Store a certified periodic section as synchronized spatial and UV curve pairs with exact binary64 seam joins.",
