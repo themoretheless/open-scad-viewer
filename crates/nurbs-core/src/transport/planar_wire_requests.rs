@@ -69,7 +69,7 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     )
 }
 
-pub(super) fn area(v: &Value) -> Result<Value> {
+pub(super) fn measure_face(v: &Value, op: &str) -> Result<Value> {
     let surface: Surface = field(v, "source")?;
     let loops: Vec<Vec<Curve>> = field(v, "loops")?;
     let r = wire::project_coplanar_trim_loops(
@@ -83,6 +83,52 @@ pub(super) fn area(v: &Value) -> Result<Value> {
             r.outcome
         )));
     };
+    use crate::analysis::{planar_boundary_distance as distance, planar_face_perimeter};
+    let boundary = |b: distance::PlanarBoundaryDistanceReport| {
+        json!({
+        "distanceMm":b.distance,"converged":b.converged,"stopReason":format!("{:?}",b.stop_reason),"cells":b.cells,
+        "witness":{"contour":b.witness.contour,"curve":b.witness.curve,"parameter":b.witness.parameter,
+        "pointBounds":b.witness.point_bounds,"distanceUpperMm":b.witness.distance_upper}})
+    };
+    match op {
+        "planar_face_perimeter" => {
+            let b = planar_face_perimeter::bound_projected_face_perimeter(
+                &faces[0],
+                field(v, "tolerance_mm")?,
+                field(v, "max_cells")?,
+            )?;
+            return Ok(
+                json!({"perimeterMm":b.perimeter,"contoursMm":b.contours,"converged":b.within_tolerance,"cells":b.cells}),
+            );
+        }
+        "planar_boundary_distance" => {
+            return Ok(boundary(distance::distance_to_projected_face_boundary(
+                &faces[0],
+                field(v, "query_point")?,
+                field(v, "tolerance_mm")?,
+                field(v, "max_cells")?,
+            )?));
+        }
+        "planar_material_distance" => {
+            let b = distance::distance_to_projected_face(
+                &faces[0],
+                field(v, "query_point")?,
+                distance::PlanarFaceDistanceOptions {
+                    tolerance: field(v, "tolerance_mm")?,
+                    winding_tolerance: field(v, "tolerance_uv")?,
+                    max_winding_cells: field(v, "max_winding_cells")?,
+                    max_boundary_cells: field(v, "max_cells")?,
+                },
+            )?;
+            let c = b.projection_classification;
+            return Ok(
+                json!({"distanceMm":b.distance,"converged":b.converged,"projection":b.orthogonal_projection,
+                "classification":{"location":format!("{:?}",c.location),"winding":c.winding,"reason":format!("{:?}",c.reason),"cells":c.cells},
+                "boundary":b.boundary.map(boundary)}),
+            );
+        }
+        _ => {}
+    }
     let report = crate::analysis::planar_face_area::measure_projected_face_area(
         &faces[0],
         field(v, "tolerance_mm2")?,

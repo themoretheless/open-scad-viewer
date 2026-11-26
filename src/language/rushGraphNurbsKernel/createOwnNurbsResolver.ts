@@ -1064,9 +1064,15 @@ export function createOwnNurbsResolver(
           case 'world_face_mass':
           case 'principal_face_moments':
           case 'principal_face_directions':
+          case 'planar_face_perimeter':
+          case 'planar_boundary_distance':
+          case 'planar_material_distance':
           case 'signed_planar_face_area': {
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,loops:n.loops.map(r=>r.map(needCurve)),
+              ...('tolerance_mm' in n ? {tolerance_mm:n.tolerance_mm,max_cells:n.max_cells} : {}),
+              ...('query_point' in n ? {query_point:n.query_point} : {}),
+              ...('max_winding_cells' in n ? {tolerance_uv:n.tolerance_uv,max_winding_cells:n.max_winding_cells} : {}),
               ...('moment_tolerances' in n ? {chart_origin:n.chart_origin,moment_tolerances:n.moment_tolerances,max_cells:n.max_cells} : {}),
               ...(n.op === 'signed_planar_face_area' ? {tolerance_mm2:n.tolerance_mm2,max_cells:n.max_cells} : {}),max_work:n.max_work})
             constructionReports[key]={measurement:{operation:n.op,report}}
