@@ -51,6 +51,11 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
         | "extract_profile_boolean_edges"
         | "assemble_profile_boolean_loops"
         | "triangulate_profile_boolean"
+        | "build_profile_boolean_solid"
+        | "measure_profile_extrusion_inertia"
+        | "locate_profile_extrusion_points"
+        | "clip_profile_extrusion_path"
+        | "bound_profile_extrusion_area"
         | "extrude_profile_boolean_shell"
         | "decompose_profile_overlap" => {
             let second = path(v, "other_path_mm")?;
@@ -181,6 +186,87 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
                                 work,
                             )?;
                             json!({"verticesMm":coordinates(r.vertices_mm),"triangles":r.triangles,"workUsed":r.exact_work})
+                        }
+                        "build_profile_boolean_solid" => {
+                            let r = a::extrude_exact_coplanar_polyline_boolean_brep(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                field(v, "tolerance_mm")?,
+                                super::closed_ss::closed_solid_policy(field(v, "tolerance_uv")?),
+                                work,
+                            )?;
+                            return Ok(
+                                json!({"model":r.solid.model(),"report":{"volumeMm3":r.volume_mm3.to_string(),"workUsed":r.exact_work}}),
+                            );
+                        }
+                        "measure_profile_extrusion_inertia" => {
+                            let r = a::exact_coplanar_polyline_boolean_extrusion_inertia(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                work,
+                            )?;
+                            json!({"volumeMm3":r.volume_mm3.to_string(),"centroidMm":r.centroid_mm.map(|q|q.to_string()),"inertiaMm5":r.inertia_mm5.map(|row|row.map(|q|q.to_string())),"workUsed":r.exact_work})
+                        }
+                        "locate_profile_extrusion_points" => {
+                            let r = a::locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                &path(v, "samples_mm")?,
+                                work,
+                            )?;
+                            let locations = r
+                                .locations
+                                .into_iter()
+                                .map(|l| format!("{l:?}"))
+                                .collect::<Vec<_>>();
+                            json!({"locations":locations,"workUsed":r.exact_work})
+                        }
+                        "clip_profile_extrusion_path" => {
+                            let r = a::clip_path_to_exact_coplanar_polyline_boolean_extrusion(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                &path(v, "samples_mm")?,
+                                work,
+                            )?;
+                            let spans = r
+                                .span_intervals
+                                .into_iter()
+                                .map(|s| {
+                                    s.into_iter()
+                                        .map(|p| p.map(|q| q.to_string()))
+                                        .collect::<Vec<_>>()
+                                })
+                                .collect::<Vec<_>>();
+                            json!({"spans":spans,"workUsed":r.exact_work})
+                        }
+                        "bound_profile_extrusion_area" => {
+                            let r = a::bounded_coplanar_polyline_boolean_extrusion_area(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                field(v, "tolerance_mm2")?,
+                                work,
+                            )?;
+                            json!({"capsMm2":r.cap_bounds_mm2.map(|q|q.to_string()),"wallsMm2":r.wall_bounds_mm2.map(|q|q.to_string()),"totalMm2":r.total_bounds_mm2.map(|q|q.to_string()),"workUsed":r.exact_work})
                         }
                         _ => {
                             let r = a::extrude_exact_coplanar_planar_polyline_region_boolean(

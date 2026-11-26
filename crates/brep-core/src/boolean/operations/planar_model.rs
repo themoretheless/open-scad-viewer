@@ -231,12 +231,18 @@ struct FaceFrame {
     min: [f64; 2],
     max: [f64; 2],
     chart: Option<CoordinateChart>,
+    parallelogram: Option<[[f64; 3]; 4]>,
 }
 
 impl FaceFrame {
     fn uv(&self, point: [f64; 3], welded: [f64; 3]) -> [f64; 2] {
         if let Some((_, _, axes, _)) = self.chart {
             return axes.map(|axis| welded[axis]);
+        }
+        if let Some(corners) = &self.parallelogram {
+            if let Some(i) = corners.iter().position(|corner| *corner == point) {
+                return [[0.,0.],[1.,0.],[1.,1.],[0.,1.]][i];
+            }
         }
         let d = sub(point, self.origin);
         [
@@ -280,6 +286,9 @@ impl FaceFrame {
             }
             surface.knots_u = vec![ranges[0][0], ranges[0][0], ranges[0][1], ranges[0][1]];
             surface.knots_v = vec![ranges[1][0], ranges[1][0], ranges[1][1], ranges[1][1]];
+        }
+        if let Some([a,b,c,d]) = self.parallelogram {
+            surface.control_points = vec![vec![a.to_vec(),d.to_vec()],vec![b.to_vec(),c.to_vec()]];
         }
         surface
     }
@@ -362,8 +371,34 @@ impl PolygonModelBuilder {
             v,
             min,
             max,
+            parallelogram: if chart.is_none() && all_points.len() == 4 {
+                self.exact_parallelogram(polygon)
+            } else {
+                None
+            },
             chart,
         })
+    }
+
+    /// Reuse the four model vertices as the bilinear control net only when
+    /// the two diagonals have exactly the same midpoint in binary arithmetic.
+    fn exact_parallelogram(&self, polygon: &[[f64; 3]]) -> Option<[[f64; 3]; 4]> {
+        use num_rational::BigRational as Q;
+        let corners: [[f64; 3]; 4] = polygon.try_into().ok()?;
+        for (i, &p) in corners.iter().enumerate() {
+            if self.welded_vertex(p).is_some_and(|id| self.model.vertices[id].point != p)
+                || corners[..i].iter().any(|&q| close(p, q, self.tolerance * VERTEX_WELD_FACTOR))
+            {
+                return None;
+            }
+        }
+        for axis in 0..3 {
+            let [a,b,c,d] = corners.map(|p| Q::from_float(p[axis]));
+            if a? + c? != b? + d? {
+                return None;
+            }
+        }
+        Some(corners)
     }
 
     /// Author exact coordinate-plane charts from the original polygon

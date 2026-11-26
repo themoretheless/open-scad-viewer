@@ -492,6 +492,13 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'build_profile_boolean_solid': {
+            const {op,id:_id,...settings}=n
+            const {model,report}=callGeometryRust<{model:NurbsBrep;report:object}>(op,settings)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'triangulate_planar_path':
           case 'measure_path_second_moments':
           case 'bound_path_principal_moments':
@@ -504,6 +511,10 @@ export function createOwnNurbsResolver(
           case 'extract_profile_boolean_edges':
           case 'assemble_profile_boolean_loops':
           case 'triangulate_profile_boolean':
+          case 'measure_profile_extrusion_inertia':
+          case 'locate_profile_extrusion_points':
+          case 'clip_profile_extrusion_path':
+          case 'bound_profile_extrusion_area':
           case 'extrude_profile_boolean_shell':
           case 'decompose_profile_overlap':
           case 'clip_path_to_perforated_region':

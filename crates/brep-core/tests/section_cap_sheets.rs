@@ -6202,6 +6202,27 @@ fn exact_coplanar_boolean_brep_extrusion_qualifies_compact_holed_caps() {
 }
 
 #[test]
+fn skew_boolean_extrusion_retains_exact_side_faces_and_inertia() {
+    use brep_core::analysis::{CoplanarPolylineBoolean::Intersection, exact_polyhedral_inertia,
+        exact_coplanar_polyline_boolean_extrusion_inertia, extrude_exact_coplanar_polyline_boolean_brep};
+    use num_rational::BigRational as Q;
+    let point = |x, y| [x, y, 0].map(|n: i64| Q::from_integer(n.into()));
+    let square = |lo, hi| [point(lo,lo),point(hi,lo),point(hi,hi),point(lo,hi),point(lo,lo)];
+    let first = square(0,3);
+    let second = square(1,4);
+    let sweep = [1i64,0,3].map(|n| Q::from_integer(n.into()));
+    let solid = extrude_exact_coplanar_polyline_boolean_brep(&first,&[],&second,&[],Intersection,
+        &sweep,1e-8,section_solid_options().admission,1_000_000).unwrap();
+    assert!(solid.solid.geometry().proven);
+    let measured = exact_polyhedral_inertia(&solid.solid,1_000_000).unwrap();
+    let analytic = exact_coplanar_polyline_boolean_extrusion_inertia(&first,&[],&second,&[],
+        Intersection,&sweep,1_000_000).unwrap();
+    assert_eq!(solid.volume_mm3.to_string(),"12");
+    assert_eq!(measured.centroid_mm,analytic.centroid_mm);
+    assert_eq!(measured.inertia_mm5,analytic.inertia_mm5);
+}
+
+#[test]
 fn exact_coplanar_boolean_brep_extrusion_refuses_rounded_vertices() {
     use brep_core::analysis::{
         CoplanarPolylineBoolean::Intersection, extrude_exact_coplanar_polyline_boolean_brep,
