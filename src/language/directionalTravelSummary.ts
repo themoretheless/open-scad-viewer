@@ -135,6 +135,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'pair_plane_branch') return russian ? 'Согласованные кривые сечения' : 'pair plane branch'
   if (operation === 'stitch_plane_strip') return russian ? 'Сшивка ветви через узловые ячейки' : 'stitch plane strip'
   if (operation === 'close_plane_strip') return russian ? 'Замыкание сечения на периодическом шве' : 'close plane strip'
+  if (operation === 'split_periodic_plane_strip') return russian ? 'Разрез периодической поверхности' : 'Split periodic surface strip'
   if (operation === 'store_closed_plane_piece') return russian ? 'Кривая замкнутого сечения' : 'store closed plane piece'
   if (operation === 'trace_plane_strip') return russian ? 'Пространственная кривая через узловые ячейки' : 'trace plane strip'
   if (operation === 'plane_branch_xyz_polyline') return russian ? 'Пространственная аппроксимация ветви' : 'plane branch xyz polyline'

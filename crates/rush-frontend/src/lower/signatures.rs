@@ -302,6 +302,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "pair_plane_branch" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_mm","max_segments","gap_tolerance_mm","use_pcurve","max_work"],
         "stitch_plane_strip" => &["plane_normal","plane_offset_mm","solved_span","transverse_spans","parameter_width","direction","max_work"],
         "close_plane_strip" => &["plane_normal","plane_offset_mm","solved_span","transverse_spans","parameter_width","direction","tolerance_mm","max_segments_per_cell","max_work"],
+        "split_periodic_plane_strip" => &["plane_normal","plane_offset_mm","solved_span","transverse_spans","parameter_width","direction","tolerance_mm","max_segments_per_cell","gap_tolerance_mm","positive_side","max_work"],
         "store_closed_plane_piece" => &["plane_normal","plane_offset_mm","solved_span","transverse_spans","parameter_width","direction","tolerance_mm","max_segments_per_cell","gap_tolerance_mm","piece","use_pcurve","max_work"],
         "trace_plane_strip" => &["plane_normal","plane_offset_mm","solved_span","transverse_spans","parameter_width","direction","tolerance_mm","max_segments_per_cell","max_work"],
         "plane_branch_xyz_polyline" => &["plane_normal","plane_offset_mm","knot_span","direction","tolerance_mm","max_segments","max_work"],

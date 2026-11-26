@@ -17,7 +17,8 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
     };
     if matches!(
         op,
-        "close_plane_strip"
+        "split_periodic_plane_strip"
+            | "close_plane_strip"
             | "store_closed_plane_piece"
             | "stitch_plane_strip"
             | "trace_plane_strip"
@@ -39,6 +40,30 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
                 max_xyz_error: field(v, "tolerance_mm")?,
                 max_segments_per_cell: field(v, "max_segments_per_cell")?,
             };
+            if op == "split_periodic_plane_strip" {
+                let r = plane::split_periodic_surface_strip_by_plane(
+                    &surface,
+                    normal,
+                    offset,
+                    options,
+                    field(v, "gap_tolerance_mm")?,
+                )?;
+                let cut = r
+                    .outcome
+                    .map_err(|reason| input(format!("Periodic split refused: {reason:?}")))?;
+                let positive: bool = field(v, "positive_side")?;
+                let selected = if positive {
+                    &cut.positive
+                } else {
+                    &cut.negative
+                };
+                return Ok(
+                    json!({"positiveSide":positive,"trimLoops":[selected],"negative":cut.negative,"positive":cut.positive,
+                    "uvPeriod":cut.section.uv_period.to_string(),"workUsed":r.work_used,"pieces":cut.section.pieces.iter().map(|p|json!({
+                    "spatial":p.spatial.curve,"pcurve":p.pcurve,"xyzErrorUpper":p.spatial.xyz_error_upper.to_string(),
+                    "planeResidualUpper":p.spatial.plane_residual_upper.to_string(),"gapTolerance":p.correspondence_tolerance.to_string()})).collect::<Vec<_>>()}),
+                );
+            }
             if op == "store_closed_plane_piece" {
                 let r = plane::store_periodic_surface_plane_section(
                     &surface,

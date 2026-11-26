@@ -627,6 +627,7 @@ export function createOwnNurbsResolver(
             result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
             break
           }
+          case 'split_periodic_plane_strip':
           case 'split_cell_by_plane': {
             const {id:_id,op,input,...settings}=n
             const surface=needSurface(input)
