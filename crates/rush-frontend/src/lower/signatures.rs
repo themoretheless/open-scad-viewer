@@ -447,6 +447,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "partition_solid_path" => &["query_path_mm","tolerance_uv","max_work"],
         "bound_path_length_breakdown" => &["query_path_mm","tolerance_mm","tolerance_uv","max_work"],
         "find_path_face_contacts" => &["query_path_mm","tolerance_uv","max_work"],
+        "recover_material_path" => &["query_path_mm","tolerance_uv","max_work"],
         "clip_path_to_material" => &["query_path_mm","tolerance_uv","max_work"],
         "find_path_boundary_events" => &["query_path_mm","tolerance_uv","max_work"],
         "measure_swept_path_gap" => &["query_path_mm","query_radius_mm","tolerance_uv","max_work"],

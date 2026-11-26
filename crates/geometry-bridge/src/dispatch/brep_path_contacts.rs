@@ -35,6 +35,14 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
                 .collect::<Vec<_>>();
             json!({"model":model,"contacts":contacts,"workUsed":result.exact_work})
         }
+        "recover_material_path" => {
+            let result = a::exact_polyhedral_material_path_components(&solid, &path, work)?;
+            let components=result.components.into_iter().map(|component|{
+                let points=component.points_mm.into_iter().map(|p|p.map(|q|q.to_string())).collect::<Vec<_>>();
+                json!({"parameters":component.parameters.map(|q|q.to_string()),"pointsMm":points})
+            }).collect::<Vec<_>>();
+            json!({"model":model,"components":components,"workUsed":result.exact_work})
+        }
         "clip_path_to_material" => {
             let result = a::exact_polyhedral_path_material_clip(&solid, &path, work)?;
             let spans = result

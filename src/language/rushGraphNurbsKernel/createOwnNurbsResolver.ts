@@ -1113,6 +1113,7 @@ export function createOwnNurbsResolver(
           case 'partition_solid_path':
           case 'bound_path_length_breakdown':
           case 'find_path_face_contacts':
+          case 'recover_material_path':
           case 'clip_path_to_material':
           case 'find_path_boundary_events':
           case 'measure_swept_path_gap':

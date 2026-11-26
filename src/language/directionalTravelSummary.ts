@@ -131,6 +131,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'partition_solid_path') return russian ? 'Разбиение пути по положению' : 'partition solid path'
   if (operation === 'bound_path_length_breakdown') return russian ? 'Длины внутренних, граничных и внешних участков' : 'bound path length breakdown'
   if (operation === 'find_path_face_contacts') return russian ? 'Контакты пути с гранями' : 'find path face contacts'
+  if (operation === 'recover_material_path') return russian ? 'Восстановленные участки пути' : 'Recovered material path'
   if (operation === 'clip_path_to_material') return russian ? 'Участки пути в материале' : 'clip path to material'
   if (operation === 'find_path_boundary_events') return russian ? 'Переходы пути через границу' : 'find path boundary events'
   if (operation === 'measure_swept_path_gap') return russian ? 'Минимальный зазор вдоль пути' : 'measure swept path gap'
