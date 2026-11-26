@@ -873,6 +873,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BscAHTpe.js':197_100,'assets/jbyymqEm.js':203_600,'assets/mainSolid.worker-BeLGpm2B.js':222_100}),
   }),
+  // World face moment and principal axis bounds: 20,831,264 raw bytes, 7,708,625 packed bytes and 14,864,016 total asset bytes.
+  'c9dafc90093cc83e06bc9970721352b4cc693daf1ba2d54df042dcfc58acff19':Object.freeze({
+    version:116,geometryChunkBytes:7_709_000,totalAssetBytes:14_865_000,rawGeometryBytes:20_968_000,
+    namedJsChunkBytes:Object.freeze({
+      index:293_400,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/Bo822T5I.js':203_600,'assets/C-yT7Qjx.js':197_400,'assets/mainSolid.worker-IR55ES-S.js':222_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

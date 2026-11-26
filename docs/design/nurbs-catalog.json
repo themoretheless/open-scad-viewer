@@ -8997,7 +8997,7 @@
     {
       "id": "NURBS-0326",
       "name": "Гарантированные границы центра площади и центроидного тензора плоских рациональных граней в 3D",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_mass",
@@ -9008,7 +9008,9 @@
         "crates/nurbs-core/src/trim/planar_mass_bounds.rs",
         "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs",
         "docs/qualification/nurbs-curvature-field-326-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-326-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-326-2026-11-17/native.log.gz",
+        "examples/rush/bound-world-face-mass.r",
+        "tests/rushBoundedFaceMass.test.ts"
       ],
       "remainingQualification": [
         "Propagate outward rational planar moment enclosures to world-space signed area, centroid, and centered XYZ moments.",
@@ -9040,7 +9042,7 @@
     {
       "id": "NURBS-0328",
       "name": "Гарантированные интервалы главных моментов плоской грани с рациональными контурами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_moments",
@@ -9048,7 +9050,9 @@
         "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs",
         "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs",
         "docs/qualification/nurbs-curvature-field-328-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-328-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-328-2026-11-17/native.log.gz",
+        "examples/rush/bound-principal-face-moments.r",
+        "tests/rushBoundedFaceMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose both world-space in-plane principal moments and their sum from certified rational boundary moment bounds.",
@@ -9080,7 +9084,7 @@
     {
       "id": "NURBS-0330",
       "name": "Гарантированные интервалы главных направлений для плоских граней с рациональными контурами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_directions",
@@ -9088,7 +9092,9 @@
         "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs",
         "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs",
         "docs/qualification/nurbs-curvature-field-330-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-330-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-330-2026-11-17/native.log.gz",
+        "examples/rush/bound-principal-face-directions.r",
+        "tests/rushBoundedFaceMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose both world-space principal axis projectors when the in-plane moment gap is proven positive.",
