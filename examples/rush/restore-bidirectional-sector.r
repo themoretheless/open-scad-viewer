@@ -1,0 +1,11 @@
+// @rush/1
+part0 = nurbs_curve(degree:1,knots:[0, 0, 1, 1],control_points:[[2, 0, 0], [2, 1, 0]],weights:[1, 1])
+part1 = nurbs_curve(degree:2,knots:[0, 0, 0, 1, 1, 1],control_points:[[2, 1, 0], [1, 2, 0], [0, 2, 0]],weights:[1, 1, 1])
+part2 = nurbs_curve(degree:1,knots:[0, 0, 1, 1],control_points:[[0, 2, 0], [-1, 2, 0]],weights:[1, 1])
+part3 = nurbs_curve(degree:2,knots:[0, 0, 0, 1, 1, 1],control_points:[[-1, 2, 0], [-2, 1, 0], [-2, 0, 0]],weights:[1, 1, 1])
+part4 = nurbs_curve(degree:1,knots:[0, 0, 1, 1],control_points:[[-2, 0, 0], [-2, -1, 0]],weights:[1, 1])
+part5 = nurbs_curve(degree:2,knots:[0, 0, 0, 1, 1, 1],control_points:[[-2, -1, 0], [-0.96875, -2, 0], [0, -2, 0]],weights:[1, 1, 1])
+part6 = nurbs_curve(degree:1,knots:[0, 0, 1, 1],control_points:[[0, -2, 0], [1, -2, 0]],weights:[1, 1])
+part7 = nurbs_curve(degree:2,knots:[0, 0, 0, 1, 1, 1],control_points:[[1, -2, 0], [2, -1, 0], [2, 0, 0]],weights:[1, 1, 1])
+result = part0.restore_bidirectional_sector(inputs:[part1,part2,part3,part4,part5,part6,part7],sector_index:2,piece:1,pieces_per_sector:2)
+show result.surface_extrude(vector:[0,0,1mm]).tessellate(8,4)

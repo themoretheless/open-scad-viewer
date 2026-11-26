@@ -2955,6 +2955,19 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'repeat_profile_segment':
+          case 'compress_rotated_segments':
+          case 'compress_profile_sectors':
+          case 'discover_profile_sectors':
+          case 'restore_lossless_sector':
+          case 'restore_bidirectional_sector': {
+            const {id:_id,op,input,...parameters}=n
+            const curves=[needCurve(input),...('inputs' in parameters?parameters.inputs.map(id=>needCurve(id)):[])]
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve}>(op,{...parameters,curves})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'make_step_assembly':
           case 'step_part_tolerances':
           case 'set_scaled_step_placement':

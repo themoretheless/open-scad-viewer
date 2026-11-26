@@ -63661,6 +63661,276 @@
               },
               "op": {
                 "type": "string",
+                "const": "repeat_profile_segment"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "copies": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "copies",
+              "sector_index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "compress_rotated_segments"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "compress_profile_sectors"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "pieces_per_sector",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "discover_profile_sectors"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "restore_lossless_sector"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "pieces_per_sector"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "restore_bidirectional_sector"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "pieces_per_sector"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "read_shared_step"
               },
               "input": {

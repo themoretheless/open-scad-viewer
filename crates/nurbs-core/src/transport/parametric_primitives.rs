@@ -77,6 +77,8 @@ mod spatial_distances;
 mod face_clearances;
 #[path="routed_tubes.rs"]
 mod routed_tubes;
+#[path="circular_sectors.rs"]
+mod circular_sectors;
 
 #[path = "exact_field_requests.rs"]
 mod exact_field_requests;
@@ -144,6 +146,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
                 "gradientLower":r.gradient_lower,"reason":r.reason}))
         })());
     }
+    if circular_sectors::OPS.contains(&op) { return Some(circular_sectors::apply(v,op)); }
     if matches!(op,"routed_tube_pair"|"routed_tube_bundle") { return Some(routed_tubes::apply(v,op)); }
     if face_clearances::OPS.contains(&op) { return Some(face_clearances::apply(v,op)); }
     if spatial_distances::OPS.contains(&op) { return Some(spatial_distances::apply(v,op)); }
