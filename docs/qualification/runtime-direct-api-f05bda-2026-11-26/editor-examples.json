@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "f05bda8087f1a51bf6f79dca77787d6d456c37e57c917183a79c3dcff9731a27",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/join-projective-chain.r",
+      "exampleSha256": "c45484c7e296648a262e26994279a65837f58b6dca34dcd637065f4697f37a59",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n9,43\nГотово · 75 ms"
+    },
+    {
+      "example": "examples/rush/compact-projective-chain.r",
+      "exampleSha256": "e68ff45b89df43b9e816017c1898edb968167a135538acabe8f6abe8b6ef644c",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n9,75\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/close-projective-chain.r",
+      "exampleSha256": "d240d571c3c65fdcb9024f8b096c5069ec45a65bb2ac509ab3616e4a145a0a6c",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n35,41\nГотово · 11 ms"
+    }
+  ]
+}

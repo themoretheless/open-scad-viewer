@@ -13899,7 +13899,7 @@
     {
       "id": "NURBS-0503",
       "name": "Точная склейка цепочки NURBS-кривых до C2 с дробно-линейной параметризацией",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_chain_with_exact_projective_c2_clock",
@@ -13908,7 +13908,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-503-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-503-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-503-2026-11-17/native.log.gz",
+        "examples/rush/join-projective-chain.r",
+        "tests/rushChainSeams.test.ts"
       ],
       "remainingQualification": [
         "Compose regular C2 seam clocks across an ordered chain and publish a single curve only after every join is proved.",
@@ -13919,7 +13921,7 @@
     {
       "id": "NURBS-0504",
       "name": "Удаление избыточных узлов на стыках цепочки NURBS-кривых C2",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_and_compact_exact_projective_c2_chain",
@@ -13929,7 +13931,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_knot_removal.rs",
         "docs/qualification/nurbs-curvature-field-504-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-504-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-504-2026-11-17/native.log.gz",
+        "examples/rush/compact-projective-chain.r",
+        "tests/rushChainSeams.test.ts"
       ],
       "remainingQualification": [
         "Join a regular C2 chain and attempt exact removal at each transported seam under one budget.",
@@ -13940,7 +13944,7 @@
     {
       "id": "NURBS-0505",
       "name": "Точное замыкание цепочки NURBS-кривых со стыком C2",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_closed_exact_projective_c2_chain",
@@ -13949,7 +13953,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-505-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-505-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-505-2026-11-17/native.log.gz",
+        "examples/rush/close-projective-chain.r",
+        "tests/rushChainSeams.test.ts"
       ],
       "remainingQualification": [
         "Prove a closed clamped chain by matching exact position and both endpoint derivatives at the final seam.",
