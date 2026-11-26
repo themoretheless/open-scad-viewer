@@ -73,6 +73,8 @@ mod exact_merge_requests;
 mod profile_compression;
 #[path="spatial_distances.rs"]
 mod spatial_distances;
+#[path="blend_offset_requests.rs"]
+mod blend_offset_requests;
 #[path="geodesic_requests.rs"]
 mod geodesic_requests;
 #[path="face_clearances.rs"]
@@ -150,6 +152,8 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     }
     if circular_sectors::OPS.contains(&op) { return Some(circular_sectors::apply(v,op)); }
     if matches!(op,"routed_tube_pair"|"routed_tube_bundle") { return Some(routed_tubes::apply(v,op)); }
+    if op == "blend_surface_boundaries" { return Some(blend_offset_requests::blend(v)); }
+    if op == "offset_nurbs_surface" { return Some(blend_offset_requests::offset(v)); }
     if op == "trace_geodesic" { return Some(geodesic_requests::trace(v)); }
     if face_clearances::OPS.contains(&op) { return Some(face_clearances::apply(v,op)); }
     if spatial_distances::OPS.contains(&op) { return Some(spatial_distances::apply(v,op)); }

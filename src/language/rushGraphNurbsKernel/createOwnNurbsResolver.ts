@@ -1446,6 +1446,20 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'blend_surface_boundaries': {
+            const {op,id:_id,input,target_geometry,...settings}=n
+            const {patches,...report}=callGeometryRust<{patches:NurbsSurface[]}>(op,{surface:needSurface(input),target:needSurface(target_geometry),...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'patches',data:{patches,faceIds:patches.map((_,i)=>i)}}
+            break
+          }
+          case 'offset_nurbs_surface': {
+            const {op,id:_id,input,...settings}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface}>(op,{surface:needSurface(input),...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'trace_geodesic': {
             const {op,id:_id,input,return_field,...settings}=n
             const surface=needSurface(input)

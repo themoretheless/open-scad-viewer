@@ -685,6 +685,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "surface_gap_contour_samples" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","max_work"],
         "surface_gap_world_polyline" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","return_field","max_work"],
         "trace_geodesic" => &["start_uv", "direction_uv", "length", "max_steps", "return_field"],
+        "blend_surface_boundaries" => &["target_geometry", "source_edge", "target_edge", "continuity_class", "gains", "reverse_u", "reverse_target_u", "max_patches"],
+        "offset_nurbs_surface" => &["distance", "tolerance_mm"],
         "surface_gap_world_length" => &["knot_span","direction","gap_level_per_mm2","transverse","max_depth","max_work"],
         "split_tensor_surface" => &["direction","parameter","part","max_work"],
         "tile_tensor_surface" => &["cuts_u","cuts_v","patch_index","max_work"],
