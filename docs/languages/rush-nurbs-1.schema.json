@@ -117029,6 +117029,34 @@
               },
               "op": {
                 "type": "string",
+                "const": "bake_step_scales"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "compress_brep_faces"
               },
               "input": {

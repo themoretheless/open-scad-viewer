@@ -1,7 +1,7 @@
 use crate::*;
 use cad_step::{export_named_step_assembly,import_named_step_assembly,import_step_shared_assembly,NamedStepAssembly};
 
-pub(super) const OPS:&[&str]=&["name_step_parts","read_step_names","step_parts_list","compress_step_definition","select_step_parts",
+pub(super) const OPS:&[&str]=&["name_step_parts","read_step_names","step_parts_list","compress_step_definition","bake_step_scales","select_step_parts",
     "name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists"];
 
 fn write(assembly:&NamedStepAssembly)->Result<String> {
@@ -41,6 +41,7 @@ pub(super) fn apply(v:&Value)->Result<Value>{
             report["accepted"]=json!(accepted);
             if accepted { write(&assembly)? } else { text.to_owned() }
         }
+        "bake_step_scales"=>assembly.export_step_with_baked_scales()?,
         "select_step_parts"=>assembly.export_selected_parts(&field::<Vec<usize>>(v,"definition_indices")?,&field::<String>(v,"product_name")?)?,
         "name_step_variant"=>{
             let id=assembly.replace_named_variant(&field::<Vec<usize>>(v,"selection")?,field(v,"model")?,field(v,"product_name")?)?;

@@ -597,6 +597,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'compress_brep_faces') return russian ? 'Сжатие поверхностей граней' : 'Compress B-rep face surfaces'
   if (operation === 'compress_brep_edge') return russian ? 'Сжатие ребра и его обрезок' : 'Compress B-rep edge and trims'
   if (operation === 'compress_step_definition') return russian ? 'Сжатие определения детали STEP' : 'Compress STEP part definition'
+  if (operation === 'bake_step_scales') return russian ? 'STEP с жёсткими размещениями' : 'STEP with rigid placements'
   if (operation === 'select_step_parts') return russian ? 'Экспорт позиций спецификации' : 'Select step parts'
   if (operation === 'name_step_variant') return russian ? 'Именованный вариант детали' : 'Name step variant'
   if (operation === 'append_named_parts') return russian ? 'Слияние именованных сборок' : 'Append named parts'

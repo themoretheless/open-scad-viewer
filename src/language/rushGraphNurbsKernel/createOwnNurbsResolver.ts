@@ -3043,6 +3043,7 @@ export function createOwnNurbsResolver(
           case 'read_step_names':
           case 'step_parts_list':
           case 'compress_step_definition':
+          case 'bake_step_scales':
           case 'select_step_parts':
           case 'name_step_variant':
           case 'append_named_parts':
