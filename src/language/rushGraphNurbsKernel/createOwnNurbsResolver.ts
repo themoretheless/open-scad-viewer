@@ -1082,17 +1082,23 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'build_expanded_plane_solid':
+          case 'build_outward_plane_solid':
           case 'build_section_solid':
           case 'infer_rim_planes':
           case 'close_inferred_rims':
           case 'close_bounded_inferred_rims':
           case 'inspect_inferred_solid':
+          case 'build_outward_inferred_solid':
           case 'build_expanded_solid':
           case 'build_inferred_solid':
+          case 'close_expanded_planes':
           case 'close_section_planes':
           case 'build_bounded_section_solid':
           case 'close_bounded_planes':
+          case 'attach_expanded_rims':
           case 'attach_section_rims':
+          case 'discover_expanded_rims':
           case 'discover_section_rims':
           case 'attach_bounded_rims':
           case 'discover_bounded_rims': {

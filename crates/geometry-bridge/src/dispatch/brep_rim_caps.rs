@@ -15,6 +15,16 @@ pub(super) fn attach(v: &Value, op: &str) -> Result<Value> {
         })
     };
     let (attached, rings, discovery, errors) = match op {
+        "discover_expanded_rims" => {
+            let r = cap::discover_and_attach_section_caps_with_expanded_exact_support(
+                &source,
+                shell,
+                cap::SectionPlane { normal, offset },
+                work,
+                cells,
+            )?;
+            (r.attachment, r.rings, r.discovery_work, None)
+        }
         "discover_section_rims" => {
             let r =
                 cap::discover_and_attach_section_caps(&source, shell, normal, offset, work, cells)?;
@@ -38,7 +48,16 @@ pub(super) fn attach(v: &Value, op: &str) -> Result<Value> {
         _ => {
             let rings: Vec<Vec<[usize; 2]>> = field(v, "rim_addresses")?;
             let refs = rings.iter().map(Vec::as_slice).collect::<Vec<_>>();
-            if op == "attach_section_rims" {
+            if op == "attach_expanded_rims" {
+                (
+                    cap::attach_section_caps_with_expanded_exact_support(
+                        &source, shell, &refs, normal, offset, work, cells,
+                    )?,
+                    rings,
+                    0,
+                    None,
+                )
+            } else if op == "attach_section_rims" {
                 (
                     cap::attach_section_caps(&source, shell, &refs, normal, offset, work, cells)?,
                     rings,
@@ -66,12 +85,12 @@ pub(super) fn attach(v: &Value, op: &str) -> Result<Value> {
     )
 }
 
-pub(super) fn close_planes(v: &Value, bounded: bool) -> Result<Value> {
+pub(super) fn close_planes(v: &Value, mode: &str) -> Result<Value> {
     let source: brep_core::Model = field(v, "source")?;
     let shell = field(v, "shell")?;
     let work = field(v, "max_work")?;
     let cells = field(v, "max_verification_cells")?;
-    let (attachment, errors) = if bounded {
+    let (attachment, errors) = if mode == "bounded" {
         let planes = bounded_planes(v)?;
         let r = cap::close_shell_with_bounded_section_caps(&source, shell, &planes, work, cells)?;
         (
@@ -83,7 +102,11 @@ pub(super) fn close_planes(v: &Value, bounded: bool) -> Result<Value> {
         )
     } else {
         let planes = exact_planes(v)?;
-        let r = cap::close_shell_with_section_caps(&source, shell, &planes, work, cells)?;
+        let r = if mode == "expanded" {
+            cap::close_shell_with_expanded_exact_section_caps(&source, shell, &planes, work, cells)?
+        } else {
+            cap::close_shell_with_section_caps(&source, shell, &planes, work, cells)?
+        };
         let errors = vec![String::from("0"); r.cap_faces.len()];
         (r, errors)
     };
@@ -131,7 +154,21 @@ pub(super) fn solid(v: &Value, mode: &str) -> Result<Value> {
         volume_tolerance_mm3: field(v, "volume_tolerance_mm3")?,
         max_volume_cells: field(v, "max_volume_cells")?,
     };
-    let (section, errors) = if mode == "expanded" {
+    let mut reversed = false;
+    let (section, errors) = if mode == "outward_planes" || mode == "outward_inferred" {
+        let r = if mode == "outward_planes" {
+            cap::build_outward_section_solid(&source, &exact_planes(v)?, options)?
+        } else {
+            cap::build_outward_inferred_section_solid(&source, options)?
+        };
+        reversed = r.orientation_reversed;
+        let errors = vec![String::from("0"); r.section.cap_faces.len()];
+        (r.section, errors)
+    } else if mode == "expanded_planes" {
+        let r = cap::build_expanded_section_solid(&source, &exact_planes(v)?, options)?;
+        let errors = vec![String::from("0"); r.cap_faces.len()];
+        (r, errors)
+    } else if mode == "expanded" {
         let r = cap::build_expanded_inferred_section_solid(&source, options)?;
         let bounds = vec![String::from("0"); r.cap_faces.len()];
         (r, bounds)
@@ -162,6 +199,6 @@ pub(super) fn solid(v: &Value, mode: &str) -> Result<Value> {
     let model = section.solid.model();
     let volume = section.volume.volume_mm3;
     Ok(
-        json!({"model":model,"capFaces":section.cap_faces,"bodyCount":model.bodies.len(),"boundaryProven":section.solid.geometry().proven,"volumeMm3":[volume.lower,volume.upper],"supportErrorUpper":errors,"volumeCells":section.volume.cells}),
+        json!({"model":model,"orientationReversed":reversed,"capFaces":section.cap_faces,"bodyCount":model.bodies.len(),"boundaryProven":section.solid.geometry().proven,"volumeMm3":[volume.lower,volume.upper],"supportErrorUpper":errors,"volumeCells":section.volume.cells}),
     )
 }

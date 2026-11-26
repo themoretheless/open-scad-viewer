@@ -11,6 +11,7 @@ mod rim_caps;
 #[path="brep_inferred_rims.rs"]
 mod inferred_rims;
 const OPS: &[&str] = &[
+    "attach_expanded_rims","discover_expanded_rims","close_expanded_planes","build_expanded_plane_solid","build_outward_plane_solid","build_outward_inferred_solid",
     "inspect_inferred_solid","expanded_section_sheets","build_expanded_solid",
     "build_section_solid",
     "infer_rim_planes",
@@ -125,12 +126,17 @@ fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "inspect_inferred_solid" => inferred_rims::inspect(&v),
         "build_expanded_solid" => rim_caps::solid(&v,"expanded"),
+        op @ ("attach_expanded_rims"|"discover_expanded_rims") => rim_caps::attach(&v,op),
+        "close_expanded_planes" => rim_caps::close_planes(&v,"expanded"),
+        "build_expanded_plane_solid" => rim_caps::solid(&v,"expanded_planes"),
+        "build_outward_plane_solid" => rim_caps::solid(&v,"outward_planes"),
+        "build_outward_inferred_solid" => rim_caps::solid(&v,"outward_inferred"),
         "build_section_solid" => rim_caps::solid(&v,"exact"),
         op @ ("infer_rim_planes" | "close_inferred_rims" | "close_bounded_inferred_rims") => inferred_rims::infer(&v,op),
         "build_inferred_solid" => rim_caps::solid(&v,"inferred"),
-        "close_section_planes" => rim_caps::close_planes(&v,false),
+        "close_section_planes" => rim_caps::close_planes(&v,"exact"),
         "build_bounded_section_solid" => rim_caps::solid(&v,"bounded"),
-        "close_bounded_planes" => rim_caps::close_planes(&v,true),
+        "close_bounded_planes" => rim_caps::close_planes(&v,"bounded"),
         op @ ("attach_section_rims" | "discover_section_rims" | "attach_bounded_rims" | "discover_bounded_rims") => rim_caps::attach(&v,op),
         op @ ("expanded_section_sheets"|"section_brep_sheets"|"bounded_section_brep_sheets")=>section_sheets::build(&v,op),
         "brep_partition_closed_ss" => closed_ss::partition(v),
