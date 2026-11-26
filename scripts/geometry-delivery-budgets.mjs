@@ -1697,6 +1697,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/C-u8MYCz.js':203_600,'assets/CApMYugr.js':114_000,'assets/CCitqNYw.js':109_800,'assets/DvoFziwV.js':221_100,'assets/mainSolid.worker-aQq9hLam.js':287_400,'assets/u2Vi7WwF.js':143_000}),
   }),
+  // NURBS geodesic tracing: 20,490,502 raw bytes, 7,787,746 packed bytes and 15,294,303 total asset bytes.
+  '049be4c256bb69973868ff373bdb3b83cb29971f18658daf5835bb35db0e6cd6':Object.freeze({
+    version:219,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/A1s-COIP.js':114_200,'assets/BkB1pyFc.js':143_600,'assets/Cc3s9iHm.js':221_400,'assets/Ck-A_JMk.js':110_100,'assets/D_Yx_IBy.js':203_600,'assets/mainSolid.worker-J_nhKNS6.js':288_000}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

@@ -1157,11 +1157,13 @@
     {
       "id": "NURBS-0029",
       "name": "геодезическая",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/analysis/geodesic.rs",
         "crates/nurbs-core/tests/geodesic.rs",
-        "docs/design/nurbs-geodesic.md"
+        "docs/design/nurbs-geodesic.md",
+        "examples/rush/geodesic-on-panel.r",
+        "tests/rushGeodesic.test.ts"
       ],
       "remainingQualification": [
         "initial-value RK4 tracing with local sampled curvature residual; global drift, shortest path and rounding-inclusive endpoint error are not certified",

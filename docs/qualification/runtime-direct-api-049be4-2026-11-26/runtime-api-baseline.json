@@ -1,0 +1,22 @@
+{
+  "schema": "runtime-direct-api-baseline/1",
+  "state": "complete",
+  "wasmSha256": "049be4c256bb69973868ff373bdb3b83cb29971f18658daf5835bb35db0e6cd6",
+  "checks": {
+    "directNodeApiPassed": 115,
+    "chromiumMainChecks": 40,
+    "chromiumIndependentWorkerChecks": 40
+  },
+  "evidence": [
+    {
+      "path": "docs/qualification/runtime-direct-api-049be4-2026-11-26/node.json",
+      "sha256": "9ca8c55711807bac1009519142a0fdf702495494d42ce53182c6715879a1b47c"
+    },
+    {
+      "path": "docs/qualification/runtime-direct-api-049be4-2026-11-26/report.json",
+      "sha256": "8ded3716e98660b92fd1e7b4a3d0b64a30b3733b02683d0300d6062ebb1255dc"
+    }
+  ],
+  "scope": "Finite exact-artifact direct API baseline: 115 Node tests and 40 Chromium main/40 independent-worker embedded checks. No complete frontend, application worker protocol, global geometry, Linux or hosted CI qualification.",
+  "qualificationClaim": "finite-runtime-direct-api-only"
+}

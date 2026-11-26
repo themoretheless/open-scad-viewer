@@ -1,0 +1,8 @@
+{
+  "kernelSha256": "049be4c256bb69973868ff373bdb3b83cb29971f18658daf5835bb35db0e6cd6",
+  "runner": "Chromium",
+  "scenes": [
+    "geodesic-on-panel Объекты 1 Треугольники 64 Объём 0 Площадь 3 Готово · 61 ms",
+    "geodesic-at-boundary Объекты 1 Треугольники 64 Объём 0 Площадь 100 Готово · 6 ms"
+  ]
+}
