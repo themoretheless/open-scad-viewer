@@ -122,7 +122,7 @@ fn bounded_planes(v: &Value) -> Result<Vec<cap::BoundedSectionPlane>> {
     Ok(planes)
 }
 
-pub(super) fn solid(v: &Value, bounded: bool) -> Result<Value> {
+pub(super) fn solid(v: &Value, mode: &str) -> Result<Value> {
     let source: brep_core::Model = field(v, "source")?;
     let options = cap::SectionSolidOptions {
         max_exact_work: field(v, "max_work")?,
@@ -131,7 +131,17 @@ pub(super) fn solid(v: &Value, bounded: bool) -> Result<Value> {
         volume_tolerance_mm3: field(v, "volume_tolerance_mm3")?,
         max_volume_cells: field(v, "max_volume_cells")?,
     };
-    let (section, errors) = if bounded {
+    let (section, errors) = if mode == "inferred" {
+        let r =
+            cap::build_inferred_section_solid(&source, field(v, "support_tolerance_mm")?, options)?;
+        (
+            r.section,
+            r.support_error_upper
+                .into_iter()
+                .map(|q| q.to_string())
+                .collect(),
+        )
+    } else if mode == "bounded" {
         let r = cap::build_bounded_section_solid(&source, &bounded_planes(v)?, options)?;
         (
             r.section,

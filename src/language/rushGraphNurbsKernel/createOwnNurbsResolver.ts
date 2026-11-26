@@ -1083,6 +1083,10 @@ export function createOwnNurbsResolver(
             break
           }
           case 'build_section_solid':
+          case 'infer_rim_planes':
+          case 'close_inferred_rims':
+          case 'close_bounded_inferred_rims':
+          case 'build_inferred_solid':
           case 'close_section_planes':
           case 'build_bounded_section_solid':
           case 'close_bounded_planes':
