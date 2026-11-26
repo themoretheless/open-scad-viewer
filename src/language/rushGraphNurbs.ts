@@ -6,6 +6,11 @@ const scalar = z.union([number, z.object({ param: id }).strict()])
 const vector = z.tuple([scalar, scalar, scalar]),
   uv = z.tuple([scalar, scalar]),
   interval = z.tuple([scalar, scalar])
+const surfaceExpression = z.union([
+  z.array(z.union([scalar, z.enum(['u', 'v', 'neg', '+', '-', '*', '/'])])).min(1).max(64),
+  z.string().min(1).max(1024),
+])
+const surfaceExpressions = z.tuple([surfaceExpression, surfaceExpression, surfaceExpression])
 const exactUnsignedRatio = z.string().regex(/^[0-9]{1,1234}\/[0-9]{1,1234}$/)
 const finiteVector = z.tuple([z.number(), z.number(), z.number()])
 /** Edge query evaluated against the input B-rep: every given filter must match. */
@@ -106,6 +111,7 @@ export const rushGraphNurbsSchema = z
     nodes: z
       .array(
         z.discriminatedUnion('op', [
+          z.object({id,op:z.literal('approximate_function_surface'),domain:z.tuple([scalar,scalar,scalar,scalar]),expressions:surfaceExpressions,second_derivative_bounds:uv,tolerance_mm:scalar,max_cells:z.number().int().min(1).max(256)}).strict(),
           z.object({ id, op: z.literal('sphere_surface'), center: vector, radius: scalar }).strict(),
           z.object({ id, op: z.literal('cylinder_surface'), center: vector, radius: scalar, height: scalar }).strict(),
           z.object({ id, op: z.literal('cone_surface'), center: vector, radius: scalar, height: scalar }).strict(),
@@ -114,29 +120,7 @@ export const rushGraphNurbsSchema = z
               id,
               op: z.literal('formula_surface'),
               domain: z.tuple([scalar, scalar, scalar, scalar]),
-              expressions: z.tuple([
-                z.union([
-                  z
-                    .array(z.union([scalar, z.enum(['u', 'v', 'neg', '+', '-', '*', '/'])]))
-                    .min(1)
-                    .max(64),
-                  z.string().min(1).max(1024),
-                ]),
-                z.union([
-                  z
-                    .array(z.union([scalar, z.enum(['u', 'v', 'neg', '+', '-', '*', '/'])]))
-                    .min(1)
-                    .max(64),
-                  z.string().min(1).max(1024),
-                ]),
-                z.union([
-                  z
-                    .array(z.union([scalar, z.enum(['u', 'v', 'neg', '+', '-', '*', '/'])]))
-                    .min(1)
-                    .max(64),
-                  z.string().min(1).max(1024),
-                ]),
-              ]),
+              expressions: surfaceExpressions,
             })
             .strict(),
           z
@@ -1501,6 +1485,8 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('bake_step_scales'),input:id,preview_index:z.number().int().nonnegative()}).strict(),
           z.object({id,op:z.literal('compress_brep_faces'),input:id,faces:z.array(z.number().int().nonnegative()).min(1).max(4096),max_work:z.number().int().min(1).max(10000000)}).strict(),
           z.object({id,op:z.literal('inspect_shell_orientation'),input:id,tolerance_uv:scalar,max_cells:z.number().int().min(2).max(1000000)}).strict(),
+          z.object({id,op:z.literal('rolling_ball_fillet_surface'),input:id,target_geometry:id,radius:scalar,side_a:scalar,side_b:scalar,tolerance_mm:scalar,max_march_steps:z.number().int().min(1).max(4096),max_sections:z.number().int().min(2).max(11)}).strict(),
+          z.object({id,op:z.literal('variable_radius_fillet_surface'),input:id,target_geometry:id,radius_stations:z.array(z.tuple([scalar,scalar])).min(2).max(33),side_a:scalar,side_b:scalar,tolerance_mm:scalar,max_march_steps:z.number().int().min(1).max(4096),max_sections:z.number().int().min(2).max(11)}).strict(),
           z.object({id,op:z.literal('profile_spring_surface'),input:id,center:vector,radius:scalar,height:scalar,turns:scalar,phase_degrees:scalar,tolerance_mm:scalar,max_spans:z.number().int().min(1).max(1024)}).strict(),
           z.object({id,op:z.literal('sphere_envelope_surface'),input:id,target_geometry:id,normal:vector,tolerance_mm:scalar,max_patches:z.number().int().min(1).max(256),max_domain_cells:z.number().int().positive()}).strict(),
           z.object({id,op:z.literal('thicken_nurbs_patch'),input:id,thickness_mm:scalar,tolerance_mm:scalar}).strict(),

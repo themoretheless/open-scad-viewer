@@ -79,6 +79,10 @@ mod blend_offset_requests;
 mod qualified_intersection_requests;
 #[path="carried_surface_requests.rs"]
 mod carried_surface_requests;
+#[path="fillet_surface_requests.rs"]
+mod fillet_surface_requests;
+#[path="function_surface_requests.rs"]
+mod function_surface_requests;
 #[path="pullback_requests.rs"]
 mod pullback_requests;
 #[path="cloud_diagnostics_requests.rs"]
@@ -164,6 +168,9 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"routed_tube_pair"|"routed_tube_bundle") { return Some(routed_tubes::apply(v,op)); }
     if op == "blend_surface_boundaries" { return Some(blend_offset_requests::blend(v)); }
     if op == "offset_nurbs_surface" { return Some(blend_offset_requests::offset(v)); }
+    if op == "approximate_function_surface" { return Some(function_surface_requests::build(v)); }
+    if op == "rolling_ball_fillet_surface" { return Some(fillet_surface_requests::build(v, false)); }
+    if op == "variable_radius_fillet_surface" { return Some(fillet_surface_requests::build(v, true)); }
     if op == "profile_spring_surface" { return Some(carried_surface_requests::spring(v)); }
     if op == "sphere_envelope_surface" { return Some(carried_surface_requests::envelope(v)); }
     if op == "inspect_surface_intersection" { return Some(qualified_intersection_requests::inspect(v)); }

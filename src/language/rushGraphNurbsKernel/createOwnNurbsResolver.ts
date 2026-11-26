@@ -1486,6 +1486,16 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'rolling_ball_fillet_surface':
+          case 'variable_radius_fillet_surface': {
+            const {op,id:_id,input,target_geometry,...settings}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface|null;failure:{detail:string}|null}>(
+              op,{surface:needSurface(input),target:needSurface(target_geometry),...settings})
+            if (!surface) throw new Error(report.failure?.detail ?? 'Could not construct the rolling-ball surface')
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'profile_spring_surface':
           case 'sphere_envelope_surface': {
             const {op,id:_id,input}=n
@@ -2228,6 +2238,13 @@ export function createOwnNurbsResolver(
             )
             constructionReports[key] = approximation.report
             result = { kind: 'curve', data: approximation.curve }
+            break
+          }
+          case 'approximate_function_surface': {
+            const {op,id:_id,...args}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface}>(op,args)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
             break
           }
           case 'formula_surface':
