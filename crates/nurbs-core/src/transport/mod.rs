@@ -22,6 +22,7 @@ mod rotating_tools;
 mod angular_limits;
 mod orientation_frames;
 mod contour_fills;
+mod contour_nesting;
 mod contour_obstacles;
 mod trajectory_ranges;
 mod motion_turns;

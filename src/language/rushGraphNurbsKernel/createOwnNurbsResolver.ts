@@ -1529,6 +1529,10 @@ export function createOwnNurbsResolver(
           case 'contour_capsule_distance':
           case 'contour_rectangle_distance':
           case 'planar_contour_sets_distance':
+          case 'contour_placement':
+          case 'contour_nesting':
+          case 'contour_hierarchy':
+          case 'contour_fill_orientations':
           case 'signed_contour_distance':
           case 'contour_fill_over_box':
           case 'signed_contour_box_distance':
