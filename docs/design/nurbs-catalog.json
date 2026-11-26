@@ -18830,7 +18830,7 @@
     {
       "id": "NURBS-0728",
       "name": "Сертифицированная длительность нарушения зазора для составной траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_chain_violation_duration",
@@ -18838,7 +18838,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-728-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-728-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-728-2026-11-17/native.log.gz",
+        "examples/rush/chain-violation-duration.r",
+        "tests/rushChainClearances.test.ts"
       ],
       "remainingQualification": [
         "Enclose violation duration across independently timed segments under one obstacle-cell budget.",
@@ -18849,7 +18851,7 @@
     {
       "id": "NURBS-0729",
       "name": "Сертифицированное время первого нарушения зазора на составной траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::first_toolpath_chain_violation",
@@ -18857,7 +18859,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-729-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-729-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-729-2026-11-17/native.log.gz",
+        "examples/rush/first-chain-violation.r",
+        "tests/rushChainClearances.test.ts"
       ],
       "remainingQualification": [
         "Bracket the first clearance violation in elapsed chain time across independent segment clocks.",
@@ -18868,7 +18872,7 @@
     {
       "id": "NURBS-0730",
       "name": "Сертифицированный минимальный зазор составной NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_toolpath_chain_clearance",
@@ -18876,7 +18880,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-730-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-730-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-730-2026-11-17/native.log.gz",
+        "examples/rush/minimum-chain-gap.r",
+        "tests/rushChainClearances.test.ts"
       ],
       "remainingQualification": [
         "Enclose the minimum chain clearance with a segment, obstacle and elapsed-time witness.",

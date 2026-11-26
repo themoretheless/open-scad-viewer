@@ -354,3 +354,51 @@ function installSharedDecoders(section, type, index, calls) {
     section(10).data=appendEntry(section(10).data,Buffer.concat([unsigned(start.length),Buffer.from(start)]))
   } finally { helper.dispose() }
 }
+
+// All source segments must be ordered, active initializers of owned memory.
+// Keep the data segment count: every active segment is dropped at instantiation.
+export function compactAdjacentWasmTables(input) {
+  const original = Buffer.from(input.buffer, input.byteOffset, input.byteLength)
+  const joined = coalesceStaticSegments(original, 512)
+  if (joined === original) return original
+  const candidate = compact(joined, true, true, true)
+  if (candidate.length >= original.length) return original
+  const memory = bytes => new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports.memory
+  const reference = memory(original)
+  if (!(reference instanceof WebAssembly.Memory)) return original
+  if (!Buffer.from(reference.buffer).equals(Buffer.from(memory(candidate).buffer))) {
+    throw new Error('Coalescing static segments changed initial geometry memory')
+  }
+  return candidate
+}
+function coalesceStaticSegments(input, maxGap) {
+  const bytes = input
+  const list = sections(bytes)
+  if(list.some(s=>[2,8].includes(s.id)) || list.find(s=>s.id===5)?.data[0]!==1) return bytes
+  const data = list.find(s=>s.id===11)
+  if(!data) return bytes
+  const cursor={at:0}, groups=[]
+  const count=readUnsigned(data.data,cursor)
+  let end=0
+  for(let i=0;i<count;i++){
+    if(readUnsigned(data.data,cursor)!==0 || data.data[cursor.at++]!==65) return bytes
+    const base=readUnsigned(data.data,cursor)
+    if((data.data[cursor.at-1]&64) || data.data[cursor.at++]!==11 || base<end) return bytes
+    const length=readUnsigned(data.data,cursor), group=groups.at(-1),gap=base-end
+    if(cursor.at+length>data.data.length || base+length>=0x40000000) return bytes
+    if(!group || gap>maxGap) groups.push({base,parts:[]})
+    else if(gap) group.parts.push(Buffer.alloc(gap))
+    groups.at(-1).parts.push(data.data.subarray(cursor.at,cursor.at+length))
+    cursor.at+=length
+    end=base+length
+  }
+  if(groups.length===count || cursor.at!==data.data.length) return bytes
+  data.data=Buffer.concat([unsigned(count),Buffer.from(Array(count-groups.length).fill([0,65,0,11,0]).flat()),...groups.flatMap(g=>{
+    const addr=unsigned(g.base), payload=Buffer.concat(g.parts)
+    let offset=addr
+    if(addr.at(-1)&64){addr[addr.length-1]|=128;offset=Buffer.concat([addr,Buffer.from([0])])}
+    return [Buffer.from([0,65]),offset,Buffer.from([11]),unsigned(payload.length),payload]
+  })])
+  const result=Buffer.concat([bytes.subarray(0,8),...list.flatMap(s=>[Buffer.from([s.id]),unsigned(s.data.length),s.data])])
+  return WebAssembly.validate(result) ? result : bytes
+}
