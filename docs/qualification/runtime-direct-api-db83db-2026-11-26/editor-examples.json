@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "db83dbdb5b0fedc81413ef70457f6aa1b578c1a2b595fbe6d8ff93e7fc3c35cf",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/project-planar-wire.r",
+      "exampleSha256": "7e209ada36c9d3b51326f8afb133089696c8b838f8d2859e6221ff02cbef3e88",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2\nГотово · 394 ms"
+    },
+    {
+      "example": "examples/rush/lift-planar-wire.r",
+      "exampleSha256": "817831fa19dbdcc54cad83446291af944b72ff2f87f1a0735b7f883df5cacfc5",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 7 ms"
+    }
+  ]
+}
