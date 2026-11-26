@@ -2822,6 +2822,26 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'step_ray_crossings':
+          case 'step_first_ray_crossing':
+          case 'step_ray_candidates':
+          case 'step_ray_intervals':
+          case 'step_ray_length':
+          case 'qualify_step_instance':
+          case 'step_ray_coverage':
+          case 'step_ray_multiplicity':
+          case 'step_pair_clearance':
+          case 'step_clearance_checks':
+          case 'step_minimum_clearance':
+          case 'step_polyhedral_sections': {
+            const {id:_id,input,op,...parameters}=n
+            const step=requireStepFile(input)
+            const {model,...report}=callGeometryRust<{model:NurbsBrep}>(op,{...parameters,step})
+            sharedStepFiles.set(key,step)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'make_step_assembly':
           case 'step_part_tolerances':
           case 'set_scaled_step_placement':

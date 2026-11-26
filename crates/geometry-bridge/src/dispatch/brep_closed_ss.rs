@@ -2,7 +2,7 @@
 use crate::*;
 use value_codec::Serialize;
 
-pub(super) fn closed_solid_policy(tolerance_uv: f64) -> brep_core::closed_solid::AdmissionPolicy {
+pub(in crate::dispatch) fn closed_solid_policy(tolerance_uv: f64) -> brep_core::closed_solid::AdmissionPolicy {
     use brep_core::{boundary_embedding, closed_solid, face_contacts, volume_validity};
     closed_solid::AdmissionPolicy {
         tolerance_uv,

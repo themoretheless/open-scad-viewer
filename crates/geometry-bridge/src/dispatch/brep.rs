@@ -1,7 +1,7 @@
 //! Bridge operations of the `brep` family.
 use crate::*;
 #[path="brep_closed_ss.rs"]
-mod closed_ss;
+pub(super) mod closed_ss;
 
 #[path="brep_section_sheets.rs"]
 mod section_sheets;
