@@ -20657,7 +20657,7 @@
     {
       "id": "NURBS-0815",
       "name": "Экземпляры сателлитов с общей NURBS-геометрией",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Сборки",
       "nativeApi": "brep_core::gear::planetary_gear_occurrences",
@@ -20665,7 +20665,9 @@
         "crates/brep-core/src/parts/gear/gear_with_report.rs",
         "crates/brep-core/src/parts/gear/tests/mod.rs",
         "docs/qualification/nurbs-curvature-field-815-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-815-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-815-2026-11-17/native.log.gz",
+        "examples/rush/planet-gear-occurrences.r",
+        "tests/rushPlanetInstances.test.ts"
       ],
       "remainingQualification": [
         "Store one planet gear B-rep and rigid placements for repeated occurrences.",
@@ -20676,7 +20678,7 @@
     {
       "id": "NURBS-0816",
       "name": "Экспорт общей NURBS-геометрии сателлитов в сборку STEP AP242",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::export_planet_gear_occurrences_step",
@@ -20685,7 +20687,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-816-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-816-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-816-2026-11-17/native.log.gz",
+        "examples/rush/planet-occurrences-step.r",
+        "tests/rushPlanetInstances.test.ts"
       ],
       "remainingQualification": [
         "Export one planet B-rep definition with AP242 product occurrences and rigid transformations.",
@@ -20696,7 +20700,7 @@
     {
       "id": "NURBS-0817",
       "name": "Экспорт полной планетарной сборки с тремя определениями геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::export_planetary_gear_set_step",
@@ -20705,7 +20709,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-817-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-817-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-817-2026-11-17/native.log.gz",
+        "examples/rush/planetary-gear-set-step.r",
+        "tests/rushPlanetInstances.test.ts"
       ],
       "remainingQualification": [
         "Export sun, ring and shared planet definitions with twenty AP242 occurrences.",

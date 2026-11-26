@@ -1521,6 +1521,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BMsgb8F_.js':129_000,'assets/Bej9HJds.js':104_100,'assets/CLXP4JaM.js':203_600,'assets/DC_QQf-H.js':211_200,'assets/mainSolid.worker-BBKl17Gm.js':273_500}),
   }),
+  // shared planet gears and AP242 assembly downloads: 20,900,556 raw bytes, 8,013,405 packed bytes and 15,423,557 total asset bytes.
+  '93fdc31cc0779382b1fd9f2b48c8cb8b6cec0f53eaade7bdde372be6d01d4523':Object.freeze({
+    version:197,geometryChunkBytes:8_026_000,totalAssetBytes:15_424_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:333_100,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/32gmJ32B.js':211_500,'assets/D3eB6tNL.js':104_400,'assets/D8F6mThW.js':129_700,'assets/DxCeA3dB.js':100_200,'assets/dv1QXP7Z.js':203_600,'assets/mainSolid.worker-jQ3eXpUt.js':274_100}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

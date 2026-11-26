@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "93fdc31cc0779382b1fd9f2b48c8cb8b6cec0f53eaade7bdde372be6d01d4523",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/planet-gear-occurrences.r",
+      "exampleSha256": "52cdfd3ff7f35dda5b64c114c3f5c144b1323eca9b0434dc2b97290e1a9fde80",
+      "editorStats": "Объекты\n1\nТреугольники\n1 004\nОбъём\n264,43\nПлощадь\n434,03\nГотово · 161 ms"
+    },
+    {
+      "example": "examples/rush/planet-occurrences-step.r",
+      "exampleSha256": "8cdd3d55778b927e131a264041ee0a506451027b0fc33bb5af7955ec820ef0a0",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 122 ms"
+    },
+    {
+      "example": "examples/rush/planetary-gear-set-step.r",
+      "exampleSha256": "30331bb90ff64b7e10acc9122624bddf36e5932e69b14941b1fc74756e5c093e",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 1 343 ms"
+    }
+  ]
+}
