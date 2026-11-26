@@ -1,0 +1,415 @@
+{
+  "parser": "OpenCascade/cadquery-ocp",
+  "cases": [
+    {
+      "case": "fixture-step-v5-self-authored-ap242-cone",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.293874368899372e-12,
+      "area_rel_error": 9.294410453304859e-12,
+      "centroid_error": 1.509903313490213e-14
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-cylinder",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.297397444854191e-12,
+      "area_rel_error": 9.297962876797558e-12,
+      "centroid_error": 7.105427357601002e-15
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-inch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.298674120856057e-12,
+      "area_rel_error": 9.2972787073012e-12,
+      "centroid_error": 2.4868995751603507e-13
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-metre",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.2973546862091e-12,
+      "area_rel_error": 9.298306485718432e-12,
+      "centroid_error": 8.640199666842818e-12
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-multiple-void",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 4.62141616754537e-16,
+      "area_rel_error": 8.772132540248158e-16,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-nested-placement",
+      "valid": true,
+      "solids": 2,
+      "volume_rel_error": 9.295135717080727e-12,
+      "area_rel_error": 9.293326334861955e-12,
+      "centroid_error": 5.329070518200751e-15
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-torus",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.8603179197028782e-11,
+      "area_rel_error": 1.8603179197028782e-11,
+      "centroid_error": 1.4210854715202004e-14
+    },
+    {
+      "case": "fixture-step-v5-self-authored-ap242-void",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.29304451640129e-12,
+      "area_rel_error": 9.293475321691478e-12,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "fixture-step-v6-self-authored-ap242-assembly",
+      "valid": true,
+      "solids": 3,
+      "volume_rel_error": 4.010043342410422e-12,
+      "area_rel_error": 2.6273737635486147e-12,
+      "centroid_error": 1.1888268147686176e-11
+    },
+    {
+      "case": "fixture-step-v6-self-authored-ap242-periodic-cone",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.29374388460475e-12,
+      "area_rel_error": 3.328457443977958e-12,
+      "centroid_error": 1.509903313490213e-14
+    },
+    {
+      "case": "fixture-step-v6-self-authored-ap242-periodic-cylinder",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.297397444854191e-12,
+      "area_rel_error": 3.717375768500233e-12,
+      "centroid_error": 7.105427357601002e-15
+    },
+    {
+      "case": "fixture-step-v6-self-authored-ap242-periodic-torus",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.179111454499048e-15,
+      "area_rel_error": 0.0,
+      "centroid_error": 6.5503158452884236e-15
+    },
+    {
+      "case": "fixture-step-v6-self-authored-ap242-pole-cone",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.289764113618747e-12,
+      "area_rel_error": 3.3119654992570564e-12,
+      "centroid_error": 1.354472090042691e-14
+    },
+    {
+      "case": "fixture-step-v6-self-authored-mixed-unit-product-assembly",
+      "valid": true,
+      "solids": 2,
+      "volume_rel_error": 1.4799302740871739e-15,
+      "area_rel_error": 6.496328857150857e-16,
+      "centroid_error": 1.1368683772161603e-13
+    },
+    {
+      "case": "fixture-step-v8-self-authored-ap242-cone",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.29374388460475e-12,
+      "area_rel_error": 3.328457443977958e-12,
+      "centroid_error": 1.509903313490213e-14
+    },
+    {
+      "case": "fixture-step-v8-self-authored-ap242-cylinder",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.297397444854191e-12,
+      "area_rel_error": 3.717375768500233e-12,
+      "centroid_error": 7.105427357601002e-15
+    },
+    {
+      "case": "fixture-step-v8-self-authored-ap242-pole-cone",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.289764113618747e-12,
+      "area_rel_error": 3.3119654992570564e-12,
+      "centroid_error": 1.354472090042691e-14
+    },
+    {
+      "case": "fixture-step-v8-self-authored-ap242-torus",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.179111454499048e-15,
+      "area_rel_error": 0.0,
+      "centroid_error": 6.5503158452884236e-15
+    },
+    {
+      "case": "fixture-step-v8-self-authored-ap242-void",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.292039304057527e-12,
+      "area_rel_error": 4.863073717401644e-12,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "fixture-step-v9-self-authored-ap242-cylinder",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.297397444854191e-12,
+      "area_rel_error": 3.717375768500233e-12,
+      "centroid_error": 7.105427357601002e-15
+    },
+    {
+      "case": "gen-00-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.303366636089205e-12,
+      "area_rel_error": 9.301778146166293e-12,
+      "centroid_error": 1.1546319456101628e-14
+    },
+    {
+      "case": "gen-01-drilled-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.0830360543358745e-12,
+      "area_rel_error": 3.553244929560484e-13,
+      "centroid_error": 2.220446049250313e-16
+    },
+    {
+      "case": "gen-02-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.300595680279511e-12,
+      "area_rel_error": 9.301502688120495e-12,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-03-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.300834530514869e-12,
+      "area_rel_error": 9.301425025714732e-12,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-04-cylinder",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.294498722335796e-12,
+      "area_rel_error": 9.291555941507396e-12,
+      "centroid_error": 5.551115123125783e-17
+    },
+    {
+      "case": "gen-05-box-pocket",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 0.0,
+      "area_rel_error": 9.791137704958978e-16,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-06-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.30160635391517e-12,
+      "area_rel_error": 9.302606010123527e-12,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "gen-07-box-union",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 7.033746857694622e-16,
+      "area_rel_error": 1.102974878350192e-15,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-08-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 6.008643220959088e-16,
+      "area_rel_error": 6.253508907764014e-16,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "gen-08-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.4458297750432817e-15,
+      "area_rel_error": 9.380263361646025e-16,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-09-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.30117343176533e-12,
+      "area_rel_error": 9.302482722278182e-12,
+      "centroid_error": 3.1086244689504383e-15
+    },
+    {
+      "case": "gen-10-drilled-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.7316130865270638e-12,
+      "area_rel_error": 1.357735601996768e-12,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-11-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.301524872400381e-12,
+      "area_rel_error": 9.300896150530426e-12,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-12-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 4.989569162126646e-16,
+      "area_rel_error": 5.637218264649748e-16,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-12-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 6.548809525291222e-16,
+      "area_rel_error": 9.865131963137064e-16,
+      "centroid_error": 1.1102230246251565e-16
+    },
+    {
+      "case": "gen-13-cylinder",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.293526370308363e-12,
+      "area_rel_error": 9.291256259864533e-12,
+      "centroid_error": 3.552713678800501e-15
+    },
+    {
+      "case": "gen-14-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.1830825388916152e-15,
+      "area_rel_error": 1.7257963980511002e-15,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-14-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.4788531736145177e-16,
+      "area_rel_error": 1.3806371184408797e-15,
+      "centroid_error": 0.0
+    },
+    {
+      "case": "gen-15-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.9915699263026438e-15,
+      "area_rel_error": 1.04251282217766e-15,
+      "centroid_error": 1.3322676295501878e-15
+    },
+    {
+      "case": "gen-15-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 8.71311842757406e-16,
+      "area_rel_error": 1.2162649592072702e-15,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-16-box-union",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.0575602757440744e-15,
+      "area_rel_error": 8.76839082194473e-16,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-17-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.7012086172548387e-15,
+      "area_rel_error": 3.6863623124425226e-16,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-17-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.786269048117581e-15,
+      "area_rel_error": 1.1059086937327576e-15,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-18-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.2747812104537703e-15,
+      "area_rel_error": 6.013022462893664e-16,
+      "centroid_error": 8.881784197001252e-16
+    },
+    {
+      "case": "gen-18-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 6.196853106372491e-16,
+      "area_rel_error": 2.004340820964554e-16,
+      "centroid_error": 4.440892098500626e-16
+    },
+    {
+      "case": "gen-19-box-union",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 4.477444751288713e-16,
+      "area_rel_error": 6.331370549184162e-16,
+      "centroid_error": 1.3322676295501878e-15
+    },
+    {
+      "case": "gen-20-box-notch",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 4.209652969084811e-16,
+      "area_rel_error": 1.5008163395592897e-15,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "gen-20-box",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 1.2278154493164038e-16,
+      "area_rel_error": 1.3757483112626822e-15,
+      "centroid_error": 0.0
+    },
+    {
+      "case": "gen-21-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.299976986281062e-12,
+      "area_rel_error": 9.302500557047464e-12,
+      "centroid_error": 1.7763568394002505e-15
+    },
+    {
+      "case": "gen-22-box-union",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.658750021696575e-16,
+      "area_rel_error": 6.263805020442653e-16,
+      "centroid_error": 2.7755575615628914e-16
+    },
+    {
+      "case": "gen-23-revolve",
+      "valid": true,
+      "solids": 1,
+      "volume_rel_error": 9.301979072574663e-12,
+      "area_rel_error": 9.301992044237012e-12,
+      "centroid_error": 3.1086244689504383e-15
+    }
+  ],
+  "failures": [],
+  "scope": "edited STEP round-trip corpus; volume/area/centroid at 1e-4 relative"
+}

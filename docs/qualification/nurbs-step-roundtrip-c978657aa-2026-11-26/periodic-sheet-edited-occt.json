@@ -1,0 +1,44 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.1.0",
+  "scope": "Independent STEP read, shape validity, optional topology counts, exact bounding box, volume or area and OCCT tessellation. Does not certify all STEP inputs.",
+  "previewProduced": false,
+  "passed": true,
+  "parts": [
+    {
+      "name": "periodic-trimmed-sheet-translated-x7",
+      "stepSha256": "25d659eeae7b7b065a9df6ac64a52092aceabbbd98f6d07f7424feffcffa8454",
+      "valid": true,
+      "solids": 0,
+      "faces": 1,
+      "shells": 1,
+      "wires": 2,
+      "uniqueEdges": 10,
+      "uniqueVertices": 10,
+      "topologyPassed": true,
+      "topologyExpectations": {
+        "faces": 1,
+        "shells": 1,
+        "wires": 2
+      },
+      "boundsMm": [
+        [
+          6.9999999,
+          -1e-07,
+          0.2499999
+        ],
+        [
+          7.5000001,
+          0.5000001,
+          1.7500001
+        ]
+      ],
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "passed": true,
+      "previewTriangles": 910,
+      "areaMm2": 1.2500000000000002,
+      "areaErrorMm2": 2.220446049250313e-16
+    }
+  ]
+}

@@ -20734,7 +20734,8 @@
         "docs/qualification/nurbs-curvature-field-816-2026-11-17/receipt.json",
         "docs/qualification/nurbs-curvature-field-816-2026-11-17/native.log.gz",
         "examples/rush/planet-occurrences-step.r",
-        "tests/rushPlanetInstances.test.ts"
+        "tests/rushPlanetInstances.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Export one planet B-rep definition with AP242 product occurrences and rigid transformations.",
@@ -20756,7 +20757,8 @@
         "docs/qualification/nurbs-curvature-field-817-2026-11-17/receipt.json",
         "docs/qualification/nurbs-curvature-field-817-2026-11-17/native.log.gz",
         "examples/rush/planetary-gear-set-step.r",
-        "tests/rushPlanetInstances.test.ts"
+        "tests/rushPlanetInstances.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Export sun, ring and shared planet definitions with twenty AP242 occurrences.",
@@ -20802,7 +20804,8 @@
         "docs/qualification/nurbs-curvature-field-819-2026-11-17/receipt.json",
         "docs/qualification/nurbs-curvature-field-819-2026-11-17/native.log.gz",
         "examples/rush/replace-step-part.r",
-        "tests/rushSharedAssemblies.test.ts"
+        "tests/rushSharedAssemblies.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Export edited definitions as closed solids with proper rigid placements. The twenty-placement herringbone assembly retains all transforms and three shared definitions while exporting the changed planet height.",
@@ -21001,7 +21004,8 @@
         "docs/qualification/nurbs-curvature-field-828-2026-11-17/receipt.json",
         "docs/qualification/nurbs-curvature-field-828-2026-11-17/native.log.gz",
         "examples/rush/step-part-tolerances.r",
-        "tests/rushAssemblyProperties.test.ts"
+        "tests/rushAssemblyProperties.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Write definition-specific AP242 uncertainty contexts and reuse the same context for equal tolerances.",
@@ -21023,7 +21027,8 @@
         "docs/qualification/nurbs-curvature-field-829-2026-11-17/receipt.json",
         "docs/qualification/nurbs-curvature-field-829-2026-11-17/native.log.gz",
         "examples/rush/export-scaled-step-instance.r",
-        "tests/rushAssemblyProperties.test.ts"
+        "tests/rushAssemblyProperties.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Serialize positive per-axis scales in AP242 orthogonal placements without copying the shared definition.",
@@ -21045,7 +21050,8 @@
         "docs/qualification/nurbs-curvature-field-830-2026-11-17/receipt.json",
         "docs/qualification/nurbs-curvature-field-830-2026-11-17/native.log.gz",
         "examples/rush/export-mirrored-step-instance.r",
-        "tests/rushAssemblyProperties.test.ts"
+        "tests/rushAssemblyProperties.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Reserialize imported reflected orthogonal placements with positive scale magnitudes and a reflected axis frame.",
@@ -23089,7 +23095,8 @@
         "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/receipt.json",
         "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/native.log.gz",
         "examples/rush/name-step-parts.r",
-        "tests/rushNamedParts.test.ts"
+        "tests/rushNamedParts.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "One name per part definition. Names are written to PRODUCT records; the native shared geometry reader returns definitions and placements."
@@ -23262,7 +23269,8 @@
         "tests/exactSolidsFromSource.test.ts",
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py",
         "examples/rush/group-step-parts.r",
-        "tests/rushOccurrenceStyles.test.ts"
+        "tests/rushOccurrenceStyles.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Flat groups and rigid RGB occurrences checked through Solid export on raw WASM and independently reopened in OCCT. Packaged WASM verified on grouped and styled round trips."
@@ -23287,7 +23295,8 @@
         "tests/exactSolidsFromSource.test.ts",
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py",
         "examples/rush/style-step-occurrences.r",
-        "tests/rushOccurrenceStyles.test.ts"
+        "tests/rushOccurrenceStyles.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "RGB appearance on rigid placements. Physical materials, and native occurrence-style editing remain open. Packaged WASM verified."
@@ -23972,7 +23981,8 @@
         "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/receipt.json",
         "examples/rush/planetary-gear-set-step.r",
         "tests/rushPlanetInstances.test.ts",
-        "docs/qualification/nurbs-planetary-step-editor-2026-11-26/receipt.json"
+        "docs/qualification/nurbs-planetary-step-editor-2026-11-26/receipt.json",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Bit-identical normalized placement direction triples in a shared STEP assembly. Placement operators, scales and occurrence identity remain independent."
@@ -24086,7 +24096,8 @@
         "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/native.log.gz",
         "examples/rush/planetary-gear-set-step.r",
         "tests/rushPlanetInstances.test.ts",
-        "docs/qualification/nurbs-planetary-step-editor-2026-11-26/receipt.json"
+        "docs/qualification/nurbs-planetary-step-editor-2026-11-26/receipt.json",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Rigid proper placements in a flat procedural gear assembly. OCCT verifies all 18 local-to-world planet frames. External nonuniform and reflected placement qualification is separate."
@@ -24131,7 +24142,8 @@
         "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/receipt.json",
         "docs/qualification/nurbs-styled-scaled-step-979-2026-11-19/native.log.gz",
         "examples/rush/step-baked-scales.r",
-        "tests/rushBakedStepScales.test.ts"
+        "tests/rushBakedStepScales.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "Occurrence-level surface colours for orthogonal scaled and reflected placements. OCCT checks colours, volume and centroids of shared mirrored elliptic cylinders. Grouped mixed styled and unstyled occurrences checked in Rust."
@@ -24175,7 +24187,8 @@
         "docs/qualification/nurbs-named-styled-step-981-2026-11-19/receipt.json",
         "docs/qualification/nurbs-named-styled-step-981-2026-11-19/native.log.gz",
         "examples/rush/step-baked-scales.r",
-        "tests/rushBakedStepScales.test.ts"
+        "tests/rushBakedStepScales.test.ts",
+        "crates/cad-step/src/step_v3_export/assemblies.rs"
       ],
       "remainingQualification": [
         "One group level and direct occurrences. OCCT verifies shared product identity, names, positions and individual colours of two reflected scaled cylinders."

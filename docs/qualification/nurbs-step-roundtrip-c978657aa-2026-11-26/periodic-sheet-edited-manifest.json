@@ -1,0 +1,30 @@
+{
+  "toleranceMm": 2e-07,
+  "parts": [
+    {
+      "name": "periodic-trimmed-sheet-translated-x7",
+      "file": "periodic-sheet.step",
+      "sha256": "25d659eeae7b7b065a9df6ac64a52092aceabbbd98f6d07f7424feffcffa8454",
+      "expected": {
+        "boundsMm": [
+          [
+            7,
+            0,
+            0.25
+          ],
+          [
+            7.5,
+            0.5,
+            1.75
+          ]
+        ],
+        "solids": 0,
+        "shells": 1,
+        "faces": 1,
+        "wires": 2,
+        "areaMm2": 1.25,
+        "areaToleranceMm2": 1e-08
+      }
+    }
+  ]
+}
