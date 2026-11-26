@@ -1446,6 +1446,15 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'trace_geodesic': {
+            const {op,id:_id,input,return_field,...settings}=n
+            const surface=needSurface(input)
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve|null;stop:string}>(op,{surface,...settings,return_field})
+            constructionReports[key]={measurement:{operation:op,report}}
+            if(return_field && !curve) throw new Error('Geodesic has no usable path: '+report.stop)
+            result=curve ? {kind:'curve',data:curve} : {kind:'surface',data:surface}
+            break
+          }
           case 'surface_gap_world_polyline': {
             const {op,id:_id,input,return_field,...settings}=n
             const surface=needSurface(input)
