@@ -418,6 +418,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "store_section_edge" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","edge_index","tolerance_mm","max_work"],
         "optimize_section_edge" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","edge_index","tolerance_mm","max_work"],
         "store_section_edges" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","edge_index","tolerance_mm","max_work"],
+        "partition_face_events" => &["target_geometry","loops","left_loop_count","max_work"],
+        "enclose_face_events" => &["target_geometry","loops","left_loop_count","xyz_tolerance","max_work"],
         "match_quadratic_contacts" => &["target_geometry","loops","left_loop_count","max_work"],
         "shared_boundary_spans" => &["target_geometry","loops","left_loop_count","max_work"],
         "shared_boundary_contacts" => &["target_geometry","loops","left_loop_count","max_work"],

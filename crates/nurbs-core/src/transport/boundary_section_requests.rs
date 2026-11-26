@@ -8,14 +8,14 @@ pub(super) fn measure(
     prior: u64,
 ) -> Result<Value> {
     if op == "match_quadratic_contacts" {
-        use section::{AlgebraicBoundaryClock as Clock, AlgebraicPlanarContacts as Contacts};
+        use section::AlgebraicPlanarContacts as Contacts;
         let r = section::match_quadratic_planar_boundary_contacts(left, right, work)?;
         let mut out = match r.outcome {
             Contacts::Transverse { line: l, points } => {
-                let clocks = points.into_iter().map(|p| match p {
-                    Clock::Rational(q) => json!({"kind":"rational","value":q.to_string()}),
-                    Clock::Quadratic {linear,constant,upper_root} => json!({"kind":"quadratic","linear":linear.to_string(),"constant":constant.to_string(),"upperRoot":upper_root})
-                }).collect::<Vec<_>>();
+                let clocks = points
+                    .into_iter()
+                    .map(super::events::clock)
+                    .collect::<Vec<_>>();
                 json!({"status":"transverse","line":line(l),"points":clocks})
             }
             Contacts::Parallel => json!({"status":"parallel"}),
