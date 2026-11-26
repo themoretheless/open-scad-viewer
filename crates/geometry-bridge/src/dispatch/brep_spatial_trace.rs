@@ -47,6 +47,11 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
         | "measure_profile_overlap_area"
         | "measure_profile_overlap_centroid"
         | "classify_profile_overlap"
+        | "decompose_profile_boolean"
+        | "extract_profile_boolean_edges"
+        | "assemble_profile_boolean_loops"
+        | "triangulate_profile_boolean"
+        | "extrude_profile_boolean_shell"
         | "decompose_profile_overlap" => {
             let second = path(v, "other_path_mm")?;
             let h1 = hole_paths(&v["holes_mm"])?;
@@ -99,7 +104,7 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
                     )?;
                     json!({"relation":format!("{:?}",r.relation),"areaSquaredMm4":r.overlap_area_squared_mm4.to_string(),"workUsed":r.exact_work})
                 }
-                _ => {
+                "decompose_profile_overlap" => {
                     let r = a::decompose_exact_coplanar_planar_polyline_region_overlap(
                         &points,
                         &first_holes,
@@ -109,6 +114,87 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
                     )?;
                     let cells = r.cells_mm.into_iter().map(coordinates).collect::<Vec<_>>();
                     json!({"cellsMm":cells,"workUsed":r.exact_work})
+                }
+                _ => {
+                    let mode = match v["boolean_mode"].as_str() {
+                        Some("intersection") => a::CoplanarPolylineBoolean::Intersection,
+                        Some("union") => a::CoplanarPolylineBoolean::Union,
+                        Some("difference") => a::CoplanarPolylineBoolean::Difference,
+                        Some("symmetric_difference") => {
+                            a::CoplanarPolylineBoolean::SymmetricDifference
+                        }
+                        _ => {
+                            return Err(nurbs_core::Error::new(
+                                "BREP_INVALID_INPUT",
+                                "Unknown profile Boolean mode",
+                            ));
+                        }
+                    };
+                    match op {
+                        "decompose_profile_boolean" => {
+                            let r = a::decompose_exact_coplanar_planar_polyline_region_boolean(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                work,
+                            )?;
+                            let cells = r.cells_mm.into_iter().map(coordinates).collect::<Vec<_>>();
+                            json!({"cellsMm":cells,"workUsed":r.exact_work})
+                        }
+                        "extract_profile_boolean_edges" => {
+                            let r = a::boundary_of_exact_coplanar_planar_polyline_region_boolean(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                work,
+                            )?;
+                            let edges = r
+                                .edges_mm
+                                .into_iter()
+                                .map(|e| e.map(|p| p.map(|q| q.to_string())))
+                                .collect::<Vec<_>>();
+                            json!({"edgesMm":edges,"workUsed":r.exact_work})
+                        }
+                        "assemble_profile_boolean_loops" => {
+                            let r = a::loops_of_exact_coplanar_planar_polyline_region_boolean(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                work,
+                            )?;
+                            let rings = r.loops_mm.into_iter().map(coordinates).collect::<Vec<_>>();
+                            json!({"loopsMm":rings,"workUsed":r.exact_work})
+                        }
+                        "triangulate_profile_boolean" => {
+                            let r = a::triangulate_exact_coplanar_planar_polyline_region_boolean(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                work,
+                            )?;
+                            json!({"verticesMm":coordinates(r.vertices_mm),"triangles":r.triangles,"workUsed":r.exact_work})
+                        }
+                        _ => {
+                            let r = a::extrude_exact_coplanar_planar_polyline_region_boolean(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                work,
+                            )?;
+                            json!({"verticesMm":coordinates(r.vertices_mm),"triangles":r.triangles,"volumeMm3":r.volume_mm3.to_string(),"workUsed":r.exact_work})
+                        }
+                    }
                 }
             }
         }

@@ -500,6 +500,11 @@ export function createOwnNurbsResolver(
           case 'measure_profile_overlap_area':
           case 'measure_profile_overlap_centroid':
           case 'classify_profile_overlap':
+          case 'decompose_profile_boolean':
+          case 'extract_profile_boolean_edges':
+          case 'assemble_profile_boolean_loops':
+          case 'triangulate_profile_boolean':
+          case 'extrude_profile_boolean_shell':
           case 'decompose_profile_overlap':
           case 'clip_path_to_perforated_region':
           case 'measure_region_second_moments':
