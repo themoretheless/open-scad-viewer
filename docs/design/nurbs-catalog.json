@@ -11968,7 +11968,7 @@
     {
       "id": "NURBS-0437",
       "name": "Гарантированные границы длины пространственного пути в плоскогранном теле",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_path_material_length",
@@ -11986,7 +11986,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-437-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-437-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-437-2026-11-17/native.log.gz",
+        "examples/rush/bound-path-material-length.r",
+        "tests/rushPathPartition.test.ts"
       ],
       "remainingQualification": [
         "Enclose distance traveled in closed material within a requested absolute tolerance.",
@@ -11997,7 +11999,7 @@
     {
       "id": "NURBS-0438",
       "name": "Точное выделение внешних участков пространственной ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_exterior_clip",
@@ -12015,7 +12017,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-438-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-438-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-438-2026-11-17/native.log.gz",
+        "examples/rush/clip-exterior-path.r",
+        "tests/rushPathPartition.test.ts"
       ],
       "remainingQualification": [
         "Clip to the strict exterior while retaining exact open and closed interval endpoints.",
@@ -12026,7 +12030,7 @@
     {
       "id": "NURBS-0439",
       "name": "Точное выделение внутренних участков пространственной ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_interior_clip",
@@ -12044,7 +12048,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-439-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-439-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-439-2026-11-17/native.log.gz",
+        "examples/rush/clip-interior-path.r",
+        "tests/rushPathPartition.test.ts"
       ],
       "remainingQualification": [
         "Clip to the strict interior with exact endpoint inclusion, excluding boundary runs and tangencies.",
@@ -12055,7 +12061,7 @@
     {
       "id": "NURBS-0440",
       "name": "Точное разбиение пространственной ломаной на внутренние, граничные и внешние участки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_partition",
@@ -12073,7 +12079,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-440-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-440-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-440-2026-11-17/native.log.gz",
+        "examples/rush/partition-solid-path.r",
+        "tests/rushPathPartition.test.ts"
       ],
       "remainingQualification": [
         "Partition each span into disjoint interior, boundary and exterior parameter intervals.",
@@ -12115,7 +12123,7 @@
     {
       "id": "NURBS-0442",
       "name": "Гарантированные длины внутренних, граничных и внешних участков ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_path_length_breakdown",
@@ -12133,7 +12141,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-442-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-442-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-442-2026-11-17/native.log.gz",
+        "examples/rush/bound-path-length-breakdown.r",
+        "tests/rushPathPartition.test.ts"
       ],
       "remainingQualification": [
         "Enclose traveled length separately in each location with a requested absolute tolerance.",

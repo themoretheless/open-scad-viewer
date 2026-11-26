@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "5825b74aab6827d8c1c9c788db5279519050c60c6ba46f8016873e5fb7027eac",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/bound-path-material-length.r",
+      "exampleSha256": "14d86c4a88f9a0eee7b41d0c99e7f6bff3870b1f087286f87f39a28cf5b4e9f7",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 52 ms"
+    },
+    {
+      "example": "examples/rush/clip-exterior-path.r",
+      "exampleSha256": "eae55dd07d46d05ee010206843efadf69e8162f1e6a01aa1952d513c7baf9276",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/clip-interior-path.r",
+      "exampleSha256": "986a3a8558546dd0047a46bf56596984de86e7dcf9f227bf4f98e502dbc4d2d1",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 14 ms"
+    },
+    {
+      "example": "examples/rush/partition-solid-path.r",
+      "exampleSha256": "0c4e01e8c50b3c0bddc0e2f100b59a95452ec5e60acd8fe9cb99c3702ca4a0fd",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/bound-path-length-breakdown.r",
+      "exampleSha256": "5d0afeb0edc13229481b65281aac9b0d51b63da831f82f7f55347333ea5ae974",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 13 ms"
+    }
+  ]
+}
