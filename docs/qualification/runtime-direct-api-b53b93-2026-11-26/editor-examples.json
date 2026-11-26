@@ -1,0 +1,61 @@
+{
+  "kernelSha256": "b53b935dfdd4f7fe6f357ad6610d86caa467619d2d4a43bfeadc12f3e78da645",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/piecewise-axis-radius.r",
+      "exampleSha256": "7c3b51300c878c627135ce4e1793edfbc1979cabf62d9761b3b3d25c03266199",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n4\nГотово · 44 ms"
+    },
+    {
+      "example": "examples/rush/bore-wall-faces.r",
+      "exampleSha256": "29265bbed2deefd9dce030608cefcd84c03c9d124c25991931c8d592cb10e50f",
+      "editorStats": "Объекты\n1\nТреугольники\n8 736\nОбъём\n4 069,69\nПлощадь\n5 378,79\nГотово · 515 ms"
+    },
+    {
+      "example": "examples/rush/cap-edge-pcurve.r",
+      "exampleSha256": "13459a8eef83f5df35b536e8bc485f2aeabc50b2c7ea96e0fcf854e7a9c387d6",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n4\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/transfer-cap-loop.r",
+      "exampleSha256": "7fd0e0a8fe8d478eb9ad77a1cf8045b6efb79b74e6e8bb1fbcb8c1bceff1135a",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/replace-bore-wall.r",
+      "exampleSha256": "64fade8cfab686f87089647c146560f1cab4c80c4c742a24244d77b01b458f3c",
+      "editorStats": "Объекты\n1\nТреугольники\n8 112\nОбъём\n3 361,46\nПлощадь\n5 285,01\nГотово · 776 ms"
+    },
+    {
+      "example": "examples/rush/cut-bore-cylinder.r",
+      "exampleSha256": "23b6420981586cb7dc552b9fec5e7afc3b5a5b4a999ad7c6d2092f0a74269328",
+      "editorStats": "Объекты\n1\nТреугольники\n8 112\nОбъём\n3 361,46\nПлощадь\n5 285,01\nГотово · 998 ms"
+    },
+    {
+      "example": "examples/rush/spinner-bore-step.r",
+      "exampleSha256": "bd3869d4ef88a066a9a2404cc05bdb41e1f6e9f6f289fb7ffdca90be849e53b8",
+      "editorStats": "Объекты\n1\nТреугольники\n8 112\nОбъём\n3 361,46\nПлощадь\n5 285,01\nГотово · 4 795 ms"
+    },
+    {
+      "example": "examples/rush/spinner-bore-intersection.r",
+      "exampleSha256": "a1179a9bbb9a7e107894032a1a650fe7b0d50c573c70ccd310c6a579fdfb62e7",
+      "editorStats": "Объекты\n1\nТреугольники\n720\nОбъём\n708,23\nПлощадь\n2 826,8\nГотово · 840 ms"
+    },
+    {
+      "example": "examples/rush/spinner-bore-union.r",
+      "exampleSha256": "d605f8d6839c4e24e7b23f862d69be06478071b33ab0fccd750a6d553d822d4d",
+      "editorStats": "Объекты\n1\nТреугольники\n8 060\nОбъём\n17 879,14\nПлощадь\n6 822,04\nГотово · 751 ms"
+    },
+    {
+      "example": "examples/rush/spinner-bore-extract.r",
+      "exampleSha256": "a5d6cb7183aa1e2d799ba10d71520f4cdd2da16009462d31db83053e875fbfe4",
+      "editorStats": "Объекты\n1\nТреугольники\n672\nОбъём\n13 809,45\nПлощадь\n4 082,71\nГотово · 1 003 ms"
+    },
+    {
+      "example": "examples/rush/spinner-bore-xor.r",
+      "exampleSha256": "acb53874308b78094451c5af02c9b33508e85ade3c1c101c1653a35fd97ce5cc",
+      "editorStats": "Объекты\n1\nТреугольники\n8 784\nОбъём\n17 170,91\nПлощадь\n9 367,72\nГотово · 1 715 ms"
+    }
+  ]
+}

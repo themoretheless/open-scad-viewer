@@ -23273,7 +23273,7 @@
     {
       "id": "NURBS-0942",
       "name": "Радиальный диапазон составной NURBS-поверхности относительно координатной оси",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::radial_bounds::piecewise_axis_radius_bounds",
@@ -23281,7 +23281,9 @@
         "crates/nurbs-foundation/src/distance/radial_bounds.rs",
         "crates/brep-core/tests/spinner_bore_boolean.rs",
         "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-piecewise-cylinder-bounds-942-2026-11-18/native.log.gz",
+        "examples/rush/piecewise-axis-radius.r",
+        "tests/rushBoreWalls.test.ts"
       ],
       "remainingQualification": [
         "Clamped positive rational Bezier spans, degrees 1–8, internal knot multiplicity equal to degree, within the supplied patch budget. Bounds concern entire carriers. Trim construction and Boolean sewing remain open."
@@ -23290,7 +23292,7 @@
     {
       "id": "NURBS-0943",
       "name": "Поиск стенки сквозного отверстия между двумя контурами B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::body_analysis::through_wall::between_holes",
@@ -23299,7 +23301,9 @@
         "crates/brep-core/src/body_analysis/through_wall.rs",
         "crates/brep-core/tests/spinner_bore_boolean.rs",
         "docs/qualification/nurbs-through-wall-943-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-through-wall-943-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-through-wall-943-2026-11-18/native.log.gz",
+        "examples/rush/bore-wall-faces.r",
+        "tests/rushBoreWalls.test.ts"
       ],
       "remainingQualification": [
         "Closed shell; proves wall-face connectivity and exact rim-edge membership for two selected cap holes. Geometry, radial clearance and Boolean sewing are separate."
@@ -23308,7 +23312,7 @@
     {
       "id": "NURBS-0944",
       "name": "Построение проверенной UV-кривой пространственного ребра на аффинном торце",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::profile_certificate::original_restriction::plane::pullback::stored_affine_trim",
@@ -23317,7 +23321,9 @@
         "crates/brep-core/tests/full_round_source_caps.rs",
         "crates/brep-core/tests/spinner_bore_boolean.rs",
         "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/native.log.gz",
+        "examples/rush/cap-edge-pcurve.r",
+        "tests/rushBoreWalls.test.ts"
       ],
       "remainingQualification": [
         "Horizontal injective affine caps. Returns stored UV knots and weights with a continuous world-space agreement certificate. Loop sewing and the Boolean operation remain separate."
@@ -23326,7 +23332,7 @@
     {
       "id": "NURBS-0945",
       "name": "Перенос ориентированного контура между плоскими торцами с сохранением общих рёбер",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::profile_certificate::original_restriction::plane::pullback::stored_affine_loop",
@@ -23335,7 +23341,9 @@
         "crates/brep-core/tests/full_round_source_caps.rs",
         "crates/brep-core/tests/spinner_bore_boolean.rs",
         "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/native.log.gz",
+        "examples/rush/transfer-cap-loop.r",
+        "tests/rushBoreWalls.test.ts"
       ],
       "remainingQualification": [
         "Whole nondegenerate clamped edges on a horizontal affine target. Checks indexed closure and stored UV endpoints, supports both traversals. Does not certify nesting or solid material."
@@ -23344,7 +23352,7 @@
     {
       "id": "NURBS-0946",
       "name": "Сшивка цилиндрической замены стенки сквозного отверстия",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::body_analysis::through_wall_cylinder::replace",
@@ -23357,7 +23365,9 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/receipt.json",
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "examples/rush/replace-bore-wall.r",
+        "tests/rushBoreWalls.test.ts"
       ],
       "remainingQualification": [
         "Single closed shell with selected horizontal affine end caps and separated walls. Explicit wall replacement; automatic Boolean dispatch and general embedding proof remain open."
@@ -23366,7 +23376,7 @@
     {
       "id": "NURBS-0947",
       "name": "Увеличение сквозного отверстия шестерни штатным вычитанием цилиндра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::boolean",
@@ -23377,7 +23387,9 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-spinner-standard-difference-947-2026-11-18/receipt.json",
         "docs/qualification/nurbs-spinner-standard-difference-947-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py"
+        "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
+        "examples/rush/cut-bore-cylinder.r",
+        "tests/rushBoreWalls.test.ts"
       ],
       "remainingQualification": [
         "Single closed shell with selected horizontal affine end caps and separated walls. Canonical coaxial cylinder starts at the lower cap and reaches or exceeds the upper cap. Other cutter representations and general embedding remain outside this qualification."
@@ -23386,7 +23398,7 @@
     {
       "id": "NURBS-0948",
       "name": "Общие определения одинаковых UV-сплайнов при экспорте STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен STEP",
       "nativeApi": "cad_step::export_step_v9",
@@ -23394,7 +23406,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-step-shared-uv-curves-948-2026-11-18/native.log.gz",
+        "examples/rush/spinner-bore-step.r",
+        "tests/rushSpinnerBoreBooleans.test.ts"
       ],
       "remainingQualification": [
         "Direct STEP v9 B-rep writer. Each PCURVE keeps its surface and each coedge retains its own use. Curves with different stored spline data remain separate."
@@ -23403,7 +23417,7 @@
     {
       "id": "NURBS-0949",
       "name": "Пересечение цилиндра со стенкой сквозного отверстия шестерни",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::boolean",
@@ -23414,7 +23428,9 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
         "docs/qualification/nurbs-spinner-intersection-949-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spinner-intersection-949-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spinner-intersection-949-2026-11-18/native.log.gz",
+        "examples/rush/spinner-bore-intersection.r",
+        "tests/rushSpinnerBoreBooleans.test.ts"
       ],
       "remainingQualification": [
         "Single isolated through bore with two horizontal cap charts and radial separation. Both operand orders. General non-coaxial cuts remain outside this domain."
@@ -23423,7 +23439,7 @@
     {
       "id": "NURBS-0950",
       "name": "Объединение шестерни с цилиндрической вставкой до заполнения сквозного отверстия",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::boolean",
@@ -23434,7 +23450,9 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
         "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spinner-bore-union-950-2026-11-18/native.log.gz",
+        "examples/rush/spinner-bore-union.r",
+        "tests/rushSpinnerBoreBooleans.test.ts"
       ],
       "remainingQualification": [
         "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, both operand orders. General non-coaxial cuts remain outside this domain."
@@ -23443,7 +23461,7 @@
     {
       "id": "NURBS-0951",
       "name": "Извлечение тела сквозного канала обратным вычитанием из цилиндра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::boolean",
@@ -23454,7 +23472,9 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
         "docs/qualification/nurbs-spinner-bore-core-951-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spinner-bore-core-951-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spinner-bore-core-951-2026-11-18/native.log.gz",
+        "examples/rush/spinner-bore-extract.r",
+        "tests/rushSpinnerBoreBooleans.test.ts"
       ],
       "remainingQualification": [
         "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, cylinder minus stock. General non-coaxial cuts remain outside this domain."
@@ -23463,7 +23483,7 @@
     {
       "id": "NURBS-0952",
       "name": "Симметрическая разность шестерни и вставки с раздельными телами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::boolean",
@@ -23474,7 +23494,9 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-cylinder-wall-graft-946-2026-11-18/verify_volume.py",
         "docs/qualification/nurbs-spinner-exclusive-regions-952-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spinner-exclusive-regions-952-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spinner-exclusive-regions-952-2026-11-18/native.log.gz",
+        "examples/rush/spinner-bore-xor.r",
+        "tests/rushSpinnerBoreBooleans.test.ts"
       ],
       "remainingQualification": [
         "Single isolated through bore with two horizontal cap charts and radial separation. Flush insert with exactly matching end elevations, symmetric difference with two radially separated components. General non-coaxial cuts remain outside this domain."
