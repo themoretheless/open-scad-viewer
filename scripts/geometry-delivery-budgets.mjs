@@ -905,6 +905,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BN6rSSAO.js':197_900,'assets/Bj19zhZE.js':203_600,'assets/mainSolid.worker-lKTvXIWC.js':224_600}),
   }),
+  // Oblique UV line contact isolation: 20,881,669 raw bytes, 7,724,620 packed bytes and 14,890,476 total asset bytes.
+  'a70cb8004a08ad944688fbcd944d13d7c19a78a886e1b5f43a4896a9c2cb6eb9':Object.freeze({
+    version:120,geometryChunkBytes:7_725_000,totalAssetBytes:14_891_000,rawGeometryBytes:20_968_000,
+    namedJsChunkBytes:Object.freeze({
+      index:294_300,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/C1NUUDz7.js':197_900,'assets/DmRDR6Zc.js':203_600,'assets/mainSolid.worker-DJ91MG6i.js':225_300}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

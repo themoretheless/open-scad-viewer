@@ -9196,7 +9196,7 @@
     {
       "id": "NURBS-0335",
       "name": "Точная локализация контактов рационального UV-контура с наклонной прямой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_line",
@@ -9205,7 +9205,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
         "crates/nurbs-core/tests/exact_pcurve_line_contact_contracts.rs",
         "docs/qualification/nurbs-curvature-field-335-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-335-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-335-2026-11-17/native.log.gz",
+        "examples/rush/isolate-uv-line.r",
+        "tests/rushObliqueLine.test.ts"
       ],
       "remainingQualification": [
         "Isolate exact homogeneous roots for arbitrary planar line contacts with crossing parity, endpoint ownership and coincident spans.",

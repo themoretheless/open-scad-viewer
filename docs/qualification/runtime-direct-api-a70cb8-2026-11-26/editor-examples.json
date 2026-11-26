@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "a70cb8004a08ad944688fbcd944d13d7c19a78a886e1b5f43a4896a9c2cb6eb9",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/isolate-uv-line.r",
+      "exampleSha256": "1f552f81bb319b64ad058580ae68494e7d93e1e556683f27063c2ffadc21d60d",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1,57\nГотово · 54 ms"
+    }
+  ]
+}
