@@ -393,6 +393,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "check_seam_angle" => &["target_geometry","inputs","min_cosine_squared","max_work"],
         "isolate_seam_gap" => &["target_geometry","inputs","tolerance_mm","parameter_width","max_work"],
         "isolate_seam_angle" => &["target_geometry","inputs","min_cosine_squared","parameter_width","max_work"],
+        "project_planar_wire" => &["loops","inputs","contour_counts","patch_index","loop_index","piece","max_work"],
+        "lift_planar_wire" => &["loops","loop_index","piece","max_work"],
         "active_surface_hull" => &["max_work"],
         "project_plane_chart" => &["max_work"],
         "lift_plane_chart" => &["target_geometry","max_work"],

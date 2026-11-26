@@ -1801,6 +1801,8 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('check_seam_angle'),input:id,target_geometry:id,inputs:z.tuple([id,id]),min_cosine_squared:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('isolate_seam_gap'),input:id,target_geometry:id,inputs:z.tuple([id,id]),tolerance_mm:scalar,parameter_width:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('isolate_seam_angle'),input:id,target_geometry:id,inputs:z.tuple([id,id]),min_cosine_squared:scalar,parameter_width:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('project_planar_wire'),input:id,loops:z.array(z.array(id).min(1)).min(1),inputs:z.array(id).max(253),contour_counts:z.array(z.number().int().min(1).max(64)).min(1).max(64),patch_index:z.number().int().min(0).max(63),loop_index:z.number().int().nonnegative(),piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('lift_planar_wire'),input:id,loops:z.array(z.array(id).min(1)).min(1),loop_index:z.number().int().nonnegative(),piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('active_surface_hull'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('project_plane_chart'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('lift_plane_chart'),input:id,target_geometry:id,max_work:z.number().int().min(1).max(1000000)}).strict(),

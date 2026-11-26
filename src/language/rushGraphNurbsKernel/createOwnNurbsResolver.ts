@@ -1046,6 +1046,19 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'project_planar_wire':
+          case 'lift_planar_wire': {
+            const grouping=n.op === 'project_planar_wire' ? {
+              others:n.inputs.map(needSurface), contour_counts:n.contour_counts,patch_index:n.patch_index,
+            } : {}
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;workUsed:number}>(n.op,{
+              source:needSurface(n.input),loops:n.loops.map(r=>r.map(needCurve)),
+              loop_index:n.loop_index,piece:n.piece,max_work:n.max_work,...grouping,
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'active_surface_hull':
           case 'project_plane_chart':
           case 'lift_plane_chart':
