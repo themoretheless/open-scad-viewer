@@ -10172,7 +10172,7 @@
     {
       "id": "NURBS-0373",
       "name": "Плоская крышка по замкнутой цепочке согласованных NURBS-кромок",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::cap_surface_plane_section",
@@ -10186,7 +10186,9 @@
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "crates/nurbs-core/src/analysis/planar_trim_projection.rs",
         "docs/qualification/nurbs-curvature-field-373-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-373-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-373-2026-11-17/native.log.gz",
+        "examples/rush/cap-section-wire.r",
+        "tests/rushSectionCaps.test.ts"
       ],
       "remainingQualification": [
         "Build a planar trimmed cap from a simple closed section edge chain with a continuous boundary gap certificate.",
@@ -10197,7 +10199,7 @@
     {
       "id": "NURBS-0374",
       "name": "Плоская крышка NURBS с точно проверенными отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::cap_surface_plane_section_with_holes",
@@ -10210,7 +10212,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes.rs",
         "docs/qualification/nurbs-curvature-field-374-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-374-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-374-2026-11-17/native.log.gz",
+        "examples/rush/cap-section-holes.r",
+        "tests/rushSectionCaps.test.ts"
       ],
       "remainingQualification": [
         "Build a planar cap with disjoint, strictly contained holes and certified boundary gaps.",
@@ -10221,7 +10225,7 @@
     {
       "id": "NURBS-0375",
       "name": "Автоматическая сборка раздельных крышек NURBS с вложенными островами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::arrange_surface_plane_section_caps",
@@ -10235,7 +10239,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
         "docs/qualification/nurbs-curvature-field-375-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-375-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-375-2026-11-17/native.log.gz",
+        "examples/rush/arrange-section-caps.r",
+        "tests/rushSectionCaps.test.ts"
       ],
       "remainingQualification": [
         "Arrange disjoint and nested section rings into oriented planar cap regions under exact even-odd membership.",
