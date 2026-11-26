@@ -59,6 +59,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if v["op"].as_str() == Some("inspect_shell_orientation") {
+        return Routed::Handled(crate::cad_face_contacts::inspect_authored_shell_orientation(&v));
+    }
     if matches!(v["op"].as_str(), Some("compress_brep_faces" | "compress_brep_edge")) {
         return Routed::Handled(compact_product_step::compress_brep(&v));
     }

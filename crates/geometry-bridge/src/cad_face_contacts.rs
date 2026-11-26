@@ -671,3 +671,50 @@ pub(super) fn compact_volume_report(mut report: Value) -> Value {
     }
     report
 }
+
+pub(super) fn inspect_authored_shell_orientation(v: &Value) -> Result<Value> {
+    use brep_core::{boundary_embedding, volume_validity};
+    let model = field(v, "model")?;
+    let cells: usize = field(v, "max_cells")?;
+    if !(2..=1_000_000).contains(&cells) {
+        return Err(super::input("Shell audit requires 2..1000000 cells per stage"));
+    }
+    let domain_cells = 8 * cells;
+    let report = volume_validity::inspect(
+        &model,
+        field(v, "tolerance_uv")?,
+        volume_validity::Limits {
+            boundary: boundary_embedding::Limits {
+                exact_work: cells as u64,
+                trim_pairs: cells.min(100_000),
+                trim_cells: cells,
+                trim_domain_cells: domain_cells,
+                spans: cells.min(100_000),
+                contacts: Limits {
+                    pairs: cells.min(100_000),
+                    cells,
+                    domain_cells,
+                    cells_per_pair: cells.min(10_000),
+                    domain_cells_per_pair: domain_cells.min(80_000),
+                },
+            },
+            nesting_pairs: cells.min(100_000),
+            nesting_cells: cells,
+            nesting_domain_cells: domain_cells,
+            orientation_cells: cells,
+            orientation_domain_cells: domain_cells,
+            orientation_spans: cells.min(100_000),
+        },
+    )?;
+    let orientations: Vec<_> = report.orientations.iter().map(|shell| {
+        json!({"shell":shell.shell,"expectedOutward":shell.expected_outward,"outward":shell.outward,
+            "rayAttempts":shell.attempts.len()})
+    }).collect();
+    Ok(json!({
+        "orientations":orientations,
+        "solidGeometryCertified":report.proven,
+        "boundaryEmbeddingCertified":report.boundary.proven,
+        "orientationCells":report.orientation_cells,
+        "orientationDomainCells":report.orientation_domain_cells,
+    }))
+}

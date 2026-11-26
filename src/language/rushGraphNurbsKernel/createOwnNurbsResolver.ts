@@ -3174,6 +3174,14 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'inspect_shell_orientation': {
+            const {op,id:_id,input,...options}=n
+            const model=needBrep(input)
+            const report=callGeometryRust<object>(op,{model,...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'compress_brep_faces':
           case 'compress_brep_edge': {
             const {id:_id,input,op,...args}=n

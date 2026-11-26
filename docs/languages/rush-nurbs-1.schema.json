@@ -117560,6 +117560,39 @@
               },
               "op": {
                 "type": "string",
+                "const": "inspect_shell_orientation"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "tolerance_uv": {
+                "type": "number"
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "tolerance_uv",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "compress_brep_edge"
               },
               "input": {
