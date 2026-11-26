@@ -77,6 +77,7 @@ mod pcurve_seam_requests;
 mod pcurve_agreement_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if op=="signed_planar_face_area" {return Some(planar_wire_requests::area(v));}
     if matches!(op,"project_planar_wire" | "lift_planar_wire") {return Some(planar_wire_requests::apply(v,op));}
     if matches!(op,"active_surface_hull" | "project_plane_chart" | "lift_plane_chart" | "shared_plane_chart") {return Some(planar_chart_requests::apply(v,op));}
     if matches!(op,"bounded_surface_partial_field" | "surface_partial_field" | "bounded_surface_area_normal_field" | "surface_area_normal_field" | "bounded_surface_gaussian_field" | "bounded_surface_mean_squared_field" | "bounded_surface_principal_gap_squared_field" | "bounded_surface_metric_field" | "surface_gaussian_field" | "surface_mean_squared_field" | "surface_principal_gap_squared_field" | "surface_metric_field" | "bounded_surface_mixed_partial_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }

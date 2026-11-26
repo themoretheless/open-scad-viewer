@@ -68,3 +68,28 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
         "domain":curve.domain(),"loopPieces":wires.iter().map(Vec::len).collect::<Vec<_>>(),"workUsed":used}),
     )
 }
+
+pub(super) fn area(v: &Value) -> Result<Value> {
+    let surface: Surface = field(v, "source")?;
+    let loops: Vec<Vec<Curve>> = field(v, "loops")?;
+    let r = wire::project_coplanar_trim_loops(
+        std::slice::from_ref(&surface),
+        &[loops],
+        field(v, "max_work")?,
+    )?;
+    let wire::PlanarTrimOutcome::Projected(faces) = r.outcome else {
+        return Err(input(format!(
+            "Planar area projection refused: {:?}",
+            r.outcome
+        )));
+    };
+    let report = crate::analysis::planar_face_area::measure_projected_face_area(
+        &faces[0],
+        field(v, "tolerance_mm2")?,
+        field(v, "max_cells")?,
+    )?;
+    Ok(
+        json!({"signedAreaMm2":report.signed_area,"converged":report.converged,
+        "cells":report.cells,"projectionWorkUsed":r.work_used,"retainedAxes":faces[0].projection.retained_axes}),
+    )
+}

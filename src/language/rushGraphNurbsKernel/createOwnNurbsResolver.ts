@@ -1046,6 +1046,14 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'signed_planar_face_area': {
+            const surface=needSurface(n.input)
+            const report=callGeometryRust<object>(n.op,{source:surface,loops:n.loops.map(r=>r.map(needCurve)),
+              tolerance_mm2:n.tolerance_mm2,max_cells:n.max_cells,max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'project_planar_wire':
           case 'lift_planar_wire': {
             const grouping=n.op === 'project_planar_wire' ? {

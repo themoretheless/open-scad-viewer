@@ -91,6 +91,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'check_seam_angle') return russian ? 'Допуск угла UV-шва' : 'Seam angle tolerance'
   if (operation === 'isolate_seam_gap') return russian ? 'Участки превышения зазора' : 'Gap violation intervals'
   if (operation === 'isolate_seam_angle') return russian ? 'Участки превышения угла' : 'Angle violation intervals'
+  if (operation === 'signed_planar_face_area') return russian ? 'Знаковая площадь плоской грани' : 'Signed planar face area'
   if (operation === 'project_planar_wire') return russian ? 'Проекция контура на общую плоскость' : 'project planar wire'
   if (operation === 'lift_planar_wire') return russian ? 'Подъём плоского контура в 3D' : 'lift planar wire'
   if (operation === 'active_surface_hull') return russian ? 'Аффинная размерность поверхности' : 'active surface hull'
