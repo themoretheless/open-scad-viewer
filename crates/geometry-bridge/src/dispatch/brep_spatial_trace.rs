@@ -4,8 +4,11 @@ use brep_core::analysis as a;
 use num_rational::BigRational as Q;
 
 fn path(v: &Value, name: &str) -> Result<Vec<[Q; 3]>> {
-    v[name]
-        .as_array()
+    point_list(&v[name])
+}
+
+fn point_list(v: &Value) -> Result<Vec<[Q; 3]>> {
+    v.as_array()
         .filter(|points| (1..=4096).contains(&points.len()))
         .ok_or_else(|| {
             nurbs_core::Error::new(
@@ -33,6 +36,67 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
             let r = a::node_exact_spatial_polyline(&points, work)?;
             let edges=r.edges.into_iter().map(|e|json!({"sourceSpan":e.source_span,"parameters":e.parameters.map(|q|q.to_string()),"nodes":e.nodes})).collect::<Vec<_>>();
             json!({"nodesMm":coordinates(r.nodes_mm),"edges":edges,"workUsed":r.exact_work})
+        }
+        "triangulate_planar_path" => {
+            let r = a::triangulate_exact_planar_spatial_polyline(&points, work)?;
+            json!({"triangles":r.triangles,"workUsed":r.exact_work})
+        }
+        "measure_path_second_moments" => {
+            let r = a::exact_planar_spatial_polyline_second_moments(&points, work)?;
+            json!({"centroidMm":r.centroid_mm.map(|q|q.to_string()),"normalizedMomentsMm2":r.normalized_central_moments_mm2.map(|row|row.map(|q|q.to_string())),"areaSquaredMm4":r.area_squared_mm4.to_string(),"workUsed":r.exact_work})
+        }
+        "bound_path_principal_moments" => {
+            let r = a::bounded_planar_spatial_polyline_principal_moments(
+                &points,
+                field(v, "tolerance_mm2")?,
+                work,
+            )?;
+            json!({"boundsMm2":r.principal_bounds_mm2.map(|row|row.map(|q|q.to_string())),"workUsed":r.exact_work})
+        }
+        "measure_region_mass"
+        | "clip_path_to_perforated_region"
+        | "measure_region_second_moments" => {
+            let holes = v["holes_mm"]
+                .as_array()
+                .filter(|h| h.len() <= 64)
+                .ok_or_else(|| {
+                    nurbs_core::Error::new("BREP_INVALID_INPUT", "Expected up to 64 hole contours")
+                })?
+                .iter()
+                .map(point_list)
+                .collect::<Result<Vec<_>>>()?;
+            let rings = holes.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            match op {
+                "measure_region_mass" => {
+                    let r = a::exact_planar_spatial_polyline_region_mass(&points, &rings, work)?;
+                    json!({"centroidMm":r.centroid_mm.map(|q|q.to_string()),"areaVectorMm2":r.area_vector_mm2.map(|q|q.to_string()),"areaSquaredMm4":r.area_squared_mm4.to_string(),"workUsed":r.exact_work})
+                }
+                "clip_path_to_perforated_region" => {
+                    let r = a::clip_spatial_path_to_exact_planar_polyline_region(
+                        &points,
+                        &rings,
+                        &path(v, "other_path_mm")?,
+                        work,
+                    )?;
+                    let spans = r
+                        .span_intervals
+                        .into_iter()
+                        .map(|intervals| {
+                            intervals
+                                .into_iter()
+                                .map(|p| p.map(|q| q.to_string()))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>();
+                    json!({"spans":spans,"workUsed":r.exact_work})
+                }
+                _ => {
+                    let r = a::exact_planar_spatial_polyline_region_second_moments(
+                        &points, &rings, work,
+                    )?;
+                    json!({"centroidMm":r.centroid_mm.map(|q|q.to_string()),"normalizedMomentsMm2":r.normalized_central_moments_mm2.map(|row|row.map(|q|q.to_string())),"areaSquaredMm4":r.area_squared_mm4.to_string(),"workUsed":r.exact_work})
+                }
+            }
         }
         "measure_planar_path_area" => {
             let r = a::exact_planar_spatial_polyline_area(&points, work)?;

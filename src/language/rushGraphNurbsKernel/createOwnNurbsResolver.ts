@@ -492,6 +492,12 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'triangulate_planar_path':
+          case 'measure_path_second_moments':
+          case 'bound_path_principal_moments':
+          case 'measure_region_mass':
+          case 'clip_path_to_perforated_region':
+          case 'measure_region_second_moments':
           case 'measure_planar_path_area':
           case 'measure_planar_path_centroid':
           case 'simplify_exact_path':
