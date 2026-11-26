@@ -10379,7 +10379,7 @@
     {
       "id": "NURBS-0381",
       "name": "Тело из закрытой крышками оболочки с доказанной границей и объёмом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::build_section_solid",
@@ -10396,7 +10396,9 @@
         "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
         "crates/brep-core/tests/support/closed_solid_policy.rs",
         "docs/qualification/nurbs-curvature-field-381-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-381-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-381-2026-11-17/native.log.gz",
+        "examples/rush/build-section-solid.r",
+        "tests/rushCappedSolids.test.ts"
       ],
       "remainingQualification": [
         "Close a standalone shell with section caps, qualify embedded material orientation and bound its positive volume.",
@@ -10487,7 +10489,7 @@
     {
       "id": "NURBS-0385",
       "name": "Сертифицированное B-rep-тело из оболочки с крышками по индивидуальным допускам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::build_bounded_section_solid",
@@ -10504,7 +10506,9 @@
         "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
         "crates/brep-core/tests/support/closed_solid_policy.rs",
         "docs/qualification/nurbs-curvature-field-385-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-385-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-385-2026-11-17/native.log.gz",
+        "examples/rush/build-bounded-section-solid.r",
+        "tests/rushCappedSolids.test.ts"
       ],
       "remainingQualification": [
         "Qualify a capped solid with per-plane rounding bounds and enclose the positive volume of the stored boundary.",
