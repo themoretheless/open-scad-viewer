@@ -95,6 +95,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'exact_wire_area') return russian ? 'Точная площадь контура' : 'exact wire area'
   if (operation === 'bound_wire_moments') return russian ? 'Интервалы моментов рационального контура' : 'Rational wire moment bounds'
   if (operation === 'cap_section_wire') return russian ? 'Крышка по контуру' : 'cap section wire'
+  if (operation === 'section_brep_sheets') return russian ? 'Листовые B-rep грани сечения' : 'section brep sheets'
+  if (operation === 'bounded_section_brep_sheets') return russian ? 'Листовые B-rep грани с допуском опоры' : 'bounded section brep sheets'
   if (operation === 'cap_section_holes') return russian ? 'Крышка с отверстиями' : 'cap section holes'
   if (operation === 'arrange_section_caps') return russian ? 'Крышки по вложенным контурам' : 'arrange section caps'
   if (operation === 'exact_wire_mass') return russian ? 'Первые моменты и центр площади' : 'exact wire mass'

@@ -1,0 +1,11 @@
+// @rush/1
+outer0 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[0,0,2],[4,0,2]],weights:[1,1])
+outer1 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[4,0,2],[4,4,2]],weights:[1,1])
+outer2 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[4,4,2],[0,4,2]],weights:[1,1])
+outer3 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[0,4,2],[0,0,2]],weights:[1,1])
+hole0 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[1,1,2],[3,1,2]],weights:[1,1])
+hole1 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[3,1,2],[3,3,2]],weights:[1,1])
+hole2 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[3,3,2],[1,3,2]],weights:[1,1])
+hole3 = nurbs_curve(degree:1,knots:[0,0,1,1],control_points:[[1,3,2],[1,1,2]],weights:[1,1])
+cap = outer0.section_brep_sheets(inputs:[outer1,outer2,outer3],loops:[[hole0,hole1,hole2,hole3]],plane_normal:[0,0,1],plane_offset_mm:2,tolerance_mm:0.00000001,max_verification_cells:10000,max_work:1000000)
+show cap.brep_tessellate(12)

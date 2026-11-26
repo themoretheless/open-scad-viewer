@@ -411,6 +411,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "exact_wire_area" => &["inputs","max_work"],
         "bound_wire_moments" => &["inputs","loops","chart_origin","moment_tolerances","max_cells"],
         "cap_section_wire" => &["inputs","plane_normal","plane_offset_mm","boundary_tolerance_mm","support_tolerance_mm","max_work"],
+        "section_brep_sheets" => &["inputs","loops","plane_normal","plane_offset_mm","tolerance_mm","max_verification_cells","max_work"],
+        "bounded_section_brep_sheets" => &["inputs","loops","plane_normal","plane_offset_mm","tolerance_mm","max_verification_cells","support_tolerance_mm","max_work"],
         "cap_section_holes" => &["inputs","loops","plane_normal","plane_offset_mm","boundary_tolerance_mm","support_tolerance_mm","max_work"],
         "arrange_section_caps" => &["inputs","loops","plane_normal","plane_offset_mm","boundary_tolerance_mm","support_tolerance_mm","region","max_work"],
         "exact_wire_mass" => &["inputs","loops","max_work"],

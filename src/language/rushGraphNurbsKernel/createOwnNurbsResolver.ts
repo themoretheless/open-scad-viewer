@@ -1082,6 +1082,15 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'section_brep_sheets':
+          case 'bounded_section_brep_sheets': {
+            const {id:_id,op,input,inputs,loops,...settings}=n
+            const rings=[[input,...inputs],...loops].map(r=>r.map(needCurve))
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;workUsed:number}>(op,{rings,...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'cap_section_wire':
           case 'cap_section_holes':
           case 'arrange_section_caps': {

@@ -3,7 +3,11 @@ use crate::*;
 #[path="brep_closed_ss.rs"]
 mod closed_ss;
 
+#[path="brep_section_sheets.rs"]
+mod section_sheets;
+
 const OPS: &[&str] = &[
+    "section_brep_sheets","bounded_section_brep_sheets",
     "brep_partition_closed_ss", "brep_partition_all_closed_ss",
     "brep_audit_exact_periodic_trim_contour",
     "brep_measure_exact_periodic_trim_range",
@@ -105,6 +109,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        op @ ("section_brep_sheets"|"bounded_section_brep_sheets")=>section_sheets::build(&v,op),
         "brep_partition_closed_ss" => closed_ss::partition(v),
         "brep_bound_exact_periodic_trim_directional_area" => brep::exact_periodic_trim_directional_area_request(&v),
         "brep_measure_exact_periodic_trim_window_mass_properties" => brep::exact_periodic_trim_surface_window_mass_request(&v),
