@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(super) const OPS: &[&str] = &["step_ray_crossings", "step_first_ray_crossing", "step_ray_candidates", "step_ray_intervals", "step_ray_length", "qualify_step_instance", "step_ray_coverage", "step_ray_multiplicity", "step_pair_clearance", "step_clearance_checks", "step_minimum_clearance", "step_polyhedral_sections"];
+pub(super) const OPS: &[&str] = &["step_group_clearances","step_group_minimum_gap","step_ray_crossings", "step_first_ray_crossing", "step_ray_candidates", "step_ray_intervals", "step_ray_length", "qualify_step_instance", "step_ray_coverage", "step_ray_multiplicity", "step_pair_clearance", "step_clearance_checks", "step_minimum_clearance", "step_polyhedral_sections"];
 
 fn crossing(c:brep_core::ray_parity::Crossing)->Value {
     json!({"face":c.face,"uv":c.uv,"parameter":c.parameter})
@@ -56,16 +56,21 @@ pub(super) fn apply(v:&Value)->Result<Value> {
             let r=assembly.occurrence_clearance(field(v,"pair")?,field(v,"tolerance_mm")?,tolerance()?,limits()?)?;
             json!({"distanceMm":r.distance_interval_mm,"materialOverlap":r.material_overlap,"converged":r.converged,"reason":r.reason})
         }
-        "step_clearance_checks"=>{
-            let pairs=assembly.check_clearances(field(v,"minimum_mm")?,field(v,"tolerance_mm")?,tolerance()?,limits()?,field(v,"max_pairs")?)?
+        "step_clearance_checks"|"step_group_clearances"=>{
+            let rows=if op=="step_group_clearances" {
+                assembly.clearances_between(&field::<Vec<usize>>(v,"left_group")?,&field::<Vec<usize>>(v,"right_group")?,field(v,"minimum_mm")?,field(v,"tolerance_mm")?,tolerance()?,limits()?,field(v,"max_pairs")?)?
+            }else{assembly.check_clearances(field(v,"minimum_mm")?,field(v,"tolerance_mm")?,tolerance()?,limits()?,field(v,"max_pairs")?)?};
+            let pairs=rows
                 .into_iter().map(|(pair,r)|match r {
                     Ok(r)=>json!({"pair":pair,"status":format!("{:?}",r.status),"distanceMm":r.measurement.distance_interval_mm}),
                     Err(e)=>json!({"pair":pair,"error":e.to_string()}),
                 }).collect::<Vec<_>>();
             json!({"pairs":pairs})
         }
-        "step_minimum_clearance"=>{
-            let r=assembly.minimum_clearance(field(v,"tolerance_mm")?,tolerance()?,limits()?,field(v,"max_pairs")?)?;
+        "step_minimum_clearance"|"step_group_minimum_gap"=>{
+            let r=if op=="step_group_minimum_gap" {
+                Some(assembly.minimum_clearance_between(&field::<Vec<usize>>(v,"left_group")?,&field::<Vec<usize>>(v,"right_group")?,field(v,"tolerance_mm")?,tolerance()?,limits()?,field(v,"max_pairs")?)?)
+            }else{assembly.minimum_clearance(field(v,"tolerance_mm")?,tolerance()?,limits()?,field(v,"max_pairs")?)?};
             json!({"minimum":r.map(|r|json!({"lowerMm":r.lower_bound_mm,"upperMm":r.upper_bound_mm,"pair":r.upper_bound_pair,
                 "checkedPairs":r.checked_pairs,"converged":r.converged,"errors":r.pair_errors.into_iter().map(|(pair,e)|json!({"pair":pair,"error":e.to_string()})).collect::<Vec<_>>() }))})
         }

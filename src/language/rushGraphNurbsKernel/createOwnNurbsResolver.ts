@@ -2824,6 +2824,8 @@ export function createOwnNurbsResolver(
           }
           case 'step_ray_crossings':
           case 'step_first_ray_crossing':
+          case 'step_group_clearances':
+          case 'step_group_minimum_gap':
           case 'step_ray_candidates':
           case 'step_ray_intervals':
           case 'step_ray_length':
@@ -2838,6 +2840,26 @@ export function createOwnNurbsResolver(
             const step=requireStepFile(input)
             const {model,...report}=callGeometryRust<{model:NurbsBrep}>(op,{...parameters,step})
             sharedStepFiles.set(key,step)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
+          case 'step_cut_stock':
+          case 'step_fuse_instances':
+          case 'step_revision_delta':
+          case 'step_split_instance':
+          case 'step_stock_delta':
+          case 'step_slice_layers':
+          case 'step_clip_material':
+          case 'step_free_space':
+          case 'step_interference_regions':
+          case 'step_interference_material':
+          case 'step_interference_groups':
+          case 'step_group_interferences': {
+            const {id:_id,input,op,...parameters}=n
+            const step=requireStepFile(input)
+            const {model,...report}=callGeometryRust<{model:NurbsBrep}>(op,{...parameters,step})
+            if(op==='step_interference_groups')sharedStepFiles.set(key,step)
             constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'brep',data:model}
             break
@@ -2865,6 +2887,9 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'move_step_group':
+          case 'copy_step_group':
+          case 'replace_step_variant':
           case 'open_step_file':
           case 'read_shared_step':
           case 'replace_step_part':
