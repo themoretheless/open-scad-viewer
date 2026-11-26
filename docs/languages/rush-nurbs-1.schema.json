@@ -60477,6 +60477,519 @@
               },
               "op": {
                 "type": "string",
+                "const": "make_step_assembly"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "minItems": 0,
+                "maxItems": 255
+              },
+              "definition_indices": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "minItems": 1,
+                "maxItems": 256
+              },
+              "placements": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "minItems": 1,
+                "maxItems": 256
+              },
+              "definition_tolerances_mm": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 0,
+                "maxItems": 256
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "inputs",
+              "definition_indices",
+              "placements",
+              "definition_tolerances_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_part_tolerances"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "set_scaled_step_placement"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "placement": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "minItems": 4,
+                "maxItems": 4
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "index",
+              "placement"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_occurrence_bounds"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_proximity_pairs"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "distance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "distance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_common_material"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pair": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "pair"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_interferences"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "max_pairs": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "max_pairs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_material_volume"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "relative_tolerance": {
+                "type": "number"
+              },
+              "max_evaluations": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "relative_tolerance",
+              "max_evaluations"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_material_centroid"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "relative_tolerance": {
+                "type": "number"
+              },
+              "max_evaluations": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "relative_tolerance",
+              "max_evaluations"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_material_inertia"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "relative_tolerance": {
+                "type": "number"
+              },
+              "max_evaluations": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "relative_tolerance",
+              "max_evaluations"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_material_area"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "relative_tolerance": {
+                "type": "number"
+              },
+              "max_evaluations": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "relative_tolerance",
+              "max_evaluations"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_principal_inertia"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "relative_tolerance": {
+                "type": "number"
+              },
+              "max_evaluations": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "relative_tolerance",
+              "max_evaluations"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "step_mass_properties"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "preview_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "relative_tolerance": {
+                "type": "number"
+              },
+              "max_evaluations": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "densities": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 256
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "preview_index",
+              "relative_tolerance",
+              "max_evaluations",
+              "densities"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "read_shared_step"
               },
               "input": {

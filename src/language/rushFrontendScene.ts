@@ -63,7 +63,7 @@ export async function buildTextNurbsScene(
     if (!('measurement' in entry)) return []
     const { operation, report } = entry.measurement as { operation: string; report: object }
     const {step,...summary} = report as {step?:unknown}
-    const assemblyFile = (operation === 'planet_occurrences_step' || operation === 'planetary_gear_set_step' || ["open_step_file","read_shared_step", "replace_step_part", "replace_step_instance", "place_step_instance", "remove_step_instance", "add_step_instance", "insert_step_solid", "append_step_assembly", "deduplicate_step_parts", "extract_step_instances"].includes(operation)) && typeof step === 'string' ? step : undefined
+    const assemblyFile = (operation === 'planet_occurrences_step' || operation === 'planetary_gear_set_step' || ["make_step_assembly", "step_part_tolerances", "set_scaled_step_placement", "step_occurrence_bounds", "step_proximity_pairs", "step_common_material", "step_interferences", "step_material_volume", "step_material_centroid", "step_material_inertia", "step_material_area", "step_principal_inertia", "step_mass_properties","open_step_file","read_shared_step", "replace_step_part", "replace_step_instance", "place_step_instance", "remove_step_instance", "add_step_instance", "insert_step_solid", "append_step_assembly", "deduplicate_step_parts", "extract_step_instances"].includes(operation)) && typeof step === 'string' ? step : undefined
     const serialized = JSON.stringify(assemblyFile ? summary : report)
     reportCharacters += assemblyFile?.length ?? 0
     reportCharacters += serialized.length

@@ -2822,6 +2822,29 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'make_step_assembly':
+          case 'step_part_tolerances':
+          case 'set_scaled_step_placement':
+          case 'step_occurrence_bounds':
+          case 'step_proximity_pairs':
+          case 'step_common_material':
+          case 'step_interferences':
+          case 'step_material_volume':
+          case 'step_material_centroid':
+          case 'step_material_inertia':
+          case 'step_material_area':
+          case 'step_principal_inertia':
+          case 'step_mass_properties': {
+            const {id:_id,input,op,...parameters}=n
+            const source='inputs' in parameters
+              ? {models:[input,...parameters.inputs].map(id=>needBrep(id))}
+              : {step:requireStepFile(input)}
+            const {model,step,...report}=callGeometryRust<{model:NurbsBrep;step:string|null;definitionCount:number;occurrenceCount:number}>(op,{...parameters,...source})
+            if(step)sharedStepFiles.set(key,step)
+            constructionReports[key]={measurement:{operation:op,report:{...report,...(step && {step})}}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'open_step_file':
           case 'read_shared_step':
           case 'replace_step_part':

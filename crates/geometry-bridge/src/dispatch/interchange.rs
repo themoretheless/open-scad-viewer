@@ -1,6 +1,8 @@
 //! Bridge operations of the `interchange` family.
 use crate::*;
 
+#[path="shared_assembly_properties.rs"]
+mod shared_assembly_properties;
 #[path="shared_assembly_edits.rs"]
 mod shared_assembly_edits;
 
@@ -45,6 +47,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if shared_assembly_properties::OPS.contains(&v["op"].as_str().unwrap_or("")) {
+        return Routed::Handled(shared_assembly_properties::apply(&v));
+    }
     if shared_assembly_edits::OPS.contains(&v["op"].as_str().unwrap_or("")) {
         return Routed::Handled(shared_assembly_edits::apply(&v));
     }
