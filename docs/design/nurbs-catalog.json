@@ -2367,12 +2367,14 @@
     {
       "id": "NURBS-0060",
       "name": "поверхность по облаку",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-foundation/src/foundation/fitting.rs",
         "crates/nurbs-foundation/src/foundation/fitting/cloud_surface.rs",
         "crates/nurbs-core/tests/cloud_surface.rs",
-        "docs/design/nurbs-cloud-surface.md"
+        "docs/design/nurbs-cloud-surface.md",
+        "examples/rush/fit-surface-cloud.r",
+        "tests/rushSurfaceCloud.test.ts"
       ],
       "remainingQualification": [
         "conditioned PCA chart and numerical least-squares rank limit applicability; multi-sheet topology and unique reconstruction are not inferred",
@@ -2888,12 +2890,14 @@
     {
       "id": "NURBS-0077",
       "name": "G1 blend",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::surface_blend::g1",
       "evidence": [
         "crates/nurbs-core/src/join/surface_blend.rs",
         "crates/nurbs-core/tests/surface_blend.rs",
-        "docs/design/nurbs-surface-blend.md"
+        "docs/design/nurbs-surface-blend.md",
+        "tests/rushBlendOffset.test.ts",
+        "examples/rush/surface-boundary-blend.r"
       ],
       "remainingQualification": [
         "homogeneous Hermite construction matches parametric boundary jets in real arithmetic under explicit affine correspondence; binary64 rounding is not certified",
@@ -2904,12 +2908,14 @@
     {
       "id": "NURBS-0078",
       "name": "G2 blend",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::surface_blend::g2",
       "evidence": [
         "crates/nurbs-core/src/join/surface_blend.rs",
         "crates/nurbs-core/tests/surface_blend.rs",
-        "docs/design/nurbs-surface-blend.md"
+        "docs/design/nurbs-surface-blend.md",
+        "tests/rushBlendOffset.test.ts",
+        "examples/rush/surface-boundary-blend.r"
       ],
       "remainingQualification": [
         "homogeneous Hermite construction matches parametric boundary jets in real arithmetic under explicit affine correspondence; binary64 rounding is not certified",
@@ -2920,13 +2926,15 @@
     {
       "id": "NURBS-0079",
       "name": "offset",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/offset/surface_offset.rs",
         "crates/nurbs-core/src/offset/surface_offset/validity.rs",
         "crates/nurbs-core/src/offset/surface_offset/deviation.rs",
         "crates/nurbs-core/tests/surface_offset_assurance.rs",
-        "docs/design/nurbs-surface-offset.md"
+        "docs/design/nurbs-surface-offset.md",
+        "tests/rushBlendOffset.test.ts",
+        "examples/rush/offset-nurbs-panel.r"
       ],
       "remainingQualification": [
         "nonzero offsets expose SampledDeviation assurance; only zero-distance identity has exact=true, primitive recognition is heuristic",
@@ -5869,7 +5877,7 @@
     {
       "id": "NURBS-0196",
       "name": "проверка ориентации нормалей оболочки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "remainingQualification": [
@@ -5879,7 +5887,9 @@
       "evidence": [
         "crates/brep-core/src/body_analysis/volume_validity.rs",
         "crates/brep-core/src/body_analysis/shell_orientation.rs",
-        "docs/design/nurbs-normal-orientation.md"
+        "docs/design/nurbs-normal-orientation.md",
+        "examples/rush/inspect-shell-orientation.r",
+        "tests/rushShellOrientation.test.ts"
       ]
     },
     {
@@ -24302,7 +24312,7 @@
     {
       "id": "NURBS-0989",
       "name": "Массовый момент инерции NURBS-сборки относительно смещённой оси вращения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::moment_about_axis",
@@ -24313,7 +24323,8 @@
         "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-bearing-inertia-989-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Derived from additive component mass properties. Verified offset bearing by OCCT, nonuniformly scaled mirrored component by analytic box dimensions, and axis magnitude invariance."
@@ -24322,7 +24333,7 @@
     {
       "id": "NURBS-0990",
       "name": "Вектор статического дисбаланса NURBS-сборки относительно оси подшипника",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::static_unbalance",
@@ -24332,7 +24343,8 @@
         "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Static radial first mass moment, in kg mm. Qualified offset, tilted, reversed and centred axes; reference computed from OCCT mass properties with an independent counterweight check."
@@ -24341,7 +24353,7 @@
     {
       "id": "NURBS-0991",
       "name": "Расчёт двухплоскостной балансировки NURBS-сборки по тензору инерции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::two_plane_balance_corrections",
@@ -24351,7 +24363,8 @@
         "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Rigid body with two distinct signed axial planes. Addition vectors in kg mm. OCCT independently adds the corresponding point masses and verifies static and couple cancellation for offset and tilted central axes."
@@ -24360,7 +24373,7 @@
     {
       "id": "NURBS-0992",
       "name": "Расчёт масс противовесов для четырёх фиксированных посадочных мест NURBS-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::balance_at_fixed_sites",
@@ -24370,7 +24383,8 @@
         "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/verify.py",
         "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/occt.log",
         "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-fixed-balance-sites-992-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Two independent transverse sites on each of two planes. Nonnegative additive weights only. OCCT confirms the four fixed point masses cancel static and couple unbalance."
@@ -24379,7 +24393,7 @@
     {
       "id": "NURBS-0993",
       "name": "Пересчёт масс-инерционных характеристик NURBS-сборки с установленными точечными противовесами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::with_point_mass",
@@ -24389,7 +24403,8 @@
         "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-installed-weights-993-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Point weights with negligible intrinsic inertia in world coordinates. Exact and rounded correction masses checked against OCCT aggregate mass properties and residual corrections."
@@ -24398,7 +24413,7 @@
     {
       "id": "NURBS-0994",
       "name": "Объединение масс и центральных тензоров NURBS-подсборок с учётом собственной инерции деталей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::combined_with",
@@ -24408,7 +24423,8 @@
         "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Positive finite masses with central tensors in a common world frame. Independent OCCT bearing moment and complete assembly tensor checked for offset finite-size bodies."
@@ -24417,7 +24433,7 @@
     {
       "id": "NURBS-0995",
       "name": "Перенос измеренных масс-инерционных характеристик NURBS-подсборки в новую систему размещения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::rigidly_placed",
@@ -24429,7 +24445,8 @@
         "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Proper rigid motions with translation. Full rotated central tensor compared against remeasurement of moved STEP geometry and OCCT. Nonuniform scale refused."
@@ -24438,7 +24455,7 @@
     {
       "id": "NURBS-0996",
       "name": "Аффинный пересчёт инерции измеренной NURBS-подсборки при постоянной плотности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::affine_at_constant_density",
@@ -24448,7 +24465,8 @@
         "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-affine-inertia-996-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Constant-density nonsingular affine map. Direct reintegration includes shear, nonuniform scaling and reflection; independent OCCT checks the reflected elliptic cylinder tensor."
@@ -24457,7 +24475,7 @@
     {
       "id": "NURBS-0997",
       "name": "Восстановление массы, центра и тензора инерции остатка после снятия известной NURBS-детали",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::analysis::AssemblyMass::without_component",
@@ -24467,7 +24485,8 @@
         "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/verify.py",
         "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/occt.log",
         "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/native.log.gz",
+        "tests/rushBearingMass.test.ts"
       ],
       "remainingQualification": [
         "Known component in the same frame. Both complementary residuals checked against separate branch integrations. Rejects nonpositive mass and infeasible inertia. Membership must be known by the caller."
