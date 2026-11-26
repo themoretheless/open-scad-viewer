@@ -7920,7 +7920,7 @@
     {
       "id": "NURBS-0280",
       "name": "Совместное точное упрощение узлов и степеней NURBS-поверхности по U и V",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface",
@@ -7931,7 +7931,9 @@
         "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
         "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs",
         "docs/qualification/nurbs-curvature-field-280-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-280-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-280-2026-11-16/native.log.gz",
+        "examples/rush/tensor-surface-compression.r",
+        "tests/rushTensorCompression.test.ts"
       ],
       "remainingQualification": [
         "Alternates exact tensor knot removal and smooth degree reduction across both axes, preserving the complete UV law and denominator under a shared work budget.",
@@ -7942,7 +7944,7 @@
     {
       "id": "NURBS-0281",
       "name": "Атомарное точное пакетное упрощение набора NURBS-патчей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface_batch",
@@ -7953,7 +7955,9 @@
         "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
         "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs",
         "docs/qualification/nurbs-curvature-field-281-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-281-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-281-2026-11-16/native.log.gz",
+        "examples/rush/tensor-batch-compression.r",
+        "tests/rushTensorCompression.test.ts"
       ],
       "remainingQualification": [
         "Compresses independent input charts in order under one work and copy budget. A late refusal never publishes a partially compressed patch set.",

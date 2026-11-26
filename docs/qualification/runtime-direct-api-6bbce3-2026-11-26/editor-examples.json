@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "6bbce3f10b5bd597ac6da1c49723146c2652f395c60f1d826eeb67f4c5bcdd5c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/tensor-surface-compression.r",
+      "exampleSha256": "1c5229cf73b5fd08467f202a244284ff73cd00997335b23688c4626c802450e2",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2,45\nГотово · 56 ms"
+    },
+    {
+      "example": "examples/rush/tensor-batch-compression.r",
+      "exampleSha256": "194ad266de13299f9cee7f8daf1dddb01b11b71b7caba201dea4ded18ba85229",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2,51\nГотово · 13 ms"
+    }
+  ]
+}
