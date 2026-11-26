@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "da33088cb91e7a84a45cf16e68ebd0b0d5cae616209f3260d0bb6370ac7be9a0",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/intersect-support-planes.r",
+      "exampleSha256": "9f7242b4bbe52c9fa24b67b2f913afcffb085ce7c206bbfef0a264ed702288da",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n1,73\nГотово · 6 ms"
+    }
+  ]
+}

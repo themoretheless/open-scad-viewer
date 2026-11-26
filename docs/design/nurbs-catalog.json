@@ -9264,7 +9264,7 @@
     {
       "id": "NURBS-0338",
       "name": "Точная линия пересечения опорных плоскостей двух NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::intersect_planar_supports",
@@ -9273,7 +9273,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
         "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
         "docs/qualification/nurbs-curvature-field-338-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-338-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-338-2026-11-17/native.log.gz",
+        "examples/rush/intersect-support-planes.r",
+        "tests/rushSupportPlaneLine.test.ts"
       ],
       "remainingQualification": [
         "Solve the exact affine plane intersection with a canonical rational line clock and distinguish coincident and parallel supports.",
