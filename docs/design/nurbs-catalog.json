@@ -16700,7 +16700,7 @@
     {
       "id": "NURBS-0629",
       "name": "Общие массовые характеристики сборки NURBS-поверхностей с гарантированными границами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::combine_surface_mass_properties",
@@ -16708,7 +16708,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-629-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-629-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-629-2026-11-17/native.log.gz",
+        "examples/rush/combine-surface-measures.r",
+        "tests/rushAssemblyMass.test.ts"
       ],
       "remainingQualification": [
         "Combine independently bounded surface pieces by area-weighted centroid and interval parallel-axis recentering.",
@@ -16719,7 +16721,7 @@
     {
       "id": "NURBS-0630",
       "name": "Масса, центр и тензор инерции сборки NURBS-поверхностей с различной плотностью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::combine_surface_mass_properties_with_density",
@@ -16727,7 +16729,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-630-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-630-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-630-2026-11-17/native.log.gz",
+        "examples/rush/combine-surface-densities.r",
+        "tests/rushAssemblyMass.test.ts"
       ],
       "remainingQualification": [
         "Combine surface pieces with independent positive areal density bounds and carry the density through mass, centroid and inertia.",

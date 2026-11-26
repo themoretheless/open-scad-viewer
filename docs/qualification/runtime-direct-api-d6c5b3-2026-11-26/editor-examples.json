@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "d6c5b3882a4f2dbd85ceee401bde106dbc082ad20f9f0ca55a90c279051e7800",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/combine-surface-measures.r",
+      "exampleSha256": "9832057ece9aae0d9b7cc33af69c13fa07004bf784047d16ce4dbdf826eee302",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2\nГотово · 3 798 ms"
+    },
+    {
+      "example": "examples/rush/combine-surface-densities.r",
+      "exampleSha256": "33bb43162503216345c89a076e10c50fbbd5df91ed5b82d7868ace96c936b0c4",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2\nГотово · 3 377 ms"
+    }
+  ]
+}
