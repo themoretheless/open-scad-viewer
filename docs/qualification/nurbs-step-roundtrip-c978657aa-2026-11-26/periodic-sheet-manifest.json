@@ -1,0 +1,30 @@
+{
+  "toleranceMm": 2e-07,
+  "parts": [
+    {
+      "name": "periodic-trimmed-sheet",
+      "file": "periodic-sheet.step",
+      "sha256": "02c553328dc5b8badf97ba6d4a9703bffb9b4eef73bc4291453d993aac1f4451",
+      "expected": {
+        "boundsMm": [
+          [
+            0,
+            0,
+            0.25
+          ],
+          [
+            0.5,
+            0.5,
+            1.75
+          ]
+        ],
+        "solids": 0,
+        "shells": 1,
+        "faces": 1,
+        "wires": 2,
+        "areaMm2": 1.25,
+        "areaToleranceMm2": 1e-08
+      }
+    }
+  ]
+}

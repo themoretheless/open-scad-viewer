@@ -22,7 +22,7 @@ from OCP.GProp import GProp_GProps
 from OCP.BRepGProp import BRepGProp
 from OCP.BRepMesh import BRepMesh_IncrementalMesh
 from OCP.BRep import BRep_Tool
-from OCP.TopAbs import TopAbs_FACE, TopAbs_SOLID, TopAbs_EDGE, TopAbs_VERTEX
+from OCP.TopAbs import TopAbs_FACE, TopAbs_SOLID, TopAbs_EDGE, TopAbs_VERTEX, TopAbs_SHELL, TopAbs_WIRE
 from OCP.TopExp import TopExp_Explorer
 from OCP.TopoDS import TopoDS
 from OCP.TopLoc import TopLoc_Location
@@ -97,28 +97,45 @@ def main(directory, make_preview=True):
         box = Bnd_Box()
         BRepBndLib.AddOptimal_s(shape, box, False, False)
         bounds = [[point.X(), point.Y(), point.Z()] for point in [box.CornerMin(), box.CornerMax()]]
-        properties = GProp_GProps()
-        integration_error = BRepGProp.VolumeProperties_s(shape, properties, Eps=1e-10)
-        volume = properties.Mass()
-        error = max(abs(a - b) for actual, expected in zip(bounds, part['expected']['boundsMm']) for a, b in zip(actual, expected))
-        volume_error = abs(volume - part['expected']['volumeMm3'])
+        expected = part['expected']
+        expected_solids = expected.get('solids', 1)
         solids = count_shapes(shape, TopAbs_SOLID)
-        passed = valid and solids == part['expected'].get('solids', 1) and error <= manifest['toleranceMm'] and volume_error <= max(1e-6, abs(part['expected']['volumeMm3']) * manifest['relativeVolumeTolerance'])
-        edges = count_unique_shapes(shape, TopAbs_EDGE)
-        vertices = count_unique_shapes(shape, TopAbs_VERTEX)
-        topology_expected = {key: part['expected'][key] for key in ('edges', 'vertices')
-                             if key in part['expected']}
-        topology_passed = (all(actual == topology_expected[key]
-                               for key, actual in [('edges', edges), ('vertices', vertices)]
-                               if key in topology_expected) if topology_expected else None)
+        error = max(abs(a - b) for actual, target in zip(bounds, expected['boundsMm'])
+                    for a, b in zip(actual, target))
+        passed = valid and solids == expected_solids and error <= manifest['toleranceMm']
+        measurements = {}
+        if 'volumeMm3' in expected or expected_solids:
+            properties = GProp_GProps()
+            integration_error = BRepGProp.VolumeProperties_s(shape, properties, Eps=1e-10)
+            volume = properties.Mass()
+            volume_error = abs(volume - expected['volumeMm3'])
+            measurements.update(volumeMm3=volume, volumeErrorMm3=volume_error,
+                                volumeIntegrationRelativeError=integration_error)
+            passed = passed and volume_error <= max(
+                1e-6, abs(expected['volumeMm3']) * manifest['relativeVolumeTolerance'])
+        if 'areaMm2' in expected:
+            area_properties = GProp_GProps()
+            BRepGProp.SurfaceProperties_s(shape, area_properties)
+            area = area_properties.Mass()
+            area_error = abs(area - expected['areaMm2'])
+            measurements.update(areaMm2=area, areaErrorMm2=area_error)
+            passed = passed and area_error <= expected['areaToleranceMm2']
+        counts = dict(edges=count_unique_shapes(shape, TopAbs_EDGE),
+                      vertices=count_unique_shapes(shape, TopAbs_VERTEX),
+                      faces=count_shapes(shape, TopAbs_FACE),
+                      shells=count_shapes(shape, TopAbs_SHELL),
+                      wires=count_shapes(shape, TopAbs_WIRE))
+        topology_expected = {key: expected[key] for key in counts if key in expected}
+        topology_passed = (all(counts[key] == value for key, value in topology_expected.items())
+                           if topology_expected else None)
         passed = passed and topology_passed is not False
         faces = triangles(shape)
         row = dict(name=part['name'], stepSha256=digest, valid=valid, solids=solids,
-                   faces=count_shapes(shape, TopAbs_FACE), uniqueEdges=edges, uniqueVertices=vertices,
-                   topologyPassed=topology_passed, topologyExpectations=topology_expected, boundsMm=bounds, volumeMm3=volume,
-                   maxBoundsErrorMm=error, volumeErrorMm3=volume_error,
-                   volumeIntegrationRelativeError=integration_error, passed=passed,
-                   previewTriangles=len(faces))
+                   faces=counts['faces'], shells=counts['shells'], wires=counts['wires'],
+                   uniqueEdges=counts['edges'], uniqueVertices=counts['vertices'],
+                   topologyPassed=topology_passed, topologyExpectations=topology_expected,
+                   boundsMm=bounds, maxBoundsErrorMm=error, passed=passed, previewTriangles=len(faces),
+                   **measurements)
         rows.append(row)
         if 'lowerVolumeMm3' in part['expected']:
             lower = BRepPrimAPI_MakeBox(gp_Pnt(bounds[0][0]-1, bounds[0][1]-1, bounds[0][2]-1),
@@ -139,14 +156,18 @@ def main(directory, make_preview=True):
                 getattr(ax, 'set_' + axis + 'label')(axis.upper() + ' / mm')
             ax.set_box_aspect([max(hi-lo, 1e-6) for lo, hi in zip(*bounds)])
             ax.view_init(elev=27, azim=-55)
-            ax.set_title(f"{part['name']} · {'PASS' if passed else 'FAIL'}\nVolume {volume:.6f} mm³")
+            ax.set_title(
+                f"{part['name']} · {'PASS' if passed else 'FAIL'}"
+                + (f"\nVolume {measurements['volumeMm3']:.6f} mm³" if 'volumeMm3' in measurements
+                   else f"\nArea {measurements['areaMm2']:.6f} mm²" if 'areaMm2' in measurements
+                   else ""))
     if make_preview:
         fig.suptitle('Independent OpenCascade STEP import — current edited geometry')
         fig.savefig(directory / 'occt-preview.png', dpi=150)
         plt.close(fig)
     report = dict(schema='cad-roadmap-occt/1', oracle='OpenCascade via cadquery-ocp',
                   version=importlib.metadata.version('cadquery-ocp'),
-                  scope='Independent STEP read, solid validity, optional unique topology counts, exact bounding box, volume and OCCT tessellation. Does not certify all STEP inputs.',
+                  scope='Independent STEP read, shape validity, optional topology counts, exact bounding box, volume or area and OCCT tessellation. Does not certify all STEP inputs.',
                   previewProduced=make_preview,
                   passed=all(row['passed'] for row in rows), parts=rows)
     (directory / 'occt-report.json').write_text(json.dumps(report, indent=2) + '\n')

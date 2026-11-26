@@ -47,6 +47,9 @@ fn periodic_trim_step_round_trips_support_hole_and_exact_edge_pairs() {
         export_exact_periodic_trim_sheet_step(&source, &[&outer, &hole], 1e-8, 1_000_000).unwrap();
     let original = report.sheet.model.unwrap();
     let text = report.text.unwrap();
+    if let Some(path) = std::env::var_os("STEP_PERIODIC_SHEET_OUTPUT") {
+        std::fs::write(path, &text).expect("write independently inspectable STEP sheet");
+    }
     assert!(text.contains("OPEN_SHELL"));
     assert!(text.contains("FACE_BOUND"));
     assert!(text.contains("PCURVE"));
