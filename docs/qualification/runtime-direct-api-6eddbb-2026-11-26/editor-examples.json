@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "6eddbba462d81fd2e9abd894437e2f56297ef974a4c48b94d4270d065e11cd5b",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/angular-speed-limit.r",
+      "exampleSha256": "89052bf672e1f185d8075ced51fde67b37556fa5f73c3c99d282a4f841a87c66",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 458 ms"
+    },
+    {
+      "example": "examples/rush/angular-acceleration-limit.r",
+      "exampleSha256": "3f25112711d2e136f7480ca097f414fd0e8396181b9df9972e01b877cafbef92",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/angular-jerk-limit.r",
+      "exampleSha256": "b56095d73faba070a18665e32eb08dd2671e55a37938d4a7d50e60168f0dce93",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/angular-motion-limits.r",
+      "exampleSha256": "b26edb26fd46b52d7dd46ac9363547cc91f45ac1f57a5db63f3e319a6dbb2b5f",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/angular-slowdown-bounds.r",
+      "exampleSha256": "86471fa65ba4c5623590a0ca06f7a5419350a73fcde808f418989ce8123f9291",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/angular-duration-bounds.r",
+      "exampleSha256": "e91a2e5a931e13efbf817b22f37618c0fed653b0a3c85b34da9dff4cd93e74de",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/angular-motion-deadline.r",
+      "exampleSha256": "0d4625e1819e469172b97350d253d9e8d111cc202e0453f916a041652cc702b2",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    }
+  ]
+}

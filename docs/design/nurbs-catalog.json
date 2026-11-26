@@ -19859,7 +19859,7 @@
     {
       "id": "NURBS-0777",
       "name": "Проверка ограничения угловой скорости плоской NURBS-ориентации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_speed_limit",
@@ -19867,7 +19867,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-777-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-777-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-777-2026-11-17/native.log.gz",
+        "examples/rush/angular-speed-limit.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Certify planar angular speed limits in the source clock while preserving uncertainty at zero orientation.",
@@ -19878,7 +19880,7 @@
     {
       "id": "NURBS-0778",
       "name": "Проверка ограничения углового ускорения плоской NURBS-ориентации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_acceleration_limit",
@@ -19886,7 +19888,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-778-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-778-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-778-2026-11-17/native.log.gz",
+        "examples/rush/angular-acceleration-limit.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Certify absolute planar angular acceleration in the source parameter clock.",
@@ -19897,7 +19901,7 @@
     {
       "id": "NURBS-0779",
       "name": "Проверка ограничения углового рывка плоской NURBS-ориентации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_jerk_limit",
@@ -19905,7 +19909,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-779-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-779-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-779-2026-11-17/native.log.gz",
+        "examples/rush/angular-jerk-limit.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Certify angular jerk limits from planar rational direction jets in the original parameter clock.",
@@ -19916,7 +19922,7 @@
     {
       "id": "NURBS-0780",
       "name": "Совместная проверка угловой скорости, ускорения и рывка",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_motion_limits",
@@ -19924,7 +19930,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-780-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-780-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-780-2026-11-17/native.log.gz",
+        "examples/rush/angular-motion-limits.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Classify all three planar angular motion limits on a shared adaptive partition.",
@@ -19935,7 +19943,7 @@
     {
       "id": "NURBS-0781",
       "name": "Границы равномерного замедления по угловым ограничениям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::planar_angular_motion_slowdown_bounds",
@@ -19943,7 +19951,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-781-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-781-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-781-2026-11-17/native.log.gz",
+        "examples/rush/angular-slowdown-bounds.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Enclose the minimum uniform time dilation meeting planar angular derivative limits.",
@@ -19954,7 +19964,7 @@
     {
       "id": "NURBS-0782",
       "name": "Границы длительности равномерного прохода по угловым ограничениям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::planar_angular_motion_duration_bounds",
@@ -19962,7 +19972,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-782-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-782-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-782-2026-11-17/native.log.gz",
+        "examples/rush/angular-duration-bounds.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Convert angular slowdown bounds to certified duration bounds with outward rounding.",
@@ -19973,7 +19985,7 @@
     {
       "id": "NURBS-0783",
       "name": "Проверка времени прохода с угловыми ограничениями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_planar_angular_motion_deadline",
@@ -19981,7 +19993,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-783-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-783-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-783-2026-11-17/native.log.gz",
+        "examples/rush/angular-motion-deadline.r",
+        "tests/rushAngularLimits.test.ts"
       ],
       "remainingQualification": [
         "Classify uniform traversal deadlines using exact clock comparisons and independent angular derivative results.",
