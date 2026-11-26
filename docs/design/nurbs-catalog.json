@@ -8494,7 +8494,7 @@
     {
       "id": "NURBS-0304",
       "name": "Сертифицированная непрерывная проверка допуска зазора вдоль UV-шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::certify_pcurve_seam_gap",
@@ -8505,7 +8505,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs",
         "crates/nurbs-core/tests/exact_pcurve_gap_contracts.rs",
         "docs/qualification/nurbs-curvature-field-304-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-304-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-304-2026-11-16/native.log.gz",
+        "examples/rush/check-seam-gap.r",
+        "tests/rushSeamTolerances.test.ts"
       ],
       "remainingQualification": [
         "Enforce the Euclidean gap tolerance over the entire shared absolute seam correspondence using exact squared-distance polynomial signs.",
@@ -8516,7 +8518,7 @@
     {
       "id": "NURBS-0305",
       "name": "Непрерывная сертификация углового допуска касательных плоскостей вдоль UV-шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::certify_pcurve_seam_angle",
@@ -8527,7 +8529,9 @@
         "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
         "crates/nurbs-core/tests/exact_pcurve_angle_contracts.rs",
         "docs/qualification/nurbs-curvature-field-305-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-305-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-305-2026-11-16/native.log.gz",
+        "examples/rush/check-seam-angle.r",
+        "tests/rushSeamTolerances.test.ts"
       ],
       "remainingQualification": [
         "Certify an acute tangent-plane angle bound over a complete paired seam with exact squared cosine tests and explicit normal singularity handling.",
@@ -8538,7 +8542,7 @@
     {
       "id": "NURBS-0306",
       "name": "Сертифицированная локализация участков шва с превышением допуска зазора",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_seam_gap",
@@ -8549,7 +8553,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
         "crates/nurbs-core/tests/exact_pcurve_gap_bands_contracts.rs",
         "docs/qualification/nurbs-curvature-field-306-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-306-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-306-2026-11-16/native.log.gz",
+        "examples/rush/isolate-seam-gap.r",
+        "tests/rushSeamTolerances.test.ts"
       ],
       "remainingQualification": [
         "Isolate every strict gap violation band on the common parameter partition, with certified root brackets and exact endpoint membership.",
@@ -8560,7 +8566,7 @@
     {
       "id": "NURBS-0307",
       "name": "Сертифицированная локализация участков UV-шва с превышением углового допуска",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_seam_angle",
@@ -8571,7 +8577,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_gap_bands.rs",
         "crates/nurbs-core/tests/exact_pcurve_angle_bands_contracts.rs",
         "docs/qualification/nurbs-curvature-field-307-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-307-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-307-2026-11-16/native.log.gz",
+        "examples/rush/isolate-seam-angle.r",
+        "tests/rushSeamTolerances.test.ts"
       ],
       "remainingQualification": [
         "Isolate strict angular tolerance violations with exact rational sign and root proofs on the complete shared parameter partition.",

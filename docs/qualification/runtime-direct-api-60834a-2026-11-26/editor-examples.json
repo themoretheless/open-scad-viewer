@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "60834a0b85a3b328fd5ae26c8743cf327d152421179b0d02cecbd4e6bfd01d77",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/check-seam-gap.r",
+      "exampleSha256": "d91d5d64b31e69ca20b0aaa7aedafd3db62f1643e6075379070031e06eef075d",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 60 ms"
+    },
+    {
+      "example": "examples/rush/check-seam-angle.r",
+      "exampleSha256": "3b07c9a442bec4e9b0ace10270f9472d1beba592c1ce15ab35f9e3a353f99f06",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/isolate-seam-gap.r",
+      "exampleSha256": "9c6ec291f14e029e6547058dfba666bde000bf7e76f2cf279668536e144ee2af",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/isolate-seam-angle.r",
+      "exampleSha256": "6e307894378b81410abadf23fc84ad1bcc25722d986de59cb0b8be8fed454f6a",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 13 ms"
+    }
+  ]
+}
