@@ -12,6 +12,8 @@ mod rim_caps;
 mod inferred_rims;
 #[path="brep_polyhedral_mass.rs"]
 mod polyhedral_mass;
+#[path="brep_section_queries.rs"]
+mod section_queries;
 const OPS: &[&str] = &[
     "attach_expanded_rims","discover_expanded_rims","close_expanded_planes","build_expanded_plane_solid","build_outward_plane_solid","build_outward_inferred_solid",
     "inspect_inferred_solid","expanded_section_sheets","build_expanded_solid",
@@ -23,6 +25,7 @@ const OPS: &[&str] = &[
     "measure_polyhedral_volume","measure_polyhedral_centroid","measure_polyhedral_inertia","measure_polyhedral_face_areas","bound_polyhedral_area","bound_polyhedral_edge_length",
     "project_polyhedral_body","measure_polyhedral_frame","measure_polyhedral_axis_gap","classify_polyhedral_plane","intersect_polyhedral_edges",
     "section_polyhedral_faces","assemble_polyhedral_section_loops","measure_polyhedral_section_area","measure_polyhedral_section_centroid","bound_polyhedral_section_perimeter",
+    "locate_section_point","measure_section_contour_distance","measure_section_material_distance","clip_section_segment","clip_section_polyline","measure_section_path_length",
     "close_section_planes",
     "build_bounded_section_solid",
     "close_bounded_planes",
@@ -139,6 +142,7 @@ fn handle(v: Value) -> Result<Value> {
         op @ ("measure_polyhedral_volume"|"measure_polyhedral_centroid"|"measure_polyhedral_inertia"|"measure_polyhedral_face_areas"|"bound_polyhedral_area"|"bound_polyhedral_edge_length")=>polyhedral_mass::measure(&v,op),
         op @ ("project_polyhedral_body"|"measure_polyhedral_frame"|"measure_polyhedral_axis_gap"|"classify_polyhedral_plane"|"intersect_polyhedral_edges")=>polyhedral_mass::measure(&v,op),
         op @ ("section_polyhedral_faces"|"assemble_polyhedral_section_loops"|"measure_polyhedral_section_area"|"measure_polyhedral_section_centroid"|"bound_polyhedral_section_perimeter")=>polyhedral_mass::measure_section(&v,op),
+        op @ ("locate_section_point"|"measure_section_contour_distance"|"measure_section_material_distance"|"clip_section_segment"|"clip_section_polyline"|"measure_section_path_length")=>section_queries::measure(&v,op),
         "build_section_solid" => rim_caps::solid(&v,"exact"),
         op @ ("infer_rim_planes" | "close_inferred_rims" | "close_bounded_inferred_rims") => inferred_rims::infer(&v,op),
         "build_inferred_solid" => rim_caps::solid(&v,"inferred"),

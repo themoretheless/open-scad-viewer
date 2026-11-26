@@ -92,6 +92,9 @@ const loftConstruction = {
   max_map_evaluations: z.number().int().min(1).max(1000000).optional(),
 }
 const insert = z.array(z.object({ value: scalar, count: z.number().int().min(1).max(25) }).strict()).max(32)
+const sectionCoordinate = z.union([z.number(),z.string().min(1).max(5000)])
+const sectionQueryPoint = z.tuple([sectionCoordinate,sectionCoordinate,sectionCoordinate])
+
 export const rushGraphNurbsSchema = z
   .object({
     language: z.literal('rush/nurbs-1'),
@@ -1843,6 +1846,12 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('measure_polyhedral_section_area'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('measure_polyhedral_section_centroid'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('bound_polyhedral_section_perimeter'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,max_width_mm:z.number().positive(),tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('locate_section_point'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,query_point_mm:sectionQueryPoint,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('measure_section_contour_distance'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,query_point_mm:sectionQueryPoint,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('measure_section_material_distance'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,query_point_mm:sectionQueryPoint,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('clip_section_segment'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,query_path_mm:z.tuple([sectionQueryPoint,sectionQueryPoint]),tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('clip_section_polyline'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,query_path_mm:z.array(sectionQueryPoint).min(2).max(4096),tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('measure_section_path_length'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,query_path_mm:z.array(sectionQueryPoint).min(2).max(4096),max_width_mm:z.number().positive(),tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('classify_polyhedral_plane'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('intersect_polyhedral_edges'),input:id,plane_normal:z.tuple([scalar,scalar,scalar]),plane_offset_mm:scalar,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('measure_polyhedral_volume'),input:id,tolerance_uv:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),

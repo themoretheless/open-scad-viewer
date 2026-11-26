@@ -87,7 +87,7 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
     })
 }
 
-fn qualify(
+pub(super) fn qualify(
     source: brep_core::Model,
     policy: closed_solid::AdmissionPolicy,
 ) -> Result<closed_solid::QualifiedClosedSolid> {
