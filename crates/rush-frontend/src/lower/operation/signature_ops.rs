@@ -26,7 +26,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
     "circle_transition_surface",
     "helicoid_surface",
     "catenoid_patches",
-    "curve_from_curvature_samples", "fit_cst_sides", "naca_five_digit_profile", "cst_spline_profile", "node_spatial_path","triangulate_planar_path","measure_path_second_moments","bound_path_principal_moments","measure_region_mass","clip_path_to_perforated_region","measure_region_second_moments","measure_planar_path_area","measure_planar_path_centroid","locate_planar_path_points","clip_path_to_planar_region","project_to_planar_region","simplify_exact_path","project_point_to_path","intersect_spatial_paths","find_path_self_intersections","measure_spatial_path_distance","simplify_path_with_tolerance","cst_section_integrals", "fit_sphere_cloud", "fit_cylinder_cloud", "fit_cone_cloud", "fit_torus_cloud", "fit_plane_cloud", "superellipsoid_patches", "corrugated_bellows", "curve_nearest_point", "surface_nearest_point", "merge_curve_exact", "merge_surface_exact", "curve_pair_distance", "curve_surface_distance", "surface_pair_distance", "curve_length_bounds", "curve_station_at_length", "curve_divide_by_length", "surface_area_bounds", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface",
+    "curve_from_curvature_samples", "fit_cst_sides", "naca_five_digit_profile", "cst_spline_profile", "node_spatial_path","triangulate_planar_path","measure_path_second_moments","bound_path_principal_moments","measure_region_mass","intersect_transverse_profiles","measure_profile_overlap_area","measure_profile_overlap_centroid","classify_profile_overlap","decompose_profile_overlap","clip_path_to_perforated_region","measure_region_second_moments","measure_planar_path_area","measure_planar_path_centroid","locate_planar_path_points","clip_path_to_planar_region","project_to_planar_region","simplify_exact_path","project_point_to_path","intersect_spatial_paths","find_path_self_intersections","measure_spatial_path_distance","simplify_path_with_tolerance","cst_section_integrals", "fit_sphere_cloud", "fit_cylinder_cloud", "fit_cone_cloud", "fit_torus_cloud", "fit_plane_cloud", "superellipsoid_patches", "corrugated_bellows", "curve_nearest_point", "surface_nearest_point", "merge_curve_exact", "merge_surface_exact", "curve_pair_distance", "curve_surface_distance", "surface_pair_distance", "curve_length_bounds", "curve_station_at_length", "curve_divide_by_length", "surface_area_bounds", "optical_dome", "optical_lens", "cubic_wave_surface", "catenoid_surface",
     "catenary_curve",
     "archimedean_spiral_curve",
     "epicycloid_curve",
@@ -177,7 +177,7 @@ impl Compiler {
             }).collect::<R<Vec<_>>>()?;
             return Ok(J::Array(laws));
         }
-        if matches!(key, "query_point_mm" | "query_path_mm" | "holes_mm" | "deviation_mm" | "other_path_mm" | "query_radius_mm") {
+        if matches!(key, "query_point_mm" | "query_path_mm" | "other_holes_mm" | "holes_mm" | "deviation_mm" | "other_path_mm" | "query_radius_mm") {
             fn coordinate_values(v: V) -> R<J> {
                 match v {
                     V::Array(values) => values.into_iter().map(coordinate_values).collect::<R<Vec<_>>>().map(J::Array),

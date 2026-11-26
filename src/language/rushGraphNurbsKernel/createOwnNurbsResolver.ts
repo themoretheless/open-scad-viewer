@@ -496,6 +496,11 @@ export function createOwnNurbsResolver(
           case 'measure_path_second_moments':
           case 'bound_path_principal_moments':
           case 'measure_region_mass':
+          case 'intersect_transverse_profiles':
+          case 'measure_profile_overlap_area':
+          case 'measure_profile_overlap_centroid':
+          case 'classify_profile_overlap':
+          case 'decompose_profile_overlap':
           case 'clip_path_to_perforated_region':
           case 'measure_region_second_moments':
           case 'measure_planar_path_area':

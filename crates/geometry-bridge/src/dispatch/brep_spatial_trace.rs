@@ -21,6 +21,17 @@ fn point_list(v: &Value) -> Result<Vec<[Q; 3]>> {
         .collect()
 }
 
+fn hole_paths(v: &Value) -> Result<Vec<Vec<[Q; 3]>>> {
+    v.as_array()
+        .filter(|h| h.len() <= 64)
+        .ok_or_else(|| {
+            nurbs_core::Error::new("BREP_INVALID_INPUT", "Expected up to 64 hole contours")
+        })?
+        .iter()
+        .map(point_list)
+        .collect::<Result<Vec<_>>>()
+}
+
 fn coordinates(points: Vec<[Q; 3]>) -> Vec<[String; 3]> {
     points
         .into_iter()
@@ -32,6 +43,75 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
     let points = path(v, "query_path_mm")?;
     let work = field(v, "max_work")?;
     let report = match op {
+        "intersect_transverse_profiles"
+        | "measure_profile_overlap_area"
+        | "measure_profile_overlap_centroid"
+        | "classify_profile_overlap"
+        | "decompose_profile_overlap" => {
+            let second = path(v, "other_path_mm")?;
+            let h1 = hole_paths(&v["holes_mm"])?;
+            let h2 = hole_paths(&v["other_holes_mm"])?;
+            let first_holes = h1.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            let second_holes = h2.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            match op {
+                "intersect_transverse_profiles" => {
+                    let r = a::intersect_transverse_exact_planar_polyline_regions(
+                        &points,
+                        &first_holes,
+                        &second,
+                        &second_holes,
+                        work,
+                    )?;
+                    let segments = r
+                        .segments_mm
+                        .into_iter()
+                        .map(|s| s.map(|p| p.map(|q| q.to_string())))
+                        .collect::<Vec<_>>();
+                    json!({"segmentsMm":segments,"workUsed":r.exact_work})
+                }
+                "measure_profile_overlap_area" => {
+                    let r = a::exact_coplanar_planar_polyline_region_overlap_area(
+                        &points,
+                        &first_holes,
+                        &second,
+                        &second_holes,
+                        work,
+                    )?;
+                    json!({"areaVectorMm2":r.area_vector_mm2.map(|q|q.to_string()),"areaSquaredMm4":r.area_squared_mm4.to_string(),"workUsed":r.exact_work})
+                }
+                "measure_profile_overlap_centroid" => {
+                    let r = a::exact_coplanar_planar_polyline_region_overlap_mass(
+                        &points,
+                        &first_holes,
+                        &second,
+                        &second_holes,
+                        work,
+                    )?;
+                    json!({"centroidMm":r.centroid_mm.map(|p|p.map(|q|q.to_string())),"areaSquaredMm4":r.area_squared_mm4.to_string(),"workUsed":r.exact_work})
+                }
+                "classify_profile_overlap" => {
+                    let r = a::classify_exact_coplanar_planar_polyline_regions(
+                        &points,
+                        &first_holes,
+                        &second,
+                        &second_holes,
+                        work,
+                    )?;
+                    json!({"relation":format!("{:?}",r.relation),"areaSquaredMm4":r.overlap_area_squared_mm4.to_string(),"workUsed":r.exact_work})
+                }
+                _ => {
+                    let r = a::decompose_exact_coplanar_planar_polyline_region_overlap(
+                        &points,
+                        &first_holes,
+                        &second,
+                        &second_holes,
+                        work,
+                    )?;
+                    let cells = r.cells_mm.into_iter().map(coordinates).collect::<Vec<_>>();
+                    json!({"cellsMm":cells,"workUsed":r.exact_work})
+                }
+            }
+        }
         "node_spatial_path" => {
             let r = a::node_exact_spatial_polyline(&points, work)?;
             let edges=r.edges.into_iter().map(|e|json!({"sourceSpan":e.source_span,"parameters":e.parameters.map(|q|q.to_string()),"nodes":e.nodes})).collect::<Vec<_>>();
@@ -56,15 +136,7 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
         "measure_region_mass"
         | "clip_path_to_perforated_region"
         | "measure_region_second_moments" => {
-            let holes = v["holes_mm"]
-                .as_array()
-                .filter(|h| h.len() <= 64)
-                .ok_or_else(|| {
-                    nurbs_core::Error::new("BREP_INVALID_INPUT", "Expected up to 64 hole contours")
-                })?
-                .iter()
-                .map(point_list)
-                .collect::<Result<Vec<_>>>()?;
+            let holes = hole_paths(&v["holes_mm"])?;
             let rings = holes.iter().map(Vec::as_slice).collect::<Vec<_>>();
             match op {
                 "measure_region_mass" => {
