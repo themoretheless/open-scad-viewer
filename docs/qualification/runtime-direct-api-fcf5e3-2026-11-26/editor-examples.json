@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "fcf5e3547b7920c3fcfc076d3c960deda2b3890843202b1f97cb0c7472060c9e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/spatial-contour-sets-distance.r",
+      "exampleSha256": "257f41b8d35a689304d70d90e99a8a4be6e039930371655a07dcd775c74f7c5d",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n8\nГотово · 49 ms"
+    },
+    {
+      "example": "examples/rush/closest-spatial-contours.r",
+      "exampleSha256": "66afc9f4b5cc95d2ba86c568589a41654ee5125236e1a828b1efb1f61d490325",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n8\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/inspect-spatial-clearances.r",
+      "exampleSha256": "c28d497ad681610ad2d53bb8671870f39c67345bfea0c87d497675d4501ab2be",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n8\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/exact-diagonal-clearance.r",
+      "exampleSha256": "02f28913f1347442e4dcbb285f11176e8c404f62fa1e846faf20929b0cb786c8",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/strict-contour-witness.r",
+      "exampleSha256": "c153c0f061afc9dcf1269a17da86a681b938af0f640950dcce0377b889a7f888",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/oblique-contour-support.r",
+      "exampleSha256": "c8f4bade805e54a0a8dfbe22ab24a655036d563174ef70d68a0af86c5c1d5970",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n22,01\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/automatic-contour-support.r",
+      "exampleSha256": "a6952248161c9762ee2f15ed3c98757cc0a292bec71d1ad0f5a04001913bf54a",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n22,01\nГотово · 5 ms"
+    }
+  ]
+}

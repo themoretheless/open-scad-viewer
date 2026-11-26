@@ -22421,7 +22421,7 @@
     {
       "id": "NURBS-0900",
       "name": "Минимальное пространственное расстояние между наборами замкнутых NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_spatial_contour_sets_distance",
@@ -22429,7 +22429,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-900-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-900-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-900-2026-11-18/native.log.gz",
+        "examples/rush/spatial-contour-sets-distance.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
@@ -22438,7 +22440,7 @@
     {
       "id": "NURBS-0901",
       "name": "Поиск ближайшей пары в наборе замкнутых пространственных NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::closest_spatial_contour_pair",
@@ -22446,7 +22448,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-901-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-901-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-901-2026-11-18/native.log.gz",
+        "examples/rush/closest-spatial-contours.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
@@ -22455,7 +22459,7 @@
     {
       "id": "NURBS-0902",
       "name": "Попарная проверка пространственных контуров по минимальному монтажному зазору",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
@@ -22463,7 +22467,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-902-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-902-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-902-2026-11-18/native.log.gz",
+        "examples/rush/inspect-spatial-clearances.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
@@ -22472,7 +22478,7 @@
     {
       "id": "NURBS-0903",
       "name": "Точное подтверждение граничного зазора по пространственным оболочкам контрольных точек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
@@ -22480,7 +22486,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-903-2026-11-18/native.log.gz",
+        "examples/rush/exact-diagonal-clearance.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
@@ -22489,7 +22497,7 @@
     {
       "id": "NURBS-0904",
       "name": "Точное доказательство нарушения зазора по паре точек пространственных контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
@@ -22497,7 +22505,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-904-2026-11-18/native.log.gz",
+        "examples/rush/strict-contour-witness.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
@@ -22506,7 +22516,7 @@
     {
       "id": "NURBS-0905",
       "name": "Доказательство зазора пространственных контуров по наклонным опорным плоскостям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::prove_spatial_contour_clearance_along",
@@ -22514,7 +22524,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/native.log.gz",
+        "examples/rush/oblique-contour-support.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
@@ -22523,7 +22535,7 @@
     {
       "id": "NURBS-0906",
       "name": "Автоматический подбор разделяющей нормали для проверки зазоров NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
@@ -22531,7 +22543,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/native.log.gz",
+        "examples/rush/automatic-contour-support.r",
+        "tests/rushSpatialDistances.test.ts"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
