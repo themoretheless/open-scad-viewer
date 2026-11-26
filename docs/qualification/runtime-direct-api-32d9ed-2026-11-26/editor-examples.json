@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "32d9ed8786ddd10832e7cdaacb81eb9d4d05d957b5695180c47b74b0c1703399",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/measure-polyhedral-volume.r",
+      "exampleSha256": "e9f62a174eadb51977a174f5b5b301589808692b3291dbb6460e6a322935bbc4",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 67 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-centroid.r",
+      "exampleSha256": "b12f7e12451c259656c259dc1b2d900bb1b4fe09e1804e3848c3fb0a97c21963",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 20 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-inertia.r",
+      "exampleSha256": "12ba5dc508849f8cce0713ebd3e1add3c635fbd146cf8cf6c2dcd99e3f0ff808",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 22 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-face-areas.r",
+      "exampleSha256": "75d4dcb6915e570f1ed94529f210a8e91d5b1a374505b97f5125e970bc3a515a",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/bound-polyhedral-area.r",
+      "exampleSha256": "63d111bd92f74740a9c540938be2cb4ce6a50999ccb624634bb491bb5c5fd432",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/bound-polyhedral-edge-length.r",
+      "exampleSha256": "e3f581108f7824d40a137ca9282337941971ae9c24596fb2d031d8c580c08872",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 14 ms"
+    }
+  ]
+}

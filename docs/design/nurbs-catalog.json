@@ -10990,7 +10990,7 @@
     {
       "id": "NURBS-0401",
       "name": "Точный рациональный объём B-rep-тела с плоскими гранями и линейными кромками",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_volume",
@@ -11003,7 +11003,9 @@
         "crates/brep-core/src/body_analysis/analysis/mod.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "docs/qualification/nurbs-curvature-field-401-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-401-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-401-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-volume.r",
+        "tests/rushPolyhedralMass.test.ts"
       ],
       "remainingQualification": [
         "Integrate the oriented boundary of a qualified polyhedral solid and return its exact rational material volume.",
@@ -11014,7 +11016,7 @@
     {
       "id": "NURBS-0402",
       "name": "Точный рациональный центр объёма плоскогранного B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_centroid",
@@ -11027,7 +11029,9 @@
         "crates/brep-core/src/body_analysis/analysis/mod.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "docs/qualification/nurbs-curvature-field-402-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-402-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-402-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-centroid.r",
+        "tests/rushPolyhedralMass.test.ts"
       ],
       "remainingQualification": [
         "Integrate exact first moments of a qualified polyhedral solid with holes and return its rational centroid.",
@@ -11038,7 +11042,7 @@
     {
       "id": "NURBS-0403",
       "name": "Точный рациональный тензор инерции плоскогранного тела относительно центра объёма",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_inertia",
@@ -11051,7 +11055,9 @@
         "crates/brep-core/src/body_analysis/analysis/mod.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "docs/qualification/nurbs-curvature-field-403-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-403-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-403-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-inertia.r",
+        "tests/rushPolyhedralMass.test.ts"
       ],
       "remainingQualification": [
         "Integrate the exact centroidal inertia tensor of a qualified polyhedral solid with voids.",
@@ -11062,7 +11068,7 @@
     {
       "id": "NURBS-0404",
       "name": "Точная площадь плоскогранного B-rep-тела с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_area",
@@ -11075,7 +11081,9 @@
         "crates/brep-core/src/body_analysis/analysis/mod.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "docs/qualification/nurbs-curvature-field-404-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-404-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-404-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-face-areas.r",
+        "tests/rushPolyhedralMass.test.ts"
       ],
       "remainingQualification": [
         "Measure retained planar face areas exactly as rational square roots, including trimmed holes and oblique faces.",
@@ -11086,7 +11094,7 @@
     {
       "id": "NURBS-0405",
       "name": "Гарантированный интервал суммарной площади плоскогранного тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_area",
@@ -11099,7 +11107,9 @@
         "crates/brep-core/src/body_analysis/analysis/mod.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "docs/qualification/nurbs-curvature-field-405-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-405-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-405-2026-11-17/native.log.gz",
+        "examples/rush/bound-polyhedral-area.r",
+        "tests/rushPolyhedralMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose total retained surface area within a caller-specified width using exact integer square roots.",
@@ -11110,7 +11120,7 @@
     {
       "id": "NURBS-0406",
       "name": "Гарантированная суммарная длина уникальных линейных кромок B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_edge_length",
@@ -11123,7 +11133,9 @@
         "crates/brep-core/src/body_analysis/analysis/mod.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "docs/qualification/nurbs-curvature-field-406-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-406-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-406-2026-11-17/native.log.gz",
+        "examples/rush/bound-polyhedral-edge-length.r",
+        "tests/rushPolyhedralMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose the sum of full linear edge lengths, counting each topological edge once.",
