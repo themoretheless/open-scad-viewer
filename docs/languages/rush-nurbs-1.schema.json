@@ -116340,6 +116340,165 @@
               "minimum_web_mm"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "edit_profile_sector"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "read_sector": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "pieces_per_sector",
+              "read_sector"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "edit_closed_sector"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "read_sector": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "pieces_per_sector",
+              "read_sector"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "edit_tangent_sector"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "read_sector": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "sector_index",
+              "piece",
+              "pieces_per_sector",
+              "read_sector"
+            ],
+            "additionalProperties": false
           }
         ]
       }

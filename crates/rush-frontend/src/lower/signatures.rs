@@ -101,6 +101,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "closest_spatial_contours" => &["inputs", "tolerance_mm", "max_cells"],
         "inspect_spatial_clearances" => &["inputs", "minimum_mm", "tolerance_mm", "max_cells"],
         "prove_spatial_clearance_along" => &["inputs", "normal", "minimum_mm"],
+        "edit_profile_sector" | "edit_closed_sector" | "edit_tangent_sector" => &["inputs","pieces_per_sector","sector_index","read_sector","piece"],
         "repeat_profile_segment" => &["copies", "sector_index"],
         "compress_rotated_segments" => &["inputs", "sector_index", "tolerance_mm"],
         "compress_profile_sectors" => &["inputs", "sector_index", "piece", "pieces_per_sector", "tolerance_mm"],

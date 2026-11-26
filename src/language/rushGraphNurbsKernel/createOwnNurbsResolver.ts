@@ -2955,6 +2955,9 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'edit_profile_sector':
+          case 'edit_closed_sector':
+          case 'edit_tangent_sector':
           case 'repeat_profile_segment':
           case 'compress_rotated_segments':
           case 'compress_profile_sectors':
