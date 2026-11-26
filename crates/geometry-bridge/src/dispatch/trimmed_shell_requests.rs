@@ -3,7 +3,7 @@ use brep_core::trimmed_shell::{self, Limits, Patch};
 
 pub(super) fn assemble(v: &Value) -> Result<Value> {
     let model: brep_core::Model = field(v, "model")?;
-    model.validate_boundary_diagnostic_inputs()?;
+    model.validate()?;
     if model.shells.len() != 1 || model.shells[0].faces.len() != model.faces.len() {
         return Err(Error::new(
             "BREP_TRIMMED_SHELL_INPUT",
