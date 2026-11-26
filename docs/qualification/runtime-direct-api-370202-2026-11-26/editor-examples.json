@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "3702022cc603b0bc52759ae75ddd0ec908a60313b90b70861cfeacbaf241222b",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/repeat-profile-segment.r",
+      "exampleSha256": "671d23c669dbd303ca1d7ca669170114caaf42baa38173b599cb8abe1e08947b",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 44 ms"
+    },
+    {
+      "example": "examples/rush/compress-rotated-segments.r",
+      "exampleSha256": "8e3d3247998fae00e885125bb611b07f9f10e548f45e13ff0030618748ad847c",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/compress-profile-sectors.r",
+      "exampleSha256": "ac2f96c6bc06cf906b5414fbe6f04c5c05c4ca826e6a3e7c8fb1d9cf5d51eef1",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,3\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/discover-profile-sectors.r",
+      "exampleSha256": "8f40271de600075f20b331352f7383ab76817f4b9b7985caa0da03add0cd332a",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,3\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/restore-lossless-sector.r",
+      "exampleSha256": "bca0734ec6a3474ef05cf7ec768bf6786145d53f4a79948bd1ae9a3e1479ddc2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,29\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/restore-bidirectional-sector.r",
+      "exampleSha256": "16cb2a56d8799e03532be029036d6309ac48b7aff6391907cba7e4c55417bbb2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,29\nГотово · 6 ms"
+    }
+  ]
+}

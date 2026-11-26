@@ -22747,7 +22747,7 @@
     {
       "id": "NURBS-0917",
       "name": "Компактный круговой массив сегмента NURBS-профиля с границей ошибки поворота",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::CircularProfilePattern::instance",
@@ -22756,7 +22756,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/native.log.gz",
+        "examples/rush/repeat-profile-segment.r",
+        "tests/rushCircularSectors.test.ts"
       ],
       "remainingQualification": [
         "One seed segment rotated about the origin Z axis. Error bound covers rotation of the stored curve. Seed fitting and B-rep stitching are separate."
@@ -22765,7 +22767,7 @@
     {
       "id": "NURBS-0918",
       "name": "Свёртка развёрнутых круговых NURBS-сегментов с контролем погрешности восстановления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::CircularProfilePattern::compress",
@@ -22774,7 +22776,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-profile-compression-918-2026-11-18/native.log.gz",
+        "examples/rush/compress-rotated-segments.r",
+        "tests/rushCircularSectors.test.ts"
       ],
       "remainingQualification": [
         "Ordered equally spaced copies about Z with a shared rational basis. Conservative pole bound controls actual reconstruction at equal parameters. No automatic face ordering or B-rep rewriting."
@@ -22783,7 +22787,7 @@
     {
       "id": "NURBS-0919",
       "name": "Свёртка повторяющихся многосегментных секторов NURBS-профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::CircularSectorPattern::compress",
@@ -22792,7 +22796,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-sector-compression-919-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-sector-compression-919-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-sector-compression-919-2026-11-18/native.log.gz",
+        "examples/rush/compress-profile-sectors.r",
+        "tests/rushCircularSectors.test.ts"
       ],
       "remainingQualification": [
         "Sector-major input with known piece count and equal spacing about Z. Each corresponding piece has a shared rational basis. Reconstruction bound is pointwise; joins and solid topology are not certified."
@@ -22801,7 +22807,7 @@
     {
       "id": "NURBS-0920",
       "name": "Автоматическое распознавание кратчайшего повторяющегося сектора NURBS-профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::CircularSectorPattern::discover",
@@ -22810,7 +22816,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-sector-discovery-920-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-sector-discovery-920-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-sector-discovery-920-2026-11-18/native.log.gz",
+        "examples/rush/discover-profile-sectors.r",
+        "tests/rushCircularSectors.test.ts"
       ],
       "remainingQualification": [
         "Ordered segments around the Z axis. Tests up to 65536 repeats sharing the corresponding rational basis. No automatic ordering or axis fitting."
@@ -22819,7 +22827,7 @@
     {
       "id": "NURBS-0921",
       "name": "Побитовое восстановление NURBS-профиля шестерни из сектора и упакованных поправок",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::LosslessSectorPattern::encode",
@@ -22828,7 +22836,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/native.log.gz",
+        "examples/rush/restore-lossless-sector.r",
+        "tests/rushCircularSectors.test.ts"
       ],
       "remainingQualification": [
         "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
@@ -22837,7 +22847,7 @@
     {
       "id": "NURBS-0922",
       "name": "Адаптивное двунаправленное сжатие круговых секторов внутреннего венца",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::LosslessSectorPattern::encode_bidirectional",
@@ -22846,7 +22856,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/native.log.gz",
+        "examples/rush/restore-bidirectional-sector.r",
+        "tests/rushCircularSectors.test.ts"
       ],
       "remainingQualification": [
         "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
