@@ -7,6 +7,8 @@ use crate::editing::exact_periodic_surface::build_exact_periodic_surface_trim_pa
 use crate::trim_domain::TrimDomain;
 
 pub(super) const OPS: &[&str] = &[
+    "combine_surface_measures",
+    "combine_surface_densities",
     "tensor_principal_bounds",
     "tensor_axis_bounds",
     "trim_set_axis_bounds",
@@ -23,6 +25,9 @@ fn area(report: TrimmedAreaReport) -> Value {
             "withinTolerance":a.within_tolerance,"cells":a.cells,"stopReason":format!("{:?}",a.stop_reason)}))})
 }
 pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
+    if matches!(op,"combine_surface_measures" | "combine_surface_densities") {
+        return assembly(v,op);
+    }
     let source: Surface = field(v, "surface")?;
     if matches!(op,"tensor_principal_bounds" | "tensor_axis_bounds") {
         use crate::analysis::surface_measure::{bound_principal_moments_from_tensor,bound_directional_inertia};
@@ -112,6 +117,48 @@ pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
     result["workUsed"] = json!(used);
     result["refusal"] = Value::Null;
     Ok(result)
+}
+
+fn assembly(v: &Value, op: &str) -> Result<Value> {
+    use crate::analysis::surface_measure::{SurfaceMassPropertiesBounds, trimmed_surface_central_inertia,
+        combine_surface_mass_properties, combine_surface_mass_properties_with_density};
+    let surfaces: Vec<Surface> = field(v,"surfaces")?;
+    check((1..=32).contains(&surfaces.len()),"Expected 1 to 32 assembly surfaces")?;
+    let densities: Option<Vec<[f64;2]>> = if op == "combine_surface_densities" {
+        let values: Vec<[f64;2]> = field(v,"densities")?;
+        check(values.len()==surfaces.len() && values.iter().all(|[lo,hi]| lo.is_finite() && hi.is_finite() && *lo>0. && lo<=hi),
+            "Expected one positive ordered density interval per surface")?;
+        Some(values)
+    } else { None };
+    let tol = field(v,"tolerance_mm2")?;
+    let uv = field(v,"tolerance_uv")?;
+    let cells = field(v,"max_surface_cells")?;
+    let trim_cells = field(v,"max_trim_cells")?;
+    let mut pieces = Vec::with_capacity(surfaces.len());
+    for (index,surface) in surfaces.iter().enumerate() {
+        surface.validate()?;
+        let u = [surface.knots_u[surface.degree_u],surface.knots_u[surface.control_points.len()]];
+        let v = [surface.knots_v[surface.degree_v],surface.knots_v[surface.control_points[0].len()]];
+        let border = crate::curve::Curve::from_polyline(vec![vec![u[0],v[0]],vec![u[1],v[0]],
+            vec![u[1],v[1]],vec![u[0],v[1]],vec![u[0],v[0]]])?;
+        let trim = TrimDomain::new(&[vec![border]],uv)?;
+        let r = trimmed_surface_central_inertia(surface,&trim,tol,cells,trim_cells)?;
+        let (Some(area),Some(centroid_bounds),Some(central_inertia_bounds)) =
+            (r.centroid.measure.area,r.centroid.centroid_bounds,r.central_inertia_bounds) else {
+                return Err(crate::input(format!("Mass properties unavailable for surface {index}")));
+            };
+        pieces.push(SurfaceMassPropertiesBounds{area_bounds:area.bounds,centroid_bounds,central_inertia_bounds});
+    }
+    if let Some(densities) = densities {
+        let weighted = pieces.into_iter().zip(densities).collect::<Vec<_>>();
+        let r = combine_surface_mass_properties_with_density(&weighted)?;
+        Ok(json!({"pieceCount":weighted.len(),"massBounds":r.mass_bounds,"centroidBoundsMm":r.centroid_bounds,
+            "centralInertiaBounds":r.central_inertia_bounds}))
+    } else {
+        let r = combine_surface_mass_properties(&pieces)?;
+        Ok(json!({"pieceCount":pieces.len(),"areaBoundsMm2":r.area_bounds,"centroidBoundsMm":r.centroid_bounds,
+            "centralInertiaBounds":r.central_inertia_bounds}))
+    }
 }
 
 #[cfg(test)]

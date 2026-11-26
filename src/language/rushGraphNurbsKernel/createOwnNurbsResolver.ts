@@ -782,6 +782,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'combine_surface_measures':
+          case 'combine_surface_densities': {
+            const {id:_id,input,inputs,op,...parameters}=n
+            const surfaces=[input,...inputs].map(id=>needSurface(id))
+            const report=callGeometryRust<object>(op,{surfaces,...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surfaces[0]!}
+            break
+          }
           case 'tensor_principal_bounds':
           case 'tensor_axis_bounds':
           case 'trim_set_axis_bounds':

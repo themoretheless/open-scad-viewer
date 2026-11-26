@@ -355,6 +355,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'curve_divide_by_length') return russian ? 'Деление по длине' : 'Equal arc-length division'
   if (operation === 'surface_area_bounds') return russian ? 'Площадь поверхности' : 'Surface area'
   if (operation === 'trimmed_surface_area_in_window') return russian ? 'Площадь внутри окна UV' : 'Area inside the UV window'
+  if (operation === 'combine_surface_measures') return russian ? 'Площадь и инерция сборки' : 'Assembly area and inertia'
+  if (operation === 'combine_surface_densities') return russian ? 'Масса и инерция сборки' : 'Assembly mass and inertia'
   if (operation === 'tensor_principal_bounds') return russian ? 'Интервалы главных моментов' : 'Principal moment intervals'
   if (operation === 'tensor_axis_bounds') return russian ? 'Момент относительно оси' : 'Moment about an axis'
   if (operation === 'trim_set_axis_bounds') return russian ? 'Осевой момент обрезанных компонент' : 'Trimmed component axis moment'

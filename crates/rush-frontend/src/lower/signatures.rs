@@ -308,6 +308,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "build_exact_periodic_surface_trim_patches" => &["contours", "max_work"],
         "build_exact_periodic_surface_trim_edges" => &["contours", "max_work"],
         "trimmed_surface_area_in_window" => &["contours", "outer_contour", "max_work", "loops", "tolerance_uv", "tolerance_mm2", "max_surface_cells", "max_trim_cells", "window"],
+        "combine_surface_measures" => &["inputs", "tolerance_mm2", "tolerance_uv", "max_surface_cells", "max_trim_cells"],
+        "combine_surface_densities" => &["inputs", "tolerance_mm2", "tolerance_uv", "max_surface_cells", "max_trim_cells", "densities"],
         "tensor_principal_bounds" => &["tensor_bounds", "moment_tolerance"],
         "tensor_axis_bounds" => &["tensor_bounds", "axis_vector"],
         "trim_set_axis_bounds" => &["contours", "tolerance_mm2", "tolerance_uv", "max_work", "max_surface_cells", "max_trim_cells", "axis_vector"],
