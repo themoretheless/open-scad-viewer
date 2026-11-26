@@ -1,6 +1,9 @@
 //! Affine transforms, parametric curves/surfaces, splines, formulas, patches, and primitives.
 use super::*;
 
+#[path = "planar_chart_requests.rs"]
+mod planar_chart_requests;
+
 #[path = "arc_metrology.rs"]
 mod arc_metrology;
 
@@ -71,6 +74,7 @@ mod pcurve_seam_requests;
 mod pcurve_agreement_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if matches!(op,"active_surface_hull" | "project_plane_chart" | "lift_plane_chart" | "shared_plane_chart") {return Some(planar_chart_requests::apply(v,op));}
     if matches!(op,"bounded_surface_partial_field" | "surface_partial_field" | "bounded_surface_area_normal_field" | "surface_area_normal_field" | "bounded_surface_gaussian_field" | "bounded_surface_mean_squared_field" | "bounded_surface_principal_gap_squared_field" | "bounded_surface_metric_field" | "surface_gaussian_field" | "surface_mean_squared_field" | "surface_principal_gap_squared_field" | "surface_metric_field" | "bounded_surface_mixed_partial_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }
     if matches!(op,"bounded_curve_derivative_field" | "curve_derivative_field" | "bounded_curve_torsion_field" | "bounded_curve_speed_squared_field" | "curve_torsion_field" | "curve_speed_squared_field" | "bounded_curve_binormal_field" | "curve_binormal_field" | "bounded_curve_curvature_squared_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
     if matches!(op,"affine_clock_curve" | "piecewise_clock_curve" | "relayout_clock_curve" | "affine_clock_surface" | "piecewise_clock_surface" | "relayout_clock_surface" | "mobius_bezier_curve" | "mobius_spline_curve" | "fit_mobius_curve" | "mobius_bezier_surface" | "mobius_spline_surface" | "fit_mobius_surface") { return Some(mobius_clock_requests::apply(v,op)); }

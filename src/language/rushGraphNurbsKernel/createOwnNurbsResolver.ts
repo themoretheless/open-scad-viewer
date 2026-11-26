@@ -1046,6 +1046,19 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'active_surface_hull':
+          case 'project_plane_chart':
+          case 'lift_plane_chart':
+          case 'shared_plane_chart': {
+            const args = n.op === 'shared_plane_chart' ? {others:n.inputs.map(needSurface),patch_index:n.patch_index}
+              : n.op === 'lift_plane_chart' ? {edited:needSurface(n.target_geometry)} : {}
+            const {surface,...report} = callGeometryRust<{surface:NurbsSurface;workUsed:number}>(n.op,{
+              source:needSurface(n.input),max_work:n.max_work,...args,
+            })
+            constructionReports[key] = {measurement:{operation:n.op,report}}
+            result = {kind:'surface',data:surface}
+            break
+          }
           case 'compress_tensor_surface':
           case 'compress_tensor_surface_batch': {
             const settings = n.op === 'compress_tensor_surface'
