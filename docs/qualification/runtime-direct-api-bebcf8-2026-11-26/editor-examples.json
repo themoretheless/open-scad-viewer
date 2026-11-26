@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "bebcf8ec37382ac844dccbcfb71a3b820d190963a006506006e472a94c7f8a8a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/attach-expanded-rims.r",
+      "exampleSha256": "29041eb1668a2d2266c1ec62a4d83d023737845aa12d038b3e4674ffff208a36",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 39 ms"
+    },
+    {
+      "example": "examples/rush/discover-expanded-rims.r",
+      "exampleSha256": "48b07e43a1fcb7a32a4477754274b94ee79d4070363d08514440b0c221b623f2",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/close-expanded-planes.r",
+      "exampleSha256": "a57f0bbb1961eaed77ac1654f8d3076b78989d6756ed93567440649d1fbd3807",
+      "editorStats": "Объекты\n1\nТреугольники\n8\nОбъём\n0,5\nПлощадь\n4,41\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/build-expanded-plane-solid.r",
+      "exampleSha256": "d0c0b615895b63ba6ed66af542cef5569b2a4ae171866cada276dd4982948f6f",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 31 ms"
+    },
+    {
+      "example": "examples/rush/build-outward-plane-solid.r",
+      "exampleSha256": "c5f5c0da9b0d0c936c1749ab45d27c78530ef581d1b9d210e6ff17e292291495",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 21 ms"
+    },
+    {
+      "example": "examples/rush/build-outward-inferred-solid.r",
+      "exampleSha256": "101a68e8282be38513d94649b2b4a53f798c1079a648b6e7f9a0f4bfead76e2a",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 20 ms"
+    }
+  ]
+}
