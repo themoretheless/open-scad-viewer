@@ -13087,7 +13087,7 @@
     {
       "id": "NURBS-0473",
       "name": "Точные булевы операции над компланарными профилями с выпуклыми ячейками",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::decompose_exact_coplanar_planar_polyline_region_boolean",
@@ -13105,7 +13105,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-473-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-473-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-473-2026-11-17/native.log.gz",
+        "examples/rush/decompose-profile-boolean.r",
+        "tests/rushProfileBoolean.test.ts"
       ],
       "remainingQualification": [
         "Construct convex cells for regularized union, difference, intersection and symmetric difference.",
@@ -13116,7 +13118,7 @@
     {
       "id": "NURBS-0474",
       "name": "Точная граница результата булевых операций над компланарными профилями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::boundary_of_exact_coplanar_planar_polyline_region_boolean",
@@ -13134,7 +13136,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-474-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-474-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-474-2026-11-17/native.log.gz",
+        "examples/rush/extract-profile-boolean-edges.r",
+        "tests/rushProfileBoolean.test.ts"
       ],
       "remainingQualification": [
         "Recover directed exact boundaries of planar Boolean results by canceling cell seams.",
@@ -13145,7 +13149,7 @@
     {
       "id": "NURBS-0475",
       "name": "Точная сборка замкнутых контуров плоских булевых операций",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::loops_of_exact_coplanar_planar_polyline_region_boolean",
@@ -13163,7 +13167,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-475-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-475-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-475-2026-11-17/native.log.gz",
+        "examples/rush/assemble-profile-boolean-loops.r",
+        "tests/rushProfileBoolean.test.ts"
       ],
       "remainingQualification": [
         "Assemble oriented exact Boolean boundary loops, including point-contact junctions.",
@@ -13174,7 +13180,7 @@
     {
       "id": "NURBS-0476",
       "name": "Точная согласованная триангуляция плоских булевых результатов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::triangulate_exact_coplanar_planar_polyline_region_boolean",
@@ -13192,7 +13198,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-476-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-476-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-476-2026-11-17/native.log.gz",
+        "examples/rush/triangulate-profile-boolean.r",
+        "tests/rushProfileBoolean.test.ts"
       ],
       "remainingQualification": [
         "Triangulate exact planar Boolean results without hanging nodes on cell seams.",
@@ -13203,7 +13211,7 @@
     {
       "id": "NURBS-0477",
       "name": "Точное выдавливание плоского булева профиля в замкнутую оболочку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::extrude_exact_coplanar_planar_polyline_region_boolean",
@@ -13221,7 +13229,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-477-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-477-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-477-2026-11-17/native.log.gz",
+        "examples/rush/extrude-profile-boolean-shell.r",
+        "tests/rushProfileBoolean.test.ts"
       ],
       "remainingQualification": [
         "Extrude exact planar Boolean regions as closed outward triangle shells with rational volume.",

@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "44dafc4fc62669af6d8c72e285ccdcadfd4dadb88149beeacc8e6b7e91891a33",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/decompose-profile-boolean.r",
+      "exampleSha256": "7c38d36f022f9ddd3e40304c59c796aea0f988d47749f2f60798b1c262254a75",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 51 ms"
+    },
+    {
+      "example": "examples/rush/extract-profile-boolean-edges.r",
+      "exampleSha256": "6d59a5ed6638c7528b4e038497131eb9675fdec31877615bc9e6cd6c9a36704f",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/assemble-profile-boolean-loops.r",
+      "exampleSha256": "11008cbca8510397b7637527bfc6e607ebdf0afefd5b061a4c7351c295f69b43",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/triangulate-profile-boolean.r",
+      "exampleSha256": "b2a7343c2bf82c281216bc3ede1360fb9982b97d148fa36b83522a05e54748ea",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/extrude-profile-boolean-shell.r",
+      "exampleSha256": "d6d573d0e090c38b9418a945b5d40e4adc5874ba6f4eb1bfce62ba89a2b99b44",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 6 ms"
+    }
+  ]
+}
