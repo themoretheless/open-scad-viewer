@@ -19712,7 +19712,7 @@
     {
       "id": "NURBS-0770",
       "name": "Подтверждение контакта скруглённого вращающегося инструмента с гранью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_contact",
@@ -19720,7 +19720,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-770-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-770-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-770-2026-11-17/native.log.gz",
+        "examples/rush/rotating-face-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Certify rounded contact using a bounded inward vertex displacement checked against every obstacle plane.",
@@ -19731,7 +19733,7 @@
     {
       "id": "NURBS-0771",
       "name": "Подтверждение диагонального контакта скруглённого инструмента с углом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_corner_contact",
@@ -19739,7 +19741,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-771-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-771-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-771-2026-11-17/native.log.gz",
+        "examples/rush/rotating-corner-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Certify rounded hull contact along a two-plane inward direction while checking every obstacle half-space.",
@@ -19750,7 +19754,7 @@
     {
       "id": "NURBS-0772",
       "name": "Подтверждение несимметричного контакта скруглённого инструмента с углом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact",
@@ -19758,7 +19762,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-772-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-772-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-772-2026-11-17/native.log.gz",
+        "examples/rush/rotating-asymmetric-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Certify asymmetric rounded contact using violation-weighted inward directions and every obstacle half-space.",
@@ -19769,7 +19775,7 @@
     {
       "id": "NURBS-0773",
       "name": "Подтверждение контакта скруглённого инструмента с косым углом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_skew_contact",
@@ -19777,7 +19783,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-773-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-773-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-773-2026-11-17/native.log.gz",
+        "examples/rush/rotating-skew-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Certify rounded contact with coupled oblique half-spaces using a two-plane solve and whole-cell verification.",
@@ -19788,7 +19796,7 @@
     {
       "id": "NURBS-0774",
       "name": "Подтверждение контакта между вершинами вращающегося выпуклого инструмента",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_chord_contact",
@@ -19796,7 +19804,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-774-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-774-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-774-2026-11-17/native.log.gz",
+        "examples/rush/rotating-chord-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Certify convex hull contact through interval-enclosed chord midpoints on the rotating tool.",
@@ -19807,7 +19817,7 @@
     {
       "id": "NURBS-0775",
       "name": "Подтверждение контакта произвольной точки хорды вращающегося инструмента",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact",
@@ -19815,7 +19825,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-775-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-775-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-775-2026-11-17/native.log.gz",
+        "examples/rush/rotating-clipped-chord-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Clip hull chords to candidate contact parameters and certify each witness with interval arithmetic.",
@@ -19826,7 +19838,7 @@
     {
       "id": "NURBS-0776",
       "name": "Точное подтверждение касания вращающегося инструмента по хорде",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact",
@@ -19834,7 +19846,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-776-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-776-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-776-2026-11-17/native.log.gz",
+        "examples/rush/rotating-exact-chord-obstacles.r",
+        "tests/rushRotatingContacts.test.ts"
       ],
       "remainingQualification": [
         "Use exact rational chord clipping to preserve nonbinary singleton contact parameters.",

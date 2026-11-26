@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "2e6089acba85d32fb2fb7b28c6380cde70f37b9f69b399eeb38c9f6db7388335",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/rotating-face-obstacles.r",
+      "exampleSha256": "d7a9ddfb2a544568ce3a62aa3d5452d83c3ff4c652540af4c5c95711b5bb8920",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0\nГотово · 445 ms"
+    },
+    {
+      "example": "examples/rush/rotating-corner-obstacles.r",
+      "exampleSha256": "a57af6181dda233781420a28d58721c7d7fbcce6c7d0824a3f23f42e2e658526",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/rotating-asymmetric-obstacles.r",
+      "exampleSha256": "e3fecad5a3c0d5faa1216b578b62fd6cd90b4e5dae41dbebabb1355a9136ed7e",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/rotating-skew-obstacles.r",
+      "exampleSha256": "ecb75fb57296ee197e7010dfb9a73a0009afb9ae58bb9f702782f138c32523e9",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/rotating-chord-obstacles.r",
+      "exampleSha256": "0c62fa954dd913d800b2cd184cc4ebf9df6d614eeea75535adf02f8684e47032",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0,1\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/rotating-clipped-chord-obstacles.r",
+      "exampleSha256": "7db2ac432804eeebd39bce127d4fdf971746c2bf70cf47c21807dbe630b4054e",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0,1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/rotating-exact-chord-obstacles.r",
+      "exampleSha256": "1d99bc16e1bcb185995bac0c9d44a0fe81d810bc1e10468dcfb29de44eec1396",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n0,1\nГотово · 6 ms"
+    }
+  ]
+}
