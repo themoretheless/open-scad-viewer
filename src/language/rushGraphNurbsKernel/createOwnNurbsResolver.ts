@@ -1474,10 +1474,13 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve??left}
             break
           }
+          case 'join_projective_chain':
+          case 'compact_projective_chain':
+          case 'close_projective_chain':
           case 'merge_weighted_curves':
           case 'merge_weighted_chain': {
             const ids = n.op === 'merge_weighted_curves' ? [n.input,n.target_geometry] : [n.input,...n.inputs]
-            const {curve,...report} = callGeometryRust<{curve:NurbsCurve;weights:number[];domain:number[];workUsed:number}>(n.op,{curves:ids.map(id=>needCurve(id)),max_work:n.max_work})
+            const {curve,...report} = callGeometryRust<{curve:NurbsCurve;domain:number[];workUsed:number}>(n.op,{curves:ids.map(id=>needCurve(id)),max_work:n.max_work})
             constructionReports[key] = {measurement:{operation:n.op,report}}
             result = {kind:'curve',data:curve}
             break

@@ -44,6 +44,28 @@ pub(super) fn merge(v: &Value, op: &str) -> Result<Value> {
             }
         };
     }
+    if matches!(op, "join_projective_chain" | "compact_projective_chain" | "close_projective_chain") {
+        let curves: Vec<crate::curve::Curve> = field(v, "curves")?;
+        if curves.is_empty() || curves.len() > 32 { return Err(input("Expected 1 to 32 curves")); }
+        let sources = curves.iter().collect::<Vec<_>>();
+        let budget = field(v,"max_work")?;
+        let (chain, seams, closure) = match op {
+            "compact_projective_chain" => {
+                let r = exact_curve_merge::merge_and_compact_exact_projective_c2_chain(&sources,budget)?;
+                let seams = r.seams.into_iter().map(|s| json!({"parameter":s.parameter,"removed":s.removed,
+                    "remaining":s.remaining_multiplicity,"refusal":s.refusal.map(|reason|format!("{reason:?}"))})).collect::<Vec<_>>();
+                (r.chain, Some(seams), None)
+            }
+            "close_projective_chain" => {
+                let r = exact_curve_merge::merge_closed_exact_projective_c2_chain(&sources,budget)?;
+                (r.chain, None, r.closure.and_then(|c| c.continuity_order))
+            }
+            _ => (exact_curve_merge::merge_chain_with_exact_projective_c2_clock(&sources,budget)?, None, None),
+        };
+        let curve = chain.curve.ok_or_else(|| input(format!("C2 chain refused after {} joins: {:?}",chain.joins_verified,chain.refusal)))?;
+        return Ok(json!({"curve":curve,"domain":curve.domain(),"knots":curve.knots,"joinsVerified":chain.joins_verified,
+            "seams":seams,"closureOrder":closure,"workUsed":chain.work_used}));
+    }
     if matches!(op, "merge_weighted_curves" | "merge_weighted_chain") {
         let curves: Vec<crate::curve::Curve> = field(v, "curves")?;
         let budget = field(v, "max_work")?;
