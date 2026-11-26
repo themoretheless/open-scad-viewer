@@ -1082,6 +1082,17 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'cap_section_wire':
+          case 'cap_section_holes':
+          case 'arrange_section_caps': {
+            const {id:_id,op,input,inputs,...settings}=n
+            const rings=[[input,...inputs],...('loops' in n?n.loops:[])].map(r=>r.map(needCurve))
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface;trimLoops:NurbsCurve[][];workUsed:number}>(op,{...settings,rings})
+            transferredTrimLoops.set(key,report.trimLoops)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'exact_wire_area':
           case 'bound_wire_moments':
           case 'exact_wire_mass':

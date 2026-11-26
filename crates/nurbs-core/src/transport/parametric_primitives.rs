@@ -34,6 +34,9 @@ mod planar_path_selection;
 #[path = "plane_branch_queries.rs"]
 mod plane_branch_queries;
 
+#[path = "section_cap_queries.rs"]
+mod section_cap_queries;
+
 #[path = "plane_side_queries.rs"]
 mod plane_side_queries;
 
@@ -150,6 +153,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
         return Some(bounded_mesh_construction::build(v,op));
     }
     if matches!(op,"split_periodic_plane_strip"|"close_plane_strip"|"store_closed_plane_piece"|"trace_plane_strip"|"stitch_plane_strip"|"split_cell_by_plane"|"store_plane_branch"|"pair_plane_branch"|"sample_plane_branch"|"plane_branch_uv_polyline"|"plane_branch_xyz_polyline"){return Some(plane_branch_queries::inspect(v,op));}
+    if matches!(op,"cap_section_wire"|"cap_section_holes"|"arrange_section_caps"){return Some(section_cap_queries::build(v,op));}
     if matches!(op,"audit_plane_side"|"refine_plane_side"|"audit_plane_graphs"){return Some(plane_side_queries::inspect(v,op));}
     if matches!(op,"parallel_plane_sections" | "parallel_section_piece") {
         return Some(parallel_section_queries::inspect(v,op));
