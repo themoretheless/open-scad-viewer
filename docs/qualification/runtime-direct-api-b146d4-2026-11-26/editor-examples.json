@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "b146d46bce34cf159fdee1c6e5ceabebdbcab7ea697520986e5cdff72bcd1819",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/recover-material-path.r",
+      "exampleSha256": "909a57805597e7d90c69773f4bf15ee5531b58146df8b2bbcd8c377113de3829",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 52 ms"
+    }
+  ]
+}

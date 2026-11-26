@@ -12154,7 +12154,7 @@
     {
       "id": "NURBS-0443",
       "name": "Точное восстановление пространственных ломаных после отсечения по материалу",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_material_path_components",
@@ -12172,7 +12172,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-443-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-443-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-443-2026-11-17/native.log.gz",
+        "examples/rush/recover-material-path.r",
+        "tests/rushMaterialPathRecovery.test.ts"
       ],
       "remainingQualification": [
         "Reconstruct clipped components as exact spatial vertices and retain point contacts.",
