@@ -9795,7 +9795,7 @@
     {
       "id": "NURBS-0359",
       "name": "Точная классификация рациональной NURBS-поверхности по сторонам плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_surface_plane_side",
@@ -9806,7 +9806,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
         "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
         "docs/qualification/nurbs-curvature-field-359-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-359-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-359-2026-11-17/native.log.gz",
+        "examples/rush/audit-plane-side.r",
+        "tests/rushPlaneSides.test.ts"
       ],
       "remainingQualification": [
         "Certify the signed plane residual on every original rational surface knot cell.",
@@ -9817,7 +9819,7 @@
     {
       "id": "NURBS-0360",
       "name": "Адаптивная локализация пересечения NURBS-поверхности с плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::refine_surface_plane_side",
@@ -9830,7 +9832,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/refinement.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
         "docs/qualification/nurbs-curvature-field-360-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-360-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-360-2026-11-17/native.log.gz",
+        "examples/rush/refine-plane-side.r",
+        "tests/rushPlaneSides.test.ts"
       ],
       "remainingQualification": [
         "Subdivide exact homogeneous plane residual and weight nets to certify separated and possible contact regions.",
@@ -9841,7 +9845,7 @@
     {
       "id": "NURBS-0361",
       "name": "Сертификация единственной ветви пересечения NURBS-поверхности с плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_surface_plane_graphs",
@@ -9853,7 +9857,9 @@
         "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs",
         "docs/qualification/nurbs-curvature-field-361-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-361-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-361-2026-11-17/native.log.gz",
+        "examples/rush/audit-plane-graphs.r",
+        "tests/rushPlaneSides.test.ts"
       ],
       "remainingQualification": [
         "Certify a unique plane root for each transverse parameter by exact tensor endpoint and derivative signs.",
