@@ -2240,6 +2240,20 @@ export function createOwnNurbsResolver(
             result = { kind: 'curve', data: approximation.curve }
             break
           }
+          case 'brep_section_blade': {
+            const {op,blade_stations}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep}>(op,{blade_stations})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
+          case 'wing_loft_surface': {
+            const {op,id:_id,inputs,...args}=n
+            const {surface,...report}=callGeometryRust<{surface:NurbsSurface}>(op,{profiles:inputs.map(needCurve),...args})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'approximate_function_surface': {
             const {op,id:_id,...args}=n
             const {surface,...report}=callGeometryRust<{surface:NurbsSurface}>(op,args)

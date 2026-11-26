@@ -330,6 +330,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "elliptic_helix_curve" => &["center", "radius_x", "radius_y", "height", "turns", "phase_degrees", "max_deviation"],
         "variable_pitch_helix_curve" => &["center", "radius", "height", "turns", "start_pitch", "end_pitch", "phase_degrees", "max_deviation"],
         "conical_helix_curve" => &["center", "start_radius", "end_radius", "height", "turns", "phase_degrees", "max_deviation"],
+        "brep_section_blade" => &["blade_stations"],
+        "wing_loft_surface" => &["inputs", "wing_stations", "wing_tip", "tip_height_mm", "fold_grid"],
         "approximate_function_surface" => &["domain", "expressions", "second_derivative_bounds", "tolerance_mm", "max_cells"],
         "formula_curve" | "formula_surface" => &["domain", "expressions"],
         "sphere_surface" => &["center", "radius"],

@@ -83,6 +83,8 @@ mod carried_surface_requests;
 mod fillet_surface_requests;
 #[path="function_surface_requests.rs"]
 mod function_surface_requests;
+#[path="wing_loft_requests.rs"]
+mod wing_loft_requests;
 #[path="pullback_requests.rs"]
 mod pullback_requests;
 #[path="cloud_diagnostics_requests.rs"]
@@ -168,6 +170,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"routed_tube_pair"|"routed_tube_bundle") { return Some(routed_tubes::apply(v,op)); }
     if op == "blend_surface_boundaries" { return Some(blend_offset_requests::blend(v)); }
     if op == "offset_nurbs_surface" { return Some(blend_offset_requests::offset(v)); }
+    if op == "wing_loft_surface" { return Some(wing_loft_requests::build(v)); }
     if op == "approximate_function_surface" { return Some(function_surface_requests::build(v)); }
     if op == "rolling_ball_fillet_surface" { return Some(fillet_surface_requests::build(v, false)); }
     if op == "variable_radius_fillet_surface" { return Some(fillet_surface_requests::build(v, true)); }

@@ -111,6 +111,8 @@ export const rushGraphNurbsSchema = z
     nodes: z
       .array(
         z.discriminatedUnion('op', [
+          z.object({id,op:z.literal('brep_section_blade'),blade_stations:z.array(z.tuple([scalar,scalar,scalar,scalar,scalar,scalar])).min(2).max(129)}).strict(),
+          z.object({id,op:z.literal('wing_loft_surface'),inputs:z.array(id).min(2).max(11),wing_stations:z.array(z.tuple([scalar,scalar,scalar,scalar,scalar])).min(2).max(11),wing_tip:z.enum(['open','collapse','dome']),tip_height_mm:scalar,fold_grid:z.number().int().min(4).max(256)}).strict(),
           z.object({id,op:z.literal('approximate_function_surface'),domain:z.tuple([scalar,scalar,scalar,scalar]),expressions:surfaceExpressions,second_derivative_bounds:uv,tolerance_mm:scalar,max_cells:z.number().int().min(1).max(256)}).strict(),
           z.object({ id, op: z.literal('sphere_surface'), center: vector, radius: scalar }).strict(),
           z.object({ id, op: z.literal('cylinder_surface'), center: vector, radius: scalar, height: scalar }).strict(),

@@ -179,7 +179,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "surface_loft",
             "ruled_surface",
             "coons_patch",
-            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_rational_loft","brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "approximate_function_surface", "formula_surface",
+            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_rational_loft","brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "brep_section_blade", "wing_loft_surface", "approximate_function_surface", "formula_surface",
             "extrude",
             "revolve",
             "triangle_mesh",
@@ -301,6 +301,22 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 }
                 continue;
             }
+            if matches!(key.as_str(), "blade_stations" | "wing_stations") {
+                let dimensions = if key == "blade_stations" {
+                    &[LENGTH,LENGTH,LENGTH,LENGTH,LENGTH,ANGLE][..]
+                } else {
+                    &[LENGTH,ANGLE,ANGLE,ANGLE,SCALAR][..]
+                };
+                for station in value.as_array_mut().ok_or_else(|| text_error(key, "Expected a list of stations"))? {
+                    let row = station.as_array_mut().filter(|row| row.len() == dimensions.len())
+                        .ok_or_else(|| text_error(key, "Station has the wrong number of entries"))?;
+                    for (item, dimension) in row.iter_mut().zip(dimensions) {
+                        *item = field(item, *dimension, &params, key)?;
+                    }
+                }
+                continue;
+            }
+            if key == "wing_tip" { continue; }
             if fillet_surface && key == "radius_stations" {
                 for entry in value.as_array_mut().ok_or_else(|| text_error(key, "Expected radius station list"))? {
                     let pair = entry.as_array_mut().filter(|items| items.len() == 2)
@@ -426,7 +442,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 let dimension = if sphere_envelope && key == "normal" { SCALAR } else if (carried_surface || fillet_surface || function_surface) && key == "tolerance_mm" || function_surface && key == "second_derivative_bounds" { LENGTH } else if key == "normal_angle_deg" { ANGLE } else if thick_patch && matches!(key.as_str(), "thickness_mm" | "tolerance_mm") { LENGTH } else if nurbs_offset && matches!(key.as_str(), "distance" | "tolerance_mm") { LENGTH } else if matches!(key.as_str(), "axis_point" | "balance_planes" | "balance_sites" | "mass_position") { LENGTH } else if geodesic && key == "length" { LENGTH } else if key == "radius_mm" && bore_enlargement { LENGTH } else if key=="separation_degrees" { ANGLE } else if key == "tolerance_mm3" { [3,0] } else if matches!(key.as_str(),"residual_per_mm2" | "gap_level_per_mm2" | "target_gap_level_per_mm2") { [-2,0] } else if matches!(key.as_str(),"curvature_tolerance_per_mm" | "curvatures_per_mm") { [-1,0] } else if key == "tolerance_mm2" { [2,0] } else if superellipsoid { match key.as_str() { "exponents" | "max_cells" => SCALAR, _ => LENGTH } } else if optical || periodic_profile && key != "periods" { LENGTH } else if mechanical_profile && ["y_breaks","stock_radius","axial_shift","diameter","pitch","addendum","dedendum","backing_height","face_width","base_radius","roller_radius","end_lifts"].contains(&key.as_str()) { LENGTH } else if mechanical_profile && ["pitch_cone_angle","end_angles","orbit_angles","phase"].contains(&key.as_str()) { ANGLE } else if exact_primitive { match key.as_str() { "max_work" => SCALAR, "axes" if !exact_ellipsoid => SCALAR, _ => LENGTH } } else if engineering_profile { match key.as_str() { "normal" | "teeth" | "ribs" => SCALAR, "gap_degrees" | "start_degrees" | "sweep_degrees" => ANGLE, _ => LENGTH } } else if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
                     "bolt_radius_mm", "hole_diameter_mm", "minimum_web_mm", "offset_x_mm", "offset_y_mm", "outer_radius_mm", "source_height_mm","height_mm","coordinate_mm", "cuts_mm", "bounds_mm", "minimum_mm", "definition_tolerances_mm",
                     "centre_mm","measuring_radius_mm","measured_chord_mm","centre_range_mm","orbit_ranges_mm","minimum_gap_mm",
-                    "height",
+                    "height", "tip_height_mm",
                     "width",
                     "z_min",
                     "z_max",

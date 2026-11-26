@@ -59,6 +59,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if v["op"].as_str() == Some("brep_section_blade") {
+        return Routed::Handled(build_section_blade(&v));
+    }
     if v["op"].as_str() == Some("inspect_patch_closure") {
         return Routed::Handled(crate::cad_face_contacts::inspect_linear_patch_closure(&v));
     }
@@ -92,6 +95,20 @@ pub(crate) fn route(v: Value) -> Routed {
         return Routed::Unhandled(v);
     }
     Routed::Handled(handle(v))
+}
+
+fn build_section_blade(v: &Value) -> Result<Value> {
+    let stations: Vec<[f64; 6]> = field(v, "blade_stations")?;
+    let sections: Vec<_> = stations.into_iter().map(|[x,y,z,chord,thickness,twist]| brep_core::blade::Section {
+        leading_edge: [x,y,z], chord, thickness_control:thickness, twist_radians:twist.to_radians()
+    }).collect();
+    let model = brep_core::blade::build(&sections)?;
+    Ok(json!({
+        "model":encode(model)?,
+        "stations":sections.len(),
+        "closedOwnedIncidence":true,
+        "globalEmbeddingCertified":false
+    }))
 }
 
 fn handle(v: Value) -> Result<Value> {
