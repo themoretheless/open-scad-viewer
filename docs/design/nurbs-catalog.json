@@ -22990,7 +22990,7 @@
     {
       "id": "NURBS-0929",
       "name": "Компактный STEP AP242 для отдельного NURBS-тела с общими декартовыми точками",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_step_v9_shared_points",
@@ -23000,7 +23000,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/native.log.gz",
+        "examples/rush/compact-body-step.r",
+        "tests/rushCompactProductStep.test.ts"
       ],
       "remainingQualification": [
         "Qualified on the full spinner sun with bore using the native AP242 v9 importer. Size savings depend on shared coordinates."
@@ -23009,7 +23011,7 @@
     {
       "id": "NURBS-0930",
       "name": "Компактный обмен STEP AP242 с материалом изделия и оформлением граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::step_interchange_v3::export_step_v9_with_metadata_shared_points",
@@ -23019,7 +23021,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/native.log.gz",
+        "examples/rush/compact-product-step.r",
+        "tests/rushCompactProductStep.test.ts"
       ],
       "remainingQualification": [
         "Native AP242 metadata round trip on a single attributed gear body. External CAD interoperability not measured."
