@@ -421,6 +421,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "shared_boundary_spans" => &["target_geometry","loops","left_loop_count","max_work"],
         "shared_boundary_contacts" => &["target_geometry","loops","left_loop_count","max_work"],
         "refine_boundary_section" => &["target_geometry","loops","left_loop_count","parameter_width","max_work"],
+        "resolve_boundary_section" => &["target_geometry","loops","left_loop_count","xyz_tolerance","max_passes","max_work"],
         "bound_boundary_section" => &["target_geometry","loops","left_loop_count","parameter_width","max_work"],
         "classify_face_section" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","max_work"],
         "clip_plane_section" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","max_work"],

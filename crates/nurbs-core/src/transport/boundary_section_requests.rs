@@ -7,15 +7,36 @@ pub(super) fn measure(
     work: u64,
     prior: u64,
 ) -> Result<Value> {
-    if op == "bound_boundary_section" {
+    if matches!(op, "bound_boundary_section" | "resolve_boundary_section") {
         use section::BoundedPlanarBoundaryIntersection::*;
-        let r = section::bound_planar_face_boundary_intersection(
-            left,
-            right,
-            field(v, "parameter_width")?,
-            work,
-        )?;
-        let mut out = match r.outcome {
+        let (bounds, used, adaptive) = if op == "resolve_boundary_section" {
+            let r = section::resolve_planar_face_boundary_intersection(
+                left,
+                right,
+                section::AdaptiveBoundaryOptions {
+                    xyz_tolerance: field(v, "xyz_tolerance")?,
+                    max_passes: field(v, "max_passes")?,
+                    max_work: work,
+                },
+            )?;
+            (
+                r.bounds,
+                r.work_used,
+                Some(
+                    json!({"resolution":format!("{:?}",r.resolution),"passes":r.passes,
+                "maxUnresolvedLengthSquared":r.max_unresolved_length_squared.map(|q|q.to_string())}),
+                ),
+            )
+        } else {
+            let r = section::bound_planar_face_boundary_intersection(
+                left,
+                right,
+                field(v, "parameter_width")?,
+                work,
+            )?;
+            (r.outcome, r.work_used, None)
+        };
+        let mut out = match bounds {
             Transverse {
                 line: l,
                 proven,
@@ -27,7 +48,10 @@ pub(super) fn measure(
             Coincident => json!({"status":"coincident"}),
             Refused(e) => json!({"status":"refused","reason":format!("{e:?}")}),
         };
-        out["workUsed"] = json!(prior + r.work_used);
+        out["workUsed"] = json!(prior + used);
+        if let Some(report) = adaptive {
+            out["refinement"] = report;
+        }
         return Ok(out);
     }
     let r = match op {

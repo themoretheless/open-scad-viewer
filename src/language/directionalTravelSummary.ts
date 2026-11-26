@@ -119,6 +119,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'shared_boundary_spans') return russian ? 'Общие участки границ' : 'shared boundary spans'
   if (operation === 'shared_boundary_contacts') return russian ? 'Общие точки границ' : 'shared boundary contacts'
   if (operation === 'refine_boundary_section') return russian ? 'Уточнение общих участков' : 'refine boundary section'
+  if (operation === 'resolve_boundary_section') return russian ? 'Уточнение контакта до пространственного допуска' : 'resolve boundary section'
   if (operation === 'bound_boundary_section') return russian ? 'Границы области контакта' : 'bound boundary section'
   if (operation === 'classify_face_section') return russian ? 'Классификация контактов двух граней' : 'Face contact classification'
   if (operation === 'clip_plane_section') return russian ? 'Общие участки двух обрезанных граней' : 'clip plane section'

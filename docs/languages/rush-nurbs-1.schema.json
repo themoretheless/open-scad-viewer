@@ -66809,6 +66809,70 @@
               },
               "op": {
                 "type": "string",
+                "const": "resolve_boundary_section"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "target_geometry": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "loops": {
+                "minItems": 2,
+                "type": "array",
+                "items": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  }
+                }
+              },
+              "left_loop_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 63
+              },
+              "xyz_tolerance": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "max_passes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 54
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "target_geometry",
+              "loops",
+              "left_loop_count",
+              "xyz_tolerance",
+              "max_passes",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "bound_boundary_section"
               },
               "input": {

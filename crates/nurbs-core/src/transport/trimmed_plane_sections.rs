@@ -59,6 +59,7 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
         "shared_boundary_spans"
             | "shared_boundary_contacts"
             | "refine_boundary_section"
+            | "resolve_boundary_section"
             | "bound_boundary_section"
     ) {
         return boundary::measure(v, op, &first, &second, remaining, budget - remaining);

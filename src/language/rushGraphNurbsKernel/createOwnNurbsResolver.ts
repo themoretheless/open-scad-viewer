@@ -1112,10 +1112,12 @@ export function createOwnNurbsResolver(
           case 'shared_boundary_spans':
           case 'shared_boundary_contacts':
           case 'refine_boundary_section':
+          case 'resolve_boundary_section':
           case 'bound_boundary_section': {
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,right:needSurface(n.target_geometry),
               loops:n.loops.map(r=>r.map(needCurve)),left_loop_count:n.left_loop_count,max_work:n.max_work,
+              ...('max_passes' in n ? {max_passes:n.max_passes,xyz_tolerance:n.xyz_tolerance} : {}),
               ...('parameter_width' in n ? {parameter_width:n.parameter_width} : {})})
             constructionReports[key]={measurement:{operation:n.op,report}}
             result={kind:'surface',data:surface}
