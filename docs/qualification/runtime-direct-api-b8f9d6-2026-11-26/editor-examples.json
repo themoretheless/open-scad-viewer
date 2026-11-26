@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "b8f9d6d9adcc93184ea2d247ecd6d3261e404592fb23fafee9bfdea0b6c071c3",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/inspect-inferred-solid.r",
+      "exampleSha256": "cbc7eda5eef6e9e33512de67051cabafec318fa98a0ab924eece638b4aa79c65",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 50 ms"
+    },
+    {
+      "example": "examples/rush/expanded-section-sheets.r",
+      "exampleSha256": "29f2091a40caf60a62c27189de47bf2fc2847436fb91863fd33b04c3d821e1e6",
+      "editorStats": "Объекты\n1\nТреугольники\n2\nОбъём\n0\nПлощадь\n6,63\nГотово · 27 ms"
+    },
+    {
+      "example": "examples/rush/build-expanded-solid.r",
+      "exampleSha256": "828109cc26dcbdd7e26cb5a01636d71945deb9365d90ce34c1d5a56510efca04",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 15 ms"
+    },
+    {
+      "example": "examples/rush/submillimeter-section-sheet.r",
+      "exampleSha256": "13ea5928e251f2027429e3275e2fc08c7e579f54f7b24b9ecd53db4edc7d2aa3",
+      "editorStats": "Объекты\n1\nТреугольники\n2\nОбъём\n0\nПлощадь\n0\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/coordinate-limit-section-sheet.r",
+      "exampleSha256": "1a5fc9fa04b02bf8a060e8c666374c781ced4d16187b25dbd85236d363aae105",
+      "editorStats": "Объекты\n1\nТреугольники\n2\nОбъём\n0\nПлощадь\n6,63\nГотово · 5 ms"
+    }
+  ]
+}
