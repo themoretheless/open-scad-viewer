@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "a3e1d0f5979c92ea0d981c38a88971743c24f87ff2d245fed2950d2c16eaa5d0",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/node-spatial-path.r",
+      "exampleSha256": "5709d64aefdc9c20af44495653321586f02b67d010658168f9cb72957eab0a9a",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n7,39\nГотово · 52 ms"
+    },
+    {
+      "example": "examples/rush/measure-planar-path-area.r",
+      "exampleSha256": "a7b537db527932b4e64d5a96986770d49a87e03252c79aeb52ac5dfb30828d66",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/measure-planar-path-centroid.r",
+      "exampleSha256": "d9dfe5e0fa79d2b073de1e68221cbae25430e9807794c25d756b1941aa11cc7c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/locate-planar-path-points.r",
+      "exampleSha256": "e5feef1d6c385d0ed9edef481ca430fbf97d5c153786172bf6c0093d6e861f2f",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/clip-path-to-planar-region.r",
+      "exampleSha256": "6f05768cac0dcd36b4c2e5c1ae8f1237f2c3625a074311b2ce163beb0f6e8207",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/project-to-planar-region.r",
+      "exampleSha256": "fdb92475c7f54282ca812e080287ef3c6d2b32c9ef06a0f28a2ed365803e2fa0",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 4 ms"
+    }
+  ]
+}

@@ -12557,7 +12557,7 @@
     {
       "id": "NURBS-0456",
       "name": "Точное разбиение пространственной ломаной в узлах самопересечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::node_exact_spatial_polyline",
@@ -12575,7 +12575,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-456-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-456-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-456-2026-11-17/native.log.gz",
+        "examples/rush/node-spatial-path.r",
+        "tests/rushPlanarTrace.test.ts"
       ],
       "remainingQualification": [
         "Split a spatial path into directed edges at exact crossings, touches and overlap ends.",
@@ -12586,7 +12588,7 @@
     {
       "id": "NURBS-0457",
       "name": "Точная площадь плоского контура, заданного пространственной ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_area",
@@ -12604,7 +12606,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-457-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-457-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-457-2026-11-17/native.log.gz",
+        "examples/rush/measure-planar-path-area.r",
+        "tests/rushPlanarTrace.test.ts"
       ],
       "remainingQualification": [
         "Certify planarity and simplicity and compute exact oriented area for a spatial polygon.",
@@ -12615,7 +12619,7 @@
     {
       "id": "NURBS-0458",
       "name": "Точный центр площади плоского контура из пространственной ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_centroid",
@@ -12633,7 +12637,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-458-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-458-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-458-2026-11-17/native.log.gz",
+        "examples/rush/measure-planar-path-centroid.r",
+        "tests/rushPlanarTrace.test.ts"
       ],
       "remainingQualification": [
         "Compute the exact area centroid of a simple planar polygon, including concavity.",
@@ -12644,7 +12650,7 @@
     {
       "id": "NURBS-0459",
       "name": "Точная пакетная классификация точек относительно плоского контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::locate_points_in_exact_planar_spatial_polyline",
@@ -12662,7 +12668,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-459-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-459-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-459-2026-11-17/native.log.gz",
+        "examples/rush/locate-planar-path-points.r",
+        "tests/rushPlanarTrace.test.ts"
       ],
       "remainingQualification": [
         "Classify rational points as interior, boundary, exterior or off-plane.",
@@ -12673,7 +12681,7 @@
     {
       "id": "NURBS-0460",
       "name": "Точное отсечение пространственной ломаной плоским контуром",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::clip_spatial_path_to_exact_planar_polyline",
@@ -12692,7 +12700,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-460-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-460-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-460-2026-11-17/native.log.gz",
+        "examples/rush/clip-path-to-planar-region.r",
+        "tests/rushPlanarTrace.test.ts"
       ],
       "remainingQualification": [
         "Intersect spatial paths with simple planar regions, including coplanar and transverse cases.",
@@ -12703,7 +12713,7 @@
     {
       "id": "NURBS-0461",
       "name": "Точная проекция точки на заполненный плоский контур",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::project_point_to_exact_planar_polyline_region",
@@ -12721,7 +12731,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-461-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-461-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-461-2026-11-17/native.log.gz",
+        "examples/rush/project-to-planar-region.r",
+        "tests/rushPlanarTrace.test.ts"
       ],
       "remainingQualification": [
         "Find exact closest points on filled planar contours, including concave regions.",
