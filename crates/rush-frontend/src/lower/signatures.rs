@@ -34,6 +34,9 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "finite_za_wheel" => &["module", "diameter_quotient", "pressure_angle", "dedendum_factor", "backlash", "starts", "turns", "left_handed", "tolerance_mm", "teeth", "start_index", "axial_shift", "y_breaks", "stock_radius"],
         "finite_external_thread" => &["diameter", "pitch", "clearance", "starts", "turns", "tolerance_mm", "left_handed", "z_min", "z_max"],
         "finite_internal_thread" => &["diameter", "pitch", "clearance", "starts", "turns", "tolerance_mm", "left_handed", "z_min", "z_max", "outer_radius"],
+        "planet_gear_occurrences" => &["module", "teeth", "sun_teeth", "height", "pressure_angle", "helix_angle", "herringbone", "clearance", "backlash", "orbit_angles", "index"],
+        "planet_occurrences_step" => &["module", "teeth", "sun_teeth", "height", "pressure_angle", "helix_angle", "herringbone", "clearance", "backlash", "orbit_angles", "index"],
+        "planetary_gear_set_step" => &["module", "teeth", "sun_teeth", "height", "pressure_angle", "helix_angle", "herringbone", "clearance", "backlash", "orbit_angles", "index"],
         "verified_bevel_gear" => &["teeth", "module", "pitch_cone_angle", "pressure_angle", "face_width", "addendum", "dedendum", "backlash", "tolerance_mm"],
         "brep_gear" => &[
             "module",

@@ -62,12 +62,15 @@ export async function buildTextNurbsScene(
   const measurements = Object.entries(result.report.construction ?? {}).flatMap(([node, entry]) => {
     if (!('measurement' in entry)) return []
     const { operation, report } = entry.measurement as { operation: string; report: object }
-    const serialized = JSON.stringify(report)
+    const {step,...summary} = report as {step?:unknown}
+    const assemblyFile = (operation === 'planet_occurrences_step' || operation === 'planetary_gear_set_step') && typeof step === 'string' ? step : undefined
+    const serialized = JSON.stringify(assemblyFile ? summary : report)
+    reportCharacters += assemblyFile?.length ?? 0
     reportCharacters += serialized.length
     if (reportCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) {
       throw new Error('Measurement reports exceed the editor output limit. Reduce the work budget or parameter range.')
     }
-    return [{ node, operation, report: serialized }]
+    return [{ node, operation, report: serialized, ...(assemblyFile && {step:assemblyFile}) }]
   })
   return {
     meshes: mesh.indices.length ? [output] : [],

@@ -36,11 +36,17 @@ function validMeasurements(rows: unknown): boolean {
   if (!isDenseExactArray(rows, 4096)) return false
   let characters = 0
   return rows.every(row => {
-    if (!isRecord(row) || !hasExactKeys(row, ['node', 'operation', 'report'])) return false
+    if (!isRecord(row) || !hasExactKeys(row, ['node', 'operation', 'report'], ['step'])) return false
     if (typeof row.node !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(row.node)) return false
     if (typeof row.operation !== 'string' || !/^[a-z][a-z0-9_]{0,95}$/.test(row.operation)) return false
     if (typeof row.report !== 'string') return false
     characters += row.report.length
+    for (const key of ['step']) {
+      const attachment = row[key]
+      if (attachment === undefined) continue
+      if (typeof attachment !== 'string' || !isWellFormedUnicode(attachment)) return false
+      characters += attachment.length
+    }
     return characters <= MAX_NATIVE_GEOMETRY_CHARACTERS
   })
 }

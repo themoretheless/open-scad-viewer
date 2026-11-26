@@ -2815,6 +2815,17 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'planet_gear_occurrences':
+          case 'planet_occurrences_step':
+          case 'planetary_gear_set_step': {
+            const {id:_id,op,pressure_angle,helix_angle,...spec}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;step:string|null;placements:number[][][]}>(op,{
+              ...spec,pressureAngle:pressure_angle,helixAngle:helix_angle,
+            })
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'verified_bevel_gear': {
             const {id:_id,op,...spec}=n
             const {model,...report}=callGeometryRust<{model:NurbsBrep;worldErrorUpperMm:number;solidGeometryCertified:boolean}>(op,spec)

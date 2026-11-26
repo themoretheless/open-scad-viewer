@@ -36,6 +36,7 @@ pub(super) const OPS: &[&str] = &[
     "finite_internal_thread",
     "verified_bevel_gear",
     "brep_nurbs_gear",
+    "planet_gear_occurrences","planet_occurrences_step","planetary_gear_set_step",
     "brep_nurbs_gear_span",
     "brep_nurbs_verified_gear",
     "brep_nurbs_torus",
@@ -115,7 +116,7 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "finite_external_thread" => finite_thread::build(&v, false),
         "finite_internal_thread" => finite_thread::build(&v, true),
         "verified_bevel_gear" => rack_bevel::bevel(&v),
-        "brep_nurbs_gear" | "brep_nurbs_gear_span" | "brep_nurbs_verified_gear" => handle_gear(&v),
+        "planet_gear_occurrences" | "planet_occurrences_step" | "planetary_gear_set_step" | "brep_nurbs_gear" | "brep_nurbs_gear_span" | "brep_nurbs_verified_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,
             field(&v, "minorRadius")?,
@@ -245,6 +246,24 @@ fn handle_gear(v: &Value) -> Result<Value> {
         clearance: number("clearance", 0.25),
         backlash: number("backlash", 0.),
     };
+    if matches!(v["op"].as_str(),Some("planet_gear_occurrences" | "planet_occurrences_step" | "planetary_gear_set_step")) {
+        let sun_teeth = field(v,"sun_teeth")?;
+        let angles:Vec<f64> = field(v,"orbit_angles")?;
+        let index = field(v,"index")?;
+        let assembly = brep_core::gear::planetary_gear_occurrences(&spec,sun_teeth,&angles)?;
+        let model = assembly.materialize(index)?;
+        let full = v["op"].as_str() == Some("planetary_gear_set_step");
+        let step = if full {
+            let sun = brep_core::gear(&brep_core::GearSpec { teeth:sun_teeth, ..spec.clone() })?;
+            let ring = brep_core::gear(&brep_core::GearSpec { teeth:sun_teeth+2*spec.teeth, internal:true, ..spec.clone() })?;
+            Some(cad_step::export_planetary_gear_set_step(&sun,&ring,&assembly)?)
+        } else if v["op"].as_str() == Some("planet_occurrences_step") {
+            Some(cad_step::export_planet_gear_occurrences_step(&assembly)?)
+        } else { None };
+        return Ok(value_codec::json!({"model":model,"placements":assembly.placements(),"selectedPlanet":index,
+            "prototypeFaces":assembly.prototype().faces.len(),"definitionCount":if full {3} else {1},
+            "occurrenceCount":angles.len()+if full {2} else {0},"step":step}));
+    }
     if v["op"].as_str() == Some("brep_nurbs_gear_span") {
         return gear_span_report(&spec, v);
     }

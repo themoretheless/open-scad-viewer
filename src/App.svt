@@ -85,7 +85,7 @@ import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH, updateWork
 import type { BrowserWorkspacePersistence } from './app/workspacePersistence'
 import { assertThemeCatalog, THEME_CATALOG } from './app/themePreferences'
 import type { PickHit } from './render/rendererContracts'
-import { blockColors, dockTabs, DOCK_ICONS, revealDockDetails, closeMenus, closeMenusOutside, type DockTab } from './appHelpers'
+import { downloadBlob, blockColors, dockTabs, DOCK_ICONS, revealDockDetails, closeMenus, closeMenusOutside, type DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
 assertThemeCatalog(THEME_CATALOG)
@@ -137,6 +137,9 @@ const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
 const editorDiagnostic = ref<EditorDiagnostic | null>(null)
 import { curveMeasurementLabel, directionalTravelSummary } from './language/directionalTravelSummary'
+function downloadMeasurementStep(step:string,node:string) {
+  downloadBlob(new Blob([step],{type:'model/step'}),node+'.step')
+}
 const measurements = ref<import('./core/build').GeometryMeasurement[]>([])
 const warnings = ref<string[]>([])
 const meshCount = ref(0)
@@ -810,6 +813,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
         <details v-for="measurement in measurements" :key="measurement.node" class="nurbs-measurement">
           <summary>{{ measurement.node }} · {{ curveMeasurementLabel(measurement.operation, lang === 'ru') }}</summary>
           <div v-for="(line, i) in directionalTravelSummary(measurement.operation, measurement.report, lang === 'ru')" :key="i">{{ line }}</div>
+          <button v-if="measurement.step" type="button" @click="downloadMeasurementStep(measurement.step,measurement.node)">{{ lang === 'ru' ? 'Скачать сборку STEP' : 'Download STEP assembly' }}</button>
           <details><summary>{{ lang === 'ru' ? 'Подробный отчёт' : 'Detailed report' }}</summary><pre>{{ measurement.report }}</pre></details>
         </details>
         <div v-if="warnings.length" class="message warning" role="status">

@@ -35143,6 +35143,219 @@
               },
               "op": {
                 "type": "string",
+                "const": "planet_gear_occurrences"
+              },
+              "module": {
+                "type": "number"
+              },
+              "teeth": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "sun_teeth": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 256
+              },
+              "height": {
+                "type": "number"
+              },
+              "pressure_angle": {
+                "type": "number"
+              },
+              "helix_angle": {
+                "type": "number"
+              },
+              "herringbone": {
+                "type": "boolean"
+              },
+              "clearance": {
+                "type": "number"
+              },
+              "backlash": {
+                "type": "number"
+              },
+              "orbit_angles": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 256
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "module",
+              "teeth",
+              "sun_teeth",
+              "height",
+              "pressure_angle",
+              "helix_angle",
+              "herringbone",
+              "clearance",
+              "backlash",
+              "orbit_angles",
+              "index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "planet_occurrences_step"
+              },
+              "module": {
+                "type": "number"
+              },
+              "teeth": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "sun_teeth": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 256
+              },
+              "height": {
+                "type": "number"
+              },
+              "pressure_angle": {
+                "type": "number"
+              },
+              "helix_angle": {
+                "type": "number"
+              },
+              "herringbone": {
+                "type": "boolean"
+              },
+              "clearance": {
+                "type": "number"
+              },
+              "backlash": {
+                "type": "number"
+              },
+              "orbit_angles": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 256
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "module",
+              "teeth",
+              "sun_teeth",
+              "height",
+              "pressure_angle",
+              "helix_angle",
+              "herringbone",
+              "clearance",
+              "backlash",
+              "orbit_angles",
+              "index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "planetary_gear_set_step"
+              },
+              "module": {
+                "type": "number"
+              },
+              "teeth": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "sun_teeth": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 256
+              },
+              "height": {
+                "type": "number"
+              },
+              "pressure_angle": {
+                "type": "number"
+              },
+              "helix_angle": {
+                "type": "number"
+              },
+              "herringbone": {
+                "type": "boolean"
+              },
+              "clearance": {
+                "type": "number"
+              },
+              "backlash": {
+                "type": "number"
+              },
+              "orbit_angles": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1,
+                "maxItems": 256
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "module",
+              "teeth",
+              "sun_teeth",
+              "height",
+              "pressure_angle",
+              "helix_angle",
+              "herringbone",
+              "clearance",
+              "backlash",
+              "orbit_angles",
+              "index"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "verified_bevel_gear"
               },
               "teeth": {
