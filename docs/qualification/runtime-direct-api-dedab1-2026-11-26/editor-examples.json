@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "dedab18f968898add03b6525eff9e3a82c37ba4ae8fed6d3599fe497345d4b39",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/orientation-sector.r",
+      "exampleSha256": "21083ba226519721b203c16e5ed32d304ddafcb2e814e23381cbe98f854feda1",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 456 ms"
+    },
+    {
+      "example": "examples/rush/relative-orientation-sector.r",
+      "exampleSha256": "16f2e92ee1a82f4afc7866bb1c586628c4f7b1f174903940e4b59a3ef276e205",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/relative-angular-limits.r",
+      "exampleSha256": "e78172daca681c30ef7bbe9929fb3bc9391a87cdc998afb8a8b27b1917139772",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/angular-travel.r",
+      "exampleSha256": "67192f99c249361c71f951a2abfed5dad3813a64dfb765522b800d5a4af90278",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/relative-angular-travel.r",
+      "exampleSha256": "7e85eeb0994a41befc138778c42560121686f03c84f28841b067483dc1df1b9f",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    }
+  ]
+}

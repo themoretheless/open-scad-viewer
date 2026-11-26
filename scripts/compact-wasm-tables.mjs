@@ -462,17 +462,28 @@ function huffmanChunk(bytes) {
   assign(root,0,0)
   // Each chunk contains at most 32768 symbols, bounding code depth below 32.
   const bitCount=bytes.reduce((sum,byte)=>sum+codes[byte].length,0)
-  const tableBytes=children.length*4
+  const flagsBytes=Math.ceil(children.length*2/8)
+  const tableBytes=flagsBytes+children.length+1
   const size=tableBytes+Math.ceil(bitCount/8)
   if(size+32>=bytes.length) return
   const data=Buffer.alloc(size)
-  children.forEach(([left,right],i)=>{data.writeUInt16LE(left,i*4);data.writeUInt16LE(right,i*4+2)})
+  // Breadth-first internal children have implicit successive indices.
+  // Only a branch bitmap and the literal leaves need to travel in the module.
+  const pending=[root]
+  let leaf=flagsBytes,slot=0
+  for (let node=0;node<pending.length;node++) {
+    for (const child of children[pending[node]-256]) {
+      if (child>=256) { data[slot>>>3]|=1<<(slot&7);pending.push(child) }
+      else data[leaf++]=child
+      slot++
+    }
+  }
   let cursor=tableBytes*8
   for(const byte of bytes){
     const {bits,length}=codes[byte]
     for(let n=length-1;n>=0;n--,cursor++) data[cursor>>>3]|=((bits>>>n)&1)<<(7-(cursor&7))
   }
-  return {data,root,tableBytes}
+  return {data,internalCount:children.length,tableBytes}
 }
 
 export function compactWasmByteFrequencies(input) {
@@ -490,13 +501,29 @@ export function compactWasmByteFrequencies(input) {
     if(data[cursor.at++]!==11)return original
     const headerEnd=cursor.at,length=readUnsigned(data,cursor)
     if(!length){encoded.push(data.subarray(start,cursor.at));continue}
-    if(base<32768||base<end||base+length>=0x40000000||cursor.at+length>data.length)return original
+    if(base<65536||base<end||base+length>=0x40000000||cursor.at+length>data.length)return original
     end=base+length
     const pieces=[],reverse=[]
     let packed=0
-    for(let at=0;at<length;at+=32768){
-      const raw=data.subarray(cursor.at+at,cursor.at+Math.min(at+32768,length))
-      const h=huffmanChunk(raw),chunk=h?.data??raw
+    // Align entropy models to local data changes. Include initializer overhead
+    // in the split decision so many tiny blocks cannot inflate the module.
+    const stride=4096, blocks=Math.ceil(length/stride)
+    const costs=new Float64Array(blocks+1), choices=[]
+    for(let i=blocks-1;i>=0;i--){
+      let best=Infinity
+      for(let stop=i+1;stop<=Math.min(i+8,blocks);stop++){
+        const at=i*stride, end=Math.min(stop*stride,length)
+        const raw=data.subarray(cursor.at+at,cursor.at+end)
+        const h=huffmanChunk(raw)
+        const cost=(h?.data.length??raw.length)+(h?36:15)+costs[stop]
+        if(cost<best){best=cost;choices[i]={stop,raw,h}}
+      }
+      costs[i]=best
+    }
+    for(let i=0;i<blocks;){
+      const at=i*stride
+      const {stop,raw,h}=choices[i],chunk=h?.data??raw
+      i=stop
       if(h) scratch=Math.max(scratch,chunk.length)
       if(h||at!==packed) reverse.push({src:base+packed,dst:base+at,length:raw.length,packed:chunk.length,h})
       pieces.push(chunk)
@@ -510,15 +537,28 @@ export function compactWasmByteFrequencies(input) {
   const decoder=binaryen.parseText(`(module (memory 1)
     (func (param $src i32)(param $dst i32)(param $length i32)(param $root i32)
       (local $node i32)(local $bits i32)(local $left i32)
+      (local $slot i32)(local $next i32)(local $leaf i32)(local $child i32)
+      (local.set $leaf (i32.shr_u (i32.add (i32.shl (local.get $root)(i32.const 1))(i32.const 7))(i32.const 3)))
+      (local.set $next (i32.const 257))
+      (loop $tree
+        (if (i32.and (i32.load8_u (i32.shr_u (local.get $slot)(i32.const 3)))
+                     (i32.shl (i32.const 1)(i32.and (local.get $slot)(i32.const 7))))
+          (then (local.set $child (local.get $next))
+                (local.set $next (i32.add (local.get $next)(i32.const 1))))
+          (else (local.set $child (i32.load8_u (local.get $leaf)))
+                (local.set $leaf (i32.add (local.get $leaf)(i32.const 1)))))
+        (i32.store16 offset=32768 (i32.shl (local.get $slot)(i32.const 1))(local.get $child))
+        (br_if $tree (i32.lt_u (local.tee $slot (i32.add (local.get $slot)(i32.const 1)))
+                               (i32.shl (local.get $root)(i32.const 1)))))
       (loop $byte
-        (local.set $node (local.get $root))
+        (local.set $node (i32.const 256))
         (loop $branch
           (if (i32.eqz (local.get $left)) (then
             (local.set $bits (i32.load8_u (local.get $src)))
             (local.set $src (i32.add (local.get $src)(i32.const 1)))
             (local.set $left (i32.const 8))))
           (local.set $left (i32.sub (local.get $left)(i32.const 1)))
-          (local.set $node (i32.load16_u (i32.add
+          (local.set $node (i32.load16_u offset=32768 (i32.add
             (i32.shl (i32.sub (local.get $node)(i32.const 256))(i32.const 2))
             (i32.shl (i32.and (i32.shr_u (local.get $bits)(local.get $left))(i32.const 1))(i32.const 1)))))
           (br_if $branch (i32.ge_u (local.get $node)(i32.const 256))))
@@ -539,10 +579,11 @@ export function compactWasmByteFrequencies(input) {
     for(const c of calls){
       constant(c.h?0:c.dst);constant(c.src);constant(c.packed);start.push(252,10,0,0)
       if(c.h){
-        constant(c.h.tableBytes);constant(c.dst);constant(c.length);constant(c.h.root)
+        constant(c.h.tableBytes);constant(c.dst);constant(c.length);constant(c.h.internalCount)
         start.push(16,...unsigned(index))
       }
     }
+    constant(32768);constant(0);constant(1020);start.push(252,11,0)
     constant(0);constant(0);constant(scratch);start.push(252,11,0,16,...unsigned(oldStart),11)
     section(10).data=appendEntry(appendEntry(section(10).data,bodies.subarray(1)),Buffer.concat([unsigned(start.length),Buffer.from(start)]))
     section(8).data=unsigned(index+1)

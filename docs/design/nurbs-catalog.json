@@ -20006,7 +20006,7 @@
     {
       "id": "NURBS-0784",
       "name": "Проверка допустимого сектора плоской NURBS-ориентации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_orientation_sector",
@@ -20014,7 +20014,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-784-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-784-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-784-2026-11-17/native.log.gz",
+        "examples/rush/orientation-sector.r",
+        "tests/rushOrientationFrames.test.ts"
       ],
       "remainingQualification": [
         "Certify orientation membership in closed narrow, half-turn or reflex planar sectors.",
@@ -20025,7 +20027,7 @@
     {
       "id": "NURBS-0785",
       "name": "Проверка относительной плоской ориентации в заданном секторе",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_relative_planar_orientation_sector",
@@ -20033,7 +20035,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-785-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-785-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-785-2026-11-17/native.log.gz",
+        "examples/rush/relative-orientation-sector.r",
+        "tests/rushOrientationFrames.test.ts"
       ],
       "remainingQualification": [
         "Certify an angular sector in a synchronized rotating NURBS reference frame.",
@@ -20044,7 +20048,7 @@
     {
       "id": "NURBS-0786",
       "name": "Проверка пределов относительного углового движения двух NURBS-кривых",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_relative_planar_angular_motion_limits",
@@ -20052,7 +20056,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-786-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-786-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-786-2026-11-17/native.log.gz",
+        "examples/rush/relative-angular-limits.r",
+        "tests/rushOrientationFrames.test.ts"
       ],
       "remainingQualification": [
         "Certify relative planar angular derivatives on the union of both knot grids.",
@@ -20063,7 +20069,7 @@
     {
       "id": "NURBS-0787",
       "name": "Измерение результирующего и суммарного углового хода NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_angular_travel",
@@ -20071,7 +20077,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-787-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-787-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-787-2026-11-17/native.log.gz",
+        "examples/rush/angular-travel.r",
+        "tests/rushOrientationFrames.test.ts"
       ],
       "remainingQualification": [
         "Enclose signed angular change and total angular variation across planar NURBS spans.",
@@ -20082,7 +20090,7 @@
     {
       "id": "NURBS-0788",
       "name": "Измерение углового хода в движущейся плоской NURBS-системе отсчёта",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_relative_planar_angular_travel",
@@ -20090,7 +20098,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-788-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-788-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-788-2026-11-17/native.log.gz",
+        "examples/rush/relative-angular-travel.r",
+        "tests/rushOrientationFrames.test.ts"
       ],
       "remainingQualification": [
         "Enclose relative net rotation and total angular travel across two synchronized knot grids.",
