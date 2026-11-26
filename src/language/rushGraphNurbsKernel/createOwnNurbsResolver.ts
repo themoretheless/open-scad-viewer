@@ -492,6 +492,7 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'build_parallel_sweep_overlap':
           case 'build_profile_boolean_solid': {
             const {op,id:_id,...settings}=n
             const {model,report}=callGeometryRust<{model:NurbsBrep;report:object}>(op,settings)
@@ -516,6 +517,8 @@ export function createOwnNurbsResolver(
           case 'section_profile_extrusion':
           case 'section_profile_extrusion_parallel':
           case 'split_profile_extrusion_volume':
+          case 'measure_parallel_sweep_overlap':
+          case 'mesh_parallel_sweep_overlap':
           case 'clip_profile_extrusion_path':
           case 'bound_profile_extrusion_area':
           case 'extrude_profile_boolean_shell':

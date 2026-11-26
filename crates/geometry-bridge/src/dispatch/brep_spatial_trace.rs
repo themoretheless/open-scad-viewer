@@ -51,6 +51,9 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
         | "extract_profile_boolean_edges"
         | "assemble_profile_boolean_loops"
         | "triangulate_profile_boolean"
+        | "measure_parallel_sweep_overlap"
+        | "mesh_parallel_sweep_overlap"
+        | "build_parallel_sweep_overlap"
         | "build_profile_boolean_solid"
         | "measure_profile_extrusion_inertia"
         | "locate_profile_extrusion_points"
@@ -67,6 +70,52 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
             let first_holes = h1.iter().map(Vec::as_slice).collect::<Vec<_>>();
             let second_holes = h2.iter().map(Vec::as_slice).collect::<Vec<_>>();
             match op {
+                "measure_parallel_sweep_overlap" => {
+                    let r = a::exact_parallel_planar_profile_extrusion_overlap(
+                        &points,
+                        &first_holes,
+                        &point(&v["sweep_mm"])?,
+                        &second,
+                        &second_holes,
+                        &point(&v["other_sweep_mm"])?,
+                        work,
+                    )?;
+                    json!({"range":r.common_sweep_range.map(|p|p.map(|q|q.to_string())),"volumeMm3":r.volume_mm3.to_string(),"workUsed":r.exact_work})
+                }
+                "mesh_parallel_sweep_overlap" => {
+                    let r = a::mesh_exact_parallel_planar_profile_extrusion_overlap(
+                        &points,
+                        &first_holes,
+                        &point(&v["sweep_mm"])?,
+                        &second,
+                        &second_holes,
+                        &point(&v["other_sweep_mm"])?,
+                        work,
+                    )?;
+                    json!({"verticesMm":coordinates(r.vertices_mm),"triangles":r.triangles,"volumeMm3":r.volume_mm3.to_string(),"workUsed":r.exact_work})
+                }
+                "build_parallel_sweep_overlap" => {
+                    let r = a::brep_exact_parallel_planar_profile_extrusion_overlap(
+                        &points,
+                        &first_holes,
+                        &point(&v["sweep_mm"])?,
+                        &second,
+                        &second_holes,
+                        &point(&v["other_sweep_mm"])?,
+                        field(v, "tolerance_mm")?,
+                        super::closed_ss::closed_solid_policy(field(v, "tolerance_uv")?),
+                        work,
+                    )?;
+                    let solid = r.solid.ok_or_else(|| {
+                        nurbs_core::Error::new(
+                            "BREP_EMPTY_RESULT",
+                            "The sweeps have no common material volume",
+                        )
+                    })?;
+                    return Ok(
+                        json!({"model":solid.model(),"report":{"volumeMm3":r.volume_mm3.to_string(),"workUsed":r.exact_work}}),
+                    );
+                }
                 "intersect_transverse_profiles" => {
                     let r = a::intersect_transverse_exact_planar_polyline_regions(
                         &points,
