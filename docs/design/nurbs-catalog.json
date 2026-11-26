@@ -18704,7 +18704,7 @@
     {
       "id": "NURBS-0722",
       "name": "Адаптивный поиск минимального зазора в сцене с разными типами препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_toolpath_clearance",
@@ -18712,7 +18712,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-722-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-722-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-722-2026-11-17/native.log.gz",
+        "examples/rush/minimum-mixed-gap.r",
+        "tests/rushMixedClearances.test.ts"
       ],
       "remainingQualification": [
         "Find a certified minimum across mixed sphere, capsule and box obstacles in one search.",
@@ -18723,7 +18725,7 @@
     {
       "id": "NURBS-0723",
       "name": "Сертифицированное разбиение траектории по контактам в смешанной сцене",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_toolpath_clearance",
@@ -18731,7 +18733,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-723-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-723-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-723-2026-11-17/native.log.gz",
+        "examples/rush/mixed-path-clearance.r",
+        "tests/rushMixedClearances.test.ts"
       ],
       "remainingQualification": [
         "Partition the full sweep by obstacle clearance using a shared mixed-scene grid.",
@@ -18742,7 +18746,7 @@
     {
       "id": "NURBS-0724",
       "name": "Проверка запаса зазора вдоль NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_toolpath_clearance_with_margin",
@@ -18750,7 +18754,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-724-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-724-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-724-2026-11-17/native.log.gz",
+        "examples/rush/mixed-margin-clearance.r",
+        "tests/rushMixedClearances.test.ts"
       ],
       "remainingQualification": [
         "Classify and localize violations of a required toolpath clearance margin.",
