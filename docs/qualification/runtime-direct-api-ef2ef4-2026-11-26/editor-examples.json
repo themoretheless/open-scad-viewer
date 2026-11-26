@@ -1,0 +1,10 @@
+{
+  "kernelSha256": "ef2ef4e23ae979dacf3be95f6f4bf52c8fc56c12113279a5c8632ef867e93f4b",
+  "runner": "Chromium",
+  "scenes": [
+    "rolling-ball-fillet-surface Объекты 1 Треугольники 1 024 Объём 0 Площадь 19,62 Готово · 54 ms",
+    "variable-radius-fillet-surface Объекты 1 Треугольники 1 024 Объём 0 Площадь 15,49 Готово · 10 ms",
+    "approximate-function-surface Объекты 1 Треугольники 1 024 Объём 0 Площадь 49,36 Готово · 6 ms",
+    "coarse-function-surface Объекты 1 Треугольники 1 024 Объём 0 Площадь 49,03 Готово · 5 ms"
+  ]
+}

@@ -2862,12 +2862,14 @@
     {
       "id": "NURBS-0075",
       "name": "constant fillet",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/offset/fillet_surfaces.rs",
         "crates/nurbs-core/src/offset/fillet_surfaces/fillet_construction.rs",
         "crates/nurbs-core/tests/fillet_surfaces.rs",
-        "docs/design/nurbs-fillet-surfaces.md"
+        "docs/design/nurbs-fillet-surfaces.md",
+        "tests/rushSurfaceFillets.test.ts",
+        "examples/rush/rolling-ball-fillet-surface.r"
       ],
       "remainingQualification": [
         "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
@@ -2879,12 +2881,14 @@
     {
       "id": "NURBS-0076",
       "name": "variable fillet",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/offset/fillet_surfaces.rs",
         "crates/nurbs-core/src/offset/fillet_surfaces/fillet_construction.rs",
         "crates/nurbs-core/tests/fillet_surfaces.rs",
-        "docs/design/nurbs-fillet-surfaces.md"
+        "docs/design/nurbs-fillet-surfaces.md",
+        "tests/rushSurfaceFillets.test.ts",
+        "examples/rush/variable-radius-fillet-surface.r"
       ],
       "remainingQualification": [
         "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
@@ -3514,12 +3518,14 @@
     {
       "id": "NURBS-0099",
       "name": "S(u,v)",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::function_surface::approximate",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/function_surface.rs",
         "crates/nurbs-core/tests/function_surface.rs",
-        "docs/design/nurbs-function-surface.md"
+        "docs/design/nurbs-function-surface.md",
+        "tests/rushFunctionSurface.test.ts",
+        "examples/rush/approximate-function-surface.r"
       ],
       "remainingQualification": [
         "viewer adapters and export qualification are outside native completion"
