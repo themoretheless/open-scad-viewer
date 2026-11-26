@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "27fab6ab9bdd2cbada18c1d5b617ba6347a0796841701472f8b7ef4d40c0924f",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/check-timed-chain.r",
+      "exampleSha256": "e9599932b1168665e5fa8ad4ac433c87b8f4196b7a424eabc417912dab8dcd26",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 395 ms"
+    },
+    {
+      "example": "examples/rush/inspect-knot-turns.r",
+      "exampleSha256": "ab42d8f2665ef4f4c3f5c6449c6712ac20ba50ee18d71708af393c75fbf8f07a",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/inspect-join-turn.r",
+      "exampleSha256": "9df7a66301416b9be9a794302beb5f036330a9335458cbc056663813df1448ce",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/inspect-chain-turns.r",
+      "exampleSha256": "97cf864dd8a794951c360c35e1e849b0f57b47aded19fd3ddc83feae25ee27de",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    }
+  ]
+}

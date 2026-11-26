@@ -18179,7 +18179,7 @@
     {
       "id": "NURBS-0697",
       "name": "Совместная проверка сегментов и стыков NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::check_timed_motion_chain",
@@ -18187,7 +18187,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-697-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-697-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-697-2026-11-17/native.log.gz",
+        "examples/rush/check-timed-chain.r",
+        "tests/rushMotionTurns.test.ts"
       ],
       "remainingQualification": [
         "Check axial motion limits in each segment clock together with spatial and derivative join limits.",
@@ -18219,7 +18221,7 @@
     {
       "id": "NURBS-0699",
       "name": "Сертифицированная проверка изломов во внутренних узлах NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_knot_turns",
@@ -18227,7 +18229,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-699-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-699-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-699-2026-11-17/native.log.gz",
+        "examples/rush/inspect-knot-turns.r",
+        "tests/rushMotionTurns.test.ts"
       ],
       "remainingQualification": [
         "Enclose the tangent turn cosine at interior knots and classify against an inclusive threshold.",
@@ -18238,7 +18242,7 @@
     {
       "id": "NURBS-0700",
       "name": "Сертифицированная проверка угла поворота на стыке NURBS-сегментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_join_turn",
@@ -18246,7 +18250,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-700-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-700-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-700-2026-11-17/native.log.gz",
+        "examples/rush/inspect-join-turn.r",
+        "tests/rushMotionTurns.test.ts"
       ],
       "remainingQualification": [
         "Check one-sided tangent alignment and spatial gap between two curve windows.",
@@ -18257,7 +18263,7 @@
     {
       "id": "NURBS-0701",
       "name": "Сертифицированная проверка поворотов и зазоров на стыках NURBS-цепочки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_motion_chain_turns",
@@ -18265,7 +18271,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-701-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-701-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-701-2026-11-17/native.log.gz",
+        "examples/rush/inspect-chain-turns.r",
+        "tests/rushMotionTurns.test.ts"
       ],
       "remainingQualification": [
         "Check spatial gaps and tangent turns across open or closed chains of curve windows.",
