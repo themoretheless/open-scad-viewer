@@ -24139,7 +24139,7 @@
     {
       "id": "NURBS-0982",
       "name": "Чтение пути изделия для каждого размещения общей NURBS-детали в STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::import_step_product_paths",
@@ -24151,7 +24151,9 @@
         "docs/qualification/nurbs-named-styled-step-981-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "One named root and named representations along each selected occurrence path. Direct and nested placements of one definition checked with reversed STEP record order and compared with OCCT XDE."
@@ -24160,7 +24162,7 @@
     {
       "id": "NURBS-0983",
       "name": "Экспорт ветви именованной STEP-сборки с сохранением размещений и цветов экземпляров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_step_product_subassembly",
@@ -24172,7 +24174,9 @@
         "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "Product-name prefix selects all matching leaves in world coordinates. Flat result preserves shared geometry, definition labels and explicit solid occurrence colours."
@@ -24181,7 +24185,7 @@
     {
       "id": "NURBS-0984",
       "name": "Замена геометрии по пути изделия в STEP-сборке с сохранением соседних экземпляров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::replace_step_product_at_path",
@@ -24193,7 +24197,9 @@
         "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-branch-variant-984-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "Exact label path selects occurrences of one definition; local-space replacement. Root plus one group level, world-space placements, explicit occurrence colours. Group frames are rebased to identity."
@@ -24202,7 +24208,7 @@
     {
       "id": "NURBS-0985",
       "name": "Поворот и перенос выбранной ветви STEP-сборки с сохранением общих NURBS-деталей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::move_step_product_branch",
@@ -24214,7 +24220,9 @@
         "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "Assembly-space rigid motion by named path prefix. Exports one group level with identity group frames. XDE confirms shared product identity, three volumes, world centroids, colours and group membership."
@@ -24223,7 +24231,7 @@
     {
       "id": "NURBS-0986",
       "name": "Спецификация ветви STEP с учётом общих деталей внутри и за пределами подсборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::step_branch_parts_list",
@@ -24235,7 +24243,9 @@
         "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-branch-bom-986-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "Named path prefix. Quantities grouped by definition identity. Includes coincident placements; verifies inside and outside counts independently with XDE."
@@ -24244,7 +24254,7 @@
     {
       "id": "NURBS-0987",
       "name": "Консервативный габаритный параллелепипед ветви NURBS-сборки STEP в мировых координатах",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::step_branch_bounds",
@@ -24256,7 +24266,9 @@
         "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "World-axis enclosure from control hulls with outward rounded placement arithmetic. Open CASCADE independently checks the actual branch and root extents of the rotated cuboid fixture. General trimmed carriers may yield a loose enclosure."
@@ -24265,7 +24277,7 @@
     {
       "id": "NURBS-0988",
       "name": "Масса, центр масс и тензор инерции ветви STEP с плотностью по экземплярам",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::step_branch_mass_properties",
@@ -24277,7 +24289,9 @@
         "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/verify.py",
         "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/occt.log",
         "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/native.log.gz",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushStepBranches.test.ts"
       ],
       "remainingQualification": [
         "Named path prefix; additive mass of independent occurrences, including overlaps. Positive densities in kg/mm3. Independent OCCT mass properties on rotated translated two-density bracket pair."

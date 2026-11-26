@@ -1689,6 +1689,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/B5Jbu7b3.js':203_600,'assets/CuhSjZ_V.js':113_800,'assets/Jl_y7Gxp.js':220_900,'assets/KKpXotjn.js':142_300,'assets/O54ZAOGD.js':109_600,'assets/mainSolid.worker-Cuv4pzf6.js':286_800}),
   }),
+  // named STEP assembly branch editing and queries in the Rush editor: 20,478,551 raw bytes, 7,784,519 packed bytes and 15,288,695 total asset bytes.
+  '3112aa4f22bd69f5c86d47ffbaf588172f7926a309cf6ea09ac5360ac01cf917':Object.freeze({
+    version:218,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/C-u8MYCz.js':203_600,'assets/CApMYugr.js':114_000,'assets/CCitqNYw.js':109_800,'assets/DvoFziwV.js':221_100,'assets/mainSolid.worker-aQq9hLam.js':287_400,'assets/u2Vi7WwF.js':143_000}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
