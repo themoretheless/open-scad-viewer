@@ -1478,6 +1478,9 @@ export function createOwnNurbsResolver(
           case 'violation_path_length':
           case 'violation_obstacle_lengths':
           case 'violation_path_duration':
+          case 'chain_violation_duration':
+          case 'first_chain_violation':
+          case 'minimum_chain_gap':
           case 'mixed_margin_clearance':
           case 'minimum_sphere_gap':
           case 'minimum_box_gap':
