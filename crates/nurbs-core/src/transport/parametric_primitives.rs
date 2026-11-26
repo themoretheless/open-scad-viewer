@@ -73,6 +73,8 @@ mod exact_merge_requests;
 mod profile_compression;
 #[path="spatial_distances.rs"]
 mod spatial_distances;
+#[path="face_clearances.rs"]
+mod face_clearances;
 
 #[path = "exact_field_requests.rs"]
 mod exact_field_requests;
@@ -140,6 +142,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
                 "gradientLower":r.gradient_lower,"reason":r.reason}))
         })());
     }
+    if face_clearances::OPS.contains(&op) { return Some(face_clearances::apply(v,op)); }
     if spatial_distances::OPS.contains(&op) { return Some(spatial_distances::apply(v,op)); }
     if profile_compression::OPS.contains(&op) {return Some(profile_compression::apply(v,op));}
     if matches!(op,"merge_patch_strip" | "merge_patch_grid" | "inspect_patch_grid") { return Some(exact_merge_requests::grid(v,op)); }

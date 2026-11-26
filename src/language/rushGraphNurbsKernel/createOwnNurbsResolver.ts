@@ -789,6 +789,25 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'curve_patch_clearance':
+          case 'patch_pair_clearance':
+          case 'trimmed_face_clearance':
+          case 'curve_trimmed_face_distance':
+          case 'swept_ball_face_clearance':
+          {
+            const {id:_id,op,input,inputs,...settings}=n
+            const surface=needSurface(input)
+            const target=inputs[0]
+            const pair=op==='patch_pair_clearance'||op==='trimmed_face_clearance'
+            const geometry=pair?{other_surface:needSurface(target)}:{curve:needCurve(target)}
+            const loops='loops' in settings?settings.loops.map(loop=>loop.map(needCurve)):[]
+            const split='first_count' in settings?settings.first_count:loops.length
+            if(op==='trimmed_face_clearance' && split>=loops.length) throw new Error('Each trimmed face needs a boundary')
+            const report=callGeometryRust<object>(op,{...settings,surface,...geometry,loops:loops.slice(0,split),other_loops:loops.slice(split)})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'uv_loop_closure':
           case 'uv_loop_simplicity':
           case 'uv_trim_location': {
