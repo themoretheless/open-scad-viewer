@@ -60,6 +60,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'mobius_bezier_surface') return russian ? 'Параметризация Мёбиуса поверхности' : 'mobius bezier surface'
   if (operation === 'mobius_spline_surface') return russian ? 'Параметризация Мёбиуса поверхности' : 'mobius spline surface'
   if (operation === 'fit_mobius_surface') return russian ? 'Подбор параметризации Мёбиуса поверхности' : 'fit mobius surface'
+  if (operation === 'affine_clock_curve') return russian ? 'Смена диапазона параметра кривой' : 'Affine curve parameter range'
+  if (operation === 'affine_clock_surface') return russian ? 'Смена диапазонов U и V' : 'Affine surface parameter ranges'
   if (operation === 'piecewise_clock_curve') return russian ? 'Параметризация пролётов кривой' : 'piecewise clock curve'
   if (operation === 'relayout_clock_curve') return russian ? 'Перенос границ пролётов кривой' : 'relayout clock curve'
   if (operation === 'piecewise_clock_surface') return russian ? 'Параметризация пролётов поверхности' : 'piecewise clock surface'

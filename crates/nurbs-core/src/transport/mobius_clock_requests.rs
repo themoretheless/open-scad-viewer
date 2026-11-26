@@ -10,6 +10,7 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     if op.ends_with("_curve") {
         let source = field(v, "source")?;
         let r = match op {
+            "affine_clock_curve" => clock::affine_curve_clock(&source, field(v, "clock_pairs")?, budget)?,
             "piecewise_clock_curve" => clock::mobius_piecewise_bezier_curve(
                 &source,
                 &field::<Vec<f64>>(v, "span_factors")?,
@@ -40,6 +41,7 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     }
     let source = field(v, "source")?;
     let r = match op {
+        "affine_clock_surface" => clock::affine_surface_clock(&source, field(v, "clock_pairs")?, budget)?,
         "piecewise_clock_surface" => clock::mobius_piecewise_bezier_surface(
             &source,
             &field::<Vec<f64>>(v, "u_factors")?,

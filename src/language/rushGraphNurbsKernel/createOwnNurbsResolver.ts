@@ -986,6 +986,7 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'affine_clock_curve':
           case 'piecewise_clock_curve':
           case 'relayout_clock_curve':
           case 'certify_uv_chart':
@@ -1005,6 +1006,7 @@ export function createOwnNurbsResolver(
             result = {kind: 'curve', data: curve}
             break
           }
+          case 'affine_clock_surface':
           case 'piecewise_clock_surface':
           case 'relayout_clock_surface':
           case 'mobius_bezier_surface':
