@@ -8,11 +8,11 @@ import {cachedWasmOptimization} from './wasm-opt-cache.mjs'
 // the 8 MB ceiling browsers place on main-thread instantiation. Required, so every build of a
 // fingerprinted artifact produces the same bytes on every machine.
 const wasmOpt=fileURLToPath(new URL('../node_modules/binaryen/bin/wasm-opt',import.meta.url))
-export function optimizeWasm(file, {nativePath = process.env.OSV_WASM_OPT_NATIVE, input = readFileSync(file), mergeSimilar = false, foldCode = false} = {}) {
+export function optimizeWasm(file, {nativePath = process.env.OSV_WASM_OPT_NATIVE, input = readFileSync(file), mergeSimilar = false, foldCode = false, stack = false} = {}) {
   if(!existsSync(wasmOpt))throw new Error('wasm-opt (binaryen) is required to build the kernels: run `npm ci`.')
   const driver = optimizerDriver(nativePath)
   const flags = [...(foldCode ? ['--code-folding'] : []), ...(mergeSimilar ? ['--merge-similar-functions'] : []), '-Oz', ...(foldCode ? ['--reorder-functions','--reorder-globals'] : []), '--enable-bulk-memory', '--enable-sign-ext', '--enable-nontrapping-float-to-int',
-    '--enable-mutable-globals', '--enable-reference-types', '--enable-multivalue']
+    '--enable-mutable-globals', '--enable-reference-types', '--enable-multivalue', ...(stack ? ['--generate-stack-ir', '--optimize-stack-ir'] : [])]
   return cachedWasmOptimization({ input, tool: readFileSync(driver.path), flags,
     cacheDir: join(dirname(file), '.osv-wasm-opt-cache'), optimize: () => optimizeSnapshot(input, flags, driver) })
 }

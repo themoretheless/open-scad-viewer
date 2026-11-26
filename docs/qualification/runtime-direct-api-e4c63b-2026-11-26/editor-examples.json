@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "e4c63bb2337039337225136dc3431793856b5692991e2eab03f56e7580e9cbc0",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/minimum-sphere-gap.r",
+      "exampleSha256": "d34908f9213a679d65e11946114565e1d672d7d08fcb89dcd4d82c661e0b6c67",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 63 ms"
+    },
+    {
+      "example": "examples/rush/minimum-box-gap.r",
+      "exampleSha256": "f7330201aaadd93eefde5d6240448a8fba5216ad26eeb5c827fb56f8d8141932",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/minimum-oriented-box-gap.r",
+      "exampleSha256": "adbf11a8561009dcbea4b7a200da2ea461c6c3cf357a49c3f461c76f1f620950",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/minimum-capsule-gap.r",
+      "exampleSha256": "7d2c0461030f58f2bdc4d8c89f8429cd66b322d798485918059247c61c662a56",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 6 ms"
+    }
+  ]
+}

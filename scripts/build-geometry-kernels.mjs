@@ -46,6 +46,10 @@ if (wasm.length > 20 * 1024 * 1024) {
         const initialFold = optimizeWasm(built, {mergeSimilar: true, foldCode: true})
         const refold = compactWasmTables(optimizeWasm(built, {input: initialFold, mergeSimilar: true, foldCode: true}))
         if (refold.length < wasm.length) wasm = refold
+        if (wasm.length > 20 * 1024 * 1024) {
+          const stack = compactWasmTables(optimizeWasm(built, {input: initialFold, foldCode: true, mergeSimilar: true, stack: true}))
+          if (stack.length < wasm.length) wasm = stack
+        }
       }
     }
   }

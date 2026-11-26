@@ -18620,7 +18620,7 @@
     {
       "id": "NURBS-0718",
       "name": "Адаптивная оценка минимального зазора до сферических препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_spherical_clearance",
@@ -18628,7 +18628,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-718-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-718-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-718-2026-11-17/native.log.gz",
+        "examples/rush/minimum-sphere-gap.r",
+        "tests/rushMinimumClearances.test.ts"
       ],
       "remainingQualification": [
         "Refine signed clearance minima by lower bounds with a certified endpoint witness.",
@@ -18639,7 +18641,7 @@
     {
       "id": "NURBS-0719",
       "name": "Адаптивная оценка минимального зазора до прямоугольных препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_box_clearance",
@@ -18647,7 +18649,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-719-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-719-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-719-2026-11-17/native.log.gz",
+        "examples/rush/minimum-box-gap.r",
+        "tests/rushMinimumClearances.test.ts"
       ],
       "remainingQualification": [
         "Refine the minimum swept-ball clearance against solid axis-aligned boxes.",
@@ -18658,7 +18662,7 @@
     {
       "id": "NURBS-0720",
       "name": "Адаптивная оценка минимального зазора до повёрнутых коробок",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_oriented_box_clearance",
@@ -18666,7 +18670,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-720-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-720-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-720-2026-11-17/native.log.gz",
+        "examples/rush/minimum-oriented-box-gap.r",
+        "tests/rushMinimumClearances.test.ts"
       ],
       "remainingQualification": [
         "Refine minimum swept-ball clearance to oriented solid boxes.",
@@ -18677,7 +18683,7 @@
     {
       "id": "NURBS-0721",
       "name": "Адаптивная оценка минимального зазора до капсульных препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_capsule_clearance",
@@ -18685,7 +18691,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-721-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-721-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-721-2026-11-17/native.log.gz",
+        "examples/rush/minimum-capsule-gap.r",
+        "tests/rushMinimumClearances.test.ts"
       ],
       "remainingQualification": [
         "Refine the minimum swept-ball clearance to capsule bodies and rounded tips.",
