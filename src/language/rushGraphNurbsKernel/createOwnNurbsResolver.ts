@@ -1093,6 +1093,11 @@ export function createOwnNurbsResolver(
           case 'build_expanded_solid':
           case 'build_inferred_solid':
           case 'close_expanded_planes':
+          case 'project_polyhedral_body':
+          case 'measure_polyhedral_frame':
+          case 'measure_polyhedral_axis_gap':
+          case 'classify_polyhedral_plane':
+          case 'intersect_polyhedral_edges':
           case 'measure_polyhedral_volume':
           case 'measure_polyhedral_centroid':
           case 'measure_polyhedral_inertia':
@@ -1109,7 +1114,7 @@ export function createOwnNurbsResolver(
           case 'attach_bounded_rims':
           case 'discover_bounded_rims': {
             const {id:_id,op,input,...settings}=n
-            const {model,...report}=callGeometryRust<{model:NurbsBrep;workUsed:number}>(op,{source:needBrep(input),...settings})
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;workUsed:number}>(op,{source:needBrep(input),...settings,...(n.op==='measure_polyhedral_axis_gap'?{target:needBrep(n.target_geometry)}:{})})
             constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'brep',data:model}
             break
