@@ -8203,7 +8203,7 @@
     {
       "id": "NURBS-0292",
       "name": "Точный перенос UV-контура при перепараметризации Мёбиуса",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::pullback_mobius_pcurve",
@@ -8215,7 +8215,9 @@
         "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
         "crates/nurbs-core/tests/exact_mobius_pcurve_contracts.rs",
         "docs/qualification/nurbs-curvature-field-292-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-292-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-292-2026-11-16/native.log.gz",
+        "examples/rush/transfer-uv-clock.r",
+        "tests/rushUvClock.test.ts"
       ],
       "remainingQualification": [
         "Transfer retained two-dimensional trim curves under independent inverse chart clocks, maintaining the source trim parameter and proving equality over complete spans.",

@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "3253e8aad3f03bed8ce1a3307b9735cc25b71a0c1dc4881762a965ec56575fa9",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/transfer-uv-clock.r",
+      "exampleSha256": "d3648bc5b238ff1673899f63e4897669238214a0cdb64f5017f74b9840c3c253",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n7,57\nГотово · 55 ms"
+    }
+  ]
+}
