@@ -221,6 +221,7 @@ export function createOwnNurbsResolver(
     if (v.kind !== 'sdf') throw new Error('Expected SDF field')
     return v.data
   }
+  const measuredGearSources = new Map<string,string>()
   const sharedStepFiles = new Map<string,string>()
   function requireStepFile(key:string):string {
     needBrep(key)
@@ -2862,6 +2863,35 @@ export function createOwnNurbsResolver(
             if(op==='step_interference_groups')sharedStepFiles.set(key,step)
             constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'brep',data:model}
+            break
+          }
+          case 'external_spur_ratio':
+          case 'internal_spur_ratio':
+          case 'mounted_spur_ratio':
+          case 'spur_tip_clearance':
+          case 'spur_tooth_chord':
+          case 'spur_tooth_thinning':
+          case 'external_spur_backlash':
+          case 'internal_spur_backlash':
+          case 'spur_backlash_range':
+          case 'spur_overlap_range':
+          case 'spur_mounting_window':
+          case 'planet_tip_separation':
+          case 'spinner_layout_counts': {
+            const {id:_id,input,op,...options}=n
+            const body=needBrep(input)
+            const sourceKey=measuredGearSources.get(input) ?? input
+            const gearSpec=(id:string)=>{
+              const gear=nodes.get(measuredGearSources.get(id) ?? id)
+              if(gear?.op!=='brep_gear')throw new Error('Spur gear inspection requires a brep_gear definition')
+              return {module:gear.module,teeth:gear.teeth,pressure:gear.pressure_angle,
+                helix:gear.helix_angle,herringbone:gear.herringbone,internal:gear.internal,clearance:gear.clearance,backlash:gear.backlash}
+            }
+            const report=callGeometryRust<object>(op,{...options,gear:gearSpec(sourceKey),
+              ...('target_geometry' in options && {mate:gearSpec(options.target_geometry)})})
+            measuredGearSources.set(key,sourceKey)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:body}
             break
           }
           case 'make_step_assembly':
