@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "220217d64d89f97bbc4ec125f5d0e81911dc19f1251563635f32fc889714124c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/lift-uv-edge.r",
+      "exampleSha256": "4649409fe16c7d41fd218d8350a4184d676036050a70bfe30f63b839699fba74",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n12,17\nГотово · 55 ms"
+    }
+  ]
+}

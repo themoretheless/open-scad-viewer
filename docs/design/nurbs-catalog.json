@@ -8393,7 +8393,7 @@
     {
       "id": "NURBS-0300",
       "name": "Точное построение пространственного NURBS-ребра по UV-контуру",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::lift_pcurve_to_surface",
@@ -8406,7 +8406,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
         "crates/nurbs-core/tests/exact_pcurve_lift_contracts.rs",
         "docs/qualification/nurbs-curvature-field-300-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-300-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-300-2026-11-16/native.log.gz",
+        "examples/rush/lift-uv-edge.r",
+        "tests/rushUvEdgeLift.test.ts"
       ],
       "remainingQualification": [
         "Compose an authored rational pcurve with the exact original tensor basis across knot cells and store its complete world-space curve in the same absolute parameter.",
