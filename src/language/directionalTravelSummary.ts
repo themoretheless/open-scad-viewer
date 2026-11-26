@@ -101,6 +101,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'world_face_mass') return russian ? 'Моменты площади в мировых координатах' : 'world face mass'
   if (operation === 'principal_face_moments') return russian ? 'Главные моменты площади' : 'principal face moments'
   if (operation === 'principal_face_directions') return russian ? 'Главные направления площади' : 'principal face directions'
+  if (operation === 'coplanar_ray_contacts') return russian ? 'Контакты луча в плоскости грани' : 'coplanar ray contacts'
+  if (operation === 'coplanar_ray_partition') return russian ? 'Участки луча внутри грани' : 'coplanar ray partition'
   if (operation === 'cast_trimmed_face_ray') return russian ? 'Пересечение луча с обрезанной гранью' : 'Ray intersection with trimmed face'
   if (operation === 'planar_face_perimeter') return russian ? 'Периметр грани и отверстий' : 'planar face perimeter'
   if (operation === 'planar_boundary_distance') return russian ? 'Расстояние до границы' : 'planar boundary distance'

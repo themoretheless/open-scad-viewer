@@ -91,6 +91,61 @@ pub(super) fn measure_face(v: &Value, op: &str) -> Result<Value> {
         "pointBounds":b.witness.point_bounds,"distanceUpperMm":b.witness.distance_upper}})
     };
     match op {
+        "coplanar_ray_contacts" | "coplanar_ray_partition" => {
+            use crate::analysis::planar_coplanar_ray as ray;
+            let remaining = field::<u64>(v, "max_work")? - r.work_used;
+            if remaining == 0 {
+                return Ok(
+                    json!({"status":"refused","reason":"ResourceLimit","workUsed":r.work_used}),
+                );
+            }
+            let origin = field(v, "query_point")?;
+            let direction = field(v, "ray_direction")?;
+            let width = field(v, "parameter_width")?;
+            let (mut out, used) = if op == "coplanar_ray_contacts" {
+                let q =
+                    ray::contact_coplanar_face_ray(&faces[0], origin, direction, width, remaining)?;
+                let result = match q.outcome {
+                    ray::CoplanarRayOutcome::Contacts(events) => {
+                        json!({"status":"contacts","contacts":events.into_iter().map(|e|json!({
+                        "contour":e.contour,"curve":e.curve,"curveParameter":e.curve_parameter,
+                        "rayParameter":e.ray_parameter.map(|t|t.to_string()),"kind":format!("{:?}",e.kind)})).collect::<Vec<_>>()})
+                    }
+                    ray::CoplanarRayOutcome::NotCoplanar => json!({"status":"notCoplanar"}),
+                    ray::CoplanarRayOutcome::Refused(error) => {
+                        json!({"status":"refused","reason":format!("{error:?}")})
+                    }
+                };
+                (result, q.work_used)
+            } else {
+                let q = ray::partition_coplanar_face_ray(
+                    &faces[0],
+                    origin,
+                    direction,
+                    ray::CoplanarRayPartitionOptions {
+                        max_curve_parameter_width: width,
+                        winding_tolerance: field(v, "tolerance_uv")?,
+                        max_winding_cells: field(v, "max_winding_cells")?,
+                        max_work: remaining,
+                    },
+                )?;
+                let result = match q.outcome {
+                    ray::CoplanarRayPartitionOutcome::Partition(p) => json!({"status":"partition",
+                        "contactBands":p.contact_bands.into_iter().map(|a|a.map(|t|t.to_string())).collect::<Vec<_>>(),
+                        "gaps":p.gaps.into_iter().map(|g|json!({"parameter":g.parameter.map(|t|t.to_string()),"location":format!("{:?}",g.location)})).collect::<Vec<_>>(),
+                        "outsideAfter":p.outside_after.to_string(),"windingCells":q.winding_cells}),
+                    ray::CoplanarRayPartitionOutcome::NotCoplanar => {
+                        json!({"status":"notCoplanar"})
+                    }
+                    ray::CoplanarRayPartitionOutcome::Refused(error) => {
+                        json!({"status":"refused","reason":format!("{error:?}")})
+                    }
+                };
+                (result, q.work_used)
+            };
+            out["workUsed"] = json!(r.work_used + used);
+            return Ok(out);
+        }
         "cast_trimmed_face_ray" => {
             use crate::analysis::planar_face_ray::{self, PlanarFaceRayOutcome as Outcome};
             let remaining = field::<u64>(v, "max_work")? - r.work_used;
