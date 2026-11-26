@@ -1,0 +1,69 @@
+{
+  "wasmSha256": "c5f1edd4801a703424fc2f1c8128777645f99555585cb086db79e48df3abfd33",
+  "browser": {
+    "gpuActive": false,
+    "browser": "151.0.7922.34",
+    "placementStep": true,
+    "workerRequests": 6,
+    "applyWithoutNewWorkerRequest": true,
+    "cancelledLateSuccess": true,
+    "invalidInput": false,
+    "fieldErrors": false,
+    "undoRedo": true,
+    "objectHistory": false,
+    "keyboard": false,
+    "tabPresses": 0,
+    "downloads": 10
+  },
+  "occt": {
+    "passed": true,
+    "oracle": "OpenCascade XCAF",
+    "version": "8.0.1.1.0",
+    "stepSha256": "27ac011e26bc27975435f2aede740e05e17b5283dd5716ae152c880488b17bc0",
+    "definitions": 1,
+    "occurrences": 2,
+    "definitionVolumeMm3": 7999.999999999999,
+    "worldPlacementsMm": [
+      [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      [
+        [
+          1.0,
+          0.0,
+          0.0,
+          7.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ]
+    ]
+  }
+}

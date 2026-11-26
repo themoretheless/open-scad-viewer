@@ -10,7 +10,7 @@ assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
-  const url=new URL(req.url,'http://localhost');if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
+  const url=new URL(req.url,'http://localhost');if(url.pathname==='/favicon.ico'||url.pathname==='/__openscada/mcp-editor'){res.writeHead(204).end();return}
   const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
@@ -24,7 +24,7 @@ try {
  const {playwright}=await loadQualificationPlaywrightPackage()
  browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true})
- page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
+ page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.location().url+': '+m.text())})
  await page.addInitScript(()=>{
   window.__sceneEditRequests=0;window.__holdTransform=false;window.__lateTransform=null;window.__transformTerminated=false;const NativeWorker=window.Worker
   window.Worker=class extends NativeWorker {
@@ -43,7 +43,7 @@ try {
  })
  const origin=`http://127.0.0.1:${server.address().port}`
  await page.goto(origin)
- await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
+ if(theme!=='system')await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
  let tabPresses=0
  async function tabTo(locator){
   for(let i=0;i<250;i++){
@@ -80,14 +80,16 @@ try {
  const original={version:1,sketches:[],bodies:[]}
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'empty.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});if(keyboard){await tabTo(search);await page.keyboard.insertText(name);await page.keyboard.press('Enter')}else{await search.fill(name);await search.press('Enter')}}
+ async function command(name){await page.keyboard.press('Control+k');const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});if(keyboard){await tabTo(search);await page.keyboard.insertText(name);await page.keyboard.press('Enter')}else{await search.fill(name);await search.press('Enter')}}
  async function input(locator,value){if(keyboard){await tabTo(locator);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await locator.fill(value)}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command('Box')
- await solid.getByRole('button',{name:'Куб · 3D',exact:true}).waitFor({state:'visible'})
+ await solid.getByText('Куб · 3D',{exact:true}).waitFor({state:'visible'})
  await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'})
  await command('Create linked instance');await activate(apply)
- if(process.argv.includes('--instance-placement')||process.argv.includes('--absolute-placement')){
+ const placementStep=process.argv.includes('--placement-step')
+ if(placementStep||process.argv.includes('--instance-placement')||process.argv.includes('--absolute-placement')){
+  await solid.getByText('Куб · 3D · instance',{exact:true}).waitFor({state:'visible'})
   const created=await download('Скачать проект JSON','instance-created.json')
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
   const linked=created.bodies.find(body=>body.instance);assert.ok(linked)
@@ -95,13 +97,20 @@ try {
   await command(absolute?'Place instance':'Transform instance')
   await input(solid.getByLabel(/^X/),'7')
   await activate(apply)
-  const placed=await download('Скачать проект JSON','instance-placed.json')
-  assert.deepEqual(placed.bodies.find(body=>!body.instance),created.bodies.find(body=>!body.instance))
-  const actual=placed.bodies.find(body=>body.id===linked.id)
-  assert.equal(actual.instance.sourceId,linked.instance.sourceId)
   const expectedMatrix=structuredClone(linked.instance.matrix);if(absolute)expectedMatrix[0][3]=7;else expectedMatrix[0][3]+=7
+  let placed,actual
+  for(let attempt=0;attempt<10;attempt++){
+   placed=await download('Скачать проект JSON','instance-placed.json')
+   actual=placed.bodies.find(body=>body.id===linked.id)
+   if(actual?.instance?.matrix[0][3]===expectedMatrix[0][3])break
+   await page.waitForTimeout(500)
+  }
+  assert.deepEqual(placed.bodies.find(body=>!body.instance),created.bodies.find(body=>!body.instance))
+  assert.ok(actual?.instance,'Updated linked occurrence is missing')
+  assert.equal(actual.instance.sourceId,linked.instance.sourceId)
   assert.deepEqual(actual.instance.matrix,expectedMatrix)
   assert.equal(actual.mesh,undefined,'Compact export stores linked placement rather than duplicate geometry')
+  if(placementStep)await download('STEP сборки · тела и группы','instance-placed.step',false)
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
   await activate(solid.getByRole('button',{name:'↶',exact:true}))
   await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
@@ -190,6 +199,6 @@ try {
  }
  assert.deepEqual(renderErrors,[])
  const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
- const report={gpuActive,browser:browser.version(),workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,objectHistory:process.argv.includes('--object-history'),keyboard,tabPresses,downloads}
+ const report={gpuActive,browser:browser.version(),placementStep,workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,objectHistory:process.argv.includes('--object-history'),keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'scene-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
