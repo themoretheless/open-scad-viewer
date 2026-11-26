@@ -1,0 +1,41 @@
+{
+  "kernelSha256": "8631c8da2f5a6cbe0bf67da8f2d7ae1cee3070ab934849714a352acccbb3fb42",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/clip-polyhedral-segment.r",
+      "exampleSha256": "67e37cbd288f2ee4e45f9a55ca21bad2ab684f70b715ed96eaf3cf4fcae55a94",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 49 ms"
+    },
+    {
+      "example": "examples/rush/clip-unused-face-plane.r",
+      "exampleSha256": "3c61d3dd8b8c3710f8b29f8f7d2b5d4c91f4729bd28c679ee8ef94001363cd87",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/locate-polyhedral-point.r",
+      "exampleSha256": "cfef8b9c80145233a3acb738542e762bb5ad3d2052f69682e0b01522bb236fd5",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 15 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-boundary-distance.r",
+      "exampleSha256": "2b8dd2e016abc0fc8040a49204c97b6be30cee917712712bcd56ad83a1f4fd6d",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-signed-distance.r",
+      "exampleSha256": "885f54ce2e5432ed0b7fe189ae166a827773fd53cae8f349ee9a5d1f89bfe2fa",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/sample-polyhedral-signed-distances.r",
+      "exampleSha256": "c8b5e3c44af543034b04a653e07ab29f7729abd0b5e17221eedad7fbd28b3237",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-ball-clearance.r",
+      "exampleSha256": "2d0e418a9c8dcaf0918b0c9c4c7ed750c23312e261b6dfeccc37fa5b5ffcd835",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 12 ms"
+    }
+  ]
+}

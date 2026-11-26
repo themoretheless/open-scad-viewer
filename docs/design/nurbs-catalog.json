@@ -11575,7 +11575,7 @@
     {
       "id": "NURBS-0423",
       "name": "Точное отсечение пространственного отрезка по материалу плоскогранного тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_segment_clip",
@@ -11588,7 +11588,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-423-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-423-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-423-2026-11-17/native.log.gz",
+        "examples/rush/clip-polyhedral-segment.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Clip a spatial segment to solid material through exact transverse face intersections.",
@@ -11599,7 +11601,7 @@
     {
       "id": "NURBS-0424",
       "name": "Точное отсечение пространственного отрезка при совпадении с неиспользуемой плоскостью грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_segment_clip",
@@ -11612,7 +11614,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-424-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-424-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-424-2026-11-17/native.log.gz",
+        "examples/rush/clip-unused-face-plane.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Skip coplanar carrier planes only after proving the line misses the retained planar face.",
@@ -11623,7 +11627,7 @@
     {
       "id": "NURBS-0425",
       "name": "Точная классификация пространственной точки в плоскогранном B-rep-теле",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_point_location",
@@ -11636,7 +11640,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-425-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-425-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-425-2026-11-17/native.log.gz",
+        "examples/rush/locate-polyhedral-point.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Classify rational world coordinates as material, exterior or exact boundary on qualified polyhedral solids.",
@@ -11647,7 +11653,7 @@
     {
       "id": "NURBS-0426",
       "name": "Точное расстояние от точки до границы плоскогранного B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_boundary_distance",
@@ -11661,7 +11667,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "docs/qualification/nurbs-curvature-field-426-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-426-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-426-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-boundary-distance.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Return the exact nearest point and squared distance to a retained polyhedral boundary.",
@@ -11672,7 +11680,7 @@
     {
       "id": "NURBS-0427",
       "name": "Точное знаковое расстояние до границы плоскогранного B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_signed_distance",
@@ -11685,7 +11693,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-427-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-427-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-427-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-signed-distance.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Return exact signed squared distance to the material boundary with a rational point witness.",
@@ -11696,7 +11706,7 @@
     {
       "id": "NURBS-0428",
       "name": "Пакетное точное знаковое расстояние до плоскогранного B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_signed_distance_batch",
@@ -11709,7 +11719,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-428-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-428-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-428-2026-11-17/native.log.gz",
+        "examples/rush/sample-polyhedral-signed-distances.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Evaluate ordered exact signed-distance samples with one shared polyhedral face preparation.",
@@ -11720,7 +11732,7 @@
     {
       "id": "NURBS-0429",
       "name": "Точная проверка сферического зазора относительно плоскогранного B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_ball_clearance",
@@ -11733,7 +11745,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-429-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-429-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-429-2026-11-17/native.log.gz",
+        "examples/rush/measure-polyhedral-ball-clearance.r",
+        "tests/rushBodyQueries.test.ts"
       ],
       "remainingQualification": [
         "Classify an exact clearance ball as inside, outside, tangent or crossing polyhedral material.",
