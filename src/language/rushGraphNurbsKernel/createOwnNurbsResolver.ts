@@ -965,6 +965,10 @@ export function createOwnNurbsResolver(
             result = {kind:'curve', data:curve}
             break
           }
+          case 'check_seam_gap':
+          case 'check_seam_angle':
+          case 'isolate_seam_gap':
+          case 'isolate_seam_angle':
           case 'verify_uv_edge':
           case 'compare_uv_traces':
           case 'compare_uv_tangents': {
@@ -974,6 +978,9 @@ export function createOwnNurbsResolver(
               : {right:needSurface(n.target_geometry),right_trace:needCurve(n.inputs[1])}
             const report=callGeometryRust<object>(n.op,{
               surface,trace:needCurve(n.inputs[0]),max_work:n.max_work,...args,
+              ...('tolerance_mm' in n ? {tolerance_mm:n.tolerance_mm} : {}),
+              ...('min_cosine_squared' in n ? {min_cosine_squared:n.min_cosine_squared} : {}),
+              ...('parameter_width' in n ? {parameter_width:n.parameter_width} : {}),
             })
             constructionReports[key]={measurement:{operation:n.op,report}}
             result={kind:'surface',data:surface}
