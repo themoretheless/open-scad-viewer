@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "4bca8858e05c70e2cd569ed3f69fa59b3025fe15739a0e3fafce693cdc3b9548",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/periodic-trim-set-area.r",
+      "exampleSha256": "5b6aa0f7db51e72865fd897eef52878bc3b0eb2c2ec0b632f3486d68d56c3666",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 403 ms"
+    },
+    {
+      "example": "examples/rush/periodic-trim-set-centroid.r",
+      "exampleSha256": "ed10317aba90912a81668756016a23d611e85996038436279bf7f5cc4628c290",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 1 133 ms"
+    }
+  ]
+}

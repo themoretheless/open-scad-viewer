@@ -16393,7 +16393,7 @@
     {
       "id": "NURBS-0615",
       "name": "Гарантированная суммарная площадь всех компонент периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_area",
@@ -16402,7 +16402,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-615-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-615-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-615-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-set-area.r",
+        "tests/rushTrimSetMass.test.ts"
       ],
       "remainingQualification": [
         "Enclose total and component retained areas under shared integration and trim work limits.",
@@ -16413,7 +16415,7 @@
     {
       "id": "NURBS-0616",
       "name": "Гарантированный общий центр площади компонент периодической обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_centroid",
@@ -16422,7 +16424,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "docs/qualification/nurbs-curvature-field-616-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-616-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-616-2026-11-17/native.log.gz",
+        "examples/rush/periodic-trim-set-centroid.r",
+        "tests/rushTrimSetMass.test.ts"
       ],
       "remainingQualification": [
         "Accumulate first moments across all trimmed components under shared budgets and enclose their common centroid.",
