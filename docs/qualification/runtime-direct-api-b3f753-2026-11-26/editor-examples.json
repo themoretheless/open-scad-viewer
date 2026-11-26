@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "b3f753dd5e7b208bbfed24ec099b6516c940c49e675346d2437031fa717389bc",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/sphere-path-clearance.r",
+      "exampleSha256": "8f94d9f6edeb35205402fcef944d2f1bca4f449ab4a8a98f1784f9bfd0117a98",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 61 ms"
+    },
+    {
+      "example": "examples/rush/capsule-path-clearance.r",
+      "exampleSha256": "03094f553162d918fdf973cb7c3e6581d0f9e7f93544edcaab7b7e03537adef6",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/box-path-clearance.r",
+      "exampleSha256": "3c04239b4f6c1520e884111062c6fe43a0b1dcabeaf41144652d52d602b6d242",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/oriented-box-path-clearance.r",
+      "exampleSha256": "6fe227d5e6121cd366b0c852c700dec2cd82ca83c66ae73c14d1be8b4e4aeda4",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/first-sphere-contact.r",
+      "exampleSha256": "89c2170bafb8c68ac1184d7f52d7fb5a1f8869ebdb59eca81a3ef6050b6d2108",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/minimum-sphere-partition-gap.r",
+      "exampleSha256": "d89928d73feda97b4a0a58ecd3c8575f463dac8ba2468c3158b87affc8643433",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 5 ms"
+    }
+  ]
+}

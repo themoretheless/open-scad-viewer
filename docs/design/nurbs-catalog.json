@@ -18494,7 +18494,7 @@
     {
       "id": "NURBS-0712",
       "name": "Сертифицированный зазор сферического инструмента до сферических препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_spherical_clearance",
@@ -18502,7 +18502,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-712-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-712-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-712-2026-11-17/native.log.gz",
+        "examples/rush/sphere-path-clearance.r",
+        "tests/rushTrajectoryClearances.test.ts"
       ],
       "remainingQualification": [
         "Enclose signed sphere clearance and certify collision even when the tool center lies outside the obstacle.",
@@ -18513,7 +18515,7 @@
     {
       "id": "NURBS-0713",
       "name": "Сертифицированный зазор сферического инструмента до капсульных препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_capsule_clearance",
@@ -18521,7 +18523,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-713-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-713-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-713-2026-11-17/native.log.gz",
+        "examples/rush/capsule-path-clearance.r",
+        "tests/rushTrajectoryClearances.test.ts"
       ],
       "remainingQualification": [
         "Enclose signed clearance against capsule bodies and rounded ends.",
@@ -18532,7 +18536,7 @@
     {
       "id": "NURBS-0714",
       "name": "Сертифицированный зазор сферического инструмента до прямоугольных препятствий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_box_clearance",
@@ -18540,7 +18544,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-714-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-714-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-714-2026-11-17/native.log.gz",
+        "examples/rush/box-path-clearance.r",
+        "tests/rushTrajectoryClearances.test.ts"
       ],
       "remainingQualification": [
         "Certify Euclidean clearance against solid axis-aligned boxes, including corner contacts.",
@@ -18551,7 +18557,7 @@
     {
       "id": "NURBS-0715",
       "name": "Сертифицированный зазор сферического инструмента до повёрнутых коробок",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_oriented_box_clearance",
@@ -18559,7 +18565,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-715-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-715-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-715-2026-11-17/native.log.gz",
+        "examples/rush/oriented-box-path-clearance.r",
+        "tests/rushTrajectoryClearances.test.ts"
       ],
       "remainingQualification": [
         "Check Euclidean swept-ball clearance against oriented solid boxes.",
@@ -18570,7 +18578,7 @@
     {
       "id": "NURBS-0716",
       "name": "Сертифицированная оценка параметра первого контакта на NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::SphericalClearancePartition::first_contact",
@@ -18578,7 +18586,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-716-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-716-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-716-2026-11-17/native.log.gz",
+        "examples/rush/first-sphere-contact.r",
+        "tests/rushTrajectoryClearances.test.ts"
       ],
       "remainingQualification": [
         "Bound the first possible and confirmed toolpath contact, with a witnessing obstacle.",
@@ -18589,7 +18599,7 @@
     {
       "id": "NURBS-0717",
       "name": "Границы минимального зазора и его положения на NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::SphericalClearancePartition::minimum_clearance",
@@ -18597,7 +18607,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-717-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-717-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-717-2026-11-17/native.log.gz",
+        "examples/rush/minimum-sphere-partition-gap.r",
+        "tests/rushTrajectoryClearances.test.ts"
       ],
       "remainingQualification": [
         "Enclose the minimum signed clearance and preserve every possible minimizer interval.",
