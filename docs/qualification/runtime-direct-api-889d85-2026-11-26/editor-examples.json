@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "889d85951c026def08d76632f27dadfbeddb779139c3e9346e96a36bf240c89d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/exact-patch-strip.r",
+      "exampleSha256": "d748684296a8b5d3f72231b4ca92f26f6623094439ce04b9419326a42cc13be0",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n85,24\nГотово · 57 ms"
+    },
+    {
+      "example": "examples/rush/exact-patch-grid.r",
+      "exampleSha256": "d230b4465318ec2732812f5a48761596c397cb31bd8b1cdf9f68b0b23a456aa9",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n85,24\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/inspect-patch-grid.r",
+      "exampleSha256": "dc04a432f3e4c43b64bbdd97454d37beb3c91b6e1c3c3e794cd2b1f65fb9833e",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n33,07\nГотово · 7 ms"
+    }
+  ]
+}

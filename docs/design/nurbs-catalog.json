@@ -7968,7 +7968,7 @@
     {
       "id": "NURBS-0282",
       "name": "Точное объединение полосы смежных NURBS-патчей с удалением избыточных швов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_merge::merge_surface_strip",
@@ -7978,7 +7978,9 @@
         "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
         "crates/nurbs-core/tests/exact_surface_strip_contracts.rs",
         "docs/qualification/nurbs-curvature-field-282-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-282-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-282-2026-11-16/native.log.gz",
+        "examples/rush/exact-patch-strip.r",
+        "tests/rushPatchGrid.test.ts"
       ],
       "remainingQualification": [
         "Coalesces consecutive compatible charts while preserving both original parameter laws and removing only exactly redundant seam knots. Late failure withholds the entire strip.",
@@ -7989,7 +7991,7 @@
     {
       "id": "NURBS-0283",
       "name": "Точное объединение прямоугольной сетки смежных NURBS-патчей с согласованием базисов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_merge::merge_surface_grid",
@@ -8000,7 +8002,9 @@
         "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs",
         "crates/nurbs-core/tests/exact_surface_grid_contracts.rs",
         "docs/qualification/nurbs-curvature-field-283-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-283-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-283-2026-11-16/native.log.gz",
+        "examples/rush/exact-patch-grid.r",
+        "tests/rushPatchGrid.test.ts"
       ],
       "remainingQualification": [
         "Merges and compacts compatible rows, then inserts the union of exact transverse knots so that rows with different genuine seam structures remain joinable. Absolute UV maps and denominators are retained.",
@@ -8011,7 +8015,7 @@
     {
       "id": "NURBS-0284",
       "name": "Распознавание прямоугольной UV-сетки из неупорядоченного набора NURBS-патчей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_merge::infer_surface_grid_layout",
@@ -8020,7 +8024,9 @@
         "crates/nurbs-core/src/editing/exact_surface_merge/layout.rs",
         "crates/nurbs-core/tests/exact_surface_layout_contracts.rs",
         "docs/qualification/nurbs-curvature-field-284-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-284-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-284-2026-11-16/native.log.gz",
+        "examples/rush/inspect-patch-grid.r",
+        "tests/rushPatchGrid.test.ts"
       ],
       "remainingQualification": [
         "Uses exact stored UV endpoints to recover a V-major Cartesian tiling. Sparse occupancy distinguishes holes, duplicates and tiles spanning more than one Cartesian cell.",
