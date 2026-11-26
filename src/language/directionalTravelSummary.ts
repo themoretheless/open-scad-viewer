@@ -570,6 +570,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'trimmed_face_clearance') return russian ? 'Зазор между обрезанными гранями' : 'Trimmed face clearance'
   if (operation === 'curve_trimmed_face_distance') return russian ? 'Расстояние до обрезанной грани' : 'Curve trimmed face distance'
   if (operation === 'swept_ball_face_clearance') return russian ? 'Зазор сферического инструмента до грани' : 'Swept ball face clearance'
+  if (operation === 'routed_tube_pair') return russian ? 'Зазор между трубками' : 'Tube clearance'
+  if (operation === 'routed_tube_bundle') return russian ? 'Минимальный зазор в пучке трубок' : 'Minimum tube bundle clearance'
   if (operation === 'spatial_contour_sets_distance') return russian ? 'Расстояние между наборами контуров' : 'Spatial contour sets distance'
   if (operation === 'closest_spatial_contours') return russian ? 'Ближайшая пара контуров' : 'Closest spatial contours'
   if (operation === 'inspect_spatial_clearances') return russian ? 'Монтажные зазоры контуров' : 'Inspect spatial clearances'

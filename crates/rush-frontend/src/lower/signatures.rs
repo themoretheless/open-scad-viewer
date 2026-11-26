@@ -93,6 +93,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "trimmed_face_clearance" => &["inputs", "loops", "first_count", "minimum_mm", "tolerance_mm", "tolerance_uv", "max_cells", "max_domain_cells"],
         "curve_trimmed_face_distance" => &["inputs", "loops", "tolerance_mm", "tolerance_uv", "max_cells", "max_domain_cells"],
         "swept_ball_face_clearance" => &["inputs", "loops", "radius_mm", "tolerance_mm", "tolerance_uv", "max_cells", "max_domain_cells"],
+        "routed_tube_pair" | "routed_tube_bundle" => &["inputs","radii_mm","tolerance_mm","max_cells"],
         "spatial_contour_sets_distance" => &["inputs", "first_count", "tolerance_mm", "max_cells"],
         "closest_spatial_contours" => &["inputs", "tolerance_mm", "max_cells"],
         "inspect_spatial_clearances" => &["inputs", "minimum_mm", "tolerance_mm", "max_cells"],

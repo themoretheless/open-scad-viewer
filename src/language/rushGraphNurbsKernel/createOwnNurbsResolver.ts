@@ -808,6 +808,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'routed_tube_pair':
+          case 'routed_tube_bundle': {
+            const {id:_id,op,input,inputs,...settings}=n
+            const curve=needCurve(input)
+            const report=callGeometryRust<object>(op,{...settings,curves:[curve,...inputs.map(needCurve)]})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'uv_loop_closure':
           case 'uv_loop_simplicity':
           case 'uv_trim_location': {
