@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "14aa880d6c0e3b8cdfe2c907a241005e91519c2cdd02ab889182fec465e248ca",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/cast-trimmed-face-ray.r",
+      "exampleSha256": "ec2b2f1d16b6ea8ef261bff4dd04ee7ef6b76539d72cf272d5adefb9b8992ec4",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 73 ms"
+    }
+  ]
+}

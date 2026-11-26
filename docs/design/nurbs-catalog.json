@@ -9173,7 +9173,7 @@
     {
       "id": "NURBS-0334",
       "name": "Точное пересечение луча с плоской NURBS-гранью с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::planar_face_ray::cast_projected_face_ray",
@@ -9183,7 +9183,9 @@
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/exact_planar_face_ray_contracts.rs",
         "docs/qualification/nurbs-curvature-field-334-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-334-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-334-2026-11-17/native.log.gz",
+        "examples/rush/cast-trimmed-face-ray.r",
+        "tests/rushTrimmedFaceRay.test.ts"
       ],
       "remainingQualification": [
         "Cast an exact rational ray-plane hit and certify whether its projected location lies in filled rational trim winding.",
