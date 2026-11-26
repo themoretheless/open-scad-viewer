@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "9b29242f17aba8dfbbd9cbdf9c3e34ef2bd6df8b2ba8e14175a0136478767a63",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/clip-plane-section.r",
+      "exampleSha256": "bcbea2125f557b268b9b11c50734dabf6127e87df96f071b11a55029c1bc7b50",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 68 ms"
+    },
+    {
+      "example": "examples/rush/build-plane-section-segments.r",
+      "exampleSha256": "bd8ea53d2b54c0af1fb10a407fb01b10f24ddec7d4f2b5c482d4f0b81889715e",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 14 ms"
+    }
+  ]
+}
