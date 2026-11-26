@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "a59e76582f0690f95f3eede3c2229fa4b68cc582f482a185b46c86ee586df22a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/intersect-transverse-profiles.r",
+      "exampleSha256": "6058029d964e17d5d170ff24d412378049b8e82f4bb4fda4d4b5c1b12f556729",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 45 ms"
+    },
+    {
+      "example": "examples/rush/measure-profile-overlap-area.r",
+      "exampleSha256": "cedd3c3a7b7eabb81942f237fe3d3a1d7a83770121afc611b4f444cff2ec6d06",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/measure-profile-overlap-centroid.r",
+      "exampleSha256": "aa241aa8fc7254e5dc69258b566af38b2ae9d153e3a121ef22ff75eb62aa6530",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/classify-profile-overlap.r",
+      "exampleSha256": "40a860c74bf710720ea0bb5c221e60928789d05d265e225e81d3c6e4d6ec7b43",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/decompose-profile-overlap.r",
+      "exampleSha256": "1f27e2e301266ee1fe8340cfc82f236432b7d9090497514670ec54a64ddefc22",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n20\nГотово · 6 ms"
+    }
+  ]
+}

@@ -12931,7 +12931,7 @@
     {
       "id": "NURBS-0468",
       "name": "Точное пространственное пересечение плоских профилей с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::intersect_transverse_exact_planar_polyline_regions",
@@ -12950,7 +12950,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-468-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-468-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-468-2026-11-17/native.log.gz",
+        "examples/rush/intersect-transverse-profiles.r",
+        "tests/rushRegionOverlap.test.ts"
       ],
       "remainingQualification": [
         "Intersect filled planar profiles with holes on nonparallel supports.",
@@ -12961,7 +12963,7 @@
     {
       "id": "NURBS-0469",
       "name": "Точная площадь перекрытия компланарных профилей с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_coplanar_planar_polyline_region_overlap_area",
@@ -12979,7 +12981,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-469-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-469-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-469-2026-11-17/native.log.gz",
+        "examples/rush/measure-profile-overlap-area.r",
+        "tests/rushRegionOverlap.test.ts"
       ],
       "remainingQualification": [
         "Measure exact common area of two filled coplanar polygons with holes.",
@@ -12990,7 +12994,7 @@
     {
       "id": "NURBS-0470",
       "name": "Точный центр площади перекрытия компланарных профилей с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_coplanar_planar_polyline_region_overlap_mass",
@@ -13008,7 +13012,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-470-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-470-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-470-2026-11-17/native.log.gz",
+        "examples/rush/measure-profile-overlap-centroid.r",
+        "tests/rushRegionOverlap.test.ts"
       ],
       "remainingQualification": [
         "Compute exact common area and centroid of filled coplanar polygons with holes.",
@@ -13019,7 +13025,7 @@
     {
       "id": "NURBS-0471",
       "name": "Точная классификация взаимного положения компланарных профилей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::classify_exact_coplanar_planar_polyline_regions",
@@ -13037,7 +13043,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-471-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-471-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-471-2026-11-17/native.log.gz",
+        "examples/rush/classify-profile-overlap.r",
+        "tests/rushRegionOverlap.test.ts"
       ],
       "remainingQualification": [
         "Distinguish disjointness, point and edge touches, overlap, containment and equality.",
@@ -13048,7 +13056,7 @@
     {
       "id": "NURBS-0472",
       "name": "Точное разбиение пересечения компланарных профилей на выпуклые ячейки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::decompose_exact_coplanar_planar_polyline_region_overlap",
@@ -13066,7 +13074,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-472-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-472-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-472-2026-11-17/native.log.gz",
+        "examples/rush/decompose-profile-overlap.r",
+        "tests/rushRegionOverlap.test.ts"
       ],
       "remainingQualification": [
         "Construct disjoint convex cells for the area intersection of holed coplanar profiles.",
