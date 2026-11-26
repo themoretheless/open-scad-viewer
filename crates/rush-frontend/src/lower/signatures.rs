@@ -115,6 +115,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "bake_step_scales" => &["preview_index"],
         "compress_brep_faces" => &["faces", "max_work"],
         "inspect_shell_orientation" => &["tolerance_uv", "max_cells"],
+        "thicken_nurbs_patch" => &["thickness_mm", "tolerance_mm"],
         "inspect_patch_closure" => &["inputs", "max_intervals", "max_cells"],
         "compress_brep_edge" => &["edge_index", "max_work"],
         "select_step_parts" => &["definition_indices", "product_name", "preview_index"],

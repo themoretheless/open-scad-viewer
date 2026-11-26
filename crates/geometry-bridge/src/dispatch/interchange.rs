@@ -62,6 +62,9 @@ pub(crate) fn route(v: Value) -> Routed {
     if v["op"].as_str() == Some("inspect_patch_closure") {
         return Routed::Handled(crate::cad_face_contacts::inspect_linear_patch_closure(&v));
     }
+    if v["op"].as_str() == Some("thicken_nurbs_patch") {
+        return Routed::Handled(crate::cad_face_contacts::thicken_authored_patch(&v));
+    }
     if v["op"].as_str() == Some("inspect_shell_orientation") {
         return Routed::Handled(crate::cad_face_contacts::inspect_authored_shell_orientation(&v));
     }

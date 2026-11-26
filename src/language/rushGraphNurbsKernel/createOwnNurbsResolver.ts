@@ -3190,6 +3190,14 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'thicken_nurbs_patch': {
+            const {op,id:_id,input,...options}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep|null;stop:string}>(op,{surface:needSurface(input),...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            if(!model) throw new Error('NURBS patch thickening unresolved: '+report.stop)
+            result={kind:'brep',data:model}
+            break
+          }
           case 'inspect_shell_orientation': {
             const {op,id:_id,input,...options}=n
             const model=needBrep(input)

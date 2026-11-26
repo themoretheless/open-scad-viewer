@@ -117621,6 +117621,37 @@
               },
               "op": {
                 "type": "string",
+                "const": "thicken_nurbs_patch"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "thickness_mm": {
+                "type": "number"
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "thickness_mm",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "inspect_patch_closure"
               },
               "input": {

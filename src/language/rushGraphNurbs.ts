@@ -1501,6 +1501,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('bake_step_scales'),input:id,preview_index:z.number().int().nonnegative()}).strict(),
           z.object({id,op:z.literal('compress_brep_faces'),input:id,faces:z.array(z.number().int().nonnegative()).min(1).max(4096),max_work:z.number().int().min(1).max(10000000)}).strict(),
           z.object({id,op:z.literal('inspect_shell_orientation'),input:id,tolerance_uv:scalar,max_cells:z.number().int().min(2).max(1000000)}).strict(),
+          z.object({id,op:z.literal('thicken_nurbs_patch'),input:id,thickness_mm:scalar,tolerance_mm:scalar}).strict(),
           z.object({id,op:z.literal('inspect_patch_closure'),input:id,inputs:z.array(id).max(255),max_intervals:z.number().int().min(1).max(100000),max_cells:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('compress_brep_edge'),input:id,edge_index:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(10000000)}).strict(),
           z.object({id,op:z.literal('select_step_parts'),input:id,definition_indices:z.array(z.number().int().nonnegative()).min(1).max(256),product_name:z.string().min(1),preview_index:z.number().int().nonnegative()}).strict(),

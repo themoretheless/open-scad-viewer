@@ -742,3 +742,20 @@ pub(super) fn inspect_linear_patch_closure(v: &Value) -> Result<Value> {
         "edgeToleranceMm":audit.edge_tolerance_mm,
     }))
 }
+
+pub(super) fn thicken_authored_patch(v: &Value) -> Result<Value> {
+    let report = brep_core::shell_thickness::thicken_patch(
+        &field(v, "surface")?, field(v, "thickness_mm")?, field(v, "tolerance_mm")?,
+        Default::default(),
+    )?;
+    Ok(json!({
+        "model":report.model,
+        "stop":format!("{:?}",report.stop),
+        "maxSampledThicknessDeviationMm":report.max_sampled_thickness_deviation,
+        "continuousThicknessErrorUpperMm":report.continuous_thickness_error_upper,
+        "roundingInclusiveThicknessCertified":report.rounding_inclusive_thickness_certified,
+        "offsetFallbackReason":report.offset_fallback_reason,
+        "solidGeometryCertified":report.solid_geometry_certified,
+        "regularityCells":report.regularity_cells,
+    }))
+}
