@@ -18893,7 +18893,7 @@
     {
       "id": "NURBS-0731",
       "name": "Сертифицированное время последнего нарушения зазора на составной траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::last_toolpath_chain_violation",
@@ -18901,7 +18901,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-731-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-731-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-731-2026-11-17/native.log.gz",
+        "examples/rush/last-chain-violation.r",
+        "tests/rushClearanceTimeline.test.ts"
       ],
       "remainingQualification": [
         "Bracket the last clearance violation in elapsed chain time while retaining later uncertainty.",
@@ -18912,7 +18914,7 @@
     {
       "id": "NURBS-0732",
       "name": "Временная карта зазора для составной NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::toolpath_chain_clearance_timeline",
@@ -18920,7 +18922,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-732-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-732-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-732-2026-11-17/native.log.gz",
+        "examples/rush/chain-clearance-timeline.r",
+        "tests/rushClearanceTimeline.test.ts"
       ],
       "remainingQualification": [
         "Map certified clearance classes to ordered elapsed-time intervals across timed segments.",
@@ -18931,7 +18935,7 @@
     {
       "id": "NURBS-0733",
       "name": "Границы длительности самого долгого непрерывного нарушения зазора",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ToolpathChainClearanceTimeline::longest_violation_duration",
@@ -18939,7 +18943,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-733-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-733-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-733-2026-11-17/native.log.gz",
+        "examples/rush/longest-chain-violation.r",
+        "tests/rushClearanceTimeline.test.ts"
       ],
       "remainingQualification": [
         "Bound the longest contiguous clearance violation across segment boundaries.",
