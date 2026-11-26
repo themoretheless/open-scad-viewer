@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "c19e11f920a65f5d7bf7cc72175a7c4c033659c7ebb15ae160dec574843b850c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/mobius-bezier-curve.r",
+      "exampleSha256": "ae457347e3a8993ff3bc7edc3c9b258d4b22fcf68a000c5372f7a5d130f5f7e6",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,24\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/mobius-bezier-surface.r",
+      "exampleSha256": "ef28ff6b5940dbc16248e9cd914a916a1bbd348af001ad48f62b3bf350d7c782",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/mobius-spline-curve.r",
+      "exampleSha256": "9fca799c925dd930908d4e8fcb53bb739c6f048601f1d5ae128729a4fea7602b",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n3,65\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/mobius-spline-surface.r",
+      "exampleSha256": "d8132712cd243522b7b4625db91b61eee5559fa86faef28ec28c4fdde888b494",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,17\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/fit-mobius-curve.r",
+      "exampleSha256": "81f930390fc434b14963d4d07cef5d95f0b8f9c936d9635836b7e759acaf238f",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n3,65\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/fit-mobius-surface.r",
+      "exampleSha256": "b158e63ae2e256a5476c87a625856cd02ff9bd0a72e8fae8949e4003d9bbfc4e",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,17\nГотово · 7 ms"
+    }
+  ]
+}

@@ -729,6 +729,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CgArQZZs.js':203_600,'assets/D1hkBHSO.js':192_900,'assets/mainSolid.worker-RmEBSJ2M.js':210_800}),
   }),
+  // Exact Mobius parameter clocks: 20,623,220 raw bytes, 7,648,215 packed bytes and 14,748,580 total asset bytes.
+  'c19e11f920a65f5d7bf7cc72175a7c4c033659c7ebb15ae160dec574843b850c':Object.freeze({
+    version:98,geometryChunkBytes:7_649_000,totalAssetBytes:14_749_000,rawGeometryBytes:20_968_000,
+    namedJsChunkBytes:Object.freeze({
+      index:287_400,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CIJXa2qY.js':193_300,'assets/mainSolid.worker-Dtws1DMI.js':211_400,'assets/qEiwmHHg.js':203_600}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

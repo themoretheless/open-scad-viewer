@@ -8081,7 +8081,7 @@
     {
       "id": "NURBS-0287",
       "name": "Точное перепараметрирование Безье-кривых и патчей преобразованиями Мёбиуса",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::mobius_bezier_surface",
@@ -8091,7 +8091,10 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_mobius_bezier_contracts.rs",
         "docs/qualification/nurbs-curvature-field-287-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-287-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-287-2026-11-16/native.log.gz",
+        "examples/rush/mobius-bezier-curve.r",
+        "examples/rush/mobius-bezier-surface.r",
+        "tests/rushMobiusClocks.test.ts"
       ],
       "remainingQualification": [
         "Positive endpoint-preserving fractional-linear clocks act diagonally on the original Bernstein weights. A single exact gauge preserves the shape and orientation while changing interior parameter correspondence.",
@@ -8102,7 +8105,7 @@
     {
       "id": "NURBS-0288",
       "name": "Точное перепараметрирование Мёбиуса для многопролётных NURBS-кривых и поверхностей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::mobius_spline_surface",
@@ -8113,7 +8116,10 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_mobius_spline_contracts.rs",
         "docs/qualification/nurbs-curvature-field-288-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-288-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-288-2026-11-16/native.log.gz",
+        "examples/rush/mobius-spline-curve.r",
+        "examples/rush/mobius-spline-surface.r",
+        "tests/rushMobiusClocks.test.ts"
       ],
       "remainingQualification": [
         "Pulls back the entire clamped knot vector exactly, preserving multiplicities. The Cox–de Boor denominator products transform stored weights in one gauge and preserve the complete rational image.",
@@ -8124,7 +8130,7 @@
     {
       "id": "NURBS-0289",
       "name": "Подбор точного преобразования Мёбиуса по опорным параметрам NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::fit_mobius_spline_surface",
@@ -8135,7 +8141,10 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_mobius_spline_contracts.rs",
         "docs/qualification/nurbs-curvature-field-289-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-289-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-289-2026-11-16/native.log.gz",
+        "examples/rush/fit-mobius-curve.r",
+        "examples/rush/fit-mobius-surface.r",
+        "tests/rushMobiusClocks.test.ts"
       ],
       "remainingQualification": [
         "Fits a positive rational clock from one absolute interior landmark per axis and preserves it exactly through knot and weight storage, including nonbinary clock factors.",
