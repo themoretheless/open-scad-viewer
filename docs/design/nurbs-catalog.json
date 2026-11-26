@@ -9405,7 +9405,7 @@
     {
       "id": "NURBS-0344",
       "name": "Точные общие участки рациональных контуров двух непараллельных NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::intersect_planar_face_boundaries",
@@ -9416,7 +9416,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
         "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
         "docs/qualification/nurbs-curvature-field-344-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-344-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-344-2026-11-17/native.log.gz",
+        "examples/rush/shared-boundary-spans.r",
+        "tests/rushBoundarySections.test.ts"
       ],
       "remainingQualification": [
         "Intersect certified exact boundary intervals sourced from rational trim spans coincident with the support line.",
@@ -9427,7 +9429,7 @@
     {
       "id": "NURBS-0345",
       "name": "Изолированные общие точки рациональных контуров непараллельных NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::intersect_planar_face_boundary_contacts",
@@ -9439,7 +9441,9 @@
         "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
         "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
         "docs/qualification/nurbs-curvature-field-345-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-345-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-345-2026-11-17/native.log.gz",
+        "examples/rush/shared-boundary-contacts.r",
+        "tests/rushBoundarySections.test.ts"
       ],
       "remainingQualification": [
         "Certify exact shared boundary points by rational line intersections, including weighted crossings and rational quadratic tangencies.",
@@ -9473,7 +9477,7 @@
     {
       "id": "NURBS-0347",
       "name": "Доказуемый учёт разворотов совпадающих рациональных контуров NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::refine_planar_face_boundary_extents",
@@ -9486,7 +9490,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/contact_partition.rs",
         "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
         "docs/qualification/nurbs-curvature-field-347-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-347-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-347-2026-11-17/native.log.gz",
+        "examples/rush/refine-boundary-section.r",
+        "tests/rushBoundarySections.test.ts"
       ],
       "remainingQualification": [
         "Extend certified common boundary coverage using stationary points of rational spans that follow the support line.",
@@ -9497,7 +9503,7 @@
     {
       "id": "NURBS-0348",
       "name": "Внутренние и внешние границы пересечения рациональных контуров NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::bound_planar_face_boundary_intersection",
@@ -9510,7 +9516,9 @@
         "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/range_bounds.rs",
         "docs/qualification/nurbs-curvature-field-348-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-348-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-348-2026-11-17/native.log.gz",
+        "examples/rush/bound-boundary-section.r",
+        "tests/rushBoundarySections.test.ts"
       ],
       "remainingQualification": [
         "Bound transverse common trim boundaries by exact closed inner and outer coverage, including irrational isolated roots and folded spans.",

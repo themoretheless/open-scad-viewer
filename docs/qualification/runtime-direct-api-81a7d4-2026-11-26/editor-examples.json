@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "81a7d49302d26557e09721f9d214d693e9bdb12374d85942b368f5b1b47f0e36",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/shared-boundary-spans.r",
+      "exampleSha256": "966ed0a80775492970ffcbf303d8df4b52d2bc8cafcae2e3aefb71bd77c77fde",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 50 ms"
+    },
+    {
+      "example": "examples/rush/shared-boundary-contacts.r",
+      "exampleSha256": "489dd9f34c366393962e4d112986dc0c55b779385aff2227d298f7dbe950c2ae",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/refine-boundary-section.r",
+      "exampleSha256": "763e4b402cd87411c77f713677af5de275b5c68288e98a805074def0f2f6827c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/bound-boundary-section.r",
+      "exampleSha256": "826f589f9f39e803949b2633da1eac60c880e06f385454a74fe51539abe91fbc",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 8 ms"
+    }
+  ]
+}
