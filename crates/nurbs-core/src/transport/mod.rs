@@ -21,6 +21,7 @@ mod tool_workspaces;
 mod rotating_tools;
 mod angular_limits;
 mod orientation_frames;
+mod contour_fills;
 mod trajectory_ranges;
 mod motion_turns;
 mod trimmed_surface_integrals;

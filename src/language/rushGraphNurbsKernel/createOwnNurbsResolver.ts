@@ -1520,6 +1520,13 @@ export function createOwnNurbsResolver(
           case 'orientation_sector':
           case 'relative_orientation_sector':
           case 'relative_angular_limits':
+          case 'orientation_winding':
+          case 'curve_winding_at_point':
+          case 'contour_fill_at_point':
+          case 'curve_winding_over_box':
+          case 'signed_contour_distance':
+          case 'contour_fill_over_box':
+          case 'signed_contour_box_distance':
           case 'angular_travel':
           case 'relative_angular_travel':
           case 'angular_motion_limits':
