@@ -3037,6 +3037,28 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'certified_profile_edit': {
+            const {id:_id,input,inputs,loops,op,...options}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve}>(op,{
+              ...options,curves:[needCurve(input),...inputs.map(needCurve)],loops:loops.map(wire=>wire.map(needCurve))})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'verified_gear_edit':
+          case 'edited_gear_step': {
+            const {id:_id,op,input,...options}=n
+            const gear=nodes.get(input)
+            if(gear?.op!=='brep_gear') throw new Error('Select a gear definition for tooth editing')
+            const {model,step,...report}=callGeometryRust<{model:NurbsBrep;step:string|null}>(op,{
+              ...options,module:gear.module,teeth:gear.teeth,height:gear.height,
+              pressureAngle:gear.pressure_angle,helixAngle:gear.helix_angle,herringbone:gear.herringbone,
+              bore:gear.bore,internal:gear.internal,rimWidth:gear.rim_width,clearance:gear.clearance,backlash:gear.backlash})
+            if(step) sharedStepFiles.set(key,step)
+            constructionReports[key]={measurement:{operation:op,report:step?{...report,step}:report}}
+            result={kind:'brep',data:model,...(step?{stepText:step}:{})}
+            break
+          }
           case 'brep_gear': {
             const spec = {
                 module: n.module,

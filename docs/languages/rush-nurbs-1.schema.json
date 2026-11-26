@@ -116499,6 +116499,173 @@
               "read_sector"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "certified_profile_edit"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "minItems": 1,
+                "maxItems": 255
+              },
+              "loops": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "minItems": 1,
+                  "maxItems": 256
+                },
+                "minItems": 0,
+                "maxItems": 256
+              },
+              "pieces_per_sector": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "piece": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "sector_index",
+              "inputs",
+              "loops",
+              "pieces_per_sector",
+              "piece",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "verified_gear_edit"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "flank_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pole_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset_x_mm": {
+                "type": "number"
+              },
+              "offset_y_mm": {
+                "type": "number"
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "sector_index",
+              "flank_index",
+              "pole_index",
+              "offset_x_mm",
+              "offset_y_mm",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "edited_gear_step"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "sector_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "flank_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pole_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset_x_mm": {
+                "type": "number"
+              },
+              "offset_y_mm": {
+                "type": "number"
+              },
+              "tolerance_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "sector_index",
+              "flank_index",
+              "pole_index",
+              "offset_x_mm",
+              "offset_y_mm",
+              "tolerance_mm"
+            ],
+            "additionalProperties": false
           }
         ]
       }
