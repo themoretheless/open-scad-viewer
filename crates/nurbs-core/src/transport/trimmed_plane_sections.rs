@@ -69,6 +69,29 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
         max_winding_cells: field(v, "max_winding_cells")?,
         max_work: remaining,
     };
+    if op == "classify_face_section" {
+        let r = section::classify_planar_face_contacts(&first, &second, options)?;
+        let intervals = |parts: Vec<section::BoundaryInInterior>| {
+            parts
+                .into_iter()
+                .map(|p| json!({"parameter":p.parameter.map(|q|q.to_string()),"closed":p.closed}))
+                .collect::<Vec<_>>()
+        };
+        use section::PlanarFaceContactPartition::*;
+        let mut out = match r.outcome {
+            Transverse(c) => {
+                json!({"status":"transverse","line":line(c.line),"interior":ranges(c.interior),
+                "commonBoundary":ranges(c.common_boundary),"leftBoundaryInRightInterior":intervals(c.left_boundary_in_right_interior),
+                "rightBoundaryInLeftInterior":intervals(c.right_boundary_in_left_interior),"possible":ranges(c.possible)})
+            }
+            Parallel => json!({"status":"parallel"}),
+            Coincident => json!({"status":"coincident"}),
+            Refused(reason) => json!({"status":"refused","reason":format!("{reason:?}")}),
+        };
+        out["workUsed"] = json!(budget - remaining + r.work_used);
+        out["windingCells"] = json!(r.winding_cells);
+        return Ok(out);
+    }
     if matches!(
         op,
         "store_section_edge" | "optimize_section_edge" | "store_section_edges"

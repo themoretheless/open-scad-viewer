@@ -1121,6 +1121,7 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'classify_face_section':
           case 'clip_plane_section':
           case 'build_plane_section_segments': {
             const surface=needSurface(n.input)
