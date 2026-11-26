@@ -49570,6 +49570,1006 @@
               },
               "op": {
                 "type": "string",
+                "const": "point_workspace"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "planes": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "minItems": 1
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "planes",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "point_obstacles"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "obstacles": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "minItems": 1
+                },
+                "minItems": 1
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "obstacles",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "ball_obstacles"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "obstacles": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "minItems": 1
+                },
+                "minItems": 1
+              },
+              "radius_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "obstacles",
+              "radius_mm",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "ball_workspace"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "planes": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "minItems": 1
+              },
+              "radius_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "planes",
+              "radius_mm",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "capsule_workspace"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "planes": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "minItems": 1
+              },
+              "radius_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "vertex_offsets": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "minItems": 1
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "planes",
+              "radius_mm",
+              "vertex_offsets",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "hull_workspace"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "planes": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "minItems": 1
+              },
+              "radius_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "vertex_offsets": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "minItems": 1
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "planes",
+              "radius_mm",
+              "vertex_offsets",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "hull_obstacles"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "domain": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "param": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "param"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "obstacles": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "param": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                            }
+                          },
+                          "required": [
+                            "param"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "minItems": 1
+                },
+                "minItems": 1
+              },
+              "radius_mm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "vertex_offsets": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "param": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "minItems": 1
+              },
+              "parameter_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "domain",
+              "obstacles",
+              "radius_mm",
+              "vertex_offsets",
+              "parameter_tolerance",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "partition_axis_position"
               },
               "input": {

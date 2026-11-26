@@ -1473,6 +1473,13 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'point_workspace':
+          case 'point_obstacles':
+          case 'ball_obstacles':
+          case 'ball_workspace':
+          case 'capsule_workspace':
+          case 'hull_workspace':
+          case 'hull_obstacles':
           case 'partition_axis_position':
           case 'partition_axis_positions':
           case 'partition_trajectory_bounds':
