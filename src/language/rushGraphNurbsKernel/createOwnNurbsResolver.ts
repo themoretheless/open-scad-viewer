@@ -3274,6 +3274,15 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'assemble_owned_trimmed_shell': {
+            const {op,id:_id,input,...options}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep|null;closure:string}>(
+              op,{model:needBrep(input),...options})
+            if (!model) throw new Error('Could not admit the authored trimmed shell: '+JSON.stringify(report))
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'thicken_nurbs_patch': {
             const {op,id:_id,input,...options}=n
             const {model,...report}=callGeometryRust<{model:NurbsBrep|null;stop:string}>(op,{surface:needSurface(input),...options})

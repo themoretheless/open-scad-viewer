@@ -1,5 +1,7 @@
 //! Bridge operations of the `interchange` family.
 use crate::*;
+#[path="trimmed_shell_requests.rs"]
+mod trimmed_shell_requests;
 
 #[path="shared_assembly_rays.rs"]
 mod shared_assembly_rays;
@@ -59,6 +61,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if v["op"].as_str() == Some("assemble_owned_trimmed_shell") {
+        return Routed::Handled(trimmed_shell_requests::assemble(&v));
+    }
     if v["op"].as_str() == Some("brep_section_blade") {
         return Routed::Handled(build_section_blade(&v));
     }
