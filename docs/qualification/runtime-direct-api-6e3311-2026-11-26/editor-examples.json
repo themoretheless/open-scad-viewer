@@ -1,0 +1,46 @@
+{
+  "kernelSha256": "6e3311a97b0d929330e05d2d89c66dd2a355c3ebd39e79454cc4a24973e7104c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/name-step-parts.r",
+      "exampleSha256": "f77b81506cabe32418ec8d48fd7934dc8ce5b7d613b93e6490479e3e6c6ff1fe",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 104 ms"
+    },
+    {
+      "example": "examples/rush/read-step-names.r",
+      "exampleSha256": "71728061496751514317bfc244fd21c438542343a8efb786c1b0c6f8dff306a1",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 90 ms"
+    },
+    {
+      "example": "examples/rush/step-parts-list.r",
+      "exampleSha256": "452c47f8afc8c9e07d8b638ee63a6598ebb30e64d73de5266d155e384a8be9ea",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 88 ms"
+    },
+    {
+      "example": "examples/rush/select-step-parts.r",
+      "exampleSha256": "4333b94c8761e040a521a7f47d4c51e339e3e5343b038ea8ab9af290cdc23b52",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 86 ms"
+    },
+    {
+      "example": "examples/rush/name-step-variant.r",
+      "exampleSha256": "4db5a51b27df8abe429909486e8ee2f647081c19471dcc45a7e1fc0388504344",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n6\nПлощадь\n22\nГотово · 111 ms"
+    },
+    {
+      "example": "examples/rush/append-named-parts.r",
+      "exampleSha256": "0a8cdf0e146ec74532c7e0225f30a9adee37c58671f85d14e20e65a1f02bd02a",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 135 ms"
+    },
+    {
+      "example": "examples/rush/consolidate-named-parts.r",
+      "exampleSha256": "fd47cc3235ddd24f9ed8a641d9dbe995a6a37578f4dcc8cfd1a77fe38b846f25",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 179 ms"
+    },
+    {
+      "example": "examples/rush/compare-parts-lists.r",
+      "exampleSha256": "1264b1f9183a5451af40212bf1f1c8880b202da1cad32a8be980a5da6406f387",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n10\nГотово · 111 ms"
+    }
+  ]
+}

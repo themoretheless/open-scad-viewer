@@ -23032,7 +23032,7 @@
     {
       "id": "NURBS-0931",
       "name": "Именованные сборки STEP с повторным использованием NURBS-деталей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_named_step_assembly",
@@ -23042,7 +23042,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/native.log.gz",
+        "examples/rush/name-step-parts.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "One name per part definition. Names are written to PRODUCT records; the native shared geometry reader returns definitions and placements."
@@ -23051,7 +23053,7 @@
     {
       "id": "NURBS-0932",
       "name": "Импорт имён сборки STEP и общих определений деталей по связям геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::import_named_step_assembly",
@@ -23062,7 +23064,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-named-assembly-import-932-2026-11-18/native.log.gz",
+        "examples/rush/read-step-names.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Single selected assembly root with unambiguous product links. Imports root and part definition labels, not occurrence-specific labels."
@@ -23071,7 +23075,7 @@
     {
       "id": "NURBS-0933",
       "name": "Количественная спецификация деталей импортированной STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::parts_list",
@@ -23081,7 +23085,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/native.log.gz",
+        "examples/rush/step-parts-list.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Flat occurrence quantities by shared definition identity. Placement transforms do not split rows."
@@ -23090,7 +23096,7 @@
     {
       "id": "NURBS-0934",
       "name": "Экспорт выбранных позиций спецификации в именованную STEP-подсборку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::export_selected_parts",
@@ -23100,7 +23106,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/native.log.gz",
+        "examples/rush/select-step-parts.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Selection of whole definitions from a flat named STEP assembly; all corresponding occurrences retain their world placements."
@@ -23109,7 +23117,7 @@
     {
       "id": "NURBS-0935",
       "name": "Именованные варианты геометрии выбранных экземпляров STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::replace_named_variant",
@@ -23119,7 +23127,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/native.log.gz",
+        "examples/rush/name-step-variant.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "One closed solid revision for selected occurrences of a single definition, specified in part-local coordinates."
@@ -23128,7 +23138,7 @@
     {
       "id": "NURBS-0936",
       "name": "Объединение именованных STEP-сборок с переносом позиций спецификации",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::append_named_assembly",
@@ -23138,7 +23148,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/native.log.gz",
+        "examples/rush/append-named-parts.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Flattened assembly with proper rigid source placements. Destination name retained. Nested product hierarchy not retained."
@@ -23147,7 +23159,7 @@
     {
       "id": "NURBS-0937",
       "name": "Устранение дубликатов определений STEP-деталей по имени и индексированной геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::consolidate_named_parts",
@@ -23157,7 +23169,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/native.log.gz",
+        "examples/rush/consolidate-named-parts.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Indexed B-rep equality includes model tolerance. First matching topology identifiers retained. Geometrically equivalent reordered nets are outside scope."
@@ -23166,7 +23180,7 @@
     {
       "id": "NURBS-0938",
       "name": "Сравнение количественных спецификаций версий STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::NamedStepAssembly::parts_list_changes",
@@ -23176,7 +23190,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/native.log.gz",
+        "examples/rush/compare-parts-lists.r",
+        "tests/rushNamedParts.test.ts"
       ],
       "remainingQualification": [
         "Flat definition quantities grouped by name and equal indexed B-rep including tolerance. Does not compare instance transforms or recognize reordered control nets."
