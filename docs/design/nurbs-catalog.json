@@ -8659,7 +8659,7 @@
     {
       "id": "NURBS-0311",
       "name": "Точная аффинная перепараметризация поверхности вместе с контурами обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::affine_trimmed_surface_clock",
@@ -8671,7 +8671,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
         "crates/nurbs-core/tests/exact_affine_trim_contracts.rs",
         "docs/qualification/nurbs-curvature-field-311-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-311-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-311-2026-11-16/native.log.gz",
+        "examples/rush/affine-trim-surface.r",
+        "tests/rushTrimAxes.test.ts"
       ],
       "remainingQualification": [
         "Change the signed absolute UV domains of a rational tensor surface and its closed rational trims in one atomic operation.",
@@ -8682,7 +8684,7 @@
     {
       "id": "NURBS-0312",
       "name": "Точная перестановка осей U и V у рациональной поверхности с обрезкой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::transpose_trimmed_surface",
@@ -8692,7 +8694,9 @@
         "crates/nurbs-geometry/src/surface_transpose.rs",
         "crates/nurbs-core/tests/exact_trimmed_transpose_contracts.rs",
         "docs/qualification/nurbs-curvature-field-312-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-312-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-312-2026-11-16/native.log.gz",
+        "examples/rush/transpose-trim-surface.r",
+        "tests/rushTrimAxes.test.ts"
       ],
       "remainingQualification": [
         "Exchange both tensor axes and every closed UV trim together, including different basis degrees and rational weights.",
@@ -8703,7 +8707,7 @@
     {
       "id": "NURBS-0313",
       "name": "Единое точное преобразование порядка, направления и диапазонов осей обрезанной поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::remap_trimmed_surface_axes",
@@ -8713,7 +8717,9 @@
         "crates/nurbs-core/src/editing/exact_projective/affine_surface.rs",
         "crates/nurbs-core/tests/exact_trimmed_axis_remap_contracts.rs",
         "docs/qualification/nurbs-curvature-field-313-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-313-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-313-2026-11-16/native.log.gz",
+        "examples/rush/remap-trim-surface.r",
+        "tests/rushTrimAxes.test.ts"
       ],
       "remainingQualification": [
         "Apply a tensor-axis permutation and signed affine coordinates as one trimmed-face edit with exact final storage checks.",

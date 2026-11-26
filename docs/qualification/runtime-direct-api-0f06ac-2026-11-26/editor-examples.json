@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "0f06ac16e825bd67465845eba7f4bf0ed312dc733fea74867bbc3f3d68d80428",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/affine-trim-surface.r",
+      "exampleSha256": "5ab40698a5ca815eea948460baeddc331e7e168252f76dd571ad6d3621ae3a07",
+      "editorStats": "Объекты\n1\nТреугольники\n1 044\nОбъём\n0\nПлощадь\n243,06\nГотово · 78 ms"
+    },
+    {
+      "example": "examples/rush/affine-trim-piece.r",
+      "exampleSha256": "8322bd82a9aa50ea11607385ca691ea43c45daf2fd1ff25b1baffa83cae3ff97",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n12\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/transpose-trim-surface.r",
+      "exampleSha256": "24fb9ce820a3f4485f7d49f4824a3d634cacb4ffb3a261be94e1f0bf6694ba17",
+      "editorStats": "Объекты\n1\nТреугольники\n324\nОбъём\n0\nПлощадь\n243,07\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/transpose-trim-piece.r",
+      "exampleSha256": "527b29fe6b5cacc3db3e2b482d1d2ed94a355133c87bdf95e0bc8390e266626d",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n6\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/remap-trim-surface.r",
+      "exampleSha256": "a4b88ce5a7c847718821384bc1821c2401158648139d3c4d9106c5706156886e",
+      "editorStats": "Объекты\n1\nТреугольники\n324\nОбъём\n0\nПлощадь\n243,07\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/remap-trim-piece.r",
+      "exampleSha256": "2a805e11b417d3185ec364e140d5e05d0ab662fe5de0adbe671ef2f30b26ddf9",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n12\nГотово · 7 ms"
+    }
+  ]
+}
