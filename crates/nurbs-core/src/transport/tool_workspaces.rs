@@ -8,7 +8,7 @@ use crate::analysis::curve_measure::{
     partition_curve_rounded_hull_obstacle_clearance, partition_curve_rounded_hull_workspace,
 };
 
-pub(super) const OPS:&[&str]=&["point_workspace","point_obstacles","ball_obstacles","profiled_ball_workspace","minimum_profiled_ball_workspace","profiled_hull_workspace","minimum_profiled_hull_workspace","ball_workspace",
+pub(super) const OPS:&[&str]=&["point_workspace","point_obstacles","ball_obstacles","profiled_ball_workspace","minimum_profiled_ball_workspace","profiled_hull_workspace","minimum_profiled_hull_workspace","rotating_hull_workspace","minimum_rotating_hull_gap","rotating_hull_obstacles","rounded_rotating_obstacles","profiled_rotating_obstacles","profiled_rotating_workspace","minimum_profiled_rotating_gap","ball_workspace",
     "capsule_workspace","hull_workspace","hull_obstacles"];
 
 fn planes(data:&[[f64;4]]) -> Vec<WorkspaceHalfSpace<'_>> {
@@ -16,6 +16,7 @@ fn planes(data:&[[f64;4]]) -> Vec<WorkspaceHalfSpace<'_>> {
 }
 
 pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
+    if super::rotating_tools::OPS.contains(&op) { return super::rotating_tools::dispatch(v,op); }
     let curve=field(v,"curve")?;
     if matches!(op, "profiled_ball_workspace" | "minimum_profiled_ball_workspace" | "profiled_hull_workspace" | "minimum_profiled_hull_workspace") {
         let data:Vec<[f64;4]>=field(v,"planes")?;
@@ -71,7 +72,7 @@ pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
     Ok(workspace_report(r))
 }
 
-fn workspace_report(r:WorkspacePartition)->Value{
+pub(super) fn workspace_report(r:WorkspacePartition)->Value{
     let cells=r.cells.into_iter().map(|c|json!({"domain":c.parameter_interval,"span":c.span,"status":format!("{:?}",c.status),
         "planeResiduals":c.plane_residuals})).collect::<Vec<_>>();
     json!({"cells":cells,"workUsed":r.work_plane_cells})

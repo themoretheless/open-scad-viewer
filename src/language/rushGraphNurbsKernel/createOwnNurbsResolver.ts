@@ -1529,7 +1529,14 @@ export function createOwnNurbsResolver(
           case 'capsule_workspace':
           case 'profiled_hull_workspace':
           case 'minimum_profiled_hull_workspace':
+          case 'rotating_hull_workspace':
+          case 'minimum_rotating_hull_gap':
+          case 'profiled_rotating_workspace':
+          case 'minimum_profiled_rotating_gap':
           case 'hull_workspace':
+          case 'rotating_hull_obstacles':
+          case 'rounded_rotating_obstacles':
+          case 'profiled_rotating_obstacles':
           case 'hull_obstacles':
           case 'partition_axis_position':
           case 'partition_axis_positions':
