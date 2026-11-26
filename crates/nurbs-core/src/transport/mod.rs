@@ -11,6 +11,7 @@ mod core_queries;
 mod periodic_surface_edits;
 mod periodic_surface_assembly;
 mod motion_jumps;
+mod trajectory_clearance;
 mod tool_workspaces;
 mod trajectory_ranges;
 mod motion_turns;

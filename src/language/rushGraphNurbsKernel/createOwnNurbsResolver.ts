@@ -1473,6 +1473,12 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'sphere_path_clearance':
+          case 'capsule_path_clearance':
+          case 'box_path_clearance':
+          case 'oriented_box_path_clearance':
+          case 'first_sphere_contact':
+          case 'minimum_sphere_partition_gap':
           case 'point_workspace':
           case 'point_obstacles':
           case 'ball_obstacles':
