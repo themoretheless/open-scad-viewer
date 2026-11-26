@@ -281,6 +281,13 @@ impl EdgeSamplingRegistry {
             for &wire in std::iter::once(&face.outer).chain(&face.holes) {
                 for coedge in &model.loops[wire].coedges {
                     let edge=&model.edges[coedge.edge];
+                    // A closed edge can be the entire wire, including a
+                    // piecewise-linear spline imported as one IGES entity.
+                    // Its one shared endpoint cannot span a triangle by itself.
+                    if !edge.degenerate && edge.vertices[0] == edge.vertices[1] {
+                        let spans = edge.curve.knots.windows(2).filter(|k| k[0] < k[1]).count();
+                        schedule[coedge.edge] = schedule[coedge.edge].max(segments.max(spans).max(4));
+                    }
                     if (curved || edge.curve.degree > 1)
                         && !(reduce_face_rulings && exact_linear_ruling(&face.surface,coedge,edge)) {
                         let divisions = if reduce_linear_rulings && model.faces.len() > 32 && segments >= 4 {

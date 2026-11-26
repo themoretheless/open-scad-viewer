@@ -110,3 +110,21 @@ it('retains degenerate edges at poles without opening the shell', async () => {
   }
   expect(inspectNurbsBrep(model)).toMatchObject({ topologyValid: true, boundaryEdgeCount: 0 })
 }, 180000)
+
+it.each([
+  ['boundary-pair',1],
+  ['uv-only',4],
+  ['model-only',1],
+  ['graph-boundary',1],
+  ['grid-boundary',1],
+  ['weighted-grid',1],
+] as const)('preserves IGES face incidence for %s', async (fixture, boundaryEdgeCount) => {
+  const text = readFileSync('tests/fixtures/rush-iges/' + fixture + '.igs', 'utf8')
+  const model = await openIges(text)
+  expect(model.faces).toHaveLength(1)
+  expect(inspectNurbsBrep(model)).toMatchObject({ topologyValid: true, boundaryEdgeCount })
+  expect(model.loops[model.faces[0]!.outer]!.coedges).toHaveLength(boundaryEdgeCount)
+  if(fixture==='weighted-grid') {
+    expect(model.faces[0]!.surface.weights.flat().some(weight => weight !== 1)).toBe(true)
+  }
+}, 180000)

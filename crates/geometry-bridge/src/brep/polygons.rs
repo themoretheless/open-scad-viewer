@@ -14,19 +14,33 @@ pub(super) fn refine_trimmed_face(
     let height =
         surface.knots_v[surface.control_points[0].len()] - surface.knots_v[surface.degree_v];
     let key = |a: usize, b: usize| if a < b { [a, b] } else { [b, a] };
-    for _ in 0..24 {
+    let length_squared = |uv: &[[f64; 2]], [a, b]: [usize; 2]| {
+        ((uv[a][0] - uv[b][0]) / width).powi(2)
+            + ((uv[a][1] - uv[b][1]) / height).powi(2)
+    };
+    let mut target = 2. / (segments * segments) as f64;
+    for iteration in 0..24 {
         let mut incidence = BTreeMap::<[usize; 2], usize>::new();
         for t in &triangles {
             for i in 0..3 {
                 *incidence.entry(key(t[i], t[(i + 1) % 3])).or_default() += 1;
             }
         }
+        if iteration == 0 {
+            // The registry owns boundary edges and cannot be subdivided here.
+            // Use their longest chord as the floor for this UV size heuristic.
+            // Otherwise interior edges can converge to an immutable chord from
+            // above, repeatedly creating thinner triangles without termination.
+            for (&edge, &count) in &incidence {
+                if count == 1 {
+                    target = target.max(length_squared(&uv, edge) * (1. + 1e-6));
+                }
+            }
+        }
         let mut splits = BTreeMap::<[usize; 2], usize>::new();
         for (edge, count) in incidence {
             let [a, b] = edge;
-            let length =
-                ((uv[a][0] - uv[b][0]) / width).powi(2) + ((uv[a][1] - uv[b][1]) / height).powi(2);
-            if count == 2 && length > 2. / (segments * segments) as f64 {
+            if count == 2 && length_squared(&uv, edge) > target {
                 splits.insert(edge, uv.len());
                 uv.push([(uv[a][0] + uv[b][0]) / 2., (uv[a][1] + uv[b][1]) / 2.]);
                 shared.push(None);
