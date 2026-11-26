@@ -782,6 +782,9 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'tensor_principal_bounds':
+          case 'tensor_axis_bounds':
+          case 'trim_set_axis_bounds':
           case 'periodic_trim_set_area':
           case 'periodic_trim_set_centroid': {
             const {id:_id,input,op,...parameters}=n

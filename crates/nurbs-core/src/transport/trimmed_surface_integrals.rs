@@ -7,6 +7,9 @@ use crate::editing::exact_periodic_surface::build_exact_periodic_surface_trim_pa
 use crate::trim_domain::TrimDomain;
 
 pub(super) const OPS: &[&str] = &[
+    "tensor_principal_bounds",
+    "tensor_axis_bounds",
+    "trim_set_axis_bounds",
     "periodic_trim_set_area",
     "periodic_trim_set_centroid",
     "trimmed_surface_area_in_window",
@@ -21,6 +24,15 @@ fn area(report: TrimmedAreaReport) -> Value {
 }
 pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
     let source: Surface = field(v, "surface")?;
+    if matches!(op,"tensor_principal_bounds" | "tensor_axis_bounds") {
+        use crate::analysis::surface_measure::{bound_principal_moments_from_tensor,bound_directional_inertia};
+        let tensor = field(v,"tensor_bounds")?;
+        return if op == "tensor_principal_bounds" {
+            Ok(json!({"principalBounds":bound_principal_moments_from_tensor(tensor,field(v,"moment_tolerance")?)?}))
+        } else {
+            Ok(json!({"axisBounds":bound_directional_inertia(tensor,field(v,"axis_vector")?)?}))
+        };
+    }
     let uv_tolerance = field(v, "tolerance_uv")?;
     let mut used = 0;
     check(
@@ -41,6 +53,12 @@ pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
                 json!({"workUsed":used,"refusal":result.refusal.map(|r|format!("{r:?}")),"measure":null}),
             );
         };
+        if op == "trim_set_axis_bounds" {
+            let central = crate::analysis::surface_measure::periodic_trim_patch_set_central_inertia(
+                &patches,field(v,"tolerance_mm2")?,uv_tolerance,field(v,"max_surface_cells")?,field(v,"max_trim_cells")?)?;
+            return Ok(json!({"axisBounds":central.bound_axis_moment(field(v,"axis_vector")?)?,
+                "centroidBoundsMm":central.centroid.centroid_bounds,"workUsed":used}));
+        }
         if matches!(op, "periodic_trim_set_area" | "periodic_trim_set_centroid") {
             use crate::analysis::surface_measure::{periodic_trim_patch_set_area, periodic_trim_patch_set_centroid};
             let tolerance = field(v, "tolerance_mm2")?;
