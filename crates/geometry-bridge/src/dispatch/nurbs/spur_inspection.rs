@@ -14,6 +14,30 @@ pub(super) fn measure(v:&Value)->Result<Value> {
         Ok(())
     };
     check_spur(first)?;
+    let tooth_clearance = number(first,"clearance",0.25);
+    let internal = first["internal"].as_bool().unwrap_or(false);
+    if op=="eccentric_bore_stock" {
+        if internal {return Err(input("An eccentric bore requires an external gear"));}
+        let d=gear::external_gear_bore_stock(module,teeth,tooth_clearance,
+            [field(v,"offset_x_mm")?,field(v,"offset_y_mm")?],
+            field(v,"hole_diameter_mm")?,field(v,"minimum_web_mm")?)?;
+        return Ok(json!({"rootWebMm":d.root_web_mm,"diameterLimitMm":d.diameter_limit_mm}));
+    }
+    if matches!(op,"ring_bolt_stock"|"ring_bolt_window") {
+        if !internal {return Err(input("A ring bolt circle requires an internal gear"));}
+        let outer=field(v,"outer_radius_mm")?;
+        let diameter=field(v,"hole_diameter_mm")?;
+        let holes=field(v,"hole_count")?;
+        if op=="ring_bolt_stock" {
+            let d=gear::ring_gear_bolt_stock(module,teeth,tooth_clearance,outer,field(v,"bolt_radius_mm")?,diameter,holes)?;
+            return Ok(json!({"rootWebMm":d.root_web_mm,"outerWebMm":d.outer_web_mm,"adjacentWebMm":d.adjacent_web_mm}));
+        }
+        return Ok(match gear::ring_gear_bolt_radius_window(module,teeth,tooth_clearance,outer,diameter,holes,field(v,"minimum_web_mm")?)? {
+            gear::BoltRadiusWindow::Feasible(r)=>json!({"status":"feasible","boltRadiusMm":r}),
+            gear::BoltRadiusWindow::Infeasible=>json!({"status":"infeasible"}),
+            gear::BoltRadiusWindow::Unresolved=>json!({"status":"unresolved"}),
+        });
+    }
     if first["internal"].as_bool()==Some(true) {return Err(input("The first gear must be external"));}
     let pressure=number(first,"pressure",20.);
     let clearance=number(first,"clearance",0.25);

@@ -115951,6 +115951,125 @@
               "radii_mm"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "eccentric_bore_stock"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "offset_x_mm": {
+                "type": "number"
+              },
+              "offset_y_mm": {
+                "type": "number"
+              },
+              "hole_diameter_mm": {
+                "type": "number"
+              },
+              "minimum_web_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "offset_x_mm",
+              "offset_y_mm",
+              "hole_diameter_mm",
+              "minimum_web_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "ring_bolt_stock"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "outer_radius_mm": {
+                "type": "number"
+              },
+              "bolt_radius_mm": {
+                "type": "number"
+              },
+              "hole_diameter_mm": {
+                "type": "number"
+              },
+              "hole_count": {
+                "type": "integer",
+                "minimum": 2
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "outer_radius_mm",
+              "bolt_radius_mm",
+              "hole_diameter_mm",
+              "hole_count"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "ring_bolt_window"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "outer_radius_mm": {
+                "type": "number"
+              },
+              "hole_diameter_mm": {
+                "type": "number"
+              },
+              "hole_count": {
+                "type": "integer",
+                "minimum": 2
+              },
+              "minimum_web_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "outer_radius_mm",
+              "hole_diameter_mm",
+              "hole_count",
+              "minimum_web_mm"
+            ],
+            "additionalProperties": false
           }
         ]
       }

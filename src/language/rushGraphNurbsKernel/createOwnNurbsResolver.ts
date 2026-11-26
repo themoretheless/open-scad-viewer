@@ -2893,6 +2893,9 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'eccentric_bore_stock':
+          case 'ring_bolt_stock':
+          case 'ring_bolt_window':
           case 'external_spur_ratio':
           case 'internal_spur_ratio':
           case 'mounted_spur_ratio':

@@ -39,7 +39,7 @@ pub(super) const OPS: &[&str] = &[
     "verified_bevel_gear",
     "brep_nurbs_gear",
     "planet_gear_occurrences","planet_occurrences_step","planetary_gear_set_step",
-    "external_spur_ratio","internal_spur_ratio","mounted_spur_ratio","spur_tip_clearance","spur_tooth_chord","spur_tooth_thinning","external_spur_backlash","internal_spur_backlash","spur_backlash_range","spur_overlap_range","spur_mounting_window","planet_tip_separation","spinner_layout_counts",
+    "eccentric_bore_stock","ring_bolt_stock","ring_bolt_window","external_spur_ratio","internal_spur_ratio","mounted_spur_ratio","spur_tip_clearance","spur_tooth_chord","spur_tooth_thinning","external_spur_backlash","internal_spur_backlash","spur_backlash_range","spur_overlap_range","spur_mounting_window","planet_tip_separation","spinner_layout_counts",
     "brep_nurbs_gear_span",
     "brep_nurbs_verified_gear",
     "brep_nurbs_torus",
@@ -119,7 +119,7 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
         "finite_external_thread" => finite_thread::build(&v, false),
         "finite_internal_thread" => finite_thread::build(&v, true),
         "verified_bevel_gear" => rack_bevel::bevel(&v),
-        "external_spur_ratio" | "internal_spur_ratio" | "mounted_spur_ratio" | "spur_tip_clearance" | "spur_tooth_chord" | "spur_tooth_thinning" | "external_spur_backlash" | "internal_spur_backlash" | "spur_backlash_range" | "spur_overlap_range" | "spur_mounting_window" | "planet_tip_separation" | "spinner_layout_counts" => spur_inspection::measure(&v),
+        "eccentric_bore_stock" | "ring_bolt_stock" | "ring_bolt_window" | "external_spur_ratio" | "internal_spur_ratio" | "mounted_spur_ratio" | "spur_tip_clearance" | "spur_tooth_chord" | "spur_tooth_thinning" | "external_spur_backlash" | "internal_spur_backlash" | "spur_backlash_range" | "spur_overlap_range" | "spur_mounting_window" | "planet_tip_separation" | "spinner_layout_counts" => spur_inspection::measure(&v),
         "planet_gear_occurrences" | "planet_occurrences_step" | "planetary_gear_set_step" | "brep_nurbs_gear" | "brep_nurbs_gear_span" | "brep_nurbs_verified_gear" => handle_gear(&v),
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,
