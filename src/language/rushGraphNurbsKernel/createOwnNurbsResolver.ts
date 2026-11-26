@@ -3076,6 +3076,28 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model,stepText:report.step}
             break
           }
+          case 'piecewise_axis_radius':
+          case 'cap_edge_pcurve': {
+            const {id:_id,input,op,...args}=n
+            const surface=needSurface(input)
+            const edge='target_geometry' in args?{edge:needCurve(args.target_geometry)}:{}
+            const report=callGeometryRust<object>(op,{...args,surface,...edge})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
+          case 'bore_wall_faces':
+          case 'transfer_cap_loop':
+          case 'replace_bore_wall':
+          case 'cut_bore_cylinder': {
+            const {id:_id,input,op,...args}=n
+            const source=needBrep(input)
+            const surface='target_geometry' in args?{surface:needSurface(args.target_geometry)}:{}
+            const {model,...report}=callGeometryRust<{model?:NurbsBrep}>(op,{...args,model:source,...surface})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model??source}
+            break
+          }
           case 'certified_profile_edit': {
             const {id:_id,input,inputs,loops,op,...options}=n
             const {curve,...report}=callGeometryRust<{curve:NurbsCurve}>(op,{

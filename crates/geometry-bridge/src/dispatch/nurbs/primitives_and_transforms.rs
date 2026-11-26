@@ -13,8 +13,11 @@ mod rack_bevel;
 mod spur_inspection;
 #[path="certified_gear_edits.rs"]
 mod certified_gear_edits;
+#[path="bore_walls.rs"]
+mod bore_walls;
 
 pub(super) const OPS: &[&str] = &[
+    "piecewise_axis_radius","bore_wall_faces","cap_edge_pcurve","transfer_cap_loop","replace_bore_wall","cut_bore_cylinder",
     "brep_nurbs_sketch_extrude",
     "brep_nurbs_affine_lattice",
     "brep_nurbs_transform",
@@ -61,6 +64,7 @@ pub(super) const OPS: &[&str] = &[
 ];
 
 pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
+    if bore_walls::OPS.contains(&op){return bore_walls::apply(&v,op);}
     match op {
         "brep_nurbs_sketch_extrude" => handle_sketch_extrude(&v),
         "brep_nurbs_affine_lattice" => {
