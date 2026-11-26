@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "oracle": "OpenCascade XCAF",
+  "version": "8.0.1.1.0",
+  "stepSha256": "964e1aa5dab037311de7f2aa6d31a1b17050094486028d65ab516471a2fd8aa0",
+  "definitions": 1,
+  "occurrences": 2,
+  "definitionVolumeMm3": 6.0,
+  "worldPlacementsMm": [
+    [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        0.0,
+        0.0,
+        5.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ]
+    ]
+  ]
+}
