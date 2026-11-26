@@ -46,6 +46,8 @@ const OPS: &[&str] = &[
     "brep_nurbs_compose_step_v9",
     "brep_nurbs_export_iges_v2",
     "brep_nurbs_import_iges_v2",
+    "import_iges_curve",
+    "import_iges_surface",
     "brep_nurbs_export_step_freeform",
     "brep_nurbs_import_step_freeform",
     "brep_nurbs_export_step_trimmed",
@@ -434,6 +436,14 @@ fn handle(v: Value) -> Result<Value> {
                 "entityCount":report.entity_count,
                 "topologyCount":report.topology_count,
             }))
+        }
+        "import_iges_curve" => {
+            let text: String = field(&v, "text")?;
+            encode(cad_step::iges_interchange_v2::import_iges_curve(&text, field(&v, "directory_entry")?)?)
+        }
+        "import_iges_surface" => {
+            let text: String = field(&v, "text")?;
+            encode(cad_step::iges_interchange_v2::import_iges_surface(&text, field(&v, "directory_entry")?)?)
         }
         "brep_nurbs_import_iges_v2" => {
             let (model, cert, report) = cad_step::import_iges_v2(&field::<String>(&v, "text")?)?;

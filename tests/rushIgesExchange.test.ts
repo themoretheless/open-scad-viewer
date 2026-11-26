@@ -87,3 +87,26 @@ it.each([
   expect(actual.faces).toEqual(expected.faces)
   expect(actual.edges.map(edge => edge.curve.controlPoints)).toEqual(expected.edges.map(edge => edge.curve.controlPoints))
 }, 180000)
+
+it('reconstructs outer edges from the natural boundary of an IGES face', async () => {
+  const text = readFileSync('tests/fixtures/rush-iges/natural-boundary.igs', 'utf8')
+  const model = await openIges(text)
+  expect(model.faces).toHaveLength(6)
+  expect(model.edges).toHaveLength(12)
+  expect(inspectNurbsBrep(model)).toMatchObject({ topologyValid: true, boundaryEdgeCount: 0 })
+}, 180000)
+
+it('retains degenerate edges at poles without opening the shell', async () => {
+  const text = readFileSync('tests/fixtures/rush-iges/natural-pole.igs', 'utf8')
+  const model = await openIges(text)
+  expect(model.vertices).toHaveLength(4)
+  expect(model.edges.filter(edge => !edge.degenerate)).toHaveLength(6)
+  for (const face of model.faces) {
+    const outer = model.loops[face.outer]!
+    const poles = outer.coedges.filter(coedge => model.edges[coedge.edge]!.degenerate)
+    expect(poles).toHaveLength(1)
+    const pole = model.edges[poles[0]!.edge]!
+    expect(pole.vertices[0]).toBe(pole.vertices[1])
+  }
+  expect(inspectNurbsBrep(model)).toMatchObject({ topologyValid: true, boundaryEdgeCount: 0 })
+}, 180000)

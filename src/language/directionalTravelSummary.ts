@@ -1,4 +1,8 @@
 export function curveMeasurementLabel(operation: string, russian: boolean): string {
+  if (operation === 'export_iges_body') return russian ? 'Экспорт тела IGES' : 'IGES body export'
+  if (operation === 'open_iges_file' || operation === 'reopen_iges_body') return russian ? 'Импорт тела IGES' : 'IGES body import'
+  if (operation === 'open_iges_curve') return russian ? 'Кривая IGES' : 'IGES curve'
+  if (operation === 'open_iges_surface') return russian ? 'Поверхность IGES' : 'IGES surface'
   if (['lift_exact_periodic_surface_region_components', 'build_exact_periodic_surface_trim_components', 'build_exact_periodic_surface_trim_patches', 'build_exact_periodic_surface_trim_edges'].includes(operation)) return russian ? 'Компоненты обрезки' : 'Trim components'
   if (operation.includes('periodic_surface_region') || operation.includes('periodic_surface_contour_forest') || operation.includes('periodic_surface_paths')) return russian ? 'Область на периодической поверхности' : 'Periodic chart region'
   if (operation.includes('periodic_surface_path') || operation.includes('wrapped_surface_point')) return russian ? 'Измерение в периодических координатах' : 'Periodic chart measurement'

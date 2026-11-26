@@ -144,6 +144,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "step_material_area" => &["relative_tolerance", "max_evaluations", "preview_index"],
         "step_principal_inertia" => &["relative_tolerance", "max_evaluations", "preview_index"],
         "step_mass_properties" => &["relative_tolerance", "max_evaluations", "densities", "preview_index"],
+        "open_iges_curve" | "open_iges_surface" => &["iges_text", "directory_entry"],
         "open_iges_file" => &["iges_text"],
         "open_step_file" => &["step_text","preview_index"],
         "read_shared_step" => &["preview_index"],

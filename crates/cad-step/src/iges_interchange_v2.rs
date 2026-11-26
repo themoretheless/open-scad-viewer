@@ -2330,6 +2330,24 @@ fn unit_mismatch_warning(
     ))
 }
 
+/// Read a spatial curve selected by its IGES directory entry.
+pub fn import_iges_curve(text: &str, directory_entry: usize) -> Result<Curve> {
+    let (entities, unit, resolution) = parse(text)?;
+    let scale = unit.scale_to_mm();
+    let tolerance_mm = resolution * scale;
+    if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
+        return Err(refuse("Invalid scaled IGES curve tolerance"));
+    }
+    CurveDispatcher { entities: &entities, dim: 3, scale, tolerance_mm, work: 0 }
+        .dispatch(directory_entry)
+}
+
+/// Read a rational surface selected by its IGES directory entry.
+pub fn import_iges_surface(text: &str, directory_entry: usize) -> Result<Surface> {
+    let (entities, unit, _) = parse(text)?;
+    surface128(&entities, directory_entry, unit.scale_to_mm())
+}
+
 pub fn import_iges_v2(text: &str) -> Result<(Model, FeatureCertificate, IgesV2Report)> {
     import_iges_v2_with_options(text, IgesV2ImportOptions::default())
 }

@@ -3075,6 +3075,31 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'open_iges_curve': {
+            const curve=callGeometryRust<NurbsCurve>('import_iges_curve',{
+              text:n.iges_text,directory_entry:n.directory_entry,
+            })
+            constructionReports[key]={measurement:{operation:n.op,report:{
+              domain:[curve.knots[curve.degree],curve.knots[curve.controlPoints.length]],
+              periodic:curve.periodic ?? false,
+              weights:curve.weights,
+            }}}
+            result={kind:'curve',data:curve}
+            break
+          }
+          case 'open_iges_surface': {
+            const surface=callGeometryRust<NurbsSurface>('import_iges_surface',{
+              text:n.iges_text,directory_entry:n.directory_entry,
+            })
+            constructionReports[key]={measurement:{operation:n.op,report:{
+              domainU:[surface.knotsU[surface.degreeU],surface.knotsU[surface.controlPoints.length]],
+              domainV:[surface.knotsV[surface.degreeV],surface.knotsV[surface.controlPoints[0]!.length]],
+              periodicU:surface.periodicU ?? false,periodicV:surface.periodicV ?? false,
+              weights:surface.weights,
+            }}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'open_iges_file':
           case 'reopen_iges_body': {
             if(n.op==='reopen_iges_body') get(n.input)

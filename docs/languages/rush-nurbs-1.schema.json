@@ -60448,6 +60448,64 @@
               },
               "op": {
                 "type": "string",
+                "const": "open_iges_surface"
+              },
+              "iges_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4194304
+              },
+              "directory_entry": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "iges_text",
+              "directory_entry"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "open_iges_curve"
+              },
+              "iges_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4194304
+              },
+              "directory_entry": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "iges_text",
+              "directory_entry"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "open_iges_file"
               },
               "iges_text": {

@@ -277,6 +277,7 @@ fn standard_curve_flags_preserve_open_polynomials_and_rational_periodicity() {
         text = next;
         let (entities, _, _) = parse(&text).unwrap();
         assert_eq!(curve126(&entities, de, 3, 1.).unwrap(), curve);
+        assert_eq!(import_iges_curve(&text, de).unwrap(), curve);
         let previous = text.replace("IGES2.3", "IGES2.1");
         let mut legacy = entities[&de].values.clone();
         legacy[5] = usize::from(curve.periodic).to_string();
@@ -333,6 +334,7 @@ fn ruled_surface_keeps_its_periodic_axis_in_standard_and_legacy_iges() {
         text = next;
         let (entities, _, _) = parse(&text).unwrap();
         assert_eq!(surface128(&entities, de, 1.).unwrap(), surface);
+        assert_eq!(import_iges_surface(&text, de).unwrap(), surface);
         let mut legacy = values;
         legacy[5..10].clone_from_slice(&["0", "0", expected[3], expected[4], "0"].map(str::to_owned));
         let old = replace_parameters(&text.replace("IGES2.3", "IGES2.2"), de, legacy);
@@ -391,6 +393,7 @@ fn declared_iges_subinterval_preserves_weighted_multispan_geometry() {
     let (entities, _, _) = parse(&text).unwrap();
     let segment = curve126(&entities, de, 3, 1.).unwrap();
     assert_eq!(segment.domain(), [0.25, 1.5]);
+    assert_eq!(import_iges_curve(&text, de).unwrap(), segment);
     for t in [0.25, 0.5, 1., 1.25, 1.5] {
         assert!(CurveDispatcher::distance(&basis.evaluate(t).unwrap().point,
             &segment.evaluate(t).unwrap().point).unwrap() < 1e-12);
@@ -428,6 +431,7 @@ fn declared_surface_rectangle_preserves_geometry_and_uncut_periodicity() {
             continue;
         }
         let patch = patch.unwrap();
+        assert_eq!(import_iges_surface(&text, de).unwrap(), patch);
         assert_eq!(patch.periodic_u, range[0] == 0.);
         assert_eq!(patch.knots_u[patch.degree_u], range[0]);
         assert_eq!(patch.knots_u[patch.control_points.len()], range[1]);
