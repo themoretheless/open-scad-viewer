@@ -1,0 +1,12 @@
+// @rush/1
+panel = nurbs_surface(degree_u:1,degree_v:1,knots_u:[0,0,15,15],knots_v:[0,0,15,15],control_points:[[[0,0,0],[0,15mm,1mm]],[[15mm,0,2mm],[15mm,15mm,9mm]]],weights:[[1,2],[4,1]])
+outer0 = nurbs_curve(degree:1,knots:[3, 3, 4, 5, 5],control_points:[[0, 0], [5, 0], [15, 0]],weights:[1, 1, 1])
+outer1 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[15, 0], [15, 15]],weights:[1, 1])
+outer2 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[15, 15], [0, 15]],weights:[1, 1])
+outer3 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[0, 15], [0, 0]],weights:[1, 1])
+hole0 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[5, 3], [5, 9]],weights:[1, 1])
+hole1 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[5, 9], [6, 9]],weights:[1, 1])
+hole2 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[6, 9], [6, 3]],weights:[1, 1])
+hole3 = nurbs_curve(degree:1,knots:[3, 3, 4, 4],control_points:[[6, 3], [5, 3]],weights:[1, 1])
+piece = panel.remap_trim_piece(loops:[[outer0,outer1,outer2,outer3],[hole0,hole1,hole2,hole3]],clock_pairs:[[30,0],[-15,15]],axis_order:1,loop_index:1,piece:0,max_work:1000000)
+show piece.embed_xy_curve(height:0mm).surface_extrude(vector:[0,0,1mm]).tessellate(8,4)

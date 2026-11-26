@@ -228,6 +228,7 @@ export function createOwnNurbsResolver(
     string,
     { body: CertifiedMiterBoundaryOwner; quantum: number; maxWork: number }
   >()
+  const transferredTrimLoops = new Map<string, NurbsCurve[][]>()
   const constructionReports: Record<string, object> = {}
   let meshTriangles = 0
   function get(key: string): Value {
@@ -1023,16 +1024,23 @@ export function createOwnNurbsResolver(
           }
           case 'relayout_trim_surface':
           case 'relayout_trim_piece':
+          case 'affine_trim_surface':
+          case 'transpose_trim_surface':
+          case 'remap_trim_surface':
           case 'reclock_trim_surface':
+          case 'affine_trim_piece':
+          case 'transpose_trim_piece':
+          case 'remap_trim_piece':
           case 'reclock_trim_piece': {
             const {input, loops, op, id: _id, ...settings} = n
             const args = {source: needSurface(input), loops: loops.map(loop => loop.map(needCurve)), ...settings}
-            if (op === 'reclock_trim_piece' || op === 'relayout_trim_piece') {
+            if (op === 'reclock_trim_piece' || op === 'relayout_trim_piece' || op === 'affine_trim_piece' || op === 'transpose_trim_piece' || op === 'remap_trim_piece') {
               const {curve, ...report} = callGeometryRust<{curve: NurbsCurve; workUsed: number}>(op,args)
               constructionReports[key] = {measurement:{operation:op,report}}
               result = {kind:'curve',data:curve}
             } else {
-              const {surface, ...report} = callGeometryRust<{surface: NurbsSurface; workUsed: number}>(op,args)
+              const {surface, ...report} = callGeometryRust<{surface: NurbsSurface; trimLoops?: NurbsCurve[][]; workUsed: number}>(op,args)
+              if (report.trimLoops) transferredTrimLoops.set(key,report.trimLoops)
               constructionReports[key] = {measurement:{operation:op,report}}
               result = {kind:'surface',data:surface}
             }
@@ -2546,12 +2554,20 @@ export function createOwnNurbsResolver(
                 throw new Error('UV trim curve must be closed.')
               return pts.slice(2)
             }
+            const surface = needSurface(n.input)
+            const rings = transferredTrimLoops.get(n.input)
+            const sampleRing = (ring: NurbsCurve[]) => ring.flatMap(curve => {
+              const start = curve.knots[curve.degree]!
+              const end = curve.knots[curve.controlPoints.length]!
+              const count = curve.degree === 1 && curve.controlPoints.length === 2 ? 1 : n.trim_segments
+              return evaluateNurbsCurvePoints(curve, Array.from({length:count}, (_,i) => start + (end-start)*i/count))
+            })
             const trim = n.trim_curves
               ? { outer: sample(n.trim_curves.outer), holes: n.trim_curves.holes.map(sample) }
-              : n.trim
+              : n.trim ?? (rings ? {outer:sampleRing(rings[0]!),holes:rings.slice(1).map(sampleRing)} : undefined)
             result = {
               kind: 'mesh',
-              data: tessellateNurbsSurface(needSurface(n.input), {
+              data: tessellateNurbsSurface(surface, {
                 segmentsU: n.segments_u,
                 segmentsV: n.segments_v,
                 ...(trim ? { trim } : {}),
@@ -2595,5 +2611,5 @@ export function createOwnNurbsResolver(
     cache.set(key, result)
     return result
   }
-  return { get, cache, constructionReports, reconstructionReports, exactMiterPlacements }
+  return { get, cache, constructionReports, reconstructionReports, exactMiterPlacements, transferredTrimLoops }
 }

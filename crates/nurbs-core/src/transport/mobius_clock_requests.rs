@@ -157,7 +157,18 @@ pub(super) fn trim(v: &Value, op: &str) -> Result<Value> {
     }
     let loops: Vec<Vec<crate::curve::Curve>> = field(v, "loops")?;
     let surface = field(v, "source")?;
-    let r = if matches!(op, "relayout_trim_surface" | "relayout_trim_piece") {
+    let r = if matches!(op, "affine_trim_surface" | "affine_trim_piece") {
+        clock::affine_trimmed_surface_clock(&surface, &loops, field(v, "clock_pairs")?, budget)?
+    } else if matches!(op, "transpose_trim_surface" | "transpose_trim_piece") {
+        clock::transpose_trimmed_surface(&surface, &loops, budget)?
+    } else if matches!(op, "remap_trim_surface" | "remap_trim_piece") {
+        let order = match field::<usize>(v, "axis_order")? {
+            0 => clock::TrimmedAxisOrder::Uv,
+            1 => clock::TrimmedAxisOrder::Vu,
+            _ => return Err(input("Axis order must be 0 (UV) or 1 (VU)")),
+        };
+        clock::remap_trimmed_surface_axes(&surface, &loops, order, field(v, "clock_pairs")?, budget)?
+    } else if matches!(op, "relayout_trim_surface" | "relayout_trim_piece") {
         let [u, v_axis] = layouts(v)?;
         clock::relayout_trimmed_bezier_surface(&surface, &loops, [u.view(), v_axis.view()], budget)?
     } else {
@@ -167,6 +178,9 @@ pub(super) fn trim(v: &Value, op: &str) -> Result<Value> {
         .geometry
         .ok_or_else(|| input(format!("Trim transfer refused: {:?}", r.refusal)))?;
     let counts: Vec<_> = result.loops.iter().map(Vec::len).collect();
+    if matches!(op, "affine_trim_surface" | "transpose_trim_surface" | "remap_trim_surface") {
+        return Ok(json!({"surface":result.surface,"trimLoops":result.loops,"loopPieces":counts,"workUsed":r.work_used}));
+    }
     if matches!(op, "relayout_trim_surface" | "reclock_trim_surface") {
         return Ok(json!({"surface":result.surface,"loopPieces":counts,"workUsed":r.work_used}));
     }

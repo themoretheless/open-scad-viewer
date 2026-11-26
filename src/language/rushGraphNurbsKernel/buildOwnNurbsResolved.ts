@@ -250,7 +250,7 @@ function buildOwnNurbsDisplayResult<Base extends Record<string, unknown>>(
             ? { outer: needCurve(rootNode.trim_curves.outer), holes: rootNode.trim_curves.holes.map(needCurve) }
             : null,
         }
-      : null
+      : resolver.transferredTrimLoops.has(sourceNode) ? {trimLoops:resolver.transferredTrimLoops.get(sourceNode)} : null
   const sourceConstruction = resolver.constructionReports[sourceNode]
   const sweepEvidence = extractSweepEvidence(sourceConstruction)
   const replayOwner = resolver.exactMiterPlacements.get(sourceNode)?.body
