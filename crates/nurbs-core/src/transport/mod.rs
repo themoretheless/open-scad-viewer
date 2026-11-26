@@ -15,6 +15,7 @@ mod trajectory_clearance;
 mod chain_clearance;
 mod synchronized_clearance;
 mod scheduled_clearance;
+mod tool_pair_clearance;
 mod tool_workspaces;
 mod trajectory_ranges;
 mod motion_turns;

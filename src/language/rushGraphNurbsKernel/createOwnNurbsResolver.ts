@@ -1484,6 +1484,17 @@ export function createOwnNurbsResolver(
           case 'longest_chain_violation':
           case 'minimum_synchronized_gap':
           case 'synchronized_contact_intervals':
+          case 'minimum_tool_pair_gap':
+          case 'tool_pair_intervals':
+          case 'first_tool_pair_contact':
+          case 'last_tool_pair_contact':
+          case 'tool_contact_duration':
+          case 'longest_tool_contact':
+          case 'peak_tool_pair_count':
+          case 'simultaneous_tool_duration':
+          case 'simultaneous_tool_windows':
+          case 'peak_tool_contacts':
+          case 'tool_pairs_at_time':
           case 'minimum_scheduled_gap':
           case 'scheduled_contact_intervals':
           case 'held_contact_intervals':
