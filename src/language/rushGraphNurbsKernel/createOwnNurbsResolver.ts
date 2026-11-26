@@ -627,6 +627,16 @@ export function createOwnNurbsResolver(
             result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
             break
           }
+          case 'audit_plane_side':
+          case 'refine_plane_side':
+          case 'audit_plane_graphs': {
+            const {id:_id,op,input,...settings}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'parallel_plane_sections':
           case 'parallel_section_piece': {
             const {id:_id,op,input,...settings}=n
