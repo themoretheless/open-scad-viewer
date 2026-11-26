@@ -1,0 +1,33 @@
+{
+  "embeddedOnly": true,
+  "geometryRequests": 1,
+  "productionFilesUnchanged": true,
+  "candidate": "/Users/themoretheless/.codex/worktrees/nurbs-editor-assembly-rays-1126/public/wasm/geometry-kernel.wasm",
+  "schema": "candidate-direct-browser-api/1",
+  "identity": {
+    "sha256": "8d5f5dff436c5d43af67f9cd32beaf9ca75d170107f6066ee8c743a844acfc1c",
+    "byteLength": 20263636
+  },
+  "browserVersion": "151.0.7922.34",
+  "scope": "Finite Chromium embedded-default API probes on main and independent worker. Only the explicit identity probe fetches raw bytes; no optional compiler is installed and the worker ignores the supplied module. Extra raw HTTP requests are blocked. No provider admission, production build or whole-UI qualification.",
+  "qualificationClaim": "none",
+  "result": {
+    "main": {
+      "passed": true,
+      "checks": 40
+    },
+    "thread": {
+      "ok": true,
+      "identity": {
+        "sha256": "8d5f5dff436c5d43af67f9cd32beaf9ca75d170107f6066ee8c743a844acfc1c",
+        "byteLength": 20263636
+      },
+      "result": {
+        "passed": true,
+        "checks": 40
+      }
+    }
+  },
+  "pageErrors": [],
+  "passed": true
+}

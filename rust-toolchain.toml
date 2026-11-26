@@ -2,4 +2,4 @@
 # Keep generated WASM compatible with the Node 20 validation/runtime floor.
 channel = "nightly-2026-09-16"
 targets = ["wasm32-unknown-unknown"]
-components = ["rustfmt", "clippy"]
+components = ["rustfmt", "clippy", "rust-src"]

@@ -1,0 +1,71 @@
+{
+  "kernelSha256": "8d5f5dff436c5d43af67f9cd32beaf9ca75d170107f6066ee8c743a844acfc1c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/step-ray-crossings.r",
+      "exampleSha256": "f2719108acd254fc2f4f9710677a0ca1ecf1ab6d862ab5a8a20db0b8cea3f5a5",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 60 ms"
+    },
+    {
+      "example": "examples/rush/step-first-ray-crossing.r",
+      "exampleSha256": "7fdbe286edf93c042c3de17508fbdd5537c6465cb16ee165492ea024d5b5443e",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 25 ms"
+    },
+    {
+      "example": "examples/rush/step-ray-candidates.r",
+      "exampleSha256": "4bb9b458a15d768e8a9c0aaf6a9a199f2b00b363a4f2e3b26a7806867e7550d8",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 23 ms"
+    },
+    {
+      "example": "examples/rush/cull-far-step-ray-instances.r",
+      "exampleSha256": "1a05df15484531ea2a3ea574878342becbfb644a28f9574efa746f2f23b3759f",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 23 ms"
+    },
+    {
+      "example": "examples/rush/step-ray-intervals.r",
+      "exampleSha256": "71f25e69adcfc36c761baa166accca60ae3bb81ca2e6295565d14242574cf03f",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 37 ms"
+    },
+    {
+      "example": "examples/rush/step-ray-length.r",
+      "exampleSha256": "589472ccdd4709c870c25f8f6db34a2b220ef3fd7229eff9625038f0942eefe2",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 29 ms"
+    },
+    {
+      "example": "examples/rush/qualify-step-instance.r",
+      "exampleSha256": "0e374a6addc78b7791ff976ffab556569f6e0293c5e84cd34af87b9e58f790ab",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 27 ms"
+    },
+    {
+      "example": "examples/rush/step-ray-coverage.r",
+      "exampleSha256": "b1bdea61dd148f2401fda9877b16987ecc5d8a8fc67429aa11e4f3bff9f0cb33",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 33 ms"
+    },
+    {
+      "example": "examples/rush/step-ray-multiplicity.r",
+      "exampleSha256": "3010c4cbfa0f603ea3e192847315aedb50ca26009685e6b27fe3cb3dd11cb84a",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 32 ms"
+    },
+    {
+      "example": "examples/rush/step-pair-clearance.r",
+      "exampleSha256": "35b8cfe659e1c80f842ed2e23c165ebc3c1cddc65a4b8a446cabf57bc13036ab",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 38 ms"
+    },
+    {
+      "example": "examples/rush/step-clearance-checks.r",
+      "exampleSha256": "5f1a629e0f33a9d4ba3ac539f01dd21bf5e128f872717dfaf79bd880df014b1e",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 36 ms"
+    },
+    {
+      "example": "examples/rush/step-minimum-clearance.r",
+      "exampleSha256": "c13f746529ed962fe047ea8a1cbf857248ff074a660c256a620e7c95c9eef6c0",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 35 ms"
+    },
+    {
+      "example": "examples/rush/step-polyhedral-sections.r",
+      "exampleSha256": "347c211fe29c20c34b4d63dc31b9eaa5c5ec8f1281a2e81db30a9deb064818e9",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 33 ms"
+    }
+  ]
+}

@@ -21269,7 +21269,7 @@
     {
       "id": "NURBS-0843",
       "name": "Пересечения луча с обрезанными гранями размещённых STEP-тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::ray_crossings",
@@ -21278,7 +21278,9 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "crates/brep-core/src/model/ray_parity.rs",
         "docs/qualification/nurbs-curvature-field-843-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-843-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-843-2026-11-17/native.log.gz",
+        "examples/rush/step-ray-crossings.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Exclude occurrences by conservative world bounds and trace retained trimmed surfaces under shared root and domain work limits.",
@@ -21289,7 +21291,7 @@
     {
       "id": "NURBS-0844",
       "name": "Однозначный выбор ближайшей обрезанной грани STEP-сборки по лучу",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::first_ray_crossing",
@@ -21297,7 +21299,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-844-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-844-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-844-2026-11-17/native.log.gz",
+        "examples/rush/step-first-ray-crossing.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Return the nearest retained trimmed crossing when its complete ray interval strictly precedes all other candidates.",
@@ -21308,7 +21312,7 @@
     {
       "id": "NURBS-0845",
       "name": "Консервативные интервалы луча по габаритам экземпляров STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::ray_candidates",
@@ -21316,7 +21320,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-845-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-845-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-845-2026-11-17/native.log.gz",
+        "examples/rush/step-ray-candidates.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Intersect outward-rounded slab intervals to cull diagonal ray misses before trimmed face tracing.",
@@ -21327,7 +21333,7 @@
     {
       "id": "NURBS-0846",
       "name": "Отсев дальних деталей при выборе ближайшей грани STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::first_ray_crossing",
@@ -21335,7 +21341,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-846-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-846-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-846-2026-11-17/native.log.gz",
+        "examples/rush/cull-far-step-ray-instances.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Order box entries and stop tracing only when the remaining entry lower bounds strictly exceed a verified crossing upper bound.",
@@ -21346,7 +21354,7 @@
     {
       "id": "NURBS-0847",
       "name": "Интервалы материала вдоль луча для квалифицированного замкнутого B-rep",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "brep_core::closed_solid::QualifiedClosedSolid::ray_material_intervals",
@@ -21355,7 +21363,9 @@
         "crates/brep-core/src/model/ray_parity.rs",
         "crates/brep-core/tests/closed_solid.rs",
         "docs/qualification/nurbs-curvature-field-847-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-847-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-847-2026-11-17/native.log.gz",
+        "examples/rush/step-ray-intervals.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Group fully resolved retained-face ray roots into material intervals of a qualified closed solid.",
@@ -21366,7 +21376,7 @@
     {
       "id": "NURBS-0848",
       "name": "Границы длины материала на конечном лучевом отрезке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "brep_core::closed_solid::QualifiedClosedSolid::ray_material_length_mm",
@@ -21375,7 +21385,9 @@
         "crates/brep-core/src/model/ray_parity.rs",
         "crates/brep-core/tests/closed_solid.rs",
         "docs/qualification/nurbs-curvature-field-848-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-848-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-848-2026-11-17/native.log.gz",
+        "examples/rush/step-ray-length.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Clip qualified material intervals to a finite ray segment and enclose the total physical length with outward rounding.",
@@ -21386,7 +21398,7 @@
     {
       "id": "NURBS-0849",
       "name": "Квалификация размещённой STEP-детали для повторных измерений материала",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::qualify_occurrence",
@@ -21395,7 +21407,9 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "crates/brep-core/src/model/closed_solid.rs",
         "docs/qualification/nurbs-curvature-field-849-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-849-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-849-2026-11-17/native.log.gz",
+        "examples/rush/qualify-step-instance.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Validate material ownership in assembly coordinates and return an immutable qualified occurrence for repeated measurements.",
@@ -21406,7 +21420,7 @@
     {
       "id": "NURBS-0850",
       "name": "Покрытие конечного луча объединением материала STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::ray_material_coverage",
@@ -21416,7 +21430,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-850-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-850-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-850-2026-11-17/native.log.gz",
+        "examples/rush/step-ray-coverage.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Build guaranteed inner and possible outer parameter unions from qualified placed solids, counting common material once.",
@@ -21427,7 +21443,7 @@
     {
       "id": "NURBS-0851",
       "name": "Интервалы перекрытия материала нескольких STEP-деталей вдоль луча",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::ray_material_coverage_at_least",
@@ -21435,7 +21451,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-851-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-851-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-851-2026-11-17/native.log.gz",
+        "examples/rush/step-ray-multiplicity.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Sweep conservative endpoint events and enclose spans covered by at least the requested number of distinct occurrences.",
@@ -21446,7 +21464,7 @@
     {
       "id": "NURBS-0852",
       "name": "Измерение зазора между объёмами размещённых STEP-деталей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::occurrence_clearance",
@@ -21455,7 +21473,9 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "crates/brep-core/src/body_analysis/solid_distance.rs",
         "docs/qualification/nurbs-curvature-field-852-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-852-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-852-2026-11-17/native.log.gz",
+        "examples/rush/step-pair-clearance.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Compare placed authored B-rep volumes and retain bounded clearance, containment and source-face witnesses.",
@@ -21466,7 +21486,7 @@
     {
       "id": "NURBS-0853",
       "name": "Пакетная проверка минимального зазора STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::check_clearances",
@@ -21476,7 +21496,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-853-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-853-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-853-2026-11-17/native.log.gz",
+        "examples/rush/step-clearance-checks.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Conservatively filter by box distance and classify checked pairs only when the measured interval supports a threshold verdict.",
@@ -21487,7 +21509,7 @@
     {
       "id": "NURBS-0854",
       "name": "Границы наименьшего зазора во всей STEP-сборке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::minimum_clearance",
@@ -21497,7 +21519,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-854-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-854-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-854-2026-11-17/native.log.gz",
+        "examples/rush/step-minimum-clearance.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Process pairs in conservative lower-bound order and prune only beyond the best established upper bound.",
@@ -21508,7 +21532,7 @@
     {
       "id": "NURBS-0855",
       "name": "Точные поперечные сечения размещённых многогранных STEP-тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::exact_polyhedral_sections",
@@ -21517,7 +21541,9 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "docs/qualification/nurbs-curvature-field-855-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-855-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-855-2026-11-17/native.log.gz",
+        "examples/rush/step-polyhedral-sections.r",
+        "tests/rushAssemblyRays.test.ts"
       ],
       "remainingQualification": [
         "Cull by outward-rounded plane projection and recover exact material section loops and area for each placed polyhedral solid.",
