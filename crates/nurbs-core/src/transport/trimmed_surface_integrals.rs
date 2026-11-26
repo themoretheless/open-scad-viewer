@@ -12,6 +12,8 @@ pub(super) const OPS: &[&str] = &[
     "mass_weighted_centroid",
     "physical_principal_moments",
     "physical_moment_gaps",
+    "find_principal_axis",
+    "bound_axis_projector",
     "certify_principal_direction",
     "tensor_principal_bounds",
     "tensor_axis_bounds",
@@ -31,6 +33,15 @@ fn area(report: TrimmedAreaReport) -> Value {
 pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
     if matches!(op,"combine_surface_measures" | "combine_surface_densities") {
         return assembly(v,op);
+    }
+    if matches!(op,"find_principal_axis" | "bound_axis_projector") {
+        use crate::analysis::surface_measure::{find_certified_principal_axis,bound_principal_axis_projector};
+        let certificate = find_certified_principal_axis(field(v,"tensor_bounds")?,field(v,"moment_index")?,field(v,"moment_tolerance")?)?;
+        let projector = if op == "bound_axis_projector" {
+            certificate.map(bound_principal_axis_projector).transpose()?
+        } else { None };
+        return Ok(json!({"direction":certificate.map(|c|c.direction),"sineUpper":certificate.map(|c|c.sin_angle_upper),
+            "projectorBounds":projector}));
     }
     if op == "mass_weighted_centroid" {
         use crate::analysis::surface_measure::{SurfaceAssemblyMassBounds,bound_mass_weighted_centroid};

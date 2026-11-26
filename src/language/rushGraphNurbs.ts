@@ -1636,6 +1636,8 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('mass_weighted_centroid'),input:id,mass_bounds:z.array(z.tuple([scalar,scalar])).min(1).max(256),centroid_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).min(1).max(256)}).strict(),
           z.object({id,op:z.literal('physical_principal_moments'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),moment_tolerance:scalar}).strict(),
           z.object({id,op:z.literal('physical_moment_gaps'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),moment_tolerance:scalar}).strict(),
+          z.object({id,op:z.literal('find_principal_axis'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),moment_tolerance:scalar,moment_index:z.number().int().min(0).max(2)}).strict(),
+          z.object({id,op:z.literal('bound_axis_projector'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),moment_tolerance:scalar,moment_index:z.number().int().min(0).max(2)}).strict(),
           z.object({id,op:z.literal('certify_principal_direction'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),moment_tolerance:scalar,moment_index:z.number().int().min(0).max(2),axis_vector:z.tuple([scalar,scalar,scalar])}).strict(),
           z.object({id,op:z.literal('tensor_principal_bounds'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),moment_tolerance:scalar}).strict(),
           z.object({id,op:z.literal('tensor_axis_bounds'),input:id,tensor_bounds:z.array(z.array(z.tuple([scalar,scalar])).length(3)).length(3),axis_vector:z.tuple([scalar,scalar,scalar])}).strict(),

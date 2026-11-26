@@ -794,6 +794,8 @@ export function createOwnNurbsResolver(
           case 'mass_weighted_centroid':
           case 'physical_principal_moments':
           case 'physical_moment_gaps':
+          case 'find_principal_axis':
+          case 'bound_axis_projector':
           case 'certify_principal_direction':
           case 'tensor_principal_bounds':
           case 'tensor_axis_bounds':

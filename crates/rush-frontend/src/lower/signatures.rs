@@ -313,6 +313,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "mass_weighted_centroid" => &["mass_bounds", "centroid_bounds"],
         "physical_principal_moments" => &["tensor_bounds", "moment_tolerance"],
         "physical_moment_gaps" => &["tensor_bounds", "moment_tolerance"],
+        "find_principal_axis" => &["tensor_bounds", "moment_tolerance", "moment_index"],
+        "bound_axis_projector" => &["tensor_bounds", "moment_tolerance", "moment_index"],
         "certify_principal_direction" => &["tensor_bounds", "moment_tolerance", "moment_index", "axis_vector"],
         "tensor_principal_bounds" => &["tensor_bounds", "moment_tolerance"],
         "tensor_axis_bounds" => &["tensor_bounds", "axis_vector"],

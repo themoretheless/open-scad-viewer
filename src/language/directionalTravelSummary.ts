@@ -360,6 +360,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'mass_weighted_centroid') return russian ? 'Границы центра масс' : 'Mass centroid bounds'
   if (operation === 'physical_principal_moments') return russian ? 'Физические главные моменты' : 'Physical principal moments'
   if (operation === 'physical_moment_gaps') return russian ? 'Разности главных моментов' : 'Principal moment gaps'
+  if (operation === 'find_principal_axis') return russian ? 'Поиск главной оси' : 'Find principal axis'
+  if (operation === 'bound_axis_projector') return russian ? 'Границы проектора главной оси' : 'Principal axis projector bounds'
   if (operation === 'certify_principal_direction') return russian ? 'Проверка направления главной оси' : 'Principal axis direction certificate'
   if (operation === 'tensor_principal_bounds') return russian ? 'Интервалы главных моментов' : 'Principal moment intervals'
   if (operation === 'tensor_axis_bounds') return russian ? 'Момент относительно оси' : 'Moment about an axis'
