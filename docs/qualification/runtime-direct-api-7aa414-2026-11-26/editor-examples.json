@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "7aa414fb2e2c37f66fc0e06c2aa469f946f995d6f209c988f85191e3bea4ffcb",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/close-section-planes.r",
+      "exampleSha256": "667f78a58aa01c7e5e310c3d09e01de7d9435d0502917a1cf3f476fd81894527",
+      "editorStats": "Объекты\n1\nТреугольники\n8\nОбъём\n0,5\nПлощадь\n4,41\nГотово · 43 ms"
+    },
+    {
+      "example": "examples/rush/close-bounded-planes.r",
+      "exampleSha256": "eb6cc491395eacf3a4f864cfabedc6436e424c18d4186313317b0cc65e07d829",
+      "editorStats": "Объекты\n1\nТреугольники\n8\nОбъём\n0,5\nПлощадь\n4,41\nГотово · 13 ms"
+    }
+  ]
+}

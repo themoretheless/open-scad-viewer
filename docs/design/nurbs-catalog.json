@@ -10353,7 +10353,7 @@
     {
       "id": "NURBS-0380",
       "name": "Атомарное закрытие оболочки крышками в нескольких плоскостях",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::close_shell_with_section_caps",
@@ -10366,7 +10366,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
         "docs/qualification/nurbs-curvature-field-380-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-380-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-380-2026-11-17/native.log.gz",
+        "examples/rush/close-section-planes.r",
+        "tests/rushMultiplaneCaps.test.ts"
       ],
       "remainingQualification": [
         "Close a shell across multiple exact section planes under common arithmetic and verification limits.",
@@ -10459,7 +10461,7 @@
     {
       "id": "NURBS-0384",
       "name": "Атомарное закрытие оболочки в нескольких плоскостях с индивидуальными допусками",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::close_shell_with_bounded_section_caps",
@@ -10472,7 +10474,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
         "docs/qualification/nurbs-curvature-field-384-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-384-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-384-2026-11-17/native.log.gz",
+        "examples/rush/close-bounded-planes.r",
+        "tests/rushMultiplaneCaps.test.ts"
       ],
       "remainingQualification": [
         "Close a shell with mixed exact and rounded section caps under shared verification budgets.",
