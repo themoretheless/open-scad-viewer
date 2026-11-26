@@ -83,7 +83,7 @@ mod pcurve_seam_requests;
 mod pcurve_agreement_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
-    if matches!(op,"exact_wire_area" | "exact_wire_mass" | "exact_wire_inertia") {return Some(wire_moment_requests::apply(v,op));}
+    if matches!(op,"exact_wire_area" | "bound_wire_moments" | "exact_wire_mass" | "exact_wire_inertia") {return Some(wire_moment_requests::apply(v,op));}
     if matches!(op,"world_face_mass" | "principal_face_moments" | "principal_face_directions") {return Some(world_mass_requests::apply(v,op));}
     if op=="signed_planar_face_area" {return Some(planar_wire_requests::area(v));}
     if matches!(op,"project_planar_wire" | "lift_planar_wire") {return Some(planar_wire_requests::apply(v,op));}

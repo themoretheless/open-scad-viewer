@@ -1047,11 +1047,13 @@ export function createOwnNurbsResolver(
             break
           }
           case 'exact_wire_area':
+          case 'bound_wire_moments':
           case 'exact_wire_mass':
           case 'exact_wire_inertia': {
             const curve=needCurve(n.input)
             const report=callGeometryRust<object>(n.op,{outer:[curve,...n.inputs.map(needCurve)],
-              holes:'loops' in n ? n.loops.map(r=>r.map(needCurve)) : [],max_work:n.max_work})
+              holes:'loops' in n ? n.loops.map(r=>r.map(needCurve)) : [],
+              ...(n.op==='bound_wire_moments'?{chart_origin:n.chart_origin,moment_tolerances:n.moment_tolerances,max_cells:n.max_cells}:{max_work:n.max_work})})
             constructionReports[key]={measurement:{operation:n.op,report}}
             result={kind:'curve',data:curve}
             break

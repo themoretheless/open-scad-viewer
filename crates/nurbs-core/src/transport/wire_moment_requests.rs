@@ -2,9 +2,9 @@ use super::*;
 use crate::{curve::Curve, editing::exact_derivative as moment};
 pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     let outer: Vec<Curve> = field(v, "outer")?;
-    let work = field(v, "max_work")?;
+
     if op == "exact_wire_area" {
-        let r = moment::exact_planar_boundary_area(&outer, work)?;
+        let r = moment::exact_planar_boundary_area(&outer, field(v, "max_work")?)?;
         let moment::ExactPlanarAreaOutcome::Area(area) = r.outcome else {
             return Err(input(format!("Exact wire area refused: {:?}", r.outcome)));
         };
@@ -12,6 +12,18 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     }
     let mut rings = vec![outer];
     rings.extend(field::<Vec<Vec<Curve>>>(v, "holes")?);
+    if op == "bound_wire_moments" {
+        let report = crate::trim::planar_mass_bounds::bound_planar_boundary_moments(
+            &rings,
+            field(v, "chart_origin")?,
+            field(v, "moment_tolerances")?,
+            field(v, "max_cells")?,
+        )?;
+        return Ok(
+            json!({"moments":report.moments,"cells":report.cells,"converged":report.converged}),
+        );
+    }
+    let work = field(v, "max_work")?;
     let (mass, second, used) = if op == "exact_wire_inertia" {
         let r = moment::exact_planar_boundary_inertia(&rings, work)?;
         (r.mass, r.second_moments, r.work_used)

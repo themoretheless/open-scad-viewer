@@ -394,6 +394,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "isolate_seam_gap" => &["target_geometry","inputs","tolerance_mm","parameter_width","max_work"],
         "isolate_seam_angle" => &["target_geometry","inputs","min_cosine_squared","parameter_width","max_work"],
         "exact_wire_area" => &["inputs","max_work"],
+        "bound_wire_moments" => &["inputs","loops","chart_origin","moment_tolerances","max_cells"],
         "exact_wire_mass" => &["inputs","loops","max_work"],
         "exact_wire_inertia" => &["inputs","loops","max_work"],
         "world_face_mass" => &["loops","max_work"],

@@ -1802,6 +1802,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('isolate_seam_gap'),input:id,target_geometry:id,inputs:z.tuple([id,id]),tolerance_mm:scalar,parameter_width:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('isolate_seam_angle'),input:id,target_geometry:id,inputs:z.tuple([id,id]),min_cosine_squared:scalar,parameter_width:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('exact_wire_area'),input:id,inputs:z.array(id).max(31),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('bound_wire_moments'),input:id,inputs:z.array(id).max(31),loops:z.array(z.array(id).min(1)).max(64),chart_origin:uv,moment_tolerances:z.tuple([scalar,scalar,scalar]),max_cells:z.number().int().min(1).max(100000)}).strict(),
           z.object({id,op:z.literal('exact_wire_mass'),input:id,inputs:z.array(id).max(31),loops:z.array(z.array(id).min(1)).max(64),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('exact_wire_inertia'),input:id,inputs:z.array(id).max(31),loops:z.array(z.array(id).min(1)).max(64),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('world_face_mass'),input:id,loops:z.array(z.array(id).min(1)).min(1),max_work:z.number().int().min(1).max(1000000)}).strict(),

@@ -92,6 +92,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'isolate_seam_gap') return russian ? 'Участки превышения зазора' : 'Gap violation intervals'
   if (operation === 'isolate_seam_angle') return russian ? 'Участки превышения угла' : 'Angle violation intervals'
   if (operation === 'exact_wire_area') return russian ? 'Точная площадь контура' : 'exact wire area'
+  if (operation === 'bound_wire_moments') return russian ? 'Интервалы моментов рационального контура' : 'Rational wire moment bounds'
   if (operation === 'exact_wire_mass') return russian ? 'Первые моменты и центр площади' : 'exact wire mass'
   if (operation === 'exact_wire_inertia') return russian ? 'Вторые моменты площади' : 'exact wire inertia'
   if (operation === 'world_face_mass') return russian ? 'Моменты площади в мировых координатах' : 'world face mass'
