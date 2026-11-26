@@ -1,0 +1,15 @@
+{
+  "gpuActive": false,
+  "browser": "151.0.7922.34",
+  "placementStep": true,
+  "workerRequests": 6,
+  "applyWithoutNewWorkerRequest": true,
+  "cancelledLateSuccess": true,
+  "invalidInput": false,
+  "fieldErrors": false,
+  "undoRedo": true,
+  "objectHistory": false,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 10
+}
