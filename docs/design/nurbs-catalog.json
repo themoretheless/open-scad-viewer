@@ -9687,7 +9687,7 @@
     {
       "id": "NURBS-0355",
       "name": "Классификация областей материала между точными событиями секущей NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::classify_quadratic_planar_section",
@@ -9701,7 +9701,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "docs/qualification/nurbs-curvature-field-355-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-355-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-355-2026-11-17/native.log.gz",
+        "examples/rush/classify-section-gaps.r",
+        "tests/rushSectionMaterial.test.ts"
       ],
       "remainingQualification": [
         "Certify the complete open section intervals as inside or outside each face using rational samples between all boundary events.",
@@ -9712,7 +9714,7 @@
     {
       "id": "NURBS-0356",
       "name": "Точные связные компоненты общего материала по секущей двух NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::assemble_quadratic_planar_section_material",
@@ -9725,7 +9727,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section.rs",
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs",
         "docs/qualification/nurbs-curvature-field-356-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-356-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-356-2026-11-17/native.log.gz",
+        "examples/rush/assemble-section-material.r",
+        "tests/rushSectionMaterial.test.ts"
       ],
       "remainingQualification": [
         "Assemble closed common material components and singleton contacts from the exact ordered quadratic section.",
@@ -9736,7 +9740,7 @@
     {
       "id": "NURBS-0357",
       "name": "Сертифицированная суммарная длина общего материала по секущей NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::measure_quadratic_planar_section_material",
@@ -9750,7 +9754,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs",
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs",
         "docs/qualification/nurbs-curvature-field-357-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-357-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-357-2026-11-17/native.log.gz",
+        "examples/rush/measure-section-material.r",
+        "tests/rushSectionMaterial.test.ts"
       ],
       "remainingQualification": [
         "Bound the total material length along a finite transverse section, including algebraic endpoints and unresolved winding.",
