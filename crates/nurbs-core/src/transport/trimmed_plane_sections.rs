@@ -12,6 +12,9 @@ use crate::{
 };
 use num_rational::BigRational;
 
+#[path = "boundary_section_requests.rs"]
+mod boundary;
+
 #[path = "stored_section_requests.rs"]
 mod storage;
 
@@ -50,6 +53,15 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     let second = project("right", right)?;
     if remaining == 0 {
         return Ok(json!({"status":"refused","reason":"ResourceLimit","workUsed":budget}));
+    }
+    if matches!(
+        op,
+        "shared_boundary_spans"
+            | "shared_boundary_contacts"
+            | "refine_boundary_section"
+            | "bound_boundary_section"
+    ) {
+        return boundary::measure(v, op, &first, &second, remaining, budget - remaining);
     }
     let options = CoplanarRayPartitionOptions {
         max_curve_parameter_width: field(v, "parameter_width")?,
