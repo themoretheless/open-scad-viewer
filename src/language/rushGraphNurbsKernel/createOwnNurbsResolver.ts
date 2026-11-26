@@ -1046,6 +1046,16 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'exact_wire_area':
+          case 'exact_wire_mass':
+          case 'exact_wire_inertia': {
+            const curve=needCurve(n.input)
+            const report=callGeometryRust<object>(n.op,{outer:[curve,...n.inputs.map(needCurve)],
+              holes:'loops' in n ? n.loops.map(r=>r.map(needCurve)) : [],max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'signed_planar_face_area': {
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,loops:n.loops.map(r=>r.map(needCurve)),
