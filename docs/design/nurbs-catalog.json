@@ -23201,7 +23201,7 @@
     {
       "id": "NURBS-0939",
       "name": "Общие определения деталей STEP в группах сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_grouped_step_assembly",
@@ -23215,7 +23215,9 @@
         "docs/qualification/nurbs-grouped-step-939-2026-11-18/native.log.gz",
         "src/kernel/solidStepAssembly.ts",
         "tests/exactSolidsFromSource.test.ts",
-        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py",
+        "examples/rush/group-step-parts.r",
+        "tests/rushOccurrenceStyles.test.ts"
       ],
       "remainingQualification": [
         "Flat groups and rigid RGB occurrences checked through Solid export on raw WASM and independently reopened in OCCT. Packaged WASM verified on grouped and styled round trips."
@@ -23224,7 +23226,7 @@
     {
       "id": "NURBS-0940",
       "name": "Цвет поверхности отдельного экземпляра общего тела в STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_styled_step_assembly",
@@ -23238,7 +23240,9 @@
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_occt.py",
         "src/kernel/solidStepAssembly.ts",
         "tests/exactSolidsFromSource.test.ts",
-        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py",
+        "examples/rush/style-step-occurrences.r",
+        "tests/rushOccurrenceStyles.test.ts"
       ],
       "remainingQualification": [
         "RGB appearance on rigid placements. Physical materials, and native occurrence-style editing remain open. Packaged WASM verified."
@@ -23247,7 +23251,7 @@
     {
       "id": "NURBS-0941",
       "name": "Чтение контекстного цвета экземпляра общей детали STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::import_step_occurrence_colours",
@@ -23258,7 +23262,9 @@
         "crates/cad-step/src/step_presentation.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-read-occurrence-colours-941-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-read-occurrence-colours-941-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-read-occurrence-colours-941-2026-11-18/native.log.gz",
+        "examples/rush/read-occurrence-styles.r",
+        "tests/rushOccurrenceStyles.test.ts"
       ],
       "remainingQualification": [
         "Explicit solid occurrence colours keyed by product placement and solid, in flattened assembly order. Face overrides, inherited colours and per-face editing are separate."
