@@ -8612,7 +8612,7 @@
     {
       "id": "NURBS-0309",
       "name": "Точная сверка обоих направлений общего шва с разными диапазонами параметров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::compare_pcurve_seam_orientations",
@@ -8623,7 +8623,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs",
         "crates/nurbs-core/tests/exact_pcurve_orientation_contracts.rs",
         "docs/qualification/nurbs-curvature-field-309-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-309-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-309-2026-11-16/native.log.gz",
+        "examples/rush/compare-seam-orientations.r",
+        "tests/rushSeamOrientations.test.ts"
       ],
       "remainingQualification": [
         "Compare both endpoint-induced affine seam correspondences and keep evidence for each orientation under one shared budget.",

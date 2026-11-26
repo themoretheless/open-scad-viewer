@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "4e4160aed582e5b98dc5d815b55f872e4d92b1f76645e8a88db42c1332ab4af9",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/compare-seam-orientations.r",
+      "exampleSha256": "ff5e85f1d68c9ab67e193ecc27aef0fc8947fa54e0c54581b7b5f377a8a6f100",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 53 ms"
+    }
+  ]
+}

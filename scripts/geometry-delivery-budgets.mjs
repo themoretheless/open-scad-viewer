@@ -809,6 +809,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/ClT-O_yK.js':203_600,'assets/DKHOpeX2.js':194_900,'assets/mainSolid.worker-Csp_6764.js':217_100}),
   }),
+  // Seam orientation comparison: 20,715,132 raw bytes, 7,671,840 packed bytes and 14,800,423 total asset bytes.
+  '4e4160aed582e5b98dc5d815b55f872e4d92b1f76645e8a88db42c1332ab4af9':Object.freeze({
+    version:108,geometryChunkBytes:7_672_000,totalAssetBytes:14_801_000,rawGeometryBytes:20_968_000,
+    namedJsChunkBytes:Object.freeze({
+      index:290_600,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BuIIcSRP.js':194_900,'assets/CO2AR5dH.js':203_600,'assets/mainSolid.worker-DPSWPM13.js':217_700}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
