@@ -91,6 +91,51 @@ pub(super) fn measure_face(v: &Value, op: &str) -> Result<Value> {
         "pointBounds":b.witness.point_bounds,"distanceUpperMm":b.witness.distance_upper}})
     };
     match op {
+        "cast_trimmed_face_ray" => {
+            use crate::analysis::planar_face_ray::{self, PlanarFaceRayOutcome as Outcome};
+            let remaining = field::<u64>(v, "max_work")? - r.work_used;
+            if remaining == 0 {
+                return Ok(json!({"status":"resourceLimit","workUsed":r.work_used}));
+            }
+            let ray = planar_face_ray::cast_projected_face_ray(
+                &faces[0],
+                field(v, "query_point")?,
+                field(v, "ray_direction")?,
+                field(v, "tolerance_uv")?,
+                field(v, "max_winding_cells")?,
+                remaining,
+            )?;
+            let intersection =
+                |status: &str,
+                 p: planar_face_ray::ExactPlaneRayPoint,
+                 c: Option<crate::trim::trim_domain::Classification>| {
+                    json!({
+                "status":status,"parameter":p.parameter.to_string(),"point":p.point.map(|q|q.to_string()),
+                "classification":c.map(|c|json!({"location":format!("{:?}",c.location),"reason":format!("{:?}",c.reason),"winding":c.winding,"cells":c.cells}))})
+                };
+            let mut report = match ray.outcome {
+                Outcome::Hit {
+                    intersection: p,
+                    classification: c,
+                } => intersection("hit", p, Some(c)),
+                Outcome::Miss {
+                    intersection: p,
+                    classification: c,
+                } => intersection("miss", p, c),
+                Outcome::BoundaryUnresolved {
+                    intersection: p,
+                    classification: c,
+                } => intersection("boundaryUnresolved", p, Some(c)),
+                Outcome::Behind { parameter } => {
+                    json!({"status":"behind","parameter":parameter.to_string()})
+                }
+                Outcome::Parallel => json!({"status":"parallel"}),
+                Outcome::Coplanar => json!({"status":"coplanar"}),
+                Outcome::ResourceLimit => json!({"status":"resourceLimit"}),
+            };
+            report["workUsed"] = json!(r.work_used + ray.work_used);
+            return Ok(report);
+        }
         "planar_face_perimeter" => {
             let b = planar_face_perimeter::bound_projected_face_perimeter(
                 &faces[0],

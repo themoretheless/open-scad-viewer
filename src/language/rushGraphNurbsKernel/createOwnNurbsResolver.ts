@@ -1064,6 +1064,7 @@ export function createOwnNurbsResolver(
           case 'world_face_mass':
           case 'principal_face_moments':
           case 'principal_face_directions':
+          case 'cast_trimmed_face_ray':
           case 'planar_face_perimeter':
           case 'planar_boundary_distance':
           case 'planar_material_distance':
@@ -1071,6 +1072,7 @@ export function createOwnNurbsResolver(
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,loops:n.loops.map(r=>r.map(needCurve)),
               ...('tolerance_mm' in n ? {tolerance_mm:n.tolerance_mm,max_cells:n.max_cells} : {}),
+              ...('ray_direction' in n ? {ray_direction:n.ray_direction} : {}),
               ...('query_point' in n ? {query_point:n.query_point} : {}),
               ...('max_winding_cells' in n ? {tolerance_uv:n.tolerance_uv,max_winding_cells:n.max_winding_cells} : {}),
               ...('moment_tolerances' in n ? {chart_origin:n.chart_origin,moment_tolerances:n.moment_tolerances,max_cells:n.max_cells} : {}),

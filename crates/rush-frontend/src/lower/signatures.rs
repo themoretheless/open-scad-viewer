@@ -403,6 +403,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "world_face_mass" => &["loops","max_work"],
         "principal_face_moments" => &["loops","max_work"],
         "principal_face_directions" => &["loops","max_work"],
+        "cast_trimmed_face_ray" => &["loops","query_point","ray_direction","tolerance_uv","max_winding_cells","max_work"],
         "planar_face_perimeter" => &["loops","tolerance_mm","max_cells","max_work"],
         "planar_boundary_distance" => &["loops","query_point","tolerance_mm","max_cells","max_work"],
         "planar_material_distance" => &["loops","query_point","tolerance_mm","max_cells","tolerance_uv","max_winding_cells","max_work"],
