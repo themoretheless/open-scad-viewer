@@ -23505,7 +23505,7 @@
     {
       "id": "NURBS-0953",
       "name": "Импорт составных рациональных NURBS-кромок IGES 102/126",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23515,7 +23515,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/receipt.json",
         "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/verify_step.py"
+        "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/verify_step.py",
+        "tests/fixtures/rush-iges/split-rational-edge.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Bounded ordered continuous splines with unambiguous endpoint orientation. Each concatenated interval must pass agreement against its source. Type 100 arcs are qualified under NURBS-0954. Ambiguous or unproven joins remain unsupported."
@@ -23524,7 +23526,7 @@
     {
       "id": "NURBS-0954",
       "name": "Импорт круговой дуги IGES 100 как рациональной NURBS-кромки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23535,7 +23537,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/receipt.json",
         "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/verify.py"
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/verify.py",
+        "tests/fixtures/rush-iges/placed-arc.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Local XY circular arc, form 0; scaled world coordinates or zero-elevation UV coordinates. Direct and composite edge dispatch. Rigid curve placements are qualified under NURBS-0955."
@@ -23544,7 +23548,7 @@
     {
       "id": "NURBS-0955",
       "name": "Импорт размещённых кривых IGES с матрицей типа 124",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23555,7 +23559,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/receipt.json",
         "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/verify.py"
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/verify.py",
+        "tests/fixtures/rush-iges/placed-arc.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "One proper rigid form-zero matrix per type 100, 110 or 126 member. Translation follows the declared length units. Mapped UV controls must lie in the parameter plane. Chained matrices and reflections remain unsupported."
@@ -23564,7 +23570,7 @@
     {
       "id": "NURBS-0956",
       "name": "Жёсткое размещение рациональной поверхности IGES 128 с сохранением UV-сетки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23576,7 +23582,9 @@
         "crates/cad-step/tests/fixtures/iges/legacy-spinner-rim.igs",
         "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/receipt.json",
         "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/verify.py"
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/verify.py",
+        "tests/fixtures/rush-iges/placed-surface.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "One proper rigid form-zero matrix on an IGES 128 surface. U-fast pole/weight exchange and reader compatibility for legacy OpenSCAD Viewer files. Independent check covers the placed IGES surface and the restored STEP solid."
@@ -23585,7 +23593,7 @@
     {
       "id": "NURBS-0957",
       "name": "Прямой экспорт замкнутого рационального тела IGES для переноса в OCCT",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::export_iges_v2",
@@ -23596,7 +23604,9 @@
         "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/receipt.json",
         "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/native.log.gz",
         "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/verify.py",
-        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/cylinder.igs"
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/cylinder.igs",
+        "examples/rush/rational-iges-roundtrip.r",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Direct OCCT transfer qualified on a single closed six-face rational cylinder. Cavities, assemblies and edited solids require separate coverage."
@@ -23605,7 +23615,7 @@
     {
       "id": "NURBS-0958",
       "name": "Композиция вложенных жёстких размещений IGES при импорте кривых и NURBS-поверхностей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23614,7 +23624,9 @@
         "crates/cad-step/src/iges_interchange_v2/placement.rs",
         "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
         "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/receipt.json"
+        "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/receipt.json",
+        "tests/fixtures/rush-iges/nested-surface.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Up to 32 proper rigid form-zero matrices. Native cylinder edge and surface placement verified."
@@ -23623,7 +23635,7 @@
     {
       "id": "NURBS-0959",
       "name": "Импорт размещённых составных IGES-кривых в пространственных рёбрах и UV-контурах",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23632,7 +23644,9 @@
         "crates/cad-step/src/iges_interchange_v2/placement.rs",
         "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
         "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/receipt.json"
+        "docs/qualification/nurbs-iges-composite-placement-959-2026-11-18/receipt.json",
+        "tests/fixtures/rush-iges/placed-composite.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Rigid form-zero placements on type 102. Tested in a nested circular edge of a closed cylinder and on a rotated two-segment UV profile."
@@ -23641,7 +23655,7 @@
     {
       "id": "NURBS-0960",
       "name": "Обмен периодическими рациональными и открытыми полиномиальными кривыми IGES 126",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23651,7 +23665,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
         "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/native.log.gz",
         "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/verify.py"
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/verify.py",
+        "tests/fixtures/rush-iges/curve-flags.igs",
+        "tests/rushIgesEntities.test.ts"
       ],
       "remainingQualification": [
         "Standard type-126 closed, polynomial and periodic flags. Legacy IGES2 and IGES2.1 sender layout accepted. Independent check covers the exported flags."
@@ -23660,7 +23676,7 @@
     {
       "id": "NURBS-0961",
       "name": "Независимая периодичность U и V при обмене NURBS-поверхностями IGES 128",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23669,7 +23685,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
         "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-periodic-surfaces-961-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/surface-flags.igs",
+        "tests/rushIgesEntities.test.ts"
       ],
       "remainingQualification": [
         "OCCT verified U-periodic rational and V-periodic polynomial surfaces, all poles and weights. Rust also distinguishes clamped closed edges from periodic seams."
@@ -23678,7 +23696,7 @@
     {
       "id": "NURBS-0962",
       "name": "Импорт участка рациональной кривой IGES 126 по заданному интервалу",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23687,7 +23705,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
         "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-curve-interval-962-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/curve-interval.igs",
+        "tests/rushIgesEntities.test.ts"
       ],
       "remainingQualification": [
         "Single ordered subinterval within the active knot domain; OCCT compared the imported and re-exported rational segment at 129 parameters."
@@ -23696,7 +23716,7 @@
     {
       "id": "NURBS-0963",
       "name": "Импорт прямоугольного участка поверхности IGES 128 с сохранением полного периодического направления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23705,7 +23725,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
         "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-surface-rectangle-963-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/surface-band.igs",
+        "tests/rushIgesEntities.test.ts"
       ],
       "remainingQualification": [
         "Ordered U and V subintervals within active knot domains. OCCT independently evaluated both surfaces. Raw bounds checked against IGES 5.3 section 4.24 because installed OCCT interchanges the middle fields when reporting limits."
@@ -23714,7 +23736,7 @@
     {
       "id": "NURBS-0964",
       "name": "Восстановление естественного внешнего контура грани IGES 144 по изопараметрическим кривым",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23724,7 +23746,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-natural-boundary-964-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/natural-boundary.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Natural rectangular boundary without an explicit outer pointer. Reuses exactly matching edge definitions in either orientation. Pole support is qualified in NURBS-0965. Ambiguous matches remain unsupported."
@@ -23733,7 +23757,7 @@
     {
       "id": "NURBS-0965",
       "name": "Сшивка естественных границ IGES 144 с вырожденными рёбрами в полюсах",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23743,7 +23767,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-natural-poles-965-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/natural-pole.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Requires an exactly constant Euclidean control polygon for the boundary isocurve. Nonconstant closed isocurves retain ordinary edge semantics."
@@ -23752,7 +23778,7 @@
     {
       "id": "NURBS-0966",
       "name": "Импорт замкнутого контура IGES 142 по паре UV-кривой и пространственного ребра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23762,7 +23788,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-curve-on-surface-966-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/boundary-pair.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Both representations required. Single closed spline boundary qualified on an offset planar face with direct and pre-existing edge-list geometry; correspondence uses the existing finite sampling gate."
@@ -23771,7 +23799,7 @@
     {
       "id": "NURBS-0967",
       "name": "Восстановление пространственных рёбер IGES 142 из UV-контура на NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23781,7 +23809,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-uv-boundary-967-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/uv-only.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Uses the bounded exact rational pcurve lift. Internal crossings and stored spatial pieces must be certifiable. Covers a planar offset face and a saddle with a rational trim and a multi-cell crossing."
@@ -23790,7 +23820,7 @@
     {
       "id": "NURBS-0968",
       "name": "Восстановление UV-контура IGES 142 по пространственной кривой на аффинной грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23801,7 +23831,9 @@
         "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
         "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-model-boundary-968-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/model-only.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Requires a certified single-span affine chart and a storable UV candidate with proven exact full-domain agreement. Tested on an offset plane and a tilted chart with a weighted quadratic."
@@ -23810,7 +23842,7 @@
     {
       "id": "NURBS-0969",
       "name": "Восстановление UV-контура IGES на криволинейной поверхности с аффинной координатной проекцией",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23823,7 +23855,9 @@
         "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/projection.log.gz",
         "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-graph-boundary-969-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/graph-boundary.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Single clamped tensor span with a certified nonsingular affine coordinate pair. Every recovered trim must agree in all three spatial coordinates over its full domain."
@@ -23832,7 +23866,7 @@
     {
       "id": "NURBS-0970",
       "name": "Восстановление пространственного контура IGES в UV многопролётной полиномиальной поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23846,7 +23880,9 @@
         "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/projection.log.gz",
         "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-grid-boundary-970-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/grid-boundary.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Clamped polynomial tensor surfaces with exact full-grid affine coordinate projection. Rational curves are checked along their entire domain and cell crossings must be certifiable. Nonuniform unequal surface weights on multi-cell charts remain outside this proof."
@@ -23855,7 +23891,7 @@
     {
       "id": "NURBS-0971",
       "name": "Восстановление UV-контура IGES на многопролётной рациональной поверхности с переменными весами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Обмен IGES",
       "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
@@ -23869,7 +23905,9 @@
         "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/native.log.gz",
         "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/projection.log.gz",
         "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/verify.py"
+        "docs/qualification/nurbs-iges-weighted-grid-boundary-971-2026-11-19/verify.py",
+        "tests/fixtures/rush-iges/weighted-grid.igs",
+        "tests/rushIgesExchange.test.ts"
       ],
       "remainingQualification": [
         "Clamped rational tensor surfaces with two Cartesian coordinates globally affine in UV. A bounded homogeneous polynomial identity is checked on every nonempty knot cell; both the coordinate projection and the complete edge trace must be certified."
