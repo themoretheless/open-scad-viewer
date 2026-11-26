@@ -5,7 +5,7 @@ use crate::analysis::curve_measure::{
     classify_directional_motion_knot_jumps, classify_timed_motion_knot_jumps,
 };
 
-pub(super) const OPS: &[&str] = &["inspect_knot_jumps","inspect_timed_knot_jumps","inspect_motion_join","inspect_motion_chain"];
+pub(super) const OPS: &[&str] = &["inspect_knot_jumps","inspect_timed_knot_jumps","inspect_motion_join","inspect_motion_chain","check_timed_chain"];
 
 fn join(r: DirectionalMotionJoinReport) -> Value {
     json!({"positionGap":r.position_gap_bounds,"jumps":r.jump_bounds,"statuses":r.statuses.map(|s| format!("{s:?}"))})
@@ -34,6 +34,17 @@ pub(super) fn dispatch(v: &Value,op: &str) -> Result<Value> {
         "Expected one parameter interval and duration per motion curve")?;
     let segments=curves.iter().zip(domains).zip(durations).map(|((curve,interval),duration)|
         TimedMotionSegment{curve,interval,duration}).collect::<Vec<_>>();
+    if op=="check_timed_chain" {
+        use crate::analysis::curve_measure::{check_timed_motion_chain,TimedMotionChainLimits};
+        let [speed,acceleration,jerk]=field(v,"segment_limits")?;
+        let all_limits=TimedMotionChainLimits{segment:DirectionalMotionLimits{speed,acceleration,jerk},
+            join:limits,position_gap:field(v,"position_limit")?};
+        let r=check_timed_motion_chain(&segments,field(v,"closed")?,&direction,all_limits,field(v,"tolerances")?,
+            field(v,"max_cells")?,field(v,"max_joins")?)?;
+        return Ok(json!({"status":format!("{:?}",r.status),"segmentStatuses":r.segment_statuses.into_iter().map(|s|format!("{s:?}")).collect::<Vec<_>>(),
+            "cells":r.cells,"joinStatus":format!("{:?}",r.joins.status),"joins":r.joins.joins.into_iter().map(|j|json!({"segments":j.segment_indices,
+            "positionStatus":format!("{:?}",j.position_status),"join":join(j.join)})).collect::<Vec<_>>()}));
+    }
     if op=="inspect_motion_join" {
         let [a,b]=segments.as_slice() else {return Err(input("Motion join requires two curves"));};
         return Ok(join(classify_directional_motion_join([*a,*b],&direction,limits)?));
