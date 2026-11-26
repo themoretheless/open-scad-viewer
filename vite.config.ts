@@ -47,7 +47,9 @@ export default defineConfig({
           groups: [
             // Shared shell translations and helpers have their own cacheable module.
             // Keep their dependencies in their existing groups.
-            { name: 'app-shell', test: /src[\\/](appHelpers\.ts|i18n[\\/]appStrings\.ts)$/, includeDependenciesRecursively: false },
+            { name: 'app-shell', test: /src[\\/]appHelpers\.ts$/, includeDependenciesRecursively: false },
+            // Keep the eager translation table and its dictionaries in one chunk.
+            { name: 'app-translations', test: /src[\\/]i18n[\\/]appStrings(?:[\\/]|\.ts$)/, includeDependenciesRecursively: false },
             { name: 'forma-ui', test: /src[\\/](forma[\\/].+\.ts|ui[\\/].+\.ui|components[\\/]FormaRegion\.svt)/, includeDependenciesRecursively: false },
             { name: 'geometry-kernel-bytes', test: /src[\\/]generated[\\/]geometry-kernels[\\/]bytes/ },
             { name: 'language-kernel-bytes', test: /src[\\/]generated[\\/]language-kernel[\\/]bytes/ },
