@@ -18956,7 +18956,7 @@
     {
       "id": "NURBS-0734",
       "name": "Сертифицированный минимальный зазор между синхронными NURBS-траекториями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_synchronized_curve_clearance",
@@ -18964,7 +18964,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-734-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-734-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-734-2026-11-17/native.log.gz",
+        "examples/rush/minimum-synchronized-gap.r",
+        "tests/rushSynchronizedGaps.test.ts"
       ],
       "remainingQualification": [
         "Enclose minimum instantaneous gap for two spherical tools sharing a curve clock.",
@@ -18975,7 +18977,7 @@
     {
       "id": "NURBS-0735",
       "name": "Сертифицированные интервалы контакта двух синхронных NURBS-траекторий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_synchronized_curve_clearance",
@@ -18983,7 +18985,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-735-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-735-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-735-2026-11-17/native.log.gz",
+        "examples/rush/synchronized-contact-intervals.r",
+        "tests/rushSynchronizedGaps.test.ts"
       ],
       "remainingQualification": [
         "Partition simultaneous tool motion into clear, colliding and unresolved intervals.",
@@ -18994,7 +18998,7 @@
     {
       "id": "NURBS-0736",
       "name": "Минимальный зазор синхронных NURBS-траекторий с независимыми параметрами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_affine_synchronized_curve_clearance",
@@ -19002,7 +19006,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-736-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-736-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-736-2026-11-17/native.log.gz",
+        "examples/rush/minimum-affine-gap.r",
+        "tests/rushSynchronizedGaps.test.ts"
       ],
       "remainingQualification": [
         "Enclose simultaneous clearance with separate affine parameter windows and shared elapsed progress.",
@@ -19013,7 +19019,7 @@
     {
       "id": "NURBS-0737",
       "name": "Интервалы контакта синхронных NURBS-траекторий с независимыми параметрами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_affine_synchronized_curve_clearance",
@@ -19021,7 +19027,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-737-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-737-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-737-2026-11-17/native.log.gz",
+        "examples/rush/affine-contact-intervals.r",
+        "tests/rushSynchronizedGaps.test.ts"
       ],
       "remainingQualification": [
         "Classify contact across independent affine parameter windows on shared elapsed progress.",
