@@ -19,7 +19,7 @@ let browser,page
 const errors=[],parts=[]
 try{
  const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true})
- page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(String(e)))
+ page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1000}});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))})
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
  async function ready(){for(const name of ['history-restore','display-refinement','topology-preparation'])await solid.getByRole('status',{name,exact:true}).waitFor({state:'hidden'})}
@@ -44,7 +44,7 @@ try{
   const selector=solid.getByRole('combobox',{name:'Выбрать грань',exact:true})
   const face=await selector.locator('option').evaluateAll(options=>{const o=options.find(o=>o.value!=='-1'&&Math.abs(Number(o.textContent.split('·')[1]?.replace('mm','').split(',')[2])-101.6)<1e-7);return o?.value})
   assert.ok(face);await selector.selectOption(face)
-  await solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}).click()
+  await page.getByRole('button',{name:'Команды',exact:true}).click()
   const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill('Push / Pull');await search.press('Enter')
   const amount=solid.getByRole('textbox',{name:'Расстояние, мм',exact:true});await amount.fill('1 mm')
   await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click();await ready()
