@@ -1175,7 +1175,7 @@
     {
       "id": "NURBS-0030",
       "name": "пересечение поверхностей",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "nurbs_core::ss_intersection::construct_qualified_ss_branches",
       "evidence": [
         "crates/nurbs-core/src/intersection/ss_intersection.rs",
@@ -1228,7 +1228,8 @@
         "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch.rs",
         "crates/nurbs-core/tests/ss_closed_degenerate.rs",
         "docs/design/nurbs-closed-degenerate-ss.md",
-        "docs/qualification/nurbs-closed-degenerate-ss-2026-10-19/native-tests.json"
+        "docs/qualification/nurbs-closed-degenerate-ss-2026-10-19/native-tests.json",
+        "tests/rushQualifiedSurfaceIntersection.test.ts"
       ],
       "partialNativeApi": "nurbs_core::ss_intersection::intersect_surface_surface_report",
       "previousQualificationNotes": [
@@ -2946,14 +2947,15 @@
     {
       "id": "NURBS-0080",
       "name": "оболочка заданной толщины",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::shell_thickness::thicken_patch",
       "evidence": [
         "crates/brep-core/src/body_analysis/shell_thickness.rs",
         "crates/brep-core/tests/shell_thickness.rs",
         "crates/nurbs-core/src/offset/surface_offset.rs",
         "docs/design/nurbs-patch-shell-thickness.md",
-        "docs/qualification/nurbs-patch-shell-thickness-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-patch-shell-thickness-2026-10-15/native-tests.json",
+        "tests/rushPatchThickness.test.ts"
       ],
       "nativeScope": "Closed candidate skins of a full rational Bezier source patch: original cap retained, same-basis normal-offset approximation, four exactly owned ruled sides, all saved-face interval regularity, cyclic vertex links, connected opposite-use shell and continuous saved-boundary agreement. Ideal normal thickness is explicitly sampled, with no continuous/rounding-inclusive or embedded-solid certificate.",
       "remainingQualification": [
@@ -5895,7 +5897,7 @@
     {
       "id": "NURBS-0197",
       "name": "проверка водонепроницаемости набора патчей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "evidence": [
@@ -5911,7 +5913,8 @@
         "crates/brep-core/src/contact/watertight/linear_patch_set.rs",
         "crates/brep-core/tests/linear_patch_set.rs",
         "docs/design/nurbs-linear-patch-closure.md",
-        "docs/qualification/nurbs-linear-patch-closure-2026-10-15/native-tests.json"
+        "docs/qualification/nurbs-linear-patch-closure-2026-10-15/native-tests.json",
+        "tests/rushPatchClosure.test.ts"
       ],
       "remainingQualification": [
         "general curved automatic partial-overlap matching, closed-seam phases and degenerate boundary images outside the admitted native scope",

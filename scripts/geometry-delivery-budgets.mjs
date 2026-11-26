@@ -1713,6 +1713,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/B_g1FP0i.js':203_600,'assets/CN4rrNHq.js':144_200,'assets/Ceo1xVlV.js':111_400,'assets/CwMRR47Z.js':115_600,'assets/Dah67U23.js':222_700,'assets/mainSolid.worker-D2wfv_rc.js':288_700}),
   }),
+  // NURBS intersections, patch thickening and sewing: 20,568,414 raw bytes, 7,815,221 packed bytes and 15,333,002 total asset bytes.
+  '1bca56d130ecfee491f7a5c806337538d7e5e1b4ec2f5ecf53462092c8304b5b':Object.freeze({
+    version:221,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/3Uh9jR19.js':144_900,'assets/B3cWiEdZ.js':116_200,'assets/BfhOOgin.js':112_000,'assets/CdZhtlrG.js':203_600,'assets/Qb0eGlLS.js':223_300,'assets/mainSolid.worker-BweSRlU5.js':289_300}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
