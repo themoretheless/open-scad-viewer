@@ -221,6 +221,13 @@ export function createOwnNurbsResolver(
     if (v.kind !== 'sdf') throw new Error('Expected SDF field')
     return v.data
   }
+  const sharedStepFiles = new Map<string,string>()
+  function requireStepFile(key:string):string {
+    needBrep(key)
+    const step=sharedStepFiles.get(key)
+    if (!step) throw new Error('Expected a shared STEP assembly at '+key)
+    return step
+  }
   const reconstructionReports: Record<string, unknown> = {}
   const progressiveBodySources = new Map<string, ProgressiveBrepBody>()
   const miterSources = new Map<string, CertifiedMiterBoundaryOwner>()
@@ -2815,6 +2822,27 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'open_step_file':
+          case 'read_shared_step':
+          case 'replace_step_part':
+          case 'replace_step_instance':
+          case 'place_step_instance':
+          case 'remove_step_instance':
+          case 'add_step_instance':
+          case 'insert_step_solid':
+          case 'append_step_assembly':
+          case 'deduplicate_step_parts':
+          case 'extract_step_instances': {
+            const {id:_id,op,...parameters}=n
+            const step='step_text' in parameters ? parameters.step_text : requireStepFile(parameters.input)
+            const target='target_geometry' in parameters ? parameters.target_geometry : undefined
+            const additional=target ? (op==='append_step_assembly' ? {otherStep:requireStepFile(target)} : {model:needBrep(target)}) : {}
+            const {model,step:output,...report}=callGeometryRust<{model:NurbsBrep;step:string;definitionCount:number;occurrenceCount:number}>(op==='open_step_file'?'read_shared_step':op,{...Object.fromEntries(Object.entries(parameters).filter(([k])=>k!=='step_text')),...additional,step})
+            sharedStepFiles.set(key,output)
+            constructionReports[key]={measurement:{operation:op,report:{...report,step:output}}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'planet_gear_occurrences':
           case 'planet_occurrences_step':
           case 'planetary_gear_set_step': {
@@ -2822,6 +2850,7 @@ export function createOwnNurbsResolver(
             const {model,...report}=callGeometryRust<{model:NurbsBrep;step:string|null;placements:number[][][]}>(op,{
               ...spec,pressureAngle:pressure_angle,helixAngle:helix_angle,
             })
+            if(report.step)sharedStepFiles.set(key,report.step)
             constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'brep',data:model}
             break

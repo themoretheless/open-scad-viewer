@@ -1,6 +1,9 @@
 //! Bridge operations of the `interchange` family.
 use crate::*;
 
+#[path="shared_assembly_edits.rs"]
+mod shared_assembly_edits;
+
 const OPS: &[&str] = &[
     "brep_nurbs_export_step",
     "brep_nurbs_import_step",
@@ -42,6 +45,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if shared_assembly_edits::OPS.contains(&v["op"].as_str().unwrap_or("")) {
+        return Routed::Handled(shared_assembly_edits::apply(&v));
+    }
     if !OPS.contains(&v["op"].as_str().unwrap_or("")) {
         return Routed::Unhandled(v);
     }
