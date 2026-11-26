@@ -11903,7 +11903,7 @@
     {
       "id": "NURBS-0435",
       "name": "Точные раздельные контакты пространственной ломаной с плоскогранным телом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_boundary_contacts",
@@ -11923,7 +11923,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-435-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-435-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-435-2026-11-17/native.log.gz",
+        "examples/rush/find-path-face-contacts.r",
+        "tests/rushPathContacts.test.ts"
       ],
       "remainingQualification": [
         "Report all zero-radius face contacts, including disconnected retained coplanar overlaps.",
@@ -11934,7 +11936,7 @@
     {
       "id": "NURBS-0436",
       "name": "Точное отсечение пространственной ломаной по материалу плоскогранного тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_material_clip",
@@ -11953,7 +11955,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-436-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-436-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-436-2026-11-17/native.log.gz",
+        "examples/rush/clip-path-to-material.r",
+        "tests/rushPathContacts.test.ts"
       ],
       "remainingQualification": [
         "Clip polyline spans to closed solid material, preserving voids and isolated tangencies.",
@@ -12080,7 +12084,7 @@
     {
       "id": "NURBS-0441",
       "name": "Точные события контакта пространственной ломаной с границей тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_boundary_events",
@@ -12098,7 +12102,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-441-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-441-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-441-2026-11-17/native.log.gz",
+        "examples/rush/find-path-boundary-events.r",
+        "tests/rushPathContacts.test.ts"
       ],
       "remainingQualification": [
         "Assemble global boundary contact ranges with interior or exterior states before and after contact.",

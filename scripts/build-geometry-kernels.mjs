@@ -22,7 +22,7 @@ buildWasmBrotli(root,cargoTarget)
 const reproducible=geometryKernelCargo(root)
 // Favor size for these kernels in the browser bundle. Native release keeps its
 // existing hot-loop settings.
-const browserSizePackages = ['planar-geometry', 'sdf-core', 'subdivision-core', 'mesh-io', 'cad-predicates', 'mesh-section', 'mesh-query']
+const browserSizePackages = ['planar-geometry', 'sdf-core', 'subdivision-core', 'mesh-io', 'cad-predicates', 'mesh-section', 'mesh-query', 'mesh-topology', 'polygon-core']
 const browserSizeFlags = browserSizePackages.flatMap(name => ['--config', `profile.release.package.${name}.opt-level="z"`])
 const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.opt-level="z"','--config','profile.release.strip="symbols"','--config','profile.release.package.brep-core.opt-level="z"','--config','profile.release.package.geometry-bridge.opt-level="z"','--config','profile.release.package.nurbs-core.opt-level="z"','--config','profile.release.package.nurbs-numerics.opt-level="z"','--config','profile.release.package.nurbs-geometry.opt-level="z"','--config','profile.release.package.nurbs-foundation.opt-level="z"',...browserSizeFlags,...reproducible.args,'--target','wasm32-unknown-unknown','--manifest-path','crates/geometry-wasm/Cargo.toml'],{cwd:root,stdio:'inherit',env:{...process.env,...reproducible.env,CARGO_TARGET_DIR:cargoTarget}})
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)

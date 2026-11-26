@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "2c75a12169bc392a84c18d93d32c76f13898c2c07222a7025cec6de932f70be5",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/find-path-face-contacts.r",
+      "exampleSha256": "b7144334bcca96fad6f4e610b1b501958bac28632932ed712261078c8f94b3a9",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 53 ms"
+    },
+    {
+      "example": "examples/rush/clip-path-to-material.r",
+      "exampleSha256": "3e1da7958390062336d0f28e50eda6a957594362257cb848144f4d9e7ceeac04",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/find-path-boundary-events.r",
+      "exampleSha256": "655cd41b5b396c6207c100239e25737074f28cfb39e1f84ce3bd41494df8e997",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 15 ms"
+    }
+  ]
+}
