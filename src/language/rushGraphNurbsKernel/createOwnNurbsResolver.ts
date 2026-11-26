@@ -2894,6 +2894,25 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:body}
             break
           }
+          case 'compress_profile_curve':
+          case 'compress_profile_segments':
+          case 'compress_profile_chain':
+          case 'orient_profile_chain':
+          case 'restore_profile_partition':
+          case 'assemble_open_profile':
+          case 'assemble_closed_profile':
+          case 'assemble_planar_profile':
+          case 'orient_planar_profile':
+          case 'assemble_projected_profile':
+          case 'assemble_oblique_profile':
+          case 'assemble_spatial_profile': {
+            const {id:_id,op,input,...parameters}=n
+            const curves=[needCurve(input),...('inputs' in parameters?parameters.inputs.map(id=>needCurve(id)):[])]
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve}>(op,{...parameters,curves})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'make_step_assembly':
           case 'step_part_tolerances':
           case 'set_scaled_step_placement':

@@ -69,6 +69,8 @@ mod signed_curvature_fit;
 
 #[path = "exact_merge_requests.rs"]
 mod exact_merge_requests;
+#[path="profile_compression.rs"]
+mod profile_compression;
 
 #[path = "exact_field_requests.rs"]
 mod exact_field_requests;
@@ -136,6 +138,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
                 "gradientLower":r.gradient_lower,"reason":r.reason}))
         })());
     }
+    if profile_compression::OPS.contains(&op) {return Some(profile_compression::apply(v,op));}
     if matches!(op,"merge_patch_strip" | "merge_patch_grid" | "inspect_patch_grid") { return Some(exact_merge_requests::grid(v,op)); }
     if matches!(op,"split_tensor_surface" | "tile_tensor_surface") { return Some(exact_merge_requests::split(v,op)); }
     if matches!(op,"compress_tensor_surface" | "compress_tensor_surface_batch") { return Some(exact_merge_requests::compress(v,op)); }
