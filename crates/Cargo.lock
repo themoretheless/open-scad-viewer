@@ -726,6 +726,7 @@ dependencies = [
  "mesh-section",
  "mesh-topology",
  "num-rational",
+ "num-traits",
  "nurbs-core",
  "nurbs-intersect",
  "nurbs-numerics",

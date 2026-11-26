@@ -492,6 +492,18 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'simplify_exact_path':
+          case 'project_point_to_path':
+          case 'intersect_spatial_paths':
+          case 'find_path_self_intersections':
+          case 'measure_spatial_path_distance':
+          case 'simplify_path_with_tolerance': {
+            const {op,id:_id,...settings}=n
+            const {curve,report}=callGeometryRust<{curve:NurbsCurve;report:object}>(op,settings)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'fit_cst_sides':
           case 'naca_five_digit_profile':
           case 'cst_spline_profile':
