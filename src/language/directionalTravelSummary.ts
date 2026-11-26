@@ -130,6 +130,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'material_segment_curve') return russian ? 'Кривая компонента сечения' : 'material segment curve'
   if (operation === 'sample_plane_branch') return russian ? 'Точки ветви пересечения' : 'sample plane branch'
   if (operation === 'plane_branch_uv_polyline') return russian ? 'Аппроксимация ветви в UV' : 'plane branch uv polyline'
+  if (operation === 'store_plane_branch') return russian ? 'Пространственная кривая сечения' : 'store plane branch'
+  if (operation === 'pair_plane_branch') return russian ? 'Согласованные кривые сечения' : 'pair plane branch'
   if (operation === 'plane_branch_xyz_polyline') return russian ? 'Пространственная аппроксимация ветви' : 'plane branch xyz polyline'
   if (operation === 'audit_plane_side') return russian ? 'Положение поверхности относительно плоскости' : 'audit plane side'
   if (operation === 'refine_plane_side') return russian ? 'Уточнение положения поверхности' : 'refine plane side'

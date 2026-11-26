@@ -15,6 +15,53 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
         Some("v") => UvAxis::V,
         _ => return Err(input("Expected a U or V direction")),
     };
+    if matches!(op, "store_plane_branch" | "pair_plane_branch") {
+        let options = plane::SurfacePlaneWorldPolylineOptions {
+            span,
+            solve_axis,
+            max_xyz_error: field(v, "tolerance_mm")?,
+            max_segments: field(v, "max_segments")?,
+            max_work,
+        };
+        let (spatial, paired, used) = if op == "store_plane_branch" {
+            let r = plane::store_surface_plane_section_curve(&surface, normal, offset, options)?;
+            (
+                r.outcome
+                    .map_err(|e| input(format!("Section storage refused: {e:?}")))?,
+                None,
+                r.work_used,
+            )
+        } else {
+            let r = plane::store_surface_plane_section_pair(
+                &surface,
+                normal,
+                offset,
+                options,
+                field(v, "gap_tolerance_mm")?,
+            )?;
+            let pair = r
+                .outcome
+                .map_err(|e| input(format!("Section pairing refused: {e:?}")))?;
+            (
+                pair.spatial,
+                Some((pair.pcurve, pair.correspondence_tolerance)),
+                r.work_used,
+            )
+        };
+        let mut out = json!({"domain":spatial.domain,"xyzErrorUpper":spatial.xyz_error_upper.to_string(),"planeResidualUpper":spatial.plane_residual_upper.to_string(),"spatial":spatial.curve,"workUsed":used});
+        if let Some((pcurve, tolerance)) = paired {
+            out["pcurve"] = json!(pcurve);
+            out["gapTolerance"] = json!(tolerance.to_string());
+            out["curve"] = if field(v, "use_pcurve")? {
+                json!(pcurve)
+            } else {
+                json!(spatial.curve)
+            };
+        } else {
+            out["curve"] = json!(spatial.curve);
+        }
+        return Ok(out);
+    }
     let (items, used) = match op {
         "sample_plane_branch" => {
             let ratios: Vec<[u64; 2]> = field(v, "transverse_ratios")?;

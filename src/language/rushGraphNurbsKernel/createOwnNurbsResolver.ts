@@ -627,6 +627,14 @@ export function createOwnNurbsResolver(
             result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}}
             break
           }
+          case 'store_plane_branch':
+          case 'pair_plane_branch': {
+            const {id:_id,op,input,...settings}=n
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve;workUsed:number}>(op,{surface:needSurface(input),...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'sample_plane_branch':
           case 'plane_branch_uv_polyline':
           case 'plane_branch_xyz_polyline':
