@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     Body, Model,
-    analysis::{CertifiedFreeformVolume, certified_freeform_volume},
+    analysis::{CertifiedFreeformVolume, qualified_section_volume},
     closed_solid::{AdmissionPolicy, ClosedSolidAdmission, QualifiedClosedSolid, qualify},
 };
 use num_rational::BigRational;
@@ -308,8 +308,8 @@ fn finish_admission(
             "Section caps did not establish an embedded outward material boundary",
         )
     })?;
-    let volume = certified_freeform_volume(
-        solid.model(),
+    let volume = qualified_section_volume(
+        &solid,
         options.volume_tolerance_mm3,
         options.max_volume_cells,
     )?;

@@ -201,6 +201,24 @@ pub fn certified_freeform_volume(
     tolerance_mm3: f64,
     max_cells: usize,
 ) -> Result<CertifiedFreeformVolume> {
+    volume_impl(model, None, tolerance_mm3, max_cells)
+}
+
+/// A qualified closed boundary can also carry flux entirely on trimmed planes.
+pub(crate) fn qualified_section_volume(
+    solid: &crate::closed_solid::QualifiedClosedSolid,
+    tolerance_mm3: f64,
+    max_cells: usize,
+) -> Result<CertifiedFreeformVolume> {
+    volume_impl(solid.model(), Some(solid), tolerance_mm3, max_cells)
+}
+
+fn volume_impl(
+    model: &Model,
+    qualified: Option<&crate::closed_solid::QualifiedClosedSolid>,
+    tolerance_mm3: f64,
+    max_cells: usize,
+) -> Result<CertifiedFreeformVolume> {
     if !(tolerance_mm3.is_finite() && tolerance_mm3 > 0.) {
         return Err(Error::new(
             "BREP_CERTIFIED_MASS_OPTIONS_INVALID",
@@ -214,7 +232,9 @@ pub fn certified_freeform_volume(
     }
     let (patches, planar) = classify_faces(model)?;
     if patches.is_empty() {
-        return Err(refuse("No full-chart face carries flux"));
+        let solid = qualified.ok_or_else(|| refuse("No full-chart face carries flux"))?;
+        return qualified_planar_volume(solid, tolerance_mm3, max_cells, audit);
+
     }
     let axis = field_axis(&planar)?;
     let residual = match axis {
@@ -252,5 +272,36 @@ pub fn certified_freeform_volume(
         cells: report.cells,
         audit,
         proof: "divergence theorem over full NURBS charts with interval jets and trapezoid remainder; trimmed planar faces orthogonal to the field axis",
+    })
+}
+
+fn qualified_planar_volume(
+    solid: &crate::closed_solid::QualifiedClosedSolid,
+    tolerance_mm3: f64,
+    max_work: usize,
+    audit: SolidAuditCertificate,
+) -> Result<CertifiedFreeformVolume> {
+    use num_rational::BigRational;
+    use num_traits::ToPrimitive;
+    let exact = exact_polyhedral_volume(solid, max_work as u64)?;
+    let value = exact.volume_mm3.to_f64().filter(|v| v.is_finite())
+        .ok_or_else(|| refuse("Polyhedral volume exceeds the output range"))?;
+    let rounded = BigRational::from_float(value).ok_or_else(|| refuse("Invalid rounded volume"))?;
+    let lower = if rounded > exact.volume_mm3 { value.next_down() } else { value };
+    let upper = if rounded < exact.volume_mm3 { value.next_up() } else { value };
+    if !(lower > 0. && upper.is_finite() && upper - lower <= tolerance_mm3)
+        || BigRational::from_float(lower).is_none_or(|x| x > exact.volume_mm3)
+        || BigRational::from_float(upper).is_none_or(|x| x < exact.volume_mm3) {
+        return Err(refuse("Requested tolerance cannot enclose the positive exact polyhedral volume"));
+    }
+    Ok(CertifiedFreeformVolume {
+        capability: "qualified-exact-polyhedral-volume/1",
+        volume_mm3: CertifiedInterval {lower, upper},
+        field_axis: None,
+        integrated_faces: solid.model().faces.len(),
+        orthogonal_planar_faces: 0,
+        cells: 0,
+        audit,
+        proof: "exact oriented boundary flux on qualified planar faces with linear edges",
     })
 }

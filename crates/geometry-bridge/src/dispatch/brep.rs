@@ -9,7 +9,9 @@ mod section_sheets;
 #[path="brep_rim_caps.rs"]
 mod rim_caps;
 const OPS: &[&str] = &[
+    "build_section_solid",
     "close_section_planes",
+    "build_bounded_section_solid",
     "close_bounded_planes",
     "attach_section_rims","discover_section_rims","attach_bounded_rims","discover_bounded_rims",
     "section_brep_sheets","bounded_section_brep_sheets",
@@ -114,7 +116,9 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "build_section_solid" => rim_caps::solid(&v,false),
         "close_section_planes" => rim_caps::close_planes(&v,false),
+        "build_bounded_section_solid" => rim_caps::solid(&v,true),
         "close_bounded_planes" => rim_caps::close_planes(&v,true),
         op @ ("attach_section_rims" | "discover_section_rims" | "attach_bounded_rims" | "discover_bounded_rims") => rim_caps::attach(&v,op),
         op @ ("section_brep_sheets"|"bounded_section_brep_sheets")=>section_sheets::build(&v,op),

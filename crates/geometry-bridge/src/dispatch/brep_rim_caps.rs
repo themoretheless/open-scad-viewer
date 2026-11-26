@@ -72,20 +72,7 @@ pub(super) fn close_planes(v: &Value, bounded: bool) -> Result<Value> {
     let work = field(v, "max_work")?;
     let cells = field(v, "max_verification_cells")?;
     let (attachment, errors) = if bounded {
-        let rows: Vec<[f64; 6]> = field(v, "planes")?;
-        let planes = rows
-            .into_iter()
-            .map(
-                |[x, y, z, offset, selection, support]| cap::BoundedSectionPlane {
-                    plane: cap::SectionPlane {
-                        normal: [x, y, z],
-                        offset,
-                    },
-                    selection_tolerance_mm: selection,
-                    support_tolerance_mm: support,
-                },
-            )
-            .collect::<Vec<_>>();
+        let planes = bounded_planes(v)?;
         let r = cap::close_shell_with_bounded_section_caps(&source, shell, &planes, work, cells)?;
         (
             r.attachment,
@@ -95,19 +82,72 @@ pub(super) fn close_planes(v: &Value, bounded: bool) -> Result<Value> {
                 .collect(),
         )
     } else {
-        let rows: Vec<[f64; 4]> = field(v, "planes")?;
-        let planes = rows
-            .into_iter()
-            .map(|[x, y, z, offset]| cap::SectionPlane {
-                normal: [x, y, z],
-                offset,
-            })
-            .collect::<Vec<_>>();
+        let planes = exact_planes(v)?;
         let r = cap::close_shell_with_section_caps(&source, shell, &planes, work, cells)?;
         let errors = vec![String::from("0"); r.cap_faces.len()];
         (r, errors)
     };
     Ok(
         json!({"model":attachment.model,"capFaces":attachment.cap_faces,"closed":attachment.model.shells[shell].closed,"supportErrorUpper":errors,"sourceEdges":source.edges.len(),"resultEdges":attachment.model.edges.len(),"workUsed":attachment.exact_work,"verificationCells":attachment.verification_cells}),
+    )
+}
+
+fn exact_planes(v: &Value) -> Result<Vec<cap::SectionPlane>> {
+    let rows: Vec<[f64; 4]> = field(v, "planes")?;
+    let planes = rows
+        .into_iter()
+        .map(|[x, y, z, offset]| cap::SectionPlane {
+            normal: [x, y, z],
+            offset,
+        })
+        .collect::<Vec<_>>();
+    Ok(planes)
+}
+
+fn bounded_planes(v: &Value) -> Result<Vec<cap::BoundedSectionPlane>> {
+    let rows: Vec<[f64; 6]> = field(v, "planes")?;
+    let planes = rows
+        .into_iter()
+        .map(
+            |[x, y, z, offset, selection, support]| cap::BoundedSectionPlane {
+                plane: cap::SectionPlane {
+                    normal: [x, y, z],
+                    offset,
+                },
+                selection_tolerance_mm: selection,
+                support_tolerance_mm: support,
+            },
+        )
+        .collect::<Vec<_>>();
+    Ok(planes)
+}
+
+pub(super) fn solid(v: &Value, bounded: bool) -> Result<Value> {
+    let source: brep_core::Model = field(v, "source")?;
+    let options = cap::SectionSolidOptions {
+        max_exact_work: field(v, "max_work")?,
+        max_verification_cells: field(v, "max_verification_cells")?,
+        admission: super::closed_ss::closed_solid_policy(field(v, "tolerance_uv")?),
+        volume_tolerance_mm3: field(v, "volume_tolerance_mm3")?,
+        max_volume_cells: field(v, "max_volume_cells")?,
+    };
+    let (section, errors) = if bounded {
+        let r = cap::build_bounded_section_solid(&source, &bounded_planes(v)?, options)?;
+        (
+            r.section,
+            r.support_error_upper
+                .into_iter()
+                .map(|q| q.to_string())
+                .collect(),
+        )
+    } else {
+        let r = cap::build_section_solid(&source, &exact_planes(v)?, options)?;
+        let errors = vec![String::from("0"); r.cap_faces.len()];
+        (r, errors)
+    };
+    let model = section.solid.model();
+    let volume = section.volume.volume_mm3;
+    Ok(
+        json!({"model":model,"capFaces":section.cap_faces,"bodyCount":model.bodies.len(),"boundaryProven":section.solid.geometry().proven,"volumeMm3":[volume.lower,volume.upper],"supportErrorUpper":errors,"volumeCells":section.volume.cells}),
     )
 }

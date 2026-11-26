@@ -1082,7 +1082,9 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'build_section_solid':
           case 'close_section_planes':
+          case 'build_bounded_section_solid':
           case 'close_bounded_planes':
           case 'attach_section_rims':
           case 'discover_section_rims':
