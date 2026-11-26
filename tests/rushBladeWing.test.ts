@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {inspectNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildTextNurbsScene} from '../src/language/rushFrontendScene'
@@ -20,6 +21,11 @@ it('keeps the capped blade as a closed rational B-rep after tessellation',async(
   const model=readNativeGeometryData(scene.meshes[0]!.nativeGeometry!).geometry
   expect(model.faces).toHaveLength(6)
   expect(inspectNurbsBrep(model)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
+  const {text}=callGeometryRust<{text:string}>('brep_nurbs_export_step_v9',{model})
+  const {model:restored}=callGeometryRust<{model:NurbsBrep}>('brep_nurbs_import_step_v9',{text})
+  expect(restored.bodies).toHaveLength(1)
+  expect(restored.faces).toHaveLength(6)
+  expect(inspectNurbsBrep(restored)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
   await expect(build('section-blade','brep_section_blade',s=>s.replace('22mm','5mm'))).rejects.toThrow(/increasing Z/)
 },180000)
 
