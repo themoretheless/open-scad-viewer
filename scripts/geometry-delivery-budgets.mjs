@@ -1449,6 +1449,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BH_px-F4.js':203_600,'assets/C8F2BqxS.js':123_300,'assets/DuGNRyfV.js':102_200,'assets/U9NJroTr.js':209_400,'assets/mainSolid.worker-D8cNIpm4.js':267_800}),
   }),
+  // profiled workspaces: 20,874,777 raw bytes, 8,004,256 packed bytes and 15,379,952 total asset bytes.
+  '355773c23ce4141ccf0a7408648fb513a1de1039b27bdb0bc0c0133ce84d151a':Object.freeze({
+    version:188,geometryChunkBytes:8_005_000,totalAssetBytes:15_380_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:325_800,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/Bbrv1l9p.js':123_900,'assets/C9DSeyfW.js':203_600,'assets/Cu39RbC1.js':209_500,'assets/DscHD1lh.js':102_400,'assets/mainSolid.worker-D3vqfpZR.js':268_400}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

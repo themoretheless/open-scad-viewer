@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "355773c23ce4141ccf0a7408648fb513a1de1039b27bdb0bc0c0133ce84d151a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/profiled-ball-workspace.r",
+      "exampleSha256": "16a24a26d3b354884df7e550cadc47c0b2cdee4a530a2cefee62b29609bbe8a5",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 70 ms"
+    },
+    {
+      "example": "examples/rush/minimum-profiled-ball-workspace.r",
+      "exampleSha256": "90363e10fbf14037001fa70ec9fafbba07109a31e19d21ed0138fe5635815a07",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/profiled-hull-workspace.r",
+      "exampleSha256": "ac572ae77a33a6f103de02210428593a978f77b98866e34dca1882fdf9e377f1",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/minimum-profiled-hull-workspace.r",
+      "exampleSha256": "8e3369581e82a34040f42f6f1d8bde922923f36ad5ce69e372a2a6bc34b5967c",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    }
+  ]
+}

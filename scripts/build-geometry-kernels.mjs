@@ -4,7 +4,7 @@ import {mkdirSync,rmSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {buildWasmBrotli} from './build-wasm-brotli.mjs'
-import {compactWasmTables, compactAdjacentWasmTables, pruneEmptyWasmSegments} from './compact-wasm-tables.mjs'
+import {compactWasmTables, compactAdjacentWasmTables, pruneEmptyWasmSegments, compactWasmByteFrequencies} from './compact-wasm-tables.mjs'
 import {optimizeWasm} from './wasm-optimize.mjs'
 import {packGeometryKernel} from './pack-geometry-kernel.mjs'
 import {geometryKernelCargo} from './geometry-kernel-cargo.mjs'
@@ -53,6 +53,7 @@ if (wasm.length > 20 * 1024 * 1024) {
           if (wasm.length > 20 * 1024 * 1024) {
             const adjacent = pruneEmptyWasmSegments(compactAdjacentWasmTables(stackBytes))
             if (adjacent.length < wasm.length) wasm = adjacent
+            if (wasm.length > 20 * 1024 * 1024) wasm = compactWasmByteFrequencies(wasm)
           }
         }
       }

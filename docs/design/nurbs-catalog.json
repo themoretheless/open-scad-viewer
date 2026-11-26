@@ -19481,7 +19481,7 @@
     {
       "id": "NURBS-0759",
       "name": "Проверка выпуклой рабочей области с кусочно-линейным радиусом инструмента",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_radius_convex_workspace",
@@ -19489,7 +19489,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-759-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-759-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-759-2026-11-17/native.log.gz",
+        "examples/rush/profiled-ball-workspace.r",
+        "tests/rushProfileWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Classify containment of a spherical tool with a piecewise-linear radius against workspace planes.",
@@ -19500,7 +19502,7 @@
     {
       "id": "NURBS-0760",
       "name": "Минимальный запас до границ рабочей области с переменным радиусом инструмента",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_radius_workspace_clearance",
@@ -19508,7 +19510,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-760-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-760-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-760-2026-11-17/native.log.gz",
+        "examples/rush/minimum-profiled-ball-workspace.r",
+        "tests/rushProfileWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Refine minimum signed workspace clearance in model units and identify a witnessing plane.",
@@ -19519,7 +19523,7 @@
     {
       "id": "NURBS-0761",
       "name": "Проверка выпуклого инструмента с переменным скруглением в рабочей области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_rounded_hull_workspace",
@@ -19527,7 +19531,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-761-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-761-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-761-2026-11-17/native.log.gz",
+        "examples/rush/profiled-hull-workspace.r",
+        "tests/rushProfileWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Classify workspace containment for a fixed vertex hull rounded by a profiled radius.",
@@ -19538,7 +19544,7 @@
     {
       "id": "NURBS-0762",
       "name": "Минимальный запас выпуклого инструмента с переменным скруглением",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_rounded_hull_workspace_clearance",
@@ -19546,7 +19552,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-762-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-762-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-762-2026-11-17/native.log.gz",
+        "examples/rush/minimum-profiled-hull-workspace.r",
+        "tests/rushProfileWorkspaces.test.ts"
       ],
       "remainingQualification": [
         "Refine normalized workspace clearance for a fixed vertex hull with a profiled rounding radius.",
