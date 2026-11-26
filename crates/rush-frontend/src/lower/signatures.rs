@@ -428,6 +428,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "bound_boundary_section" => &["target_geometry","loops","left_loop_count","parameter_width","max_work"],
         "classify_section_gaps" => &["target_geometry","loops","left_loop_count","tolerance_uv","max_winding_cells","max_work"],
         "assemble_section_material" => &["target_geometry","loops","left_loop_count","tolerance_uv","max_winding_cells","max_work"],
+        "build_material_segments" => &["target_geometry","loops","left_loop_count","tolerance_uv","max_winding_cells","endpoint_tolerance","max_work"],
+        "material_segment_curve" => &["target_geometry","loops","left_loop_count","tolerance_uv","max_winding_cells","endpoint_tolerance","edge_index","tolerance_mm","max_work"],
         "measure_section_material" => &["target_geometry","loops","left_loop_count","tolerance_uv","max_winding_cells","endpoint_tolerance","max_work"],
         "classify_face_section" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","max_work"],
         "clip_plane_section" => &["target_geometry","loops","left_loop_count","parameter_width","tolerance_uv","max_winding_cells","max_work"],

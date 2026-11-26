@@ -126,6 +126,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'bound_boundary_section') return russian ? 'Границы области контакта' : 'bound boundary section'
   if (operation === 'classify_section_gaps') return russian ? 'Материал между событиями сечения' : 'classify section gaps'
   if (operation === 'assemble_section_material') return russian ? 'Компоненты материала сечения' : 'assemble section material'
+  if (operation === 'build_material_segments') return russian ? 'Геометрия компонентов сечения' : 'build material segments'
+  if (operation === 'material_segment_curve') return russian ? 'Кривая компонента сечения' : 'material segment curve'
   if (operation === 'measure_section_material') return russian ? 'Длина материала в сечении' : 'measure section material'
   if (operation === 'classify_face_section') return russian ? 'Классификация контактов двух граней' : 'Face contact classification'
   if (operation === 'clip_plane_section') return russian ? 'Общие участки двух обрезанных граней' : 'clip plane section'

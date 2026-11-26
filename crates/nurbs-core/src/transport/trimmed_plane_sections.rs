@@ -21,6 +21,9 @@ mod events;
 #[path = "section_material_requests.rs"]
 mod material;
 
+#[path = "material_segment_requests.rs"]
+mod segments;
+
 #[path = "stored_section_requests.rs"]
 mod storage;
 
@@ -59,6 +62,9 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     let second = project("right", right)?;
     if remaining == 0 {
         return Ok(json!({"status":"refused","reason":"ResourceLimit","workUsed":budget}));
+    }
+    if matches!(op, "build_material_segments" | "material_segment_curve") {
+        return segments::build(v, op, &first, &second, remaining, budget - remaining);
     }
     if matches!(
         op,

@@ -1,5 +1,5 @@
 use super::*;
-fn section_data(s: section::ExactPlanarSection) -> Value {
+pub(super) fn section_data(s: section::ExactPlanarSection) -> Value {
     let coordinates=s.events.into_iter().map(|e|json!({"clock":events::clock(e.clock),"parameterBounds":e.parameter_bounds.map(|x|x.to_string()),"onBoundary":e.on_boundary})).collect::<Vec<_>>();
     json!({"line":line(s.line),"events":coordinates,"samples":s.samples.into_iter().map(|q|q.to_string()).collect::<Vec<_>>()})
 }
