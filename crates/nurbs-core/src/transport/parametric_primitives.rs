@@ -84,7 +84,7 @@ mod pcurve_agreement_requests;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"exact_wire_area" | "bound_wire_moments" | "exact_wire_mass" | "exact_wire_inertia") {return Some(wire_moment_requests::apply(v,op));}
-    if matches!(op,"world_face_mass" | "principal_face_moments" | "principal_face_directions") {return Some(world_mass_requests::apply(v,op));}
+    if matches!(op,"bound_world_face_mass" | "bound_principal_face_moments" | "bound_principal_face_directions" | "world_face_mass" | "principal_face_moments" | "principal_face_directions") {return Some(world_mass_requests::apply(v,op));}
     if op=="signed_planar_face_area" {return Some(planar_wire_requests::area(v));}
     if matches!(op,"project_planar_wire" | "lift_planar_wire") {return Some(planar_wire_requests::apply(v,op));}
     if matches!(op,"active_surface_hull" | "project_plane_chart" | "lift_plane_chart" | "shared_plane_chart") {return Some(planar_chart_requests::apply(v,op));}

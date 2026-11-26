@@ -1058,12 +1058,16 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'bound_world_face_mass':
+          case 'bound_principal_face_moments':
+          case 'bound_principal_face_directions':
           case 'world_face_mass':
           case 'principal_face_moments':
           case 'principal_face_directions':
           case 'signed_planar_face_area': {
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,loops:n.loops.map(r=>r.map(needCurve)),
+              ...('moment_tolerances' in n ? {chart_origin:n.chart_origin,moment_tolerances:n.moment_tolerances,max_cells:n.max_cells} : {}),
               ...(n.op === 'signed_planar_face_area' ? {tolerance_mm2:n.tolerance_mm2,max_cells:n.max_cells} : {}),max_work:n.max_work})
             constructionReports[key]={measurement:{operation:n.op,report}}
             result={kind:'surface',data:surface}

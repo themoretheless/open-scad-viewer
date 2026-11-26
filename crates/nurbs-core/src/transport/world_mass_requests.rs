@@ -26,6 +26,34 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
             r.outcome
         )));
     };
+    if op.starts_with("bound_") {
+        use crate::analysis::bounded_planar_face_mass as bounds;
+        let origin = field(v, "chart_origin")?;
+        let tolerance = field(v, "moment_tolerances")?;
+        let limit = field(v, "max_cells")?;
+        let face = &faces[0];
+        let encode_spectrum = |s: bounds::BoundedPrincipalPlaneMoments| json!({"principal":s.principal,"polar":s.polar});
+        let mut out = match op {
+            "bound_world_face_mass" => {
+                let b = bounds::bound_projected_face_mass(face, origin, tolerance, limit)?;
+                json!({"signedArea":b.signed_area,"centroidal":b.centroidal.map(|c|json!({"point":c.point,"secondMoments":c.second_moments})),
+                    "projectedConverged":b.projected_converged,"cells":b.cells})
+            }
+            "bound_principal_face_moments" => {
+                let b =
+                    bounds::bound_projected_face_principal_moments(face, origin, tolerance, limit)?;
+                json!({"signedArea":b.signed_area,"spectrum":b.spectrum.map(encode_spectrum),"projectedConverged":b.projected_converged,"cells":b.cells})
+            }
+            _ => {
+                let b = bounds::bound_projected_face_principal_directions(
+                    face, origin, tolerance, limit,
+                )?;
+                json!({"signedArea":b.signed_area,"spectrum":b.spectrum.map(encode_spectrum),"axes":b.axes,"projectedConverged":b.projected_converged,"cells":b.cells})
+            }
+        };
+        out["projectionWorkUsed"] = json!(r.work_used);
+        return Ok(out);
+    }
     let remaining = budget - r.work_used;
     if remaining == 0 {
         return Err(input("World mass work limit reached"));
