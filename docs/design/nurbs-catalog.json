@@ -21576,7 +21576,7 @@
     {
       "id": "NURBS-0857",
       "name": "Вычитание размещённых инструментов из заготовки в STEP-сборке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::cut_stock",
@@ -21584,7 +21584,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-stock-cut-857-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-stock-cut-857-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-stock-cut-857-2026-11-18/native.log.gz",
+        "examples/rush/step-cut-stock.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21593,7 +21595,7 @@
     {
       "id": "NURBS-0858",
       "name": "Объединение материала выбранных экземпляров STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::fuse_occurrences",
@@ -21601,7 +21603,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-assembly-fusion-858-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-assembly-fusion-858-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-assembly-fusion-858-2026-11-18/native.log.gz",
+        "examples/rush/step-fuse-instances.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21610,7 +21614,7 @@
     {
       "id": "NURBS-0859",
       "name": "Сравнение редакций детали по добавленному и удалённому материалу",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_delta",
@@ -21620,7 +21624,9 @@
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/src/step_interchange_v3.rs",
         "docs/qualification/nurbs-material-delta-859-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-material-delta-859-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-material-delta-859-2026-11-18/native.log.gz",
+        "examples/rush/step-revision-delta.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21629,7 +21635,7 @@
     {
       "id": "NURBS-0860",
       "name": "Разрез размещённой детали координатной плоскостью с сохранением обеих частей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::split_at_coordinate",
@@ -21637,7 +21643,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-coordinate-split-860-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-coordinate-split-860-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-coordinate-split-860-2026-11-18/native.log.gz",
+        "examples/rush/step-split-instance.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21646,7 +21654,7 @@
     {
       "id": "NURBS-0861",
       "name": "Проверка запаса и нехватки материала заготовки для раскладки деталей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::stock_layout_delta",
@@ -21654,7 +21662,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-stock-layout-861-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-stock-layout-861-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-stock-layout-861-2026-11-18/native.log.gz",
+        "examples/rush/step-stock-delta.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21663,7 +21673,7 @@
     {
       "id": "NURBS-0862",
       "name": "Разбиение размещённой детали на слои переменной толщины",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::coordinate_layers",
@@ -21671,7 +21681,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-coordinate-layers-862-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-coordinate-layers-862-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-coordinate-layers-862-2026-11-18/native.log.gz",
+        "examples/rush/step-slice-layers.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21680,7 +21692,7 @@
     {
       "id": "NURBS-0863",
       "name": "Выделение материала деталей внутри контрольного объёма сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_in_box",
@@ -21688,7 +21700,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-inspection-box-863-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-inspection-box-863-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-inspection-box-863-2026-11-18/native.log.gz",
+        "examples/rush/step-clip-material.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21697,7 +21711,7 @@
     {
       "id": "NURBS-0864",
       "name": "Построение свободного объёма внутри контрольной области сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::free_space_in_box",
@@ -21705,7 +21719,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-free-space-864-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-free-space-864-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-free-space-864-2026-11-18/native.log.gz",
+        "examples/rush/step-free-space.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21714,7 +21730,7 @@
     {
       "id": "NURBS-0865",
       "name": "Геометрия и объём взаимных проникновений по парам деталей сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::interference_regions",
@@ -21722,7 +21738,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-interference-regions-865-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-interference-regions-865-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-interference-regions-865-2026-11-18/native.log.gz",
+        "examples/rush/step-interference-regions.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21731,7 +21749,7 @@
     {
       "id": "NURBS-0866",
       "name": "Общая область взаимных проникновений с однократным учётом кратных пересечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::interference_material",
@@ -21739,7 +21757,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-combined-interference-866-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-combined-interference-866-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-combined-interference-866-2026-11-18/native.log.gz",
+        "examples/rush/step-interference-material.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21748,7 +21768,7 @@
     {
       "id": "NURBS-0867",
       "name": "Группы деталей, связанных цепочками объёмных пересечений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::interference_groups",
@@ -21756,7 +21776,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-interference-groups-867-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-interference-groups-867-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-interference-groups-867-2026-11-18/native.log.gz",
+        "examples/rush/step-interference-groups.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21765,7 +21787,7 @@
     {
       "id": "NURBS-0868",
       "name": "Проверка взаимных проникновений между двумя узлами сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::interferences_between",
@@ -21773,7 +21795,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/native.log.gz",
+        "examples/rush/step-group-interferences.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
@@ -21782,7 +21806,7 @@
     {
       "id": "NURBS-0869",
       "name": "Проверка монтажного зазора между двумя группами деталей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::clearances_between",
@@ -21790,7 +21814,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-interface-clearance-869-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-interface-clearance-869-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-interface-clearance-869-2026-11-18/native.log.gz",
+        "examples/rush/step-group-clearances.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "Native API only. A distance interval straddling the threshold is unresolved."
@@ -21799,7 +21825,7 @@
     {
       "id": "NURBS-0870",
       "name": "Поиск наименьшего зазора между двумя узлами сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::minimum_clearance_between",
@@ -21807,7 +21833,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-interface-minimum-870-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-interface-minimum-870-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-interface-minimum-870-2026-11-18/native.log.gz",
+        "examples/rush/step-group-minimum-gap.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "Native API only. A partial search may yield only a lower bound."
@@ -21816,7 +21844,7 @@
     {
       "id": "NURBS-0871",
       "name": "Совместный поворот и перенос выбранных экземпляров STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::move_occurrences",
@@ -21824,7 +21852,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-group-move-871-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-group-move-871-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-group-move-871-2026-11-18/native.log.gz",
+        "examples/rush/move-step-group.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "Native API only. Applied motion must be proper rigid; existing orthogonal scaling and reflection are retained."
@@ -21833,7 +21863,7 @@
     {
       "id": "NURBS-0872",
       "name": "Связанное копирование группы размещений в STEP-сборке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::copy_occurrences",
@@ -21841,7 +21871,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-group-copy-872-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-group-copy-872-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-group-copy-872-2026-11-18/native.log.gz",
+        "examples/rush/copy-step-group.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "Native API only. Applied motion must be proper rigid; existing orthogonal scaling and reflection are retained."
@@ -21850,7 +21882,7 @@
     {
       "id": "NURBS-0873",
       "name": "Общий вариант геометрии для выбранных экземпляров одного прототипа",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::replace_variant",
@@ -21858,7 +21890,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-shared-variant-873-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-shared-variant-873-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-shared-variant-873-2026-11-18/native.log.gz",
+        "examples/rush/replace-step-variant.r",
+        "tests/rushAssemblyMaterial.test.ts"
       ],
       "remainingQualification": [
         "Native API only. Selected occurrences must share one source definition."

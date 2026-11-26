@@ -1,0 +1,91 @@
+{
+  "kernelSha256": "ef402835971efea3c064d9e25ad68fdac74b4cefc39e434fd993848e01f2777b",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/step-cut-stock.r",
+      "exampleSha256": "e6b281006c1bba5e7e972ffcb9d7d4aa85d0498858b0316eafc53993dd60146f",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 74 ms"
+    },
+    {
+      "example": "examples/rush/step-fuse-instances.r",
+      "exampleSha256": "400888274ac93857e1a4c61a7c8fc19559b6349465cb2c3bc3226b046ced96e0",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n12\nПлощадь\n32\nГотово · 29 ms"
+    },
+    {
+      "example": "examples/rush/step-revision-delta.r",
+      "exampleSha256": "4a31798bbee61bfe51430940990770d0651e5d933c288a4cce861ff5ab8aa0a3",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 33 ms"
+    },
+    {
+      "example": "examples/rush/step-split-instance.r",
+      "exampleSha256": "70baa98dfddc0b118605cc25c760abf44c102b23f1c22c34aef53ecdbe2f54a5",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 34 ms"
+    },
+    {
+      "example": "examples/rush/step-stock-delta.r",
+      "exampleSha256": "2c3bea91fe1568be150dae44afbe2bc6d9dbbd5bfb1c267d3cd91dcc2fddf742",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 31 ms"
+    },
+    {
+      "example": "examples/rush/step-slice-layers.r",
+      "exampleSha256": "f0655ee0b7d61d2ae3a25a34c6513c350bc0dcb7bd6ee974cb3f02828709b1ac",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n2\nПлощадь\n12\nГотово · 41 ms"
+    },
+    {
+      "example": "examples/rush/step-clip-material.r",
+      "exampleSha256": "a02ccefe46cb7fc9a9ebec08a4a9eb726e91cdce032e931b29cbcef925e23f63",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 28 ms"
+    },
+    {
+      "example": "examples/rush/step-free-space.r",
+      "exampleSha256": "3f7f8429c485e57dabac8259dbfdda98ec7094cdb5e24007740b173a09e4ad87",
+      "editorStats": "Объекты\n1\nТреугольники\n24\nОбъём\n68\nПлощадь\n144\nГотово · 38 ms"
+    },
+    {
+      "example": "examples/rush/step-interference-regions.r",
+      "exampleSha256": "b27a3e5be9012bb734df9ea52ff38d38a2a2d8317163bd5155df329d906463fc",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 27 ms"
+    },
+    {
+      "example": "examples/rush/step-interference-material.r",
+      "exampleSha256": "03ccb0f49a0bd38f1fb8151b4043134f07b7a39c3d2dcb975c975301113aed48",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 25 ms"
+    },
+    {
+      "example": "examples/rush/step-interference-groups.r",
+      "exampleSha256": "2787e87c60e5724294a356dbbd5942b802a68ebd8fb7a8a15c648e58545567b3",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 25 ms"
+    },
+    {
+      "example": "examples/rush/step-group-interferences.r",
+      "exampleSha256": "e50328bda857be949422997ebc750438fae8142c19d020b5ff803adc712399c6",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n4\nПлощадь\n16\nГотово · 26 ms"
+    },
+    {
+      "example": "examples/rush/step-group-clearances.r",
+      "exampleSha256": "5067f8809815d1468d019e630b21b8241811f6de0dca760076ee97e77d2b7eb4",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 50 ms"
+    },
+    {
+      "example": "examples/rush/step-group-minimum-gap.r",
+      "exampleSha256": "2a701e4d59a2a6f0b55bc5149a1d40ba5b777b5c07c581cc43855a895cd3a259",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 36 ms"
+    },
+    {
+      "example": "examples/rush/move-step-group.r",
+      "exampleSha256": "0541571ced3529e9fcdfee7ee41c7eb5b621feed196305d12ec712e1b11e37da",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 26 ms"
+    },
+    {
+      "example": "examples/rush/copy-step-group.r",
+      "exampleSha256": "aaf2d060fe2c082caa8cb851b89f0c5a79a3b510f12fe354f7c67cebe669b1ab",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 27 ms"
+    },
+    {
+      "example": "examples/rush/replace-step-variant.r",
+      "exampleSha256": "3408b0d997277ec8a27f7a09855028587b951a4f853e3c7cfa8f365018f9aa58",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 34 ms"
+    }
+  ]
+}
