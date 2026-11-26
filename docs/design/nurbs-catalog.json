@@ -9767,7 +9767,7 @@
     {
       "id": "NURBS-0358",
       "name": "Точные рациональные отрезки внутри общего материала между алгебраическими концами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::build_quadratic_planar_section_geometry",
@@ -9782,7 +9782,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs",
         "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs",
         "docs/qualification/nurbs-curvature-field-358-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-358-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-358-2026-11-17/native.log.gz",
+        "examples/rush/build-material-segments.r",
+        "tests/rushMaterialSegments.test.ts"
       ],
       "remainingQualification": [
         "Build exact rational spatial and chart geometry contained in proven transverse section components with bounded endpoint setbacks.",

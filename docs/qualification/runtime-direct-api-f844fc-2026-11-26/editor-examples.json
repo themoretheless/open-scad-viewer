@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "f844fcb947fbf3eba3965f7654e53862c910bf8b8843cc3dae54daeef9d0a975",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/build-material-segments.r",
+      "exampleSha256": "a63ee2c0ef60bbb3974f732597b250d86fc019a9ee7f3d48ea302d6e54e783e1",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 60 ms"
+    },
+    {
+      "example": "examples/rush/material-segment-curve.r",
+      "exampleSha256": "742c264a8366ecab4fa603794c0d0858a534b85ede5bc33e610fd605959442a1",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n0,5\nГотово · 14 ms"
+    }
+  ]
+}
