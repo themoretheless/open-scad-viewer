@@ -791,6 +791,10 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surfaces[0]!}
             break
           }
+          case 'mass_weighted_centroid':
+          case 'physical_principal_moments':
+          case 'physical_moment_gaps':
+          case 'certify_principal_direction':
           case 'tensor_principal_bounds':
           case 'tensor_axis_bounds':
           case 'trim_set_axis_bounds':

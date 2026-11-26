@@ -9,6 +9,10 @@ use crate::trim_domain::TrimDomain;
 pub(super) const OPS: &[&str] = &[
     "combine_surface_measures",
     "combine_surface_densities",
+    "mass_weighted_centroid",
+    "physical_principal_moments",
+    "physical_moment_gaps",
+    "certify_principal_direction",
     "tensor_principal_bounds",
     "tensor_axis_bounds",
     "trim_set_axis_bounds",
@@ -27,6 +31,26 @@ fn area(report: TrimmedAreaReport) -> Value {
 pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
     if matches!(op,"combine_surface_measures" | "combine_surface_densities") {
         return assembly(v,op);
+    }
+    if op == "mass_weighted_centroid" {
+        use crate::analysis::surface_measure::{SurfaceAssemblyMassBounds,bound_mass_weighted_centroid};
+        let masses: Vec<[f64;2]> = field(v,"mass_bounds")?;
+        let centroids: Vec<[[f64;2];3]> = field(v,"centroid_bounds")?;
+        check(!masses.is_empty() && masses.len()<=256 && masses.len()==centroids.len(),"Expected matching mass and centroid intervals for 1 to 256 pieces")?;
+        let pieces=masses.into_iter().zip(centroids).map(|(mass_bounds,centroid_bounds)|SurfaceAssemblyMassBounds{
+            mass_bounds,centroid_bounds,central_inertia_bounds:[[[0.;2];3];3],
+        }).collect::<Vec<_>>();
+        return Ok(json!({"centroidBounds":bound_mass_weighted_centroid(&pieces)?,"pieceCount":pieces.len()}));
+    }
+    if matches!(op,"physical_principal_moments" | "physical_moment_gaps" | "certify_principal_direction") {
+        use crate::analysis::surface_measure::{bound_physical_principal_moments,bound_physical_principal_moment_gaps,certify_principal_axis_direction};
+        let tensor=field(v,"tensor_bounds")?;
+        let tolerance=field(v,"moment_tolerance")?;
+        return match op {
+            "physical_principal_moments" => Ok(json!({"principalBounds":bound_physical_principal_moments(tensor,tolerance)?})),
+            "physical_moment_gaps" => Ok(json!({"gapBounds":bound_physical_principal_moment_gaps(tensor,tolerance)?})),
+            _ => Ok(json!({"sineUpper":certify_principal_axis_direction(tensor,field(v,"moment_index")?,field(v,"axis_vector")?,tolerance)?})),
+        };
     }
     let source: Surface = field(v, "surface")?;
     if matches!(op,"tensor_principal_bounds" | "tensor_axis_bounds") {
