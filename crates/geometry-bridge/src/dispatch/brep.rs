@@ -10,6 +10,8 @@ mod section_sheets;
 mod rim_caps;
 #[path="brep_inferred_rims.rs"]
 mod inferred_rims;
+#[path="brep_polyhedral_mass.rs"]
+mod polyhedral_mass;
 const OPS: &[&str] = &[
     "attach_expanded_rims","discover_expanded_rims","close_expanded_planes","build_expanded_plane_solid","build_outward_plane_solid","build_outward_inferred_solid",
     "inspect_inferred_solid","expanded_section_sheets","build_expanded_solid",
@@ -18,6 +20,7 @@ const OPS: &[&str] = &[
     "close_inferred_rims",
     "close_bounded_inferred_rims",
     "build_inferred_solid",
+    "measure_polyhedral_volume","measure_polyhedral_centroid","measure_polyhedral_inertia","measure_polyhedral_face_areas","bound_polyhedral_area","bound_polyhedral_edge_length",
     "close_section_planes",
     "build_bounded_section_solid",
     "close_bounded_planes",
@@ -131,6 +134,7 @@ fn handle(v: Value) -> Result<Value> {
         "build_expanded_plane_solid" => rim_caps::solid(&v,"expanded_planes"),
         "build_outward_plane_solid" => rim_caps::solid(&v,"outward_planes"),
         "build_outward_inferred_solid" => rim_caps::solid(&v,"outward_inferred"),
+        op @ ("measure_polyhedral_volume"|"measure_polyhedral_centroid"|"measure_polyhedral_inertia"|"measure_polyhedral_face_areas"|"bound_polyhedral_area"|"bound_polyhedral_edge_length")=>polyhedral_mass::measure(&v,op),
         "build_section_solid" => rim_caps::solid(&v,"exact"),
         op @ ("infer_rim_planes" | "close_inferred_rims" | "close_bounded_inferred_rims") => inferred_rims::infer(&v,op),
         "build_inferred_solid" => rim_caps::solid(&v,"inferred"),

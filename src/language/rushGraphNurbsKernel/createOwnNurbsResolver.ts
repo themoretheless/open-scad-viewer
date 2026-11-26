@@ -1093,6 +1093,12 @@ export function createOwnNurbsResolver(
           case 'build_expanded_solid':
           case 'build_inferred_solid':
           case 'close_expanded_planes':
+          case 'measure_polyhedral_volume':
+          case 'measure_polyhedral_centroid':
+          case 'measure_polyhedral_inertia':
+          case 'measure_polyhedral_face_areas':
+          case 'bound_polyhedral_area':
+          case 'bound_polyhedral_edge_length':
           case 'close_section_planes':
           case 'build_bounded_section_solid':
           case 'close_bounded_planes':
