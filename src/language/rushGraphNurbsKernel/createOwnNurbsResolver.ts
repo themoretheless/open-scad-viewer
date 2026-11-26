@@ -971,6 +971,7 @@ export function createOwnNurbsResolver(
           case 'classify_uv_seam':
           case 'isolate_uv_seam':
           case 'split_uv_seam':
+          case 'transfer_uv_grid_piece':
           case 'pullback_uv_clock':
           case 'mobius_bezier_curve':
           case 'mobius_spline_curve':
@@ -996,11 +997,13 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'relayout_trim_surface':
+          case 'relayout_trim_piece':
           case 'reclock_trim_surface':
           case 'reclock_trim_piece': {
             const {input, loops, op, id: _id, ...settings} = n
             const args = {source: needSurface(input), loops: loops.map(loop => loop.map(needCurve)), ...settings}
-            if (op === 'reclock_trim_piece') {
+            if (op === 'reclock_trim_piece' || op === 'relayout_trim_piece') {
               const {curve, ...report} = callGeometryRust<{curve: NurbsCurve; workUsed: number}>(op,args)
               constructionReports[key] = {measurement:{operation:op,report}}
               result = {kind:'curve',data:curve}

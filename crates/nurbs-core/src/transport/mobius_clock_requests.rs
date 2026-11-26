@@ -80,13 +80,52 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     )
 }
 
-pub(super) fn pullback(v: &Value) -> Result<Value> {
-    let r = clock::pullback_mobius_pcurve(
-        &field(v, "source")?,
-        field(v, "uv_domain")?,
-        field(v, "clock_factor")?,
-        field(v, "max_work")?,
-    )?;
+struct AxisLayout {
+    breaks: Vec<f64>,
+    factors: Vec<f64>,
+}
+impl AxisLayout {
+    fn view(&self) -> clock::BezierSpanLayout<'_> {
+        clock::BezierSpanLayout {
+            breaks: &self.breaks,
+            factors: &self.factors,
+        }
+    }
+}
+fn layouts(v: &Value) -> Result<[AxisLayout; 2]> {
+    Ok([
+        AxisLayout {
+            breaks: field(v, "u_breaks")?,
+            factors: field(v, "u_factors")?,
+        },
+        AxisLayout {
+            breaks: field(v, "v_breaks")?,
+            factors: field(v, "v_factors")?,
+        },
+    ])
+}
+pub(super) fn pullback(v: &Value, op: &str) -> Result<Value> {
+    let source = field(v, "source")?;
+    let budget = field(v, "max_work")?;
+    let r = if op == "transfer_uv_grid_piece" {
+        let [u, v_axis] = layouts(v)?;
+        clock::pullback_relayout_pcurve(
+            &source,
+            [
+                &field::<Vec<f64>>(v, "old_u_breaks")?,
+                &field::<Vec<f64>>(v, "old_v_breaks")?,
+            ],
+            [u.view(), v_axis.view()],
+            budget,
+        )?
+    } else {
+        clock::pullback_mobius_pcurve(
+            &source,
+            field(v, "uv_domain")?,
+            field(v, "clock_factor")?,
+            budget,
+        )?
+    };
     let mut pieces = r
         .pieces
         .ok_or_else(|| input(format!("UV contour transfer refused: {:?}", r.refusal)))?;
@@ -115,17 +154,18 @@ pub(super) fn trim(v: &Value, op: &str) -> Result<Value> {
         return Ok(json!({"curve":curve,"inside":inside,"workUsed":r.work_used}));
     }
     let loops: Vec<Vec<crate::curve::Curve>> = field(v, "loops")?;
-    let r = clock::mobius_trimmed_surface(
-        &field(v, "source")?,
-        &loops,
-        field(v, "clock_factor")?,
-        budget,
-    )?;
+    let surface = field(v, "source")?;
+    let r = if matches!(op, "relayout_trim_surface" | "relayout_trim_piece") {
+        let [u, v_axis] = layouts(v)?;
+        clock::relayout_trimmed_bezier_surface(&surface, &loops, [u.view(), v_axis.view()], budget)?
+    } else {
+        clock::mobius_trimmed_surface(&surface, &loops, field(v, "clock_factor")?, budget)?
+    };
     let result = r
         .geometry
         .ok_or_else(|| input(format!("Trim transfer refused: {:?}", r.refusal)))?;
     let counts: Vec<_> = result.loops.iter().map(Vec::len).collect();
-    if op == "reclock_trim_surface" {
+    if matches!(op, "relayout_trim_surface" | "reclock_trim_surface") {
         return Ok(json!({"surface":result.surface,"loopPieces":counts,"workUsed":r.work_used}));
     }
     let ring: usize = field(v, "loop_index")?;

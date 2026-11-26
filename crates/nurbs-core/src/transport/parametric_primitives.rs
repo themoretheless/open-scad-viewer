@@ -71,10 +71,10 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"bounded_surface_partial_field" | "surface_partial_field" | "bounded_surface_area_normal_field" | "surface_area_normal_field" | "bounded_surface_gaussian_field" | "bounded_surface_mean_squared_field" | "bounded_surface_principal_gap_squared_field" | "bounded_surface_metric_field" | "surface_gaussian_field" | "surface_mean_squared_field" | "surface_principal_gap_squared_field" | "surface_metric_field" | "bounded_surface_mixed_partial_field" | "surface_mixed_partial_field") { return Some(exact_field_requests::surface_field(v,op)); }
     if matches!(op,"bounded_curve_derivative_field" | "curve_derivative_field" | "bounded_curve_torsion_field" | "bounded_curve_speed_squared_field" | "curve_torsion_field" | "curve_speed_squared_field" | "bounded_curve_binormal_field" | "curve_binormal_field" | "bounded_curve_curvature_squared_field" | "curve_curvature_squared_field") { return Some(exact_field_requests::curve_field(v,op)); }
     if matches!(op,"piecewise_clock_curve" | "relayout_clock_curve" | "piecewise_clock_surface" | "relayout_clock_surface" | "mobius_bezier_curve" | "mobius_spline_curve" | "fit_mobius_curve" | "mobius_bezier_surface" | "mobius_spline_surface" | "fit_mobius_surface") { return Some(mobius_clock_requests::apply(v,op)); }
-    if matches!(op,"reclock_trim_surface" | "reclock_trim_piece" | "certify_uv_chart") { return Some(mobius_clock_requests::trim(v,op)); }
+    if matches!(op,"relayout_trim_surface" | "relayout_trim_piece" | "reclock_trim_surface" | "reclock_trim_piece" | "certify_uv_chart") { return Some(mobius_clock_requests::trim(v,op)); }
     if matches!(op,"classify_uv_seam" | "isolate_uv_seam" | "split_uv_seam") { return Some(pcurve_seam_requests::apply(v,op)); }
     if op == "lift_uv_edge" { return Some(mobius_clock_requests::lift(v)); }
-    if op == "pullback_uv_clock" { return Some(mobius_clock_requests::pullback(v)); }
+    if matches!(op,"transfer_uv_grid_piece" | "pullback_uv_clock") { return Some(mobius_clock_requests::pullback(v,op)); }
     if op == "projective_curve_exact" {
         return Some((|| {
             let report = crate::editing::exact_projective::curve(&field(v,"source")?,field(v,"coefficients")?,field(v,"max_work")?)?;
