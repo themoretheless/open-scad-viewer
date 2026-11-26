@@ -1460,6 +1460,16 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'join_mixed_degree':
+          case 'compact_join_seam':
+          case 'compare_parametric_seam':
+          case 'compare_geometric_seam': {
+            const left=needCurve(n.input)
+            const {curve,...report}=callGeometryRust<{curve?:NurbsCurve;workUsed:number}>(n.op,{left,right:needCurve(n.target_geometry),max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'curve',data:curve??left}
+            break
+          }
           case 'merge_weighted_curves':
           case 'merge_weighted_chain': {
             const ids = n.op === 'merge_weighted_curves' ? [n.input,n.target_geometry] : [n.input,...n.inputs]

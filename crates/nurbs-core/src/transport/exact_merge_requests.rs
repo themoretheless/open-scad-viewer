@@ -3,6 +3,36 @@ use crate::editing::{exact_curve_merge, exact_surface_merge};
 use crate::surface::Axis;
 
 pub(super) fn merge(v: &Value, op: &str) -> Result<Value> {
+    if matches!(op, "join_mixed_degree" | "compact_join_seam" | "compare_parametric_seam" | "compare_geometric_seam") {
+        let left = field(v,"left")?;
+        let right = field(v,"right")?;
+        let budget = field(v,"max_work")?;
+        return match op {
+            "join_mixed_degree" => {
+                let r = exact_curve_merge::merge_with_exact_degree_elevation(&left,&right,budget)?;
+                let curve = r.curve.ok_or_else(|| input(format!("Mixed-degree merge refused: {:?}", r.refusal)))?;
+                Ok(json!({"curve":curve,"degree":curve.degree,"domain":curve.domain(),"workUsed":r.work_used}))
+            }
+            "compact_join_seam" => {
+                let r = exact_curve_merge::merge_and_simplify_exact_seam(&left,&right,budget)?;
+                let curve = r.curve.ok_or_else(|| input(format!("Compact seam join refused: {:?}", r.join_refusal)))?;
+                Ok(json!({"curve":curve,"knots":curve.knots,"seamMultiplicity":r.seam_multiplicity,
+                    "removalRefusal":r.removal_refusal.map(|reason|format!("{reason:?}")),"workUsed":r.work_used}))
+            }
+            "compare_parametric_seam" => {
+                let r = exact_curve_merge::compare_exact_curve_seam_jets(&left,&right,budget)?;
+                if let Some(reason)=r.refusal { return Err(input(format!("Seam comparison refused: {reason:?}"))); }
+                Ok(json!({"order":r.continuity_order,"residuals":r.residuals.map(|rows|rows.map(|row|
+                    row.iter().map(ToString::to_string).collect::<Vec<_>>())),"workUsed":r.work_used}))
+            }
+            _ => {
+                let r = exact_curve_merge::compare_exact_curve_geometric_seam(&left,&right,budget)?;
+                if let Some(reason)=r.refusal { return Err(input(format!("Geometric comparison refused: {reason:?}"))); }
+                Ok(json!({"order":r.continuity_order,"speedScale":r.speed_scale.map(|v|v.to_string()),
+                    "accelerationScale":r.acceleration_scale.map(|v|v.to_string()),"workUsed":r.work_used}))
+            }
+        };
+    }
     if matches!(op, "merge_weighted_curves" | "merge_weighted_chain") {
         let curves: Vec<crate::curve::Curve> = field(v, "curves")?;
         let budget = field(v, "max_work")?;
