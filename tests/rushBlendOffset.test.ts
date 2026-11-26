@@ -7,7 +7,7 @@ async function run(example:string,replace=(s:string)=>s){
   const source=replace(readFileSync('examples/rush/'+example+'.r','utf8'))
   const scene=await buildTextNurbsScene(compileRushFrontend(source).document)
   expect(scene.meshes).toHaveLength(1)
-  return {report:JSON.parse(scene.measurements!.at(-1)!.report),positions:Array.from(scene.meshes[0]!.positions)}
+  return {report:JSON.parse(scene.measurements!.at(-1)!.report),positions:Array.from(scene.meshes[0]!.vertices).filter((_,index)=>index%6<3)}
 }
 
 it('retains both support boundaries for G1 and G2 Hermite blends',async()=>{
