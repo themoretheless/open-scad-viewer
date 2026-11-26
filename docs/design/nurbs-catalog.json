@@ -9531,7 +9531,7 @@
     {
       "id": "NURBS-0349",
       "name": "Адаптивное уточнение пересечения контуров NURBS до пространственного допуска",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::resolve_planar_face_boundary_intersection",
@@ -9544,7 +9544,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/adaptive.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/range_bounds.rs",
         "docs/qualification/nurbs-curvature-field-349-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-349-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-349-2026-11-17/native.log.gz",
+        "examples/rush/resolve-boundary-section.r",
+        "tests/rushAdaptiveBoundary.test.ts"
       ],
       "remainingQualification": [
         "Refine the maximum unresolved connected boundary interval against an exact squared XYZ length target.",
