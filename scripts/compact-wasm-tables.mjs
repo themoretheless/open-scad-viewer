@@ -48,8 +48,9 @@ function appendEntry(data, entry) {
 }
 
 // Encode non-overlapping active segments in their own memory range.
-function compactMatches(bytes, base) {
+function compactMatches(bytes, base, extended) {
   const last = new Int32Array(65536).fill(-1)
+  const chain = extended ? new Int32Array(65536).fill(-1) : null
   const payload = []
   let gain = 0, stop = 0, end = 0
   let start = 0
@@ -62,16 +63,31 @@ function compactMatches(bytes, base) {
   }
   for (let at = 0; at + 4 <= bytes.length;) {
     const key = Math.imul(bytes.readUInt32LE(at), 0x9e3779b1) >>> 16
-    const previous = last[key]
+    let previous = last[key]
+    if (chain) chain[at & 65535] = previous
     last[key] = at
-    let length = 0
-    if (previous >= 0 && at - previous <= 65535) {
-      while (length < 131 && at + length < bytes.length && bytes[previous + length] === bytes[at + length]) length++
+    let length = 0, best = previous
+    for (let probe = 0; probe < (chain ? 48 : 1) && previous >= 0 && at - previous <= 65535; probe++) {
+      let matched = 0
+      while (matched < 131 && at + matched < bytes.length && bytes[previous + matched] === bytes[at + matched]) matched++
+      if (matched > length) {
+        length = matched
+        best = previous
+        if (length === 131) break
+      }
+      if (chain) previous = chain[previous & 65535]
     }
     if (length < 5) { at++; continue }
     literal(at)
-    const offset = at - previous
+    const offset = at - best
     payload.push(128 + length - 4, offset & 255, offset >>> 8)
+    if (chain) {
+      for (let j = at + 1; j < at + length && j + 4 <= bytes.length; j++) {
+        const hash = Math.imul(bytes.readUInt32LE(j), 0x9e3779b1) >>> 16
+        chain[j & 65535] = last[hash]
+        last[hash] = j
+      }
+    }
     at += length
     start = at
     if (at - payload.length > gain) {
@@ -82,7 +98,7 @@ function compactMatches(bytes, base) {
   }
   // Keep the suffix raw from the last point of maximum accumulated saving.
   // Every previous output boundary then falls at or before the unread input.
-  if (gain < 1024) return
+  if (gain < (extended ? 200 : 1024)) return
   const data = Buffer.concat([Buffer.from(payload.slice(0,stop)),bytes.subarray(end)])
   const runs = [{kind:'lz', length:stop, output:end}]
   if (end < bytes.length) runs.push({kind:'raw',length:bytes.length-end})
@@ -175,6 +191,13 @@ function expandBlocks(count) {
 }
 
 export function compactWasmTables(input) {
+  const standard = compact(input, false)
+  if (standard.length <= 20 * 1024 * 1024) return standard
+  const denser = compact(input, true)
+  return denser.length < standard.length ? denser : standard
+}
+
+function compact(input, extended) {
   const original = Buffer.from(input.buffer, input.byteOffset, input.byteLength)
   const list = sections(original)
   const section = id => list.find(s => s.id === id)
@@ -196,7 +219,7 @@ export function compactWasmTables(input) {
     previousEnd = base + length
     const segmentBytes = data.subarray(cursor.at,end)
     let compact = length >= 2048 && compactTable(segmentBytes,base)
-    const matches = length >= 2048 && compactMatches(segmentBytes,base)
+    const matches = length >= (extended ? 256 : 2048) && compactMatches(segmentBytes, base, extended)
     if (matches && (!compact || matches.data.length + 128 < compact.data.length)) compact = matches
     cursor.at = end
     if (!compact) {

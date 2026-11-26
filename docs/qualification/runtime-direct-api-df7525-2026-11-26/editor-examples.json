@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "df7525738a44014fcb0848db6ed65b2eb7e7eccc621dfcc0eb6b5a14c465340f",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/match-quadratic-contacts.r",
+      "exampleSha256": "6262455f96569953c2d1049421d7028fd72500a111c590442901aded9467a99e",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 393 ms"
+    }
+  ]
+}

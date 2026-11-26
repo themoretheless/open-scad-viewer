@@ -9557,7 +9557,7 @@
     {
       "id": "NURBS-0350",
       "name": "Точное совпадение иррациональных квадратичных контактов контуров NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::match_quadratic_planar_boundary_contacts",
@@ -9571,7 +9571,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
         "crates/nurbs-core/src/editing/rational_factor/polynomial.rs",
         "docs/qualification/nurbs-curvature-field-350-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-350-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-350-2026-11-17/native.log.gz",
+        "examples/rush/match-quadratic-contacts.r",
+        "tests/rushQuadraticContact.test.ts"
       ],
       "remainingQualification": [
         "Identify exact shared contour contacts from irreducible quadratic equations using a canonical algebraic support clock.",
