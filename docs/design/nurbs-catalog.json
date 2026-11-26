@@ -7757,7 +7757,7 @@
     {
       "id": "NURBS-0274",
       "name": "Непрерывный сертификат отклонения пространственной ломаной от порогового контура NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline",
@@ -7772,7 +7772,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
         "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
         "docs/qualification/nurbs-curvature-field-274-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-274-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-274-2026-11-16/native.log.gz",
+        "examples/rush/world-curvature-contour.r",
+        "tests/rushWorldContours.test.ts"
       ],
       "remainingQualification": [
         "Lifts a certified UV contour to stored 3D vertices. The continuous Euclidean bound includes the UV certificate, UV-to-absolute rounding, interval point storage and the original patch Hessian along each chord.",
@@ -7783,7 +7785,7 @@
     {
       "id": "NURBS-0275",
       "name": "Непрерывные границы длины пространственного порогового контура NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::measure_curvature_gap_contour",
@@ -7798,7 +7800,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
         "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
         "docs/qualification/nurbs-curvature-field-275-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-275-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-275-2026-11-16/native.log.gz",
+        "examples/rush/world-curvature-contour.r",
+        "tests/rushWorldContours.test.ts"
       ],
       "remainingQualification": [
         "Combines interval bounds on the composed three-dimensional velocity with certified endpoint chord distances to enclose model-space arc length per segment and in total.",
@@ -7809,7 +7813,7 @@
     {
       "id": "NURBS-0276",
       "name": "Сертифицированное расстояние от точки до пространственного порогового контура NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour",
@@ -7823,7 +7827,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
         "docs/qualification/nurbs-curvature-field-276-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-276-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-276-2026-11-16/native.log.gz",
+        "examples/rush/world-curvature-contour.r",
+        "tests/rushWorldContours.test.ts"
       ],
       "remainingQualification": [
         "Exact rational clamped projection onto each stored chord and the continuous world error enclose the minimum Euclidean distance to the original contour. Reports which segment supplies the upper bound.",
@@ -7834,7 +7840,7 @@
     {
       "id": "NURBS-0277",
       "name": "Пространственные ограничивающие параллелепипеды целого порогового контура NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour",
@@ -7847,7 +7853,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "docs/qualification/nurbs-curvature-field-277-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-277-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-277-2026-11-16/native.log.gz",
+        "examples/rush/world-curvature-contour.r",
+        "tests/rushWorldContours.test.ts"
       ],
       "remainingQualification": [
         "Outward per-segment world-axis boxes enclose the whole original contour for broad-phase exclusion.",

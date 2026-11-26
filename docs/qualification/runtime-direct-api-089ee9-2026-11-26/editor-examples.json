@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "089ee965ef68578452d7f5a115f8733a0dcdefa768c289789b65c25256e0787f",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/world-curvature-contour.r",
+      "exampleSha256": "86e9ef1a1793e6e8e554922a623f9afb87ae030a4bcb88c69600261e9c3b568a",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n0,1\nГотово · 72 ms"
+    }
+  ]
+}
