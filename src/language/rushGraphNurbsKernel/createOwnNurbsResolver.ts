@@ -965,6 +965,20 @@ export function createOwnNurbsResolver(
             result = {kind:'curve', data:curve}
             break
           }
+          case 'verify_uv_edge':
+          case 'compare_uv_traces':
+          case 'compare_uv_tangents': {
+            const surface = needSurface(n.input)
+            const args = n.op === 'verify_uv_edge'
+              ? {edge:needCurve(n.target_geometry)}
+              : {right:needSurface(n.target_geometry),right_trace:needCurve(n.inputs[1])}
+            const report=callGeometryRust<object>(n.op,{
+              surface,trace:needCurve(n.inputs[0]),max_work:n.max_work,...args,
+            })
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'piecewise_clock_curve':
           case 'relayout_clock_curve':
           case 'certify_uv_chart':
