@@ -1082,6 +1082,18 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'clip_common_path':
+          case 'clip_union_path':
+          case 'subtract_path_cutters':
+          case 'classify_path_membership':
+          case 'bound_overlap_lengths':
+          case 'recover_overlap_paths': {
+            const {id:_id,op,input,inputs,...settings}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;workUsed:number}>(op,{source:needBrep(input),others:inputs.map(needBrep),...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'build_expanded_plane_solid':
           case 'build_outward_plane_solid':
           case 'build_section_solid':
