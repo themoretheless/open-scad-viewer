@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "38a6fc14574be618dd3b802b7d6f896889fc04a81b2884f4c7e2d580038f624d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/tensor-principal-bounds.r",
+      "exampleSha256": "64282ea24c93a9033dad82fd56a800e00a8e845d7060f9b4ff31778dc52223b2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 53 ms"
+    },
+    {
+      "example": "examples/rush/tensor-axis-bounds.r",
+      "exampleSha256": "5f9ffd2676446bd9e3d7ebd2df1dbe7d1598d8137917f1555e0da5a7d0b765c7",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/trim-set-axis-bounds.r",
+      "exampleSha256": "9b6daeb83b5db8202581c77f555e6799ca14c5da6d4d9a039731512fe53ba1e2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 1 435 ms"
+    }
+  ]
+}

@@ -16526,7 +16526,7 @@
     {
       "id": "NURBS-0621",
       "name": "Индивидуальные гарантированные интервалы собственных значений интервального тензора",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_moments_from_tensor",
@@ -16534,7 +16534,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-621-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-621-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-621-2026-11-17/native.log.gz",
+        "examples/rush/tensor-principal-bounds.r",
+        "tests/rushTensorInertia.test.ts"
       ],
       "remainingQualification": [
         "Tighten each ordered eigenvalue with an independent diagonal order bound and an outward-rounded off-diagonal norm bound.",
@@ -16545,7 +16547,7 @@
     {
       "id": "NURBS-0622",
       "name": "Гарантированный момент инерции вокруг заданного направления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_directional_inertia",
@@ -16553,7 +16555,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-622-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-622-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-622-2026-11-17/native.log.gz",
+        "examples/rush/tensor-axis-bounds.r",
+        "tests/rushTensorInertia.test.ts"
       ],
       "remainingQualification": [
         "Enclose the Rayleigh quotient for an arbitrary nonzero axis through the tensor reference point, including the common centroid of trimmed patches.",
