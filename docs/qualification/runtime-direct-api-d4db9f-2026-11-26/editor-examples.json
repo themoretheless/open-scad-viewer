@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "d4db9ff71ce8e55d3273a648e9c63714b0fd5e08b15ce6aeed9314efce311b0e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/classify-face-section.r",
+      "exampleSha256": "7a2ccc6d2e899d25f5b25f03ddac8f158228dfba8b6fdd31d6f31603fe5f377c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 67 ms"
+    }
+  ]
+}

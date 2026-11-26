@@ -9454,7 +9454,7 @@
     {
       "id": "NURBS-0346",
       "name": "Классификация пересечения по внутренним областям и границам обеих NURBS-граней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::classify_planar_face_contacts",
@@ -9466,7 +9466,9 @@
         "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
         "crates/nurbs-core/src/analysis/exact_plane_intersection/contact_partition.rs",
         "docs/qualification/nurbs-curvature-field-346-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-346-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-346-2026-11-17/native.log.gz",
+        "examples/rush/classify-face-section.r",
+        "tests/rushFaceContactClasses.test.ts"
       ],
       "remainingQualification": [
         "Classify interior/interior, boundary/boundary and both mixed face contact strata on the exact support clock.",
