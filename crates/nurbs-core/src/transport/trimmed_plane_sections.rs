@@ -56,7 +56,8 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     }
     if matches!(
         op,
-        "shared_boundary_spans"
+        "match_quadratic_contacts"
+            | "shared_boundary_spans"
             | "shared_boundary_contacts"
             | "refine_boundary_section"
             | "resolve_boundary_section"

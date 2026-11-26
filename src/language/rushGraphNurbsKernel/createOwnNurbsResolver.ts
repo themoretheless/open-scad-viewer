@@ -1109,6 +1109,7 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'match_quadratic_contacts':
           case 'shared_boundary_spans':
           case 'shared_boundary_contacts':
           case 'refine_boundary_section':

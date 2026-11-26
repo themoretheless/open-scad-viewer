@@ -66644,6 +66644,59 @@
               },
               "op": {
                 "type": "string",
+                "const": "match_quadratic_contacts"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "target_geometry": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "loops": {
+                "minItems": 2,
+                "type": "array",
+                "items": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  }
+                }
+              },
+              "left_loop_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 63
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "target_geometry",
+              "loops",
+              "left_loop_count",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "shared_boundary_spans"
               },
               "input": {

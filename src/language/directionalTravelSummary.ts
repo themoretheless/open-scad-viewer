@@ -116,6 +116,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'store_section_edge') return russian ? 'Хранение ребра пересечения' : 'store section edge'
   if (operation === 'optimize_section_edge') return russian ? 'Согласованное округление ребра' : 'optimize section edge'
   if (operation === 'store_section_edges') return russian ? 'Хранение разделённых рёбер' : 'store section edges'
+  if (operation === 'match_quadratic_contacts') return russian ? 'Точные квадратичные контакты контуров' : 'Exact quadratic boundary contacts'
   if (operation === 'shared_boundary_spans') return russian ? 'Общие участки границ' : 'shared boundary spans'
   if (operation === 'shared_boundary_contacts') return russian ? 'Общие точки границ' : 'shared boundary contacts'
   if (operation === 'refine_boundary_section') return russian ? 'Уточнение общих участков' : 'refine boundary section'
