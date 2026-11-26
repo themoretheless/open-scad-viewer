@@ -1823,6 +1823,8 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('lift_planar_wire'),input:id,loops:z.array(z.array(id).min(1)).min(1),loop_index:z.number().int().nonnegative(),piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('active_surface_hull'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('project_plane_chart'),input:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('clip_plane_section'),input:id,target_geometry:id,loops:z.array(z.array(id).min(1)).min(2),left_loop_count:z.number().int().min(1).max(63),parameter_width:z.number().positive(),tolerance_uv:z.number().positive(),max_winding_cells:z.number().int().min(1).max(100000),max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('build_plane_section_segments'),input:id,target_geometry:id,loops:z.array(z.array(id).min(1)).min(2),left_loop_count:z.number().int().min(1).max(63),parameter_width:z.number().positive(),tolerance_uv:z.number().positive(),max_winding_cells:z.number().int().min(1).max(100000),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('intersect_support_planes'),input:id,target_geometry:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('lift_plane_chart'),input:id,target_geometry:id,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('shared_plane_chart'),input:id,inputs:z.array(id).max(253),patch_index:z.number().int().min(0).max(253),max_work:z.number().int().min(1).max(1000000)}).strict(),

@@ -1098,6 +1098,16 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'clip_plane_section':
+          case 'build_plane_section_segments': {
+            const surface=needSurface(n.input)
+            const report=callGeometryRust<object>(n.op,{source:surface,right:needSurface(n.target_geometry),
+              loops:n.loops.map(r=>r.map(needCurve)),left_loop_count:n.left_loop_count,parameter_width:n.parameter_width,
+              tolerance_uv:n.tolerance_uv,max_winding_cells:n.max_winding_cells,max_work:n.max_work})
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'intersect_support_planes': {
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,right:needSurface(n.target_geometry),max_work:n.max_work})
