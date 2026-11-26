@@ -10006,7 +10006,7 @@
     {
       "id": "NURBS-0367",
       "name": "Разрез узловой ячейки NURBS плоскостью с парными замкнутыми контурами обрезки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::split_surface_cell_by_plane",
@@ -10020,7 +10020,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_trim.rs",
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "docs/qualification/nurbs-curvature-field-367-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-367-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-367-2026-11-17/native.log.gz",
+        "examples/rush/split-cell-by-plane.r",
+        "tests/rushPlaneCellSplit.test.ts"
       ],
       "remainingQualification": [
         "Build complementary counterclockwise trim loops along a certified per-cell surface-plane section.",

@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "qualificationClaim": "none",
+  "scope": "Fresh Node host, two cube builds using the measured embedded geometry artifact; not browser or full qualification",
+  "artifactBytes": 20962553,
+  "artifactSha256": "e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+  "publicArtifactSha256": "e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+  "publicArtifactMatches": true,
+  "compilerLoads": 1,
+  "records": [
+    {
+      "engineClass": "mesh",
+      "manifestVersion": "own-rust-node-v118",
+      "declaredQualification": "qualified",
+      "declaredKernelFingerprint": "sha256:e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+      "observedKernelFingerprint": "sha256:e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+      "manifestIntegrityMatches": true,
+      "descriptorMatchesManifest": true,
+      "artifactMatchesManifest": true,
+      "runtimeEvidence": true,
+      "matches": true,
+      "meshCount": 1,
+      "volumeMm3": 1
+    },
+    {
+      "engineClass": "brep",
+      "manifestVersion": "brep-closed-v118",
+      "declaredQualification": "qualified",
+      "declaredKernelFingerprint": "sha256:e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+      "observedKernelFingerprint": "sha256:e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+      "manifestIntegrityMatches": true,
+      "descriptorMatchesManifest": true,
+      "artifactMatchesManifest": true,
+      "runtimeEvidence": true,
+      "matches": true,
+      "meshCount": 1,
+      "volumeMm3": 1
+    }
+  ],
+  "matches": true
+}

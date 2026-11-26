@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "e9ad95efca8c9bbad977ca835681963c099c88963a65e68603daad6f0ea0a828",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/split-cell-by-plane.r",
+      "exampleSha256": "264c780c54d7f56b0014d4acb31001df09c3f23d0b7bc6301cdd3fcfa14939b7",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 72 ms"
+    }
+  ]
+}
