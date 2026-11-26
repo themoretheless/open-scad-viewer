@@ -9216,7 +9216,7 @@
     {
       "id": "NURBS-0336",
       "name": "Сертифицированные контакты луча в плоскости NURBS-грани с внешним контуром и отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::planar_coplanar_ray::contact_coplanar_face_ray",
@@ -9227,7 +9227,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
         "crates/nurbs-core/tests/exact_coplanar_face_ray_contracts.rs",
         "docs/qualification/nurbs-curvature-field-336-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-336-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-336-2026-11-17/native.log.gz",
+        "examples/rush/coplanar-ray-contacts.r",
+        "tests/rushCoplanarRays.test.ts"
       ],
       "remainingQualification": [
         "Find coplanar ray boundary contacts with exact line coefficients and certified ray-parameter enclosures.",
@@ -9238,7 +9240,7 @@
     {
       "id": "NURBS-0337",
       "name": "Сертифицированные участки компланарного луча внутри плоской NURBS-грани с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::planar_coplanar_ray::partition_coplanar_face_ray",
@@ -9247,7 +9249,9 @@
         "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/exact_coplanar_face_ray_contracts.rs",
         "docs/qualification/nurbs-curvature-field-337-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-337-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-337-2026-11-17/native.log.gz",
+        "examples/rush/coplanar-ray-partition.r",
+        "tests/rushCoplanarRays.test.ts"
       ],
       "remainingQualification": [
         "Partition a coplanar ray into certified contact-free material or exterior intervals and conservative contact bands.",
