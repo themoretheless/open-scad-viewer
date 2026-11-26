@@ -98,6 +98,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'attach_section_rims') return russian ? 'Пришить крышку по рёбрам' : 'attach section rims'
   if (operation === 'discover_section_rims') return russian ? 'Найти и закрыть свободный контур' : 'discover section rims'
   if (operation === 'attach_bounded_rims') return russian ? 'Пришить крышку с допуском' : 'attach bounded rims'
+  if (operation === 'close_section_planes') return russian ? 'Закрыть оболочку по плоскостям' : 'close section planes'
+  if (operation === 'close_bounded_planes') return russian ? 'Закрыть оболочку по плоскостям с допусками' : 'close bounded planes'
   if (operation === 'discover_bounded_rims') return russian ? 'Найти контуры и закрыть с допуском' : 'discover bounded rims'
   if (operation === 'section_brep_sheets') return russian ? 'Листовые B-rep грани сечения' : 'section brep sheets'
   if (operation === 'bounded_section_brep_sheets') return russian ? 'Листовые B-rep грани с допуском опоры' : 'bounded section brep sheets'

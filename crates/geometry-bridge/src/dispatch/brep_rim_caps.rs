@@ -65,3 +65,49 @@ pub(super) fn attach(v: &Value, op: &str) -> Result<Value> {
         json!({"model":attached.model,"capFaces":attached.cap_faces,"closed":attached.model.shells[shell].closed,"sourceEdges":source.edges.len(),"resultEdges":attached.model.edges.len(),"rimAddresses":rings,"supportErrorUpper":bounds,"discoveryWork":discovery,"workUsed":discovery+attached.exact_work,"verificationCells":attached.verification_cells}),
     )
 }
+
+pub(super) fn close_planes(v: &Value, bounded: bool) -> Result<Value> {
+    let source: brep_core::Model = field(v, "source")?;
+    let shell = field(v, "shell")?;
+    let work = field(v, "max_work")?;
+    let cells = field(v, "max_verification_cells")?;
+    let (attachment, errors) = if bounded {
+        let rows: Vec<[f64; 6]> = field(v, "planes")?;
+        let planes = rows
+            .into_iter()
+            .map(
+                |[x, y, z, offset, selection, support]| cap::BoundedSectionPlane {
+                    plane: cap::SectionPlane {
+                        normal: [x, y, z],
+                        offset,
+                    },
+                    selection_tolerance_mm: selection,
+                    support_tolerance_mm: support,
+                },
+            )
+            .collect::<Vec<_>>();
+        let r = cap::close_shell_with_bounded_section_caps(&source, shell, &planes, work, cells)?;
+        (
+            r.attachment,
+            r.support_error_upper
+                .into_iter()
+                .map(|q| q.to_string())
+                .collect(),
+        )
+    } else {
+        let rows: Vec<[f64; 4]> = field(v, "planes")?;
+        let planes = rows
+            .into_iter()
+            .map(|[x, y, z, offset]| cap::SectionPlane {
+                normal: [x, y, z],
+                offset,
+            })
+            .collect::<Vec<_>>();
+        let r = cap::close_shell_with_section_caps(&source, shell, &planes, work, cells)?;
+        let errors = vec![String::from("0"); r.cap_faces.len()];
+        (r, errors)
+    };
+    Ok(
+        json!({"model":attachment.model,"capFaces":attachment.cap_faces,"closed":attachment.model.shells[shell].closed,"supportErrorUpper":errors,"sourceEdges":source.edges.len(),"resultEdges":attachment.model.edges.len(),"workUsed":attachment.exact_work,"verificationCells":attachment.verification_cells}),
+    )
+}

@@ -414,6 +414,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "attach_section_rims" => &["shell","rim_addresses","plane_normal","plane_offset_mm","max_verification_cells","max_work"],
         "discover_section_rims" => &["shell","plane_normal","plane_offset_mm","max_verification_cells","max_work"],
         "attach_bounded_rims" => &["shell","rim_addresses","plane_normal","plane_offset_mm","support_tolerance_mm","max_verification_cells","max_work"],
+        "close_section_planes" => &["shell","planes","max_verification_cells","max_work"],
+        "close_bounded_planes" => &["shell","planes","max_verification_cells","max_work"],
         "discover_bounded_rims" => &["shell","plane_normal","plane_offset_mm","support_tolerance_mm","selection_tolerance_mm","max_verification_cells","max_work"],
         "section_brep_sheets" => &["inputs","loops","plane_normal","plane_offset_mm","tolerance_mm","max_verification_cells","max_work"],
         "bounded_section_brep_sheets" => &["inputs","loops","plane_normal","plane_offset_mm","tolerance_mm","max_verification_cells","support_tolerance_mm","max_work"],
