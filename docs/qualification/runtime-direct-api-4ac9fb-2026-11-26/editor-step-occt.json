@@ -1,0 +1,72 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.1.0",
+  "scope": "Independent STEP read, shape validity, optional topology counts, exact bounding box, volume or area and OCCT tessellation. Does not certify all STEP inputs.",
+  "previewProduced": false,
+  "passed": true,
+  "parts": [
+    {
+      "name": "mixed",
+      "stepSha256": "410163fa100692c126dc375dd295cb987f80459bef569a7071247295462585b8",
+      "valid": true,
+      "solids": 2,
+      "faces": 12,
+      "shells": 2,
+      "wires": 12,
+      "uniqueEdges": 24,
+      "uniqueVertices": 16,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          304.8000001,
+          76.20000009999998,
+          102.60000009999999
+        ]
+      ],
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "passed": true,
+      "previewTriangles": 24,
+      "volumeMm3": 397184.49599999946,
+      "volumeErrorMm3": 5.238689482212067e-10,
+      "volumeIntegrationRelativeError": 1.586032892321651e-16
+    },
+    {
+      "name": "placed",
+      "stepSha256": "897b8efea8b8e830199b0cb579f51e9f1b24170fbeba452adee042dd9de29886",
+      "valid": true,
+      "solids": 2,
+      "faces": 12,
+      "shells": 2,
+      "wires": 12,
+      "uniqueEdges": 24,
+      "uniqueVertices": 16,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          379.4000001,
+          76.20000009999998,
+          102.60000009999999
+        ]
+      ],
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "passed": true,
+      "previewTriangles": 24,
+      "volumeMm3": 397184.49599999964,
+      "volumeErrorMm3": 3.4924596548080444e-10,
+      "volumeIntegrationRelativeError": 2.9564095830622204e-16
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import profiles231 from './geometry-delivery-profiles/profiles-231.mjs'
 import profiles230 from './geometry-delivery-profiles/profiles-230.mjs'
 import profiles229 from './geometry-delivery-profiles/profiles-229.mjs'
 import profiles228 from './geometry-delivery-profiles/profiles-228.mjs'
@@ -11,6 +12,7 @@ import profiles199 from './geometry-delivery-profiles/profiles-199-226.mjs'
 // Packaging policy, not geometry tolerances, proof work, memory or WASM limits.
 // A new artifact cannot inherit a larger budget without a reviewed exact pin.
 const profiles=Object.freeze({
+  ...profiles231,
   ...profiles230,
   ...profiles229,
   ...profiles228,
