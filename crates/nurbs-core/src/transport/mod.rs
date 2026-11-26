@@ -10,6 +10,7 @@ mod editing_and_continuity;
 mod core_queries;
 mod periodic_surface_edits;
 mod periodic_surface_assembly;
+mod motion_jumps;
 mod trimmed_surface_integrals;
 mod periodic_trim_components;
 mod trim_contour_measurements;

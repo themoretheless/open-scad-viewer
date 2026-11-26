@@ -1473,6 +1473,23 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'inspect_knot_jumps':
+          case 'inspect_timed_knot_jumps':
+          case 'inspect_motion_join':
+          case 'inspect_motion_chain': {
+            const curve=needCurve(n.input)
+            let report:object
+            if(n.op==='inspect_motion_join'||n.op==='inspect_motion_chain'){
+              const {id:_id,input:_input,inputs,op,...parameters}=n
+              report=callGeometryRust<object>(op,{curves:[curve,...inputs.map(id=>needCurve(id))],...parameters})
+            }else{
+              const {id:_id,input:_input,op,...parameters}=n
+              report=callGeometryRust<object>(op,{curve,...parameters})
+            }
+            constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'curve_curvature_torsion': {
             const curve = needCurve(n.input)
             const report = callGeometryRust<object>(n.op, {curve, parameter:n.parameter, query_side:n.query_side ?? 'automatic'})
