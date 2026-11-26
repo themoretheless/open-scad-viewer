@@ -1500,6 +1500,14 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'order_boundary_contacts': {
+            const {op,input,clocks,isolate,max_work}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{clocks,isolate,max_work})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'inspect_surface_intersection': {
             const {op,input,target_geometry}=n
             const surface=needSurface(input)

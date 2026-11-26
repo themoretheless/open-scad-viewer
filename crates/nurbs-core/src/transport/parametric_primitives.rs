@@ -81,6 +81,8 @@ mod qualified_intersection_requests;
 mod pullback_requests;
 #[path="cloud_diagnostics_requests.rs"]
 mod cloud_diagnostics_requests;
+#[path="boundary_clock_requests.rs"]
+mod boundary_clock_requests;
 #[path="geodesic_requests.rs"]
 mod geodesic_requests;
 #[path="face_clearances.rs"]
@@ -165,6 +167,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op, "detect_cloud_primitives" | "orient_cloud_normals" | "segment_point_cloud") {
         return Some(cloud_diagnostics_requests::inspect(v, op));
     }
+    if op == "order_boundary_contacts" { return Some(boundary_clock_requests::inspect(v)); }
     if op == "trace_geodesic" { return Some(geodesic_requests::trace(v)); }
     if face_clearances::OPS.contains(&op) { return Some(face_clearances::apply(v,op)); }
     if spatial_distances::OPS.contains(&op) { return Some(spatial_distances::apply(v,op)); }

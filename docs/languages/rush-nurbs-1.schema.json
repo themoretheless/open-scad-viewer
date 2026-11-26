@@ -94686,6 +94686,87 @@
               },
               "op": {
                 "type": "string",
+                "const": "order_boundary_contacts"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "clocks": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rational": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        }
+                      },
+                      "required": [
+                        "rational"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "linear": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "constant": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "upper_root": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "linear",
+                        "constant",
+                        "upper_root"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 4096
+              },
+              "isolate": {
+                "type": "boolean"
+              },
+              "max_work": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "clocks",
+              "isolate",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "blend_surface_boundaries"
               },
               "input": {

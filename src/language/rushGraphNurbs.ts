@@ -2107,6 +2107,10 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('surface_gap_world_polyline'),input:id,knot_span:z.tuple([z.number().int().nonnegative(),z.number().int().nonnegative()]),direction:z.enum(['u','v']),gap_level_per_mm2:scalar,transverse:z.array(scalar).min(2).max(256),max_depth:z.number().int().min(0).max(16),return_field:z.boolean(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('trace_geodesic'),input:id,start_uv:z.tuple([scalar,scalar]),direction_uv:z.tuple([scalar,scalar]),length:scalar,max_steps:z.number().int().min(1).max(4096),return_field:z.boolean()}).strict(),
           z.object({id,op:z.literal('inspect_surface_intersection'),input:id,target_geometry:id}).strict(),
+          z.object({id,op:z.literal('order_boundary_contacts'),input:id,clocks:z.array(z.union([
+            z.object({rational:z.string().min(1).max(512)}).strict(),
+            z.object({linear:z.string().min(1).max(512),constant:z.string().min(1).max(512),upper_root:z.boolean()}).strict(),
+          ])).min(1).max(4096),isolate:z.boolean(),max_work:z.number().int().min(1).max(10000000)}).strict(),
           z.object({id,op:z.literal('blend_surface_boundaries'),input:id,target_geometry:id,source_edge:z.enum(['u_min','u_max','v_min','v_max']),target_edge:z.enum(['u_min','u_max','v_min','v_max']),continuity_class:z.enum(['G1','G2']),gains:z.tuple([scalar,scalar]),reverse_u:z.boolean(),reverse_target_u:z.boolean(),max_patches:z.number().int().min(1).max(256)}).strict(),
           z.object({id,op:z.literal('offset_nurbs_surface'),input:id,distance:scalar,tolerance_mm:scalar}).strict(),
           z.object({id,op:z.literal('surface_gap_world_length'),input:id,knot_span:z.tuple([z.number().int().nonnegative(),z.number().int().nonnegative()]),direction:z.enum(['u','v']),gap_level_per_mm2:scalar,transverse:z.array(scalar).min(2).max(256),max_depth:z.number().int().min(0).max(16),max_work:z.number().int().min(1).max(1000000)}).strict(),
