@@ -9951,7 +9951,7 @@
     {
       "id": "NURBS-0365",
       "name": "Сохранение пространственной секущей NURBS-кривой с проверкой проектирования и округления",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::store_surface_plane_section_curve",
@@ -9965,7 +9965,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs",
         "crates/nurbs-geometry/src/curve.rs",
         "docs/qualification/nurbs-curvature-field-365-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-365-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-365-2026-11-17/native.log.gz",
+        "examples/rush/store-plane-branch.r",
+        "tests/rushStoredPlaneBranch.test.ts"
       ],
       "remainingQualification": [
         "Store the certified surface-plane section as a degree-one core curve with exact integer knots and bounded XYZ error.",
@@ -9976,7 +9978,7 @@
     {
       "id": "NURBS-0366",
       "name": "Согласованная пара пространственной и параметрической NURBS-кривых сечения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::store_surface_plane_section_pair",
@@ -9991,7 +9993,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_pair.rs",
         "docs/qualification/nurbs-curvature-field-366-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-366-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-366-2026-11-17/native.log.gz",
+        "examples/rush/pair-plane-branch.r",
+        "tests/rushStoredPlaneBranch.test.ts"
       ],
       "remainingQualification": [
         "Store a synchronized XYZ edge and UV trim curve with exact continuous agreement certification.",

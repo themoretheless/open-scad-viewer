@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "450fd9af458357744980721264004954b8abda0580e1c297dbaa893e787ec521",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/store-plane-branch.r",
+      "exampleSha256": "d32740a611f384a1e81ecda928bc8a2c8739e8a3721a841f62e38025134cc24f",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 48 ms"
+    },
+    {
+      "example": "examples/rush/pair-plane-branch.r",
+      "exampleSha256": "b6fea1f3909340376575fe35776915e726362fcfdecdd7d5784233500c192799",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 7 ms"
+    }
+  ]
+}
