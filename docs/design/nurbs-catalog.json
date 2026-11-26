@@ -8950,7 +8950,7 @@
     {
       "id": "NURBS-0324",
       "name": "Точные массовые характеристики плоской NURBS-грани в мировых координатах",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_planar_face_mass::exact_projected_face_mass",
@@ -8960,7 +8960,9 @@
         "crates/nurbs-core/src/editing/exact_derivative/planar_integral.rs",
         "crates/nurbs-core/tests/exact_world_plane_mass_contracts.rs",
         "docs/qualification/nurbs-curvature-field-324-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-324-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-324-2026-11-17/native.log.gz",
+        "examples/rush/world-face-mass.r",
+        "tests/rushWorldFaceMass.test.ts"
       ],
       "remainingQualification": [
         "Transform exact signed planar area and integral moments to XYZ while retaining the exact algebraic area factor.",
@@ -9015,7 +9017,7 @@
     {
       "id": "NURBS-0327",
       "name": "Точные главные моменты площади плоской NURBS-грани и проверка изотропии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_planar_face_mass::exact_projected_face_principal_moments",
@@ -9023,7 +9025,9 @@
         "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs",
         "crates/nurbs-core/tests/exact_principal_plane_moment_contracts.rs",
         "docs/qualification/nurbs-curvature-field-327-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-327-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-327-2026-11-17/native.log.gz",
+        "examples/rush/principal-face-moments.r",
+        "tests/rushWorldFaceMass.test.ts"
       ],
       "remainingQualification": [
         "Recover the exact in-plane signed spectrum of the centroidal world tensor without rounding its square roots.",
@@ -9053,7 +9057,7 @@
     {
       "id": "NURBS-0329",
       "name": "Точные главные направления плоской NURBS-грани в виде ортогональных проекторов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_planar_face_mass::exact_projected_face_principal_directions",
@@ -9061,7 +9065,9 @@
         "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs",
         "crates/nurbs-core/tests/exact_principal_plane_moment_contracts.rs",
         "docs/qualification/nurbs-curvature-field-329-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-329-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-329-2026-11-17/native.log.gz",
+        "examples/rush/principal-face-directions.r",
+        "tests/rushWorldFaceMass.test.ts"
       ],
       "remainingQualification": [
         "Represent exact world-space principal axis lines by algebraic orthogonal projectors and retain the full plane under isotropy.",

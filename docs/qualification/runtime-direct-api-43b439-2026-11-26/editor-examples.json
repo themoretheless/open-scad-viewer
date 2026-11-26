@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "43b439ae3f432e700d7d97164308c5c2ca4ab5aaf174e497918deab2c769bf76",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/world-face-mass.r",
+      "exampleSha256": "1734f2ee352b645432218b55e16899f6024b3e60d1f5cbdfcc5f7e2169daa7af",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 43 ms"
+    },
+    {
+      "example": "examples/rush/principal-face-moments.r",
+      "exampleSha256": "7ffef02f5778e9127fce5e5340593db81761d8104703f13bda412312abcdaec0",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/principal-face-directions.r",
+      "exampleSha256": "a27d1741f40bbba2260783542e9069cd3a40283d7a54525ef6f0ef4f44743065",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 7 ms"
+    }
+  ]
+}
