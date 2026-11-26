@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "00f6ebd70ef7adb46b1278290f01bd06d01cdcb5698d86282f82341df77e922c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/contour-placement.r",
+      "exampleSha256": "472235ec5fbdc97cefc70155efd33074bfcffd083ddefeac683d5d46255f083d",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 81 ms"
+    },
+    {
+      "example": "examples/rush/contour-nesting.r",
+      "exampleSha256": "56332c7045146ee3b1cb7c3fd5800862e82b99b30ae59e37556a4cc7617c5e44",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 15 ms"
+    },
+    {
+      "example": "examples/rush/contour-hierarchy.r",
+      "exampleSha256": "be9144e54d1de6a9b1a7483218003900f6a9148815a8d69d0b2b301c3207364b",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/contour-fill-orientations.r",
+      "exampleSha256": "b0c32625699f04eed62be75265d9f749b08dfb1ee721f4e306130e99895adc56",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 15 ms"
+    }
+  ]
+}

@@ -20363,7 +20363,7 @@
     {
       "id": "NURBS-0801",
       "name": "Классификация вложенности целых плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_contour_placement",
@@ -20371,7 +20371,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-801-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-801-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-801-2026-11-17/native.log.gz",
+        "examples/rush/contour-placement.r",
+        "tests/rushContourNesting.test.ts"
       ],
       "remainingQualification": [
         "Certify whole-contour fill placement after proving separation from every reference boundary.",
@@ -20382,7 +20384,7 @@
     {
       "id": "NURBS-0802",
       "name": "Попарная таблица вложенности замкнутых плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::analyze_planar_contour_nesting",
@@ -20390,7 +20392,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-802-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-802-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-802-2026-11-17/native.log.gz",
+        "examples/rush/contour-nesting.r",
+        "tests/rushContourNesting.test.ts"
       ],
       "remainingQualification": [
         "Certify bidirectional nesting windings per separated contour pair under shared budgets.",
@@ -20401,7 +20405,7 @@
     {
       "id": "NURBS-0803",
       "name": "Иерархия простых замкнутых плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::certify_planar_contour_hierarchy",
@@ -20409,7 +20413,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-803-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-803-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-803-2026-11-17/native.log.gz",
+        "examples/rush/contour-hierarchy.r",
+        "tests/rushContourNesting.test.ts"
       ],
       "remainingQualification": [
         "Build a nesting forest from exact span segmentation, simplicity proofs and pairwise separation.",
@@ -20420,7 +20426,7 @@
     {
       "id": "NURBS-0804",
       "name": "Проверка ориентации внешних контуров, отверстий и островов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::certify_planar_contour_fill_orientations",
@@ -20428,7 +20434,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-804-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-804-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-804-2026-11-17/native.log.gz",
+        "examples/rush/contour-fill-orientations.r",
+        "tests/rushContourNesting.test.ts"
       ],
       "remainingQualification": [
         "Certify boundary orientations and identify reversals that make nonzero fill agree with nesting parity.",
