@@ -156,6 +156,18 @@ impl Compiler {
     }
 
     fn lower_signature_argument(&mut self, name: &str, key: &str, v: V) -> R<J> {
+        if name == "order_boundary_contacts" && key == "clocks" {
+            let mut clocks = raw(v)?;
+            for clock in clocks.as_array_mut().ok_or_else(|| crate::error("Expected a list of contact clocks"))? {
+                if let Some(root) = clock.get_mut("upper_root") {
+                    *root = J::Bool(root.as_bool().or_else(|| {
+                        let number = root.as_f64()?;
+                        if number == 0. || number == 1. { Some(number == 1.) } else { None }
+                    }).ok_or_else(|| crate::error("Expected true or false for upper_root"))?);
+                }
+            }
+            return Ok(clocks);
+        }
         if (matches!(name,"name_step_parts"|"select_step_parts"|"name_step_variant" | "replace_step_branch_leaf") && key=="product_name") || (name == "open_step_file" && key == "step_text") || (matches!(name, "open_iges_file" | "open_iges_curve" | "open_iges_surface") && key == "iges_text") || (name=="compact_product_step" && matches!(key,"product_name"|"material_name"|"layer_name")) {
             let value=raw(v)?;
             let text=value.as_str().or_else(||value.get("text").and_then(J::as_str)).ok_or_else(||crate::error("Expected STEP exchange text"))?;
@@ -255,6 +267,7 @@ impl Compiler {
             "verified_profile", "return_field", "inspect_spans",
             "positive_side", "use_pcurve",
             "internal",
+            "isolate",
             "principal_axes",
             "static_unbalance",
             "couple_unbalance",
