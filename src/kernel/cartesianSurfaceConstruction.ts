@@ -1,6 +1,7 @@
 import { callNurbsRust } from './geometry/nurbs'
 import type { NurbsCurve } from './nurbsCurve'
 import type { NurbsSurface } from './nurbsSurface'
+import type { RationalReparameterization } from './nurbsFoundation'
 
 export interface CartesianGordonResult {
   surface: NurbsSurface

@@ -1,6 +1,6 @@
 import { callGeometryRust } from './kernel'
 import type { NurbsBrep } from './brep'
-import type { IntersectionOptions, IntersectionReport } from './intersections'
+import type { IntersectionOptions, IntersectionReport, IntersectionSurfaceTrace } from './intersections'
 import type { Vec3 } from './math3d'
 import type { NurbsCurve } from '../nurbsCurve'
 
