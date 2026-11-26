@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "e38c1425b604fc991426548572b15917bb67d69bfa0aad0085575cdf134dbcaa",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/partition-face-events.r",
+      "exampleSha256": "b94010a95ef8615539618fa1c30f9f776f229594ea2a32d94bdca3788b8d3c67",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 66 ms"
+    },
+    {
+      "example": "examples/rush/enclose-face-events.r",
+      "exampleSha256": "6ee379bfc1027b606aba30ff57c30dbe6b283acd86467a33d4d9597a616b688f",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n8\nГотово · 12 ms"
+    }
+  ]
+}

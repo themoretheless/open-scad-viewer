@@ -9584,7 +9584,7 @@
     {
       "id": "NURBS-0351",
       "name": "Пространственные интервалы для точных алгебраических контактов NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::enclose_algebraic_planar_boundary_point",
@@ -9598,7 +9598,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
         "docs/qualification/nurbs-curvature-field-351-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-351-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-351-2026-11-17/native.log.gz",
+        "examples/rush/enclose-face-events.r",
+        "tests/rushSectionEvents.test.ts"
       ],
       "remainingQualification": [
         "Enclose an algebraic support-clock point in a rational XYZ box with a certified Euclidean diameter.",
@@ -9657,7 +9659,7 @@
     {
       "id": "NURBS-0354",
       "name": "Полное разбиение секущей по линейным и квадратичным контактам контуров NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Пересечения",
       "nativeApi": "nurbs_core::analysis::exact_plane_intersection::partition_quadratic_planar_section",
@@ -9672,7 +9674,9 @@
         "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs",
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
         "docs/qualification/nurbs-curvature-field-354-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-354-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-354-2026-11-17/native.log.gz",
+        "examples/rush/partition-face-events.r",
+        "tests/rushSectionEvents.test.ts"
       ],
       "remainingQualification": [
         "Enumerate the complete finite section of two planar contour sets when their homogeneous contact equations have degree at most two.",
