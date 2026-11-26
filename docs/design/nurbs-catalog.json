@@ -12371,7 +12371,7 @@
     {
       "id": "NURBS-0450",
       "name": "Точное упрощение пространственной ломаной с сохранением направленного контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::simplify_exact_spatial_polyline",
@@ -12389,7 +12389,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-450-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-450-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-450-2026-11-17/native.log.gz",
+        "examples/rush/simplify-exact-path.r",
+        "tests/rushSpatialTrace.test.ts"
       ],
       "remainingQualification": [
         "Remove redundant spatial polyline vertices while preserving the oriented trace.",
@@ -12400,7 +12402,7 @@
     {
       "id": "NURBS-0451",
       "name": "Точная проекция точки на пространственную ломаную со всеми минимумами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::project_point_to_exact_spatial_polyline",
@@ -12418,7 +12420,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-451-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-451-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-451-2026-11-17/native.log.gz",
+        "examples/rush/project-point-to-path.r",
+        "tests/rushSpatialTrace.test.ts"
       ],
       "remainingQualification": [
         "Project onto a spatial polyline and retain all minimizing points and stationary spans.",
@@ -12429,7 +12433,7 @@
     {
       "id": "NURBS-0452",
       "name": "Точное пересечение пространственных ломаных с совпадающими участками",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::intersect_exact_spatial_polylines",
@@ -12447,7 +12451,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-452-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-452-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-452-2026-11-17/native.log.gz",
+        "examples/rush/intersect-spatial-paths.r",
+        "tests/rushSpatialTrace.test.ts"
       ],
       "remainingQualification": [
         "Find exact spatial path intersections and overlaps with parameters on both paths.",
@@ -12458,7 +12464,7 @@
     {
       "id": "NURBS-0453",
       "name": "Точные самопересечения пространственных ломаных",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::self_intersections_exact_spatial_polyline",
@@ -12476,7 +12482,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-453-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-453-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-453-2026-11-17/native.log.gz",
+        "examples/rush/find-path-self-intersections.r",
+        "tests/rushSpatialTrace.test.ts"
       ],
       "remainingQualification": [
         "Find spatial self-crossings, nonlocal touches and retraced intervals.",
@@ -12487,7 +12495,7 @@
     {
       "id": "NURBS-0454",
       "name": "Точное минимальное расстояние между пространственными ломаными",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::distance_between_exact_spatial_polylines",
@@ -12505,7 +12513,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-454-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-454-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-454-2026-11-17/native.log.gz",
+        "examples/rush/measure-spatial-path-distance.r",
+        "tests/rushSpatialTrace.test.ts"
       ],
       "remainingQualification": [
         "Find exact minimum squared separation and witnesses on both spatial paths.",
@@ -12516,7 +12526,7 @@
     {
       "id": "NURBS-0455",
       "name": "Упрощение пространственных ломаных с гарантированным допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::simplify_bounded_spatial_polyline",
@@ -12534,7 +12544,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-455-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-455-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-455-2026-11-17/native.log.gz",
+        "examples/rush/simplify-path-with-tolerance.r",
+        "tests/rushSpatialTrace.test.ts"
       ],
       "remainingQualification": [
         "Simplify spatial paths with a continuous order-preserving error bound.",

@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "41f9543e279f12a6666bcd9037717255694af9308243eacfc114e58c6253442e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/simplify-exact-path.r",
+      "exampleSha256": "dc6cd9ec430e8974bca78b034712ea94bbea0c868421e3da1340772e77a27a3c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 42 ms"
+    },
+    {
+      "example": "examples/rush/project-point-to-path.r",
+      "exampleSha256": "e5a9d8473e2202bd98f7d9522aed48f764ff7297998b661a6ccb173d6a59048e",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/intersect-spatial-paths.r",
+      "exampleSha256": "ad434eb08ecee19f85debe3a88b10417c7c695e67917d82a389b584556497937",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/find-path-self-intersections.r",
+      "exampleSha256": "4ca5f1adc11d89c5cd9020f69cc030bfce526679f02590711eb1ebe7652bdaad",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n7,39\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/measure-spatial-path-distance.r",
+      "exampleSha256": "8480b70a229375615d5de1473e0941e4973752adaf6e96bfc71cb94b00bd3c7e",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 3 ms"
+    },
+    {
+      "example": "examples/rush/simplify-path-with-tolerance.r",
+      "exampleSha256": "371d28be16da638e025d17846425dbe549b74227f69daccdb898eacbbeee829f",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2\nГотово · 3 ms"
+    }
+  ]
+}
