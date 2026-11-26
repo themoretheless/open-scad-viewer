@@ -12185,7 +12185,7 @@
     {
       "id": "NURBS-0444",
       "name": "Точное отсечение пространственной ломаной по общему материалу нескольких тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_common_material_clip",
@@ -12203,7 +12203,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-444-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-444-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-444-2026-11-17/native.log.gz",
+        "examples/rush/clip-common-path.r",
+        "tests/rushAssemblyPath.test.ts"
       ],
       "remainingQualification": [
         "Intersect the closed material clips of multiple solids along a polyline.",
@@ -12214,7 +12216,7 @@
     {
       "id": "NURBS-0445",
       "name": "Точное отсечение пространственной ломаной по объединению нескольких тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_union_material_clip",
@@ -12232,7 +12234,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-445-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-445-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-445-2026-11-17/native.log.gz",
+        "examples/rush/clip-union-path.r",
+        "tests/rushAssemblyPath.test.ts"
       ],
       "remainingQualification": [
         "Unite exact material intervals from several solids along a spatial path.",
@@ -12243,7 +12247,7 @@
     {
       "id": "NURBS-0446",
       "name": "Точное отсечение ломаной по разности материалов нескольких тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_material_difference",
@@ -12261,7 +12265,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-446-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-446-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-446-2026-11-17/native.log.gz",
+        "examples/rush/subtract-path-cutters.r",
+        "tests/rushAssemblyPath.test.ts"
       ],
       "remainingQualification": [
         "Subtract the union of cutter material from stock material along a spatial path.",
@@ -12272,7 +12278,7 @@
     {
       "id": "NURBS-0447",
       "name": "Точное разбиение пространственной ломаной по принадлежности телам сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_coverage",
@@ -12290,7 +12296,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-447-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-447-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-447-2026-11-17/native.log.gz",
+        "examples/rush/classify-path-membership.r",
+        "tests/rushAssemblyPath.test.ts"
       ],
       "remainingQualification": [
         "Report the exact set of covering solids on every part of a spatial path.",
@@ -12301,7 +12309,7 @@
     {
       "id": "NURBS-0448",
       "name": "Гарантированные длины участков ломаной по числу перекрывающихся тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_path_coverage_lengths",
@@ -12319,7 +12327,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-448-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-448-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-448-2026-11-17/native.log.gz",
+        "examples/rush/bound-overlap-lengths.r",
+        "tests/rushAssemblyPath.test.ts"
       ],
       "remainingQualification": [
         "Enclose distance traveled by the number of solids covering the path.",
@@ -12330,7 +12340,7 @@
     {
       "id": "NURBS-0449",
       "name": "Точные компоненты пространственной ломаной по заданному числу перекрывающихся тел",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_path_coverage_components",
@@ -12348,7 +12358,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-449-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-449-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-449-2026-11-17/native.log.gz",
+        "examples/rush/recover-overlap-paths.r",
+        "tests/rushAssemblyPath.test.ts"
       ],
       "remainingQualification": [
         "Reconstruct connected path geometry for an inclusive range of solid coverage counts.",

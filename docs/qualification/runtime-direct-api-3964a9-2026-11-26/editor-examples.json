@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "3964a918917087b2652c46bd21261f4b92bb36dc10e804ca05b745234b501afe",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/clip-common-path.r",
+      "exampleSha256": "5a2d1bc312e9a1c28a5e1d47b9713c6543cde8e375f7a91153871a524e188f91",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 62 ms"
+    },
+    {
+      "example": "examples/rush/clip-union-path.r",
+      "exampleSha256": "2a6d7978f216447f6ecb6bcfe8928958b47c22c85fe9d3ca650806ba13ca75fa",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 24 ms"
+    },
+    {
+      "example": "examples/rush/subtract-path-cutters.r",
+      "exampleSha256": "087b1c47d4ad49941320beaafefa763d2f12f5067733cee710f58af97f8090ab",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 21 ms"
+    },
+    {
+      "example": "examples/rush/classify-path-membership.r",
+      "exampleSha256": "bbff3dc3a8cb86ddca2baa2bae21c35229beb30d3d91e41a1c866dd4b6914ef6",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 21 ms"
+    },
+    {
+      "example": "examples/rush/bound-overlap-lengths.r",
+      "exampleSha256": "49688d041895344d56bb10589d6f8340192ef49f46c2cf71d3217c8f90e339b6",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 20 ms"
+    },
+    {
+      "example": "examples/rush/recover-overlap-paths.r",
+      "exampleSha256": "ed5a20d3b9b5862e372ade3dc4d2f81b21e6a00bb8b1b88be26e346c08419a1e",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 19 ms"
+    }
+  ]
+}
