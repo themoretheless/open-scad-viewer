@@ -1,7 +1,7 @@
 use super::*;
 
 const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
-    "edit_profile_sector","edit_closed_sector","edit_tangent_sector","certified_profile_edit","verified_gear_edit","edited_gear_step","compact_body_step","compact_product_step","name_step_parts","read_step_names","step_parts_list","select_step_parts","name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists","repeat_profile_segment","compress_rotated_segments","compress_profile_sectors","discover_profile_sectors","restore_lossless_sector","restore_bidirectional_sector",
+    "edit_profile_sector","edit_closed_sector","edit_tangent_sector","certified_profile_edit","verified_gear_edit","edited_gear_step","compact_body_step","compact_product_step","name_step_parts","read_step_names","step_parts_list","select_step_parts","name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists","group_step_parts","style_step_occurrences","read_occurrence_styles","repeat_profile_segment","compress_rotated_segments","compress_profile_sectors","discover_profile_sectors","restore_lossless_sector","restore_bidirectional_sector",
     "curve_patch_clearance", "patch_pair_clearance", "trimmed_face_clearance", "curve_trimmed_face_distance", "swept_ball_face_clearance", "routed_tube_pair", "routed_tube_bundle", "spatial_contour_sets_distance","closest_spatial_contours","inspect_spatial_clearances","prove_spatial_clearance_along",
     "compress_profile_curve","compress_profile_segments","compress_profile_chain","orient_profile_chain","restore_profile_partition","assemble_open_profile","assemble_closed_profile","assemble_planar_profile","orient_planar_profile","assemble_projected_profile","assemble_oblique_profile","assemble_spatial_profile",
     "eccentric_bore_stock","ring_bolt_stock","ring_bolt_window","external_spur_ratio","internal_spur_ratio","mounted_spur_ratio","spur_tip_clearance","spur_tooth_chord","spur_tooth_thinning","external_spur_backlash","internal_spur_backlash","spur_backlash_range","spur_overlap_range","spur_mounting_window","planet_tip_separation","spinner_layout_counts",
@@ -51,7 +51,7 @@ const REQUIRED_ALL_SIGNATURE_OPS: &[&str] = &[
 ];
 
 const MODIFIER_OPS: &[&str] = &[
-    "edit_profile_sector","edit_closed_sector","edit_tangent_sector","certified_profile_edit","verified_gear_edit","edited_gear_step","compact_body_step","compact_product_step","name_step_parts","read_step_names","step_parts_list","select_step_parts","name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists","repeat_profile_segment","compress_rotated_segments","compress_profile_sectors","discover_profile_sectors","restore_lossless_sector","restore_bidirectional_sector",
+    "edit_profile_sector","edit_closed_sector","edit_tangent_sector","certified_profile_edit","verified_gear_edit","edited_gear_step","compact_body_step","compact_product_step","name_step_parts","read_step_names","step_parts_list","select_step_parts","name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists","group_step_parts","style_step_occurrences","read_occurrence_styles","repeat_profile_segment","compress_rotated_segments","compress_profile_sectors","discover_profile_sectors","restore_lossless_sector","restore_bidirectional_sector",
     "curve_patch_clearance", "patch_pair_clearance", "trimmed_face_clearance", "curve_trimmed_face_distance", "swept_ball_face_clearance", "routed_tube_pair", "routed_tube_bundle", "spatial_contour_sets_distance","closest_spatial_contours","inspect_spatial_clearances","prove_spatial_clearance_along",
     "compress_profile_curve","compress_profile_segments","compress_profile_chain","orient_profile_chain","restore_profile_partition","assemble_open_profile","assemble_closed_profile","assemble_planar_profile","orient_planar_profile","assemble_projected_profile","assemble_oblique_profile","assemble_spatial_profile",
     "eccentric_bore_stock","ring_bolt_stock","ring_bolt_window","external_spur_ratio","internal_spur_ratio","mounted_spur_ratio","spur_tip_clearance","spur_tooth_chord","spur_tooth_thinning","external_spur_backlash","internal_spur_backlash","spur_backlash_range","spur_overlap_range","spur_mounting_window","planet_tip_separation","spinner_layout_counts",
@@ -197,7 +197,7 @@ impl Compiler {
                 _ => Err(crate::error("Expected automatic, left or right as the derivative side")),
             };
         }
-        if (name=="name_step_parts" && key=="part_names") || key == "laws" && matches!(name, "radial_cam_profile" | "radial_cam_walls") {
+        if (matches!(key,"group_names"|"style_names") && matches!(name,"group_step_parts"|"style_step_occurrences")) || (name=="name_step_parts" && key=="part_names") || key == "laws" && matches!(name, "radial_cam_profile" | "radial_cam_walls") {
             let V::Array(entries)=v else {return Err(crate::error("Cam motion laws must be a list"));};
             let laws=entries.into_iter().map(|entry|{
                 let value=raw(entry)?;
