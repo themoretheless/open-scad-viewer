@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "44f681389b01401fc37ad9a78820e4dbbdd5465fe63db614b78472f4fdd96916",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/active-surface-hull.r",
+      "exampleSha256": "480c9eaa6c002369c2e2fd0fd65a5b5fb1fcc74c97b1a354f74959f0862ade38",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 56 ms"
+    },
+    {
+      "example": "examples/rush/project-plane-chart.r",
+      "exampleSha256": "9183393717de88cb936d9d39fe9088d02002573b510bedd195373e688cd21615",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/lift-plane-chart.r",
+      "exampleSha256": "e85511ddac186e74e681f000281159b52efe8154c18edd22ef424036a2bda756",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/shared-plane-chart.r",
+      "exampleSha256": "46dbf18388c6b27fdfe69880f871343be8821d0e85c9ebe2b1b9fd802935a682",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 5 ms"
+    }
+  ]
+}

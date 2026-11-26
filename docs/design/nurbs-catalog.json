@@ -8730,7 +8730,7 @@
     {
       "id": "NURBS-0314",
       "name": "Точное распознавание аффинной размерности активной NURBS-поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_affine_hull::classify_surface_affine_hull",
@@ -8739,7 +8739,9 @@
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "crates/nurbs-core/tests/exact_surface_affine_hull_contracts.rs",
         "docs/qualification/nurbs-curvature-field-314-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-314-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-314-2026-11-16/native.log.gz",
+        "examples/rush/active-surface-hull.r",
+        "tests/rushPlaneCharts.test.ts"
       ],
       "remainingQualification": [
         "Classify the affine dimension of a rational tensor surface with exact active-pole witnesses.",
@@ -8750,7 +8752,7 @@
     {
       "id": "NURBS-0315",
       "name": "Точная двумерная проекция плоской NURBS-поверхности с рациональным подъёмом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_affine_hull::project_planar_surface",
@@ -8758,7 +8760,9 @@
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "crates/nurbs-core/tests/exact_planar_surface_projection_contracts.rs",
         "docs/qualification/nurbs-curvature-field-315-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-315-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-315-2026-11-16/native.log.gz",
+        "examples/rush/project-plane-chart.r",
+        "tests/rushPlaneCharts.test.ts"
       ],
       "remainingQualification": [
         "Project a certified planar rational tensor surface into two Cartesian coordinates without changing its basis, with an exact rational inverse on the support plane.",
@@ -8769,7 +8773,7 @@
     {
       "id": "NURBS-0316",
       "name": "Точное восстановление отредактированной плоской NURBS-поверхности в 3D",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_affine_hull::lift_planar_surface",
@@ -8777,7 +8781,9 @@
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "crates/nurbs-core/tests/exact_planar_surface_lift_contracts.rs",
         "docs/qualification/nurbs-curvature-field-316-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-316-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-316-2026-11-16/native.log.gz",
+        "examples/rush/lift-plane-chart.r",
+        "tests/rushPlaneCharts.test.ts"
       ],
       "remainingQualification": [
         "Lift an edited planar tensor control net through its exact rational inverse chart while retaining the original spline basis.",
@@ -8788,7 +8794,7 @@
     {
       "id": "NURBS-0317",
       "name": "Общая точная двумерная проекция группы компланарных NURBS-поверхностей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::analysis::exact_affine_hull::project_coplanar_surfaces",
@@ -8796,7 +8802,9 @@
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "crates/nurbs-core/tests/exact_shared_planar_projection_contracts.rs",
         "docs/qualification/nurbs-curvature-field-317-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-317-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-317-2026-11-17/native.log.gz",
+        "examples/rush/shared-plane-chart.r",
+        "tests/rushPlaneCharts.test.ts"
       ],
       "remainingQualification": [
         "Project a group into one exact planar coordinate system derived from the affine hull of all active surface images.",
