@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "1edefb05b6cfc456417891b10ff39bdf9c5804bd167ce0e4907f8ea8f650d289",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/classify-uv-seam.r",
+      "exampleSha256": "b14fd1ca95fbdc8cdf637bb57d5d0267c8ec3e84782a8cc388e695814e1f6f30",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n31,65\nГотово · 65 ms"
+    },
+    {
+      "example": "examples/rush/isolate-uv-seam.r",
+      "exampleSha256": "8a19fbb403bd6f901c3119b8c1b24cf3781f1c7a83ba7c5304ea57c0eba7adaa",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n31,65\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/split-uv-seam.r",
+      "exampleSha256": "b0e9e009ce93652bf827cfa71bed561e722bdeec1f6ab4e27043a0bb177b4ba2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n27,1\nГотово · 8 ms"
+    }
+  ]
+}

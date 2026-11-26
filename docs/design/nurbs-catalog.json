@@ -8276,7 +8276,7 @@
     {
       "id": "NURBS-0295",
       "name": "Точная классификация пересечений UV-контура с координатным швом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::classify_pcurve_seam",
@@ -8287,7 +8287,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs",
         "crates/nurbs-core/tests/exact_pcurve_seam_contracts.rs",
         "docs/qualification/nurbs-curvature-field-295-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-295-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-295-2026-11-16/native.log.gz",
+        "examples/rush/classify-uv-seam.r",
+        "tests/rushUvSeams.test.ts"
       ],
       "remainingQualification": [
         "Classify rational UV seam contacts per original span by exact multiplicity, including whole coincident spans and one-sided endpoints.",
@@ -8298,7 +8300,7 @@
     {
       "id": "NURBS-0296",
       "name": "Сертифицированная локализация пересечений UV-контура со швом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_seam",
@@ -8309,7 +8311,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
         "crates/nurbs-core/tests/exact_pcurve_seam_isolation_contracts.rs",
         "docs/qualification/nurbs-curvature-field-296-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-296-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-296-2026-11-16/native.log.gz",
+        "examples/rush/isolate-uv-seam.r",
+        "tests/rushUvSeams.test.ts"
       ],
       "remainingQualification": [
         "Isolate each original rational pcurve seam contact in a certified absolute-parameter bracket, with exact crossing parity.",
@@ -8320,7 +8324,7 @@
     {
       "id": "NURBS-0297",
       "name": "Точное разбиение рационального UV-контура по шву",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::split_pcurve_at_seam",
@@ -8331,7 +8335,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_split.rs",
         "crates/nurbs-core/tests/exact_pcurve_seam_split_contracts.rs",
         "docs/qualification/nurbs-curvature-field-297-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-297-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-297-2026-11-16/native.log.gz",
+        "examples/rush/split-uv-seam.r",
+        "tests/rushUvSeams.test.ts"
       ],
       "remainingQualification": [
         "Split original rational UV spans at representable seam contacts, keeping the absolute curve parameter and proving each stored piece against the original geometry.",
