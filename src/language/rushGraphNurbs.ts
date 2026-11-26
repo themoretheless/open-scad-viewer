@@ -1787,6 +1787,7 @@ export const rushGraphNurbsSchema = z
           z.object({id,op:z.literal('reclock_trim_piece'),input:id,loops:z.array(z.array(id).min(1)).min(1),clock_factor:uv,loop_index:z.number().int().nonnegative(),piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('certify_uv_chart'),input:id,uv_domain:z.tuple([uv,uv]),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('classify_uv_seam'),input:id,direction:z.enum(['u','v']),seam_coordinate:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
+          z.object({id,op:z.literal('isolate_uv_line'),input:id,line_coefficients:z.tuple([scalar,scalar,scalar]),parameter_width:z.number().positive(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('isolate_uv_seam'),input:id,direction:z.enum(['u','v']),seam_coordinate:scalar,parameter_width:scalar,max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('split_uv_seam'),input:id,direction:z.enum(['u','v']),seam_coordinate:scalar,piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),
           z.object({id,op:z.literal('lift_uv_edge'),input:id,target_geometry:id,piece:z.number().int().nonnegative(),max_work:z.number().int().min(1).max(1000000)}).strict(),

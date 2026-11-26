@@ -77,6 +77,7 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'reclock_trim_piece') return russian ? 'Перенесённый участок границы' : 'Transferred trim boundary piece'
   if (operation === 'certify_uv_chart') return russian ? 'Проверка границ UV-контура' : 'Check UV contour containment'
   if (operation === 'classify_uv_seam') return russian ? 'Характер контакта UV-кривой со швом' : 'Classify UV seam contact'
+  if (operation === 'isolate_uv_line') return russian ? 'Контакты UV-кривой с прямой' : 'UV curve contacts with a line'
   if (operation === 'isolate_uv_seam') return russian ? 'Локализация контакта UV-кривой со швом' : 'Isolate UV seam contact'
   if (operation === 'split_uv_seam') return russian ? 'Разделение UV-кривой по шву' : 'Split UV curve at seam'
   if (operation === 'lift_uv_edge') return russian ? 'Пространственное ребро по UV-кривой' : 'Lift UV curve onto surface'

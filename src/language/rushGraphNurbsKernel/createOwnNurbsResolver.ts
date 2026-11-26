@@ -993,6 +993,7 @@ export function createOwnNurbsResolver(
           case 'relayout_clock_curve':
           case 'certify_uv_chart':
           case 'classify_uv_seam':
+          case 'isolate_uv_line':
           case 'isolate_uv_seam':
           case 'split_uv_seam':
           case 'transfer_uv_grid_piece':

@@ -379,6 +379,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "reclock_trim_piece" => &["loops","clock_factor","loop_index","piece","max_work"],
         "certify_uv_chart" => &["uv_domain","max_work"],
         "classify_uv_seam" => &["direction","seam_coordinate","max_work"],
+        "isolate_uv_line" => &["line_coefficients","parameter_width","max_work"],
         "isolate_uv_seam" => &["direction","seam_coordinate","parameter_width","max_work"],
         "split_uv_seam" => &["direction","seam_coordinate","piece","max_work"],
         "lift_uv_edge" => &["target_geometry","piece","max_work"],
