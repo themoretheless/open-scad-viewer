@@ -559,7 +559,7 @@ fn clamp_active_loop(curves: &[Curve], cells: &mut usize, max_cells: usize) -> R
         if remaining == 0 {
             return Ok(None);
         }
-        let report = crate::editing::exact_curve_merge::clamp_exact_curve(c, remaining as u64)?;
+        let report = crate::core::exact_curve_arithmetic::clamp_active(c, None, remaining as u64)?;
         *cells += report.work_used as usize;
         let Some(curve) = report.curve else {
             return Ok(None);

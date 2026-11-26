@@ -88,7 +88,7 @@ pub(super) fn verify(
         if max_work == 0 {
             return Ok(None);
         }
-        let report = crate::editing::exact_curve_merge::clamp_exact_curve(p, max_work)?;
+        let report = crate::core::exact_curve_arithmetic::clamp_active(p, None, max_work)?;
         let Some(curve) = report.curve else {
             return Ok(None);
         };

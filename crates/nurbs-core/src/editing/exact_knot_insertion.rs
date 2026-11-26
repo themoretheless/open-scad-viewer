@@ -15,71 +15,8 @@ pub struct Report {
     pub refusal: Option<Refusal>,
 }
 type PResult<T> = std::result::Result<T, Refusal>;
-pub(super) fn homogeneous(
-    source: &Curve,
-    parameter: f64,
-    count: usize,
-    w: &mut Work,
-) -> PResult<(Vec<Vec<Q>>, Vec<f64>)> {
-    let p = source.degree;
-    let dim = source.control_points[0].len();
-    let mut knots = source.knots.clone();
-    let mut net = Vec::with_capacity(source.control_points.len());
-    for (cp, &weight) in source.control_points.iter().zip(&source.weights) {
-        let weight = w.lift(weight)?;
-        let mut row = Vec::with_capacity(dim + 1);
-        for &x in cp {
-            let x = w.lift(x)?;
-            row.push(w.op(&x, &weight, |a, b| a * b)?);
-        }
-        row.push(weight);
-        net.push(row);
-    }
-    refine_homogeneous(&mut net, &mut knots, p, parameter, count, w)?;
-    Ok((net, knots))
-}
+pub(super) use crate::core::exact_curve_arithmetic::{homogeneous, refine_homogeneous};
 
-pub(super) fn refine_homogeneous(
-    net: &mut Vec<Vec<Q>>,
-    knots: &mut Vec<f64>,
-    p: usize,
-    parameter: f64,
-    count: usize,
-    w: &mut Work,
-) -> PResult<()> {
-    let dim = net[0].len() - 1;
-    let u = w.lift(parameter)?;
-    for _ in 0..count {
-        let k = knots.partition_point(|x| *x <= parameter) - 1;
-        let s = knots.iter().filter(|x| **x == parameter).count();
-        let n = net.len();
-        let mut refined = vec![vec![Q::zero(); dim + 1]; n + 1];
-        refined[..=k - p].clone_from_slice(&net[..=k - p]);
-        refined[k - s + 1..].clone_from_slice(&net[k - s..]);
-        for i in k - p + 1..=k - s {
-            let left = w.lift(knots[i])?;
-            let right = w.lift(knots[i + p])?;
-            let denominator = w.op(&right, &left, |a, b| a - b)?;
-            if denominator <= Q::zero() {
-                return Err(Refusal::InvalidOutput);
-            }
-            let distance = w.op(&u, &left, |a, b| a - b)?;
-            let alpha = w.op(&distance, &denominator, |a, b| a / b)?;
-            if alpha < Q::zero() || alpha > Q::one() {
-                return Err(Refusal::InvalidOutput);
-            }
-            let beta = w.op(&Q::one(), &alpha, |a, b| a - b)?;
-            for axis in 0..=dim {
-                let a = w.op(&alpha, &net[i][axis], |a, b| a * b)?;
-                let b = w.op(&beta, &net[i - 1][axis], |a, b| a * b)?;
-                refined[i][axis] = w.op(&a, &b, |a, b| a + b)?;
-            }
-        }
-        knots.insert(k + 1, parameter);
-        *net = refined;
-    }
-    Ok(())
-}
 fn proposal(source: &Curve, parameter: f64, count: usize, w: &mut Work) -> PResult<Curve> {
     let (net, knots) = homogeneous(source, parameter, count, w)?;
     let dim = source.control_points[0].len();

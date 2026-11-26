@@ -4,25 +4,7 @@ use num_rational::BigRational as Q;
 pub(super) mod polynomial;
 use super::rational_edit::Work;
 use polynomial::Poly;
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Refusal {
-    NoCommonFactor,
-    ResourceLimit,
-    NotRepresentable,
-    NonPositiveWeights,
-    InvalidOutput,
-    UnprovedFactor,
-    DifferentDefinition,
-    PredicateIndeterminate(cad_predicates::Reason),
-}
-impl From<crate::core::bounded_rational::Error> for Refusal {
-    fn from(error: crate::core::bounded_rational::Error) -> Self {
-        match error {
-            crate::core::bounded_rational::Error::ResourceLimit => Self::ResourceLimit,
-            crate::core::bounded_rational::Error::NotRepresentable => Self::NotRepresentable,
-        }
-    }
-}
+pub use crate::core::exact_curve_arithmetic::Refusal;
 #[derive(Clone, Debug)]
 pub struct Report {
     /// Literal source on every refusal, never a partially simplified curve.

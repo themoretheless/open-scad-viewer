@@ -1416,98 +1416,16 @@ fn clamp_exact_curve_impl(
     range: Option<[f64; 2]>,
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
-    use super::rational_edit::Work;
-
-    source.validate()?;
-    crate::check(
-        !source.periodic && (1..=cad_predicates::MAX_WORK).contains(&max_work),
-        "Exact active clamping needs a nonperiodic curve and bounded work",
-    )?;
-    let [start, end] = source.domain();
-    let range = range.unwrap_or([start, end]);
-    crate::check(
-        start <= range[0] && range[0] < range[1] && range[1] <= end,
-        "Exact active clamping needs an increasing interval within the original domain",
-    )?;
-    let mut work = Work { used: 0, limit: max_work };
-    let result = work
-        .charge((source.control_points.len() * (2 * source.degree + 1)) as u64)
-        .map_err(super::rational_factor::Refusal::from)
-        .and_then(|()| clamp_curve_interval(source, range, &mut work));
-    Ok(match result {
-        Ok(curve) => GaugeMergeReport {
-            curve: Some(curve),
-            work_used: work.used,
-            refusal: None,
-        },
-        Err(reason) => GaugeMergeReport {
-            curve: None,
-            work_used: work.used,
-            refusal: Some(GaugeMergeRefusal::Exact(reason)),
-        },
+    let report = crate::core::exact_curve_arithmetic::clamp_active(source, range, max_work)?;
+    Ok(GaugeMergeReport {
+        curve: report.curve,
+        work_used: report.work_used,
+        refusal: report.refusal.map(GaugeMergeRefusal::Exact),
     })
 }
 
-fn clamp_curve_interval(
-    source: &Curve,
-    [lo, hi]: [f64; 2],
-    work: &mut super::rational_edit::Work,
-) -> std::result::Result<Curve, super::rational_factor::Refusal> {
-    use super::{rational_edit::store, rational_factor::Refusal};
-
-    let degree = source.degree;
-    let (active, clamped_knots) = clamp_curve_net(source, [lo, hi], work)?;
-    let channels: Vec<Vec<_>> = (0..active[0].len())
-        .map(|axis| active.iter().map(|row| row[axis].clone()).collect())
-        .collect();
-    let (control_points, weights) = store(&channels, work)?;
-    let curve = Curve {
-        degree,
-        knots: clamped_knots,
-        control_points,
-        weights,
-        periodic: false,
-    };
-    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
-    Ok(curve)
-}
-
-pub(super) fn clamp_curve_net(
-    source: &Curve,
-    [lo, hi]: [f64; 2],
-    work: &mut super::rational_edit::Work,
-) -> std::result::Result<
-    (Vec<Vec<num_rational::BigRational>>, Vec<f64>),
-    super::rational_factor::Refusal,
-> {
-    use super::exact_knot_insertion::{homogeneous, refine_homogeneous};
-
-    let degree = source.degree;
-    let (mut net, mut knots) = homogeneous(source, lo, 0, work)?;
-    for end in [lo, hi] {
-        let multiplicity = knots.iter().filter(|&&knot| knot == end).count();
-        if multiplicity < degree {
-            refine_homogeneous(
-                &mut net,
-                &mut knots,
-                degree,
-                end,
-                degree - multiplicity,
-                work,
-            )?;
-        }
-    }
-    let after_start = knots.partition_point(|&k| k <= lo);
-    let before_end = knots.partition_point(|&k| k < hi);
-    // The first active span starts at the last copy of lo. The last
-    // active span ends at the first copy of hi. This also handles source
-    // endpoints that are already clamped at degree plus one.
-    let active = net.drain(after_start - degree - 1..before_end).collect();
-    let mut clamped_knots = vec![lo; degree + 1];
-    clamped_knots.extend_from_slice(&knots[after_start..before_end]);
-    clamped_knots.extend(std::iter::repeat_n(hi, degree + 1));
-    Ok((active, clamped_knots))
-}
+pub(super) use crate::core::exact_curve_arithmetic::clamp_curve_net;
+use crate::core::exact_curve_arithmetic::clamp_curve_interval;
 
 /// Extract a clamped subcurve from one lifted period. The start lies in the
 /// original half-open domain and the end is expressed on that same unwrapped

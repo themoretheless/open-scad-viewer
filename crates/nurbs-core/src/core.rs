@@ -22,6 +22,7 @@ pub use nurbs_geometry::curve_identity;
 pub use nurbs_geometry::bounded_rational;
 pub use nurbs_geometry::simd_kernels;
 pub use nurbs_geometry::exact_curve_segments;
+pub(crate) mod exact_curve_arithmetic;
 
 #[cfg(test)]
 #[path = "core/integration_tests.rs"]
