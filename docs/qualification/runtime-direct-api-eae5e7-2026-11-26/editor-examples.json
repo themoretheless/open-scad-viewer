@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "eae5e79c4120be510ae51470de26589c241b6456abdcd4c7ea98436ddb2b0935",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/section-polyhedral-faces.r",
+      "exampleSha256": "fe77117fc8b5ef64634e0c8b45925524ccd3a5320cafb928ff1b4457c1671450",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 57 ms"
+    },
+    {
+      "example": "examples/rush/assemble-polyhedral-section-loops.r",
+      "exampleSha256": "1761fb29029c80df936cccf37e7128627d3865f37210df421d8ff1db50a75549",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 21 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-section-area.r",
+      "exampleSha256": "841df0776bc3c28060639a7299dc0438b10f46f01f33299fe1eab450c68da78f",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-section-centroid.r",
+      "exampleSha256": "5c78ab0f3222110274505bfb1d00c45ad128a16157d222b7803b1fa25c9c69f7",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/bound-polyhedral-section-perimeter.r",
+      "exampleSha256": "e78c4b2d7fa7820f3d02598538c9e442f162afe9398759732d4c319b0607224c",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    }
+  ]
+}
