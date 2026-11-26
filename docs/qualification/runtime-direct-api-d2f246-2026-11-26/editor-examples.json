@@ -1,0 +1,36 @@
+{
+  "kernelSha256": "d2f24601688cd1bef22a557deb07e848cbf959f99edbd5d2c599211ffe19c41a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/locate-section-point.r",
+      "exampleSha256": "74be0e0270befad19c05cb9011f6c93ad5f88e6a0242b61065a92eebbcb6a5c5",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 68 ms"
+    },
+    {
+      "example": "examples/rush/measure-section-contour-distance.r",
+      "exampleSha256": "c38f3b25b11651f6c4ec5ba0e2a75d2b81d8c7e4ee605448d6c2784da0aaffc4",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 20 ms"
+    },
+    {
+      "example": "examples/rush/measure-section-material-distance.r",
+      "exampleSha256": "3ac9be46f5b950b955fb54cfdf91c40e4a8a35649de2dbd3a36168a64ba59d46",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/clip-section-segment.r",
+      "exampleSha256": "401f90fb2c8a13eb37b9e3fd3f8c9574dd1fb376353e4c607c8fb7cc4c8a8be1",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/clip-section-polyline.r",
+      "exampleSha256": "d074eeef1807dfb67e422e85d114b36396eb065d271ead4e5e4f9de737717ecf",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/measure-section-path-length.r",
+      "exampleSha256": "0128ece514e9176de424ebec1da4d51b53475d4286df283ab1bf319ea7d7e7bd",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 15 ms"
+    }
+  ]
+}

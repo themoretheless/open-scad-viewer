@@ -11410,7 +11410,7 @@
     {
       "id": "NURBS-0417",
       "name": "Точное положение пространственной точки относительно поперечного сечения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_section_point",
@@ -11424,7 +11424,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "docs/qualification/nurbs-curvature-field-417-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-417-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-417-2026-11-17/native.log.gz",
+        "examples/rush/locate-section-point.r",
+        "tests/rushSectionQueries.test.ts"
       ],
       "remainingQualification": [
         "Classify exact world-space points against transverse section material with source face witnesses.",
@@ -11435,7 +11437,7 @@
     {
       "id": "NURBS-0418",
       "name": "Точное расстояние от точки до границы поперечного сечения B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_section_distance",
@@ -11449,7 +11451,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "docs/qualification/nurbs-curvature-field-418-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-418-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-418-2026-11-17/native.log.gz",
+        "examples/rush/measure-section-contour-distance.r",
+        "tests/rushSectionQueries.test.ts"
       ],
       "remainingQualification": [
         "Find the exact nearest point on a section contour and retain its source face.",
@@ -11460,7 +11464,7 @@
     {
       "id": "NURBS-0419",
       "name": "Точное расстояние от точки до области поперечного сечения B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_section_material_distance",
@@ -11474,7 +11478,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "docs/qualification/nurbs-curvature-field-419-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-419-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-419-2026-11-17/native.log.gz",
+        "examples/rush/measure-section-material-distance.r",
+        "tests/rushSectionQueries.test.ts"
       ],
       "remainingQualification": [
         "Find the exact nearest point in the closed material region of a transverse section.",
@@ -11485,7 +11491,7 @@
     {
       "id": "NURBS-0420",
       "name": "Точное отсечение отрезка по области поперечного сечения B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_section_clip",
@@ -11500,7 +11506,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-420-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-420-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-420-2026-11-17/native.log.gz",
+        "examples/rush/clip-section-segment.r",
+        "tests/rushSectionQueries.test.ts"
       ],
       "remainingQualification": [
         "Clip a coplanar segment to closed section material, retaining boundary overlap and isolated touches.",
@@ -11511,7 +11519,7 @@
     {
       "id": "NURBS-0421",
       "name": "Точное отсечение ломаной по области поперечного сечения B-rep-тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_section_clip_polyline",
@@ -11526,7 +11534,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-421-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-421-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-421-2026-11-17/native.log.gz",
+        "examples/rush/clip-section-polyline.r",
+        "tests/rushSectionQueries.test.ts"
       ],
       "remainingQualification": [
         "Clip all coplanar polyline spans against one transverse section with a shared work budget.",
@@ -11537,7 +11547,7 @@
     {
       "id": "NURBS-0422",
       "name": "Гарантированная длина траектории в материале поперечного сечения",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_section_path_length",
@@ -11552,7 +11562,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-422-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-422-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-422-2026-11-17/native.log.gz",
+        "examples/rush/measure-section-path-length.r",
+        "tests/rushSectionQueries.test.ts"
       ],
       "remainingQualification": [
         "Enclose the polyline length retained by exact transverse section clipping.",
