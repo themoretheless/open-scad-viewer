@@ -1,6 +1,6 @@
 //! A pair of oppositely oriented once-around paths bounds a periodic belt.
 use super::*;
-use crate::boolean::operations::{
+use crate::model::planar_pcurve_regions::{
     planar_boundaries_are_disjoint, reverse_exact, subtract_planar_pcurves,
 };
 
@@ -64,7 +64,7 @@ fn rotate_at_seam(
         } else if !is_before(&start) || Q::from_float(start[axis]).unwrap() == seam {
             after.push(curve.clone());
         } else {
-            let [left, right] = crate::boolean::operations::split_pcurve_on_line(curve, &divider)?;
+            let [left, right] = crate::model::planar_pcurve_regions::split_pcurve_on_line(curve, &divider)?;
             before.extend(left);
             after.extend(right);
         }

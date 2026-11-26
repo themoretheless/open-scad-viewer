@@ -5,6 +5,7 @@
 //! Chamfers and fillets accept one convex planar body. Fillets are represented
 //! by planar tangent facets; `segments` controls that declared approximation.
 use crate::*;
+use crate::model::planar_pcurve_regions::unsupported;
 use std::collections::{BTreeMap, BTreeSet};
 
 mod boolean;
@@ -30,12 +31,10 @@ pub use planar_edit::*;
 pub(crate) use planar_model::*;
 pub use primitives::*;
 
+#[cfg(test)]
 const UNSUPPORTED: &str = "BREP_UNSUPPORTED_OPERATION";
 const OPERATION_FAILED: &str = "BREP_OPERATION_FAILED";
 
-fn unsupported(message: impl Into<String>) -> Error {
-    Error::new(UNSUPPORTED, message)
-}
 fn failed(message: impl Into<String>) -> Error {
     Error::new(OPERATION_FAILED, message)
 }

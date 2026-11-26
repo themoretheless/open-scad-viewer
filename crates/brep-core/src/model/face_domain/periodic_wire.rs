@@ -180,13 +180,13 @@ fn clip_curved_copies(
                 }
             }
             let patch =
-                crate::boolean::operations::intersect_planar_pcurves([&translated, &region], 4096)?;
+                crate::model::planar_pcurve_regions::intersect_planar_pcurves([&translated, &region], 4096)?;
             if patch.is_empty() {
                 continue;
             }
             if needs_overlap_check {
                 for previous in &covered {
-                    if !crate::boolean::operations::intersect_planar_pcurves(
+                    if !crate::model::planar_pcurve_regions::intersect_planar_pcurves(
                         [previous, &patch],
                         4096,
                     )?

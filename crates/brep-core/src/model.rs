@@ -14,6 +14,7 @@ pub mod keypoints;
 pub mod mixed_root_model;
 pub(crate) mod model_identity;
 pub(crate) mod model_report;
+pub(crate) mod planar_pcurve_regions;
 pub mod ray_parity;
 pub mod root_model;
 pub mod topology_reference;

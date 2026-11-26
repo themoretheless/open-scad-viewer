@@ -273,7 +273,7 @@ fn attach(
     })
 }
 
-fn invalid(message: &str) -> Error {
+pub(crate) fn invalid(message: &str) -> Error {
     Error::new("BREP_INVALID_SECTION_ATTACHMENT", message)
 }
 
@@ -286,16 +286,9 @@ pub use discover::{
     discover_and_attach_section_caps_with_support_tolerance,
 };
 
-mod solid;
-pub use solid::{
-    BoundedSectionSolid, InferredSectionSolidAdmission, OrientedSectionSolid, SectionSolid,
-    SectionSolidOptions, build_bounded_section_solid, build_expanded_inferred_section_solid,
-    build_expanded_section_solid, build_inferred_section_solid,
-    build_outward_inferred_section_solid, build_outward_section_solid, build_section_solid,
-    inspect_inferred_section_solid,
-};
-
 pub use discover::{
     InferredSectionPlane, InferredSectionPlanes, close_shell_with_bounded_inferred_section_caps,
     close_shell_with_inferred_section_caps, infer_section_planes,
 };
+
+pub(crate) use discover::close_inferred;

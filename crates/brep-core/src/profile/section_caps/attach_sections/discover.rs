@@ -420,7 +420,7 @@ fn close_shell<P>(
 }
 
 mod infer;
-pub(super) use infer::close_inferred;
+pub(crate) use infer::close_inferred;
 pub use infer::{
     InferredSectionPlane, InferredSectionPlanes, close_shell_with_bounded_inferred_section_caps,
     close_shell_with_inferred_section_caps, infer_section_planes,

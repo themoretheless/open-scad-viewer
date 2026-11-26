@@ -1,9 +1,8 @@
-use super::{
+use crate::profile::section_caps::{
     AttachedSectionCaps, BoundedSectionAttachment, BoundedSectionPlane, SectionAttachmentOptions,
-    SectionPlane, attach_section_caps_with_expanded_exact_support,
+    SectionPlane, attach_section_caps_with_expanded_exact_support, close_inferred,
     close_shell_with_bounded_inferred_section_caps, close_shell_with_bounded_section_caps,
-    close_shell_with_expanded_exact_section_caps, close_shell_with_section_caps,
-    discover::close_inferred, invalid,
+    close_shell_with_expanded_exact_section_caps, close_shell_with_section_caps, invalid,
 };
 use crate::{
     Body, Model,

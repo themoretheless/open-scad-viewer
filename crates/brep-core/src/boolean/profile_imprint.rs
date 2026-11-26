@@ -91,8 +91,8 @@ fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>>
         if periodic {
             let sources = [&pa.loops[..], &pb.loops[..]];
             let exact = match operation {
-                "intersection" => Some(crate::boolean::operations::intersect_planar_pcurves(sources, 4096)),
-                "difference" => Some(crate::boolean::operations::subtract_planar_pcurves(sources, 4096)),
+                "intersection" => Some(crate::model::planar_pcurve_regions::intersect_planar_pcurves(sources, 4096)),
+                "difference" => Some(crate::model::planar_pcurve_regions::subtract_planar_pcurves(sources, 4096)),
                 _ => None,
             };
             if let Some(Ok(loops)) = exact {

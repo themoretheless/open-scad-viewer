@@ -369,7 +369,7 @@ fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
 #[cfg(test)]
 mod tests;
 
-pub use crate::profile::planar_cap;
+pub mod planar_cap;
 pub use crate::parts::rack;
 pub use crate::parts::thread;
 

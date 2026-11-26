@@ -24,6 +24,7 @@ pub(crate) mod operation_tolerance;
 pub mod pcurve_repair;
 pub mod region_replacement;
 pub mod rounded_patch_network;
+pub mod section_solid;
 #[cfg(feature = "codec")]
 pub mod tolerance_unify;
 pub mod tolerance_hierarchy;

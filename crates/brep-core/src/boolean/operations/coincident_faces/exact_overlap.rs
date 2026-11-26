@@ -3,15 +3,12 @@ use super::{
     unsupported,
 };
 use crate::closed_solid::QualifiedClosedSolid;
+use crate::model::planar_pcurve_regions::representable;
 use num_rational::BigRational as Q;
-use num_traits::{Signed, ToPrimitive, Zero};
+use num_traits::{Signed, Zero};
 use nurbs_core::surface_injectivity::certify_affine_parameterization;
 
 mod curved;
-pub(crate) use curved::{
-    intersect_planar_pcurves, planar_boundaries_are_disjoint, reverse_exact, split_pcurve_on_line,
-    subtract_planar_pcurves,
-};
 
 type Point = [Q; 3];
 
@@ -52,13 +49,6 @@ fn support_value(a: &Point, direction: &Point, normal: &Point, p: &Point) -> Q {
 fn exact_point([x, y, z]: [f64; 3]) -> Result<Point> {
     let exact = |v| Q::from_float(v).ok_or_else(|| invalid("Nonfinite polygon vertex"));
     Ok([exact(x)?, exact(y)?, exact(z)?])
-}
-
-fn representable(value: &Q) -> Result<f64> {
-    value
-        .to_f64()
-        .filter(|&v| Q::from_float(v).as_ref() == Some(value))
-        .ok_or_else(|| unsupported("Exact overlap coordinate exceeds the BRep representation"))
 }
 
 /// Intersect two convex, planar world-space rings with exact arithmetic.
