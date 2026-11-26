@@ -6,7 +6,10 @@ mod closed_ss;
 #[path="brep_section_sheets.rs"]
 mod section_sheets;
 
+#[path="brep_rim_caps.rs"]
+mod rim_caps;
 const OPS: &[&str] = &[
+    "attach_section_rims","discover_section_rims","attach_bounded_rims","discover_bounded_rims",
     "section_brep_sheets","bounded_section_brep_sheets",
     "brep_partition_closed_ss", "brep_partition_all_closed_ss",
     "brep_audit_exact_periodic_trim_contour",
@@ -109,6 +112,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        op @ ("attach_section_rims" | "discover_section_rims" | "attach_bounded_rims" | "discover_bounded_rims") => rim_caps::attach(&v,op),
         op @ ("section_brep_sheets"|"bounded_section_brep_sheets")=>section_sheets::build(&v,op),
         "brep_partition_closed_ss" => closed_ss::partition(v),
         "brep_bound_exact_periodic_trim_directional_area" => brep::exact_periodic_trim_directional_area_request(&v),

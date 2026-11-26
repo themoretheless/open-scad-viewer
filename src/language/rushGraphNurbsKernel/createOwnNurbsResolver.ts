@@ -1082,6 +1082,16 @@ export function createOwnNurbsResolver(
             }
             break
           }
+          case 'attach_section_rims':
+          case 'discover_section_rims':
+          case 'attach_bounded_rims':
+          case 'discover_bounded_rims': {
+            const {id:_id,op,input,...settings}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep;workUsed:number}>(op,{source:needBrep(input),...settings})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'section_brep_sheets':
           case 'bounded_section_brep_sheets': {
             const {id:_id,op,input,inputs,loops,...settings}=n
