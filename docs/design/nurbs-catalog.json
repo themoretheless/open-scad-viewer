@@ -9870,7 +9870,7 @@
     {
       "id": "NURBS-0362",
       "name": "Сертифицированные пробы ветви пересечения NURBS-поверхности с плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::sample_surface_plane_graph",
@@ -9883,7 +9883,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs",
         "docs/qualification/nurbs-curvature-field-362-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-362-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-362-2026-11-17/native.log.gz",
+        "examples/rush/sample-plane-branch.r",
+        "tests/rushPlanePolylines.test.ts"
       ],
       "remainingQualification": [
         "Sample the unique per-cell surface-plane branch at exact rational transverse parameters.",
@@ -9894,7 +9896,7 @@
     {
       "id": "NURBS-0363",
       "name": "Полилиния с непрерывной границей ошибки для ветви пересечения NURBS с плоскостью",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::approximate_surface_plane_graph",
@@ -9908,7 +9910,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/polyline.rs",
         "docs/qualification/nurbs-curvature-field-363-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-363-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-363-2026-11-17/native.log.gz",
+        "examples/rush/plane-branch-uv-polyline.r",
+        "tests/rushPlanePolylines.test.ts"
       ],
       "remainingQualification": [
         "Construct a rational UV polyline with a continuous error bound on the certified surface-plane graph.",
@@ -9919,7 +9923,7 @@
     {
       "id": "NURBS-0364",
       "name": "Пространственная полилиния пересечения NURBS с плоскостью с гарантированным допуском",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::approximate_surface_plane_graph_xyz",
@@ -9934,7 +9938,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/polyline.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_polyline.rs",
         "docs/qualification/nurbs-curvature-field-364-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-364-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-364-2026-11-17/native.log.gz",
+        "examples/rush/plane-branch-xyz-polyline.r",
+        "tests/rushPlanePolylines.test.ts"
       ],
       "remainingQualification": [
         "Construct a rational XYZ polyline with a continuous Euclidean error bound for a surface-plane graph.",

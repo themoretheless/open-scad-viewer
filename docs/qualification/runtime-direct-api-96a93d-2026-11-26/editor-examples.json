@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "96a93d02c9c8a928ad94d7ffe7428fe1dcb243952e50c8471fb4294cbdc53138",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/sample-plane-branch.r",
+      "exampleSha256": "650204d6d7daf783c27a26a598f232a1df8c35c769fb04ab3629ebb45a0929b5",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2,24\nГотово · 52 ms"
+    },
+    {
+      "example": "examples/rush/plane-branch-uv-polyline.r",
+      "exampleSha256": "e6487b34202caad020b56f31e32394c37b241cfaaa3603c8da6e96cb16d13cd4",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2,24\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/plane-branch-xyz-polyline.r",
+      "exampleSha256": "78d1c6cdf4dedca4d11d416c0f1feb6cfb105b986fd0533f61855b456c7b962f",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n2,24\nГотово · 5 ms"
+    }
+  ]
+}

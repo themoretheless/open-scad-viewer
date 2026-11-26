@@ -194,10 +194,12 @@ export function compactWasmTables(input) {
   const standard = compact(input, false)
   if (standard.length <= 20 * 1024 * 1024) return standard
   const denser = compact(input, true)
-  return denser.length < standard.length ? denser : standard
+  if (denser.length <= 20 * 1024 * 1024) return denser
+  const layered = compact(input, true, true)
+  return [standard, denser, layered].reduce((a, b) => a.length <= b.length ? a : b)
 }
 
-function compact(input, extended) {
+function compact(input, extended, layerTables = false) {
   const original = Buffer.from(input.buffer, input.byteOffset, input.byteLength)
   const list = sections(original)
   const section = id => list.find(s => s.id === id)
@@ -220,6 +222,15 @@ function compact(input, extended) {
     const segmentBytes = data.subarray(cursor.at,end)
     let compact = length >= 2048 && compactTable(segmentBytes,base)
     const matches = length >= (extended ? 256 : 2048) && compactMatches(segmentBytes, base, extended)
+    // First reconstruct the compact delta table at its original staging offset.
+    // Any raw suffix is already in place at the end of the segment.
+    if (compact && layerTables) {
+      const table = compactMatches(compact.data, compact.offset, true)
+      if (table) {
+        compact = {...compact, data: table.data, encodedOffset: table.offset,
+          prefix: expandMatches(table.offset, compact.offset, table.runs[0].length)}
+      }
+    }
     if (matches && (!compact || matches.data.length + 128 < compact.data.length)) compact = matches
     cursor.at = end
     if (!compact) {
@@ -227,12 +238,13 @@ function compact(input, extended) {
       continue
     }
     // Positive signed LEB needs a terminating zero when bit 6 of the last byte is set.
-    let offset = unsigned(compact.offset)
+    let offset = unsigned(compact.encodedOffset ?? compact.offset)
     if (offset.at(-1) & 64) {
       offset[offset.length - 1] |= 128
       offset = Buffer.concat([offset, Buffer.from([0])])
     }
     encoded.push(Buffer.from([0, 0x41]), offset, Buffer.from([11]), unsigned(compact.data.length), compact.data)
+    if (compact.prefix) init.push(compact.prefix)
     let src = compact.offset, dst = base
     for (const run of compact.runs) {
       if (run.kind === 'lz') {
