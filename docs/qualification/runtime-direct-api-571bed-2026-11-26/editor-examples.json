@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "571bed85b2f7719ae38dca858cd2271f7c1b5f2aee5004902127d19dd81b075e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/contour-box-distance.r",
+      "exampleSha256": "3432adaedefd09d6baad547973383683f0623eacfa3dd448dad4b95aec66781a",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 73 ms"
+    },
+    {
+      "example": "examples/rush/contour-disk-distance.r",
+      "exampleSha256": "c1df22d91a5a7bed0d86c676044c610440efe1f763584fe853cef1958a5930d2",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 12 ms"
+    },
+    {
+      "example": "examples/rush/contour-capsule-distance.r",
+      "exampleSha256": "288eceae16017f7a0c9b5a87fde41b6ece4266877db7edc14b4166b3377dd401",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/contour-rectangle-distance.r",
+      "exampleSha256": "d951067eb25fdee15f80238124de8fab0d0b0b726d8ee1985b558f336a6c3e8a",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/planar-contour-sets-distance.r",
+      "exampleSha256": "6c946a4b89556175f8edfc5c73e49e17e154f2e891efc74c2a2e011cb93d0624",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n16\nГотово · 14 ms"
+    }
+  ]
+}

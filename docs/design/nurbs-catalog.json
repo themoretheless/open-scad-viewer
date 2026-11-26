@@ -20258,7 +20258,7 @@
     {
       "id": "NURBS-0796",
       "name": "Минимальное расстояние от прямоугольника до набора замкнутых NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_box_distance",
@@ -20266,7 +20266,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-796-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-796-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-796-2026-11-17/native.log.gz",
+        "examples/rush/contour-box-distance.r",
+        "tests/rushContourObstacles.test.ts"
       ],
       "remainingQualification": [
         "Certify nearest contour distance to a solid query box, including intersection witnesses.",
@@ -20277,7 +20279,7 @@
     {
       "id": "NURBS-0797",
       "name": "Минимальный зазор от диска до набора плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_disk_distance",
@@ -20285,7 +20287,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-797-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-797-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-797-2026-11-17/native.log.gz",
+        "examples/rush/contour-disk-distance.r",
+        "tests/rushContourObstacles.test.ts"
       ],
       "remainingQualification": [
         "Enclose minimum unsigned distance between a closed disk and a set of planar rational contours.",
@@ -20296,7 +20300,7 @@
     {
       "id": "NURBS-0798",
       "name": "Минимальный зазор от капсулы до набора плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_capsule_distance",
@@ -20304,7 +20308,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-798-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-798-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-798-2026-11-17/native.log.gz",
+        "examples/rush/contour-capsule-distance.r",
+        "tests/rushContourObstacles.test.ts"
       ],
       "remainingQualification": [
         "Bound capsule-to-contour distance globally, including degenerate segments and overlap.",
@@ -20315,7 +20321,7 @@
     {
       "id": "NURBS-0799",
       "name": "Минимальный зазор от повёрнутого прямоугольника до плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_oriented_box_distance",
@@ -20323,7 +20329,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-799-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-799-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-799-2026-11-17/native.log.gz",
+        "examples/rush/contour-rectangle-distance.r",
+        "tests/rushContourObstacles.test.ts"
       ],
       "remainingQualification": [
         "Bound contour distance to a rotated rectangle with exact orthogonality validation.",
@@ -20334,7 +20342,7 @@
     {
       "id": "NURBS-0800",
       "name": "Минимальный зазор между двумя наборами замкнутых плоских NURBS-контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_sets_distance",
@@ -20342,7 +20350,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-800-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-800-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-800-2026-11-17/native.log.gz",
+        "examples/rush/planar-contour-sets-distance.r",
+        "tests/rushContourObstacles.test.ts"
       ],
       "remainingQualification": [
         "Enclose global distance between two contour sets with paired source witnesses under a shared budget.",

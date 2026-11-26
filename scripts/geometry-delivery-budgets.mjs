@@ -1497,6 +1497,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/B8SGncct.js':127_100,'assets/C4BxoMy1.js':203_600,'assets/Dkj73Q9d.js':210_500,'assets/Dzt8bFdf.js':103_400,'assets/mainSolid.worker--aLcWXIf.js':271_600}),
   }),
+  // planar contour obstacle distances: 20,841,552 raw bytes, 7,997,431 packed bytes and 15,394,822 total asset bytes.
+  '571bed85b2f7719ae38dca858cd2271f7c1b5f2aee5004902127d19dd81b075e':Object.freeze({
+    version:194,geometryChunkBytes:8_026_000,totalAssetBytes:15_415_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:330_900,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CKYOfrGB.js':210_700,'assets/CTobWeTx.js':127_800,'assets/ClzEQuj-.js':103_500,'assets/mainSolid.worker-D_Af1TmO.js':272_200,'assets/sUFKFam-.js':203_600}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
