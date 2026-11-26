@@ -108,7 +108,11 @@ function compactMatches(bytes, base, extended) {
 function expandMatches(src,dst,length) {
   return `(local.set $src (i32.const ${src}))
     (local.set $dst (i32.const ${dst}))
-    (loop $tokenLoop
+    ${expandMatchTokens(`(i32.const ${src+length})`)}`
+}
+
+function expandMatchTokens(limit) {
+  return `(loop $tokenLoop
       (local.set $left (i32.load8_u (local.get $src)))
       (local.set $src (i32.add (local.get $src) (i32.const 1)))
       (if (i32.lt_u (local.get $left) (i32.const 128))
@@ -126,7 +130,7 @@ function expandMatches(src,dst,length) {
             (local.set $dst (i32.add (local.get $dst) (i32.const 1)))
             (local.set $left (i32.sub (local.get $left) (i32.const 1)))
             (br_if $copy (local.get $left)))))
-      (br_if $tokenLoop (i32.lt_u (local.get $src) (i32.const ${src+length}))))`
+      (br_if $tokenLoop (i32.lt_u (local.get $src) ${limit})))`
 }
 
 function compactTable(bytes, base) {
@@ -171,7 +175,11 @@ function compactTable(bytes, base) {
 // destination. Load each residual before its output store, including the final byte.
 function expandBlocks(count) {
   return `(local.set $blocks (i32.const ${count}))
-  (loop $blocksLoop
+  ${expandBlockWords()}`
+}
+
+function expandBlockWords() {
+  return `(loop $blocksLoop
     (local.set $value (i32.load (local.get $src)))
     (local.set $delta (i32.load offset=4 (local.get $src)))
     (i32.store (local.get $dst) (local.get $value))
@@ -196,10 +204,13 @@ export function compactWasmTables(input) {
   const denser = compact(input, true)
   if (denser.length <= 20 * 1024 * 1024) return denser
   const layered = compact(input, true, true)
-  return [standard, denser, layered].reduce((a, b) => a.length <= b.length ? a : b)
+  const best = [standard, denser, layered].reduce((a, b) => a.length <= b.length ? a : b)
+  if (best.length <= 20 * 1024 * 1024) return best
+  const shared = compact(input, true, true, true)
+  return shared.length < best.length ? shared : best
 }
 
-function compact(input, extended, layerTables = false) {
+function compact(input, extended, layerTables = false, shareDecoders = false) {
   const original = Buffer.from(input.buffer, input.byteOffset, input.byteLength)
   const list = sections(original)
   const section = id => list.find(s => s.id === id)
@@ -207,10 +218,16 @@ function compact(input, extended, layerTables = false) {
   // and constant active data segments. Other valid module layouts pass through.
   if (section(2) || section(8) || !section(1) || !section(3) || !section(10) ||
       !section(11) || section(5)?.data[0] !== 1) return original
-  const data = section(11).data, cursor = {at: 0}
+  const data = section(11).data
+  const cursor = {at: 0}
   const count = readUnsigned(data, cursor)
   let previousEnd = 0
   const encoded = [unsigned(count)], init = []
+  const calls = []
+  const emitLz = (src, dst, length) => {
+    if (shareDecoders) calls.push({op:'lz', args:[src,dst,src+length]})
+    else init.push(expandMatches(src,dst,length))
+  }
   for (let segment = 0; segment < count; segment++) {
     const start = cursor.at
     if (readUnsigned(data, cursor) !== 0 || data[cursor.at++] !== 0x41) return original
@@ -228,7 +245,7 @@ function compact(input, extended, layerTables = false) {
       const table = compactMatches(compact.data, compact.offset, true)
       if (table) {
         compact = {...compact, data: table.data, encodedOffset: table.offset,
-          prefix: expandMatches(table.offset, compact.offset, table.runs[0].length)}
+          prefix: [table.offset, compact.offset, table.runs[0].length]}
       }
     }
     if (matches && (!compact || matches.data.length + 128 < compact.data.length)) compact = matches
@@ -244,23 +261,32 @@ function compact(input, extended, layerTables = false) {
       offset = Buffer.concat([offset, Buffer.from([0])])
     }
     encoded.push(Buffer.from([0, 0x41]), offset, Buffer.from([11]), unsigned(compact.data.length), compact.data)
-    if (compact.prefix) init.push(compact.prefix)
+    if (compact.prefix) emitLz(...compact.prefix)
     let src = compact.offset, dst = base
     for (const run of compact.runs) {
       if (run.kind === 'lz') {
-        init.push(expandMatches(src,dst,run.length))
+        emitLz(src,dst,run.length)
         dst += run.output
       } else if (run.kind === 'raw') {
-        if (src !== dst) init.push(`(memory.copy (i32.const ${dst}) (i32.const ${src}) (i32.const ${run.length}))`)
+        if (src !== dst && shareDecoders) calls.push({op:'copy',args:[dst,src,run.length]})
+        else if (src !== dst) init.push(`(memory.copy (i32.const ${dst}) (i32.const ${src}) (i32.const ${run.length}))`)
         dst += run.length
       } else {
-        init.push(`(local.set $src (i32.const ${src})) (local.set $dst (i32.const ${dst}))`, expandBlocks(run.length / packedBytes))
+        if (shareDecoders) calls.push({op:'blocks',args:[src,dst,run.length / packedBytes]})
+        else init.push(`(local.set $src (i32.const ${src})) (local.set $dst (i32.const ${dst}))`, expandBlocks(run.length / packedBytes))
         dst += run.length / packedBytes * blockBytes
       }
       src += run.length
     }
   }
-  if (!init.length || cursor.at !== data.length) return original
+  if ((!init.length && !calls.length) || cursor.at !== data.length) return original
+  const index = readUnsigned(section(3).data, {at: 0})
+  const type = readUnsigned(section(1).data, {at: 0})
+  let startIndex = index
+  if (shareDecoders) {
+    startIndex = index + 2
+    installSharedDecoders(section, type, index, calls)
+  } else {
   const helper = binaryen.parseText(`(module (memory 1) (func (export "init")
     (local $src i32) (local $dst i32) (local $value i32) (local $delta i32)
     (local $blocks i32) (local $left i32) ${init.join('\n')}))`)
@@ -272,13 +298,12 @@ function compact(input, extended, layerTables = false) {
     if (code[0] !== 1) throw new Error('Expected a single table initializer')
     body = code.subarray(1)
   } finally { helper.dispose() }
-  const type = readUnsigned(section(1).data, {at: 0})
-  const index = readUnsigned(section(3).data, {at: 0})
   section(1).data = appendEntry(section(1).data, Buffer.from([0x60, 0, 0]))
   section(3).data = appendEntry(section(3).data, unsigned(type))
   section(10).data = appendEntry(section(10).data, body)
+  }
   section(11).data = Buffer.concat(encoded)
-  list.splice(list.findIndex(s => [9,12,10].includes(s.id)), 0, {id: 8, data: unsigned(index)})
+  list.splice(list.findIndex(s => [9,12,10].includes(s.id)), 0, {id: 8, data: unsigned(startIndex)})
   const result = Buffer.concat([original.subarray(0,8), ...list.flatMap(s => [Buffer.from([s.id]), unsigned(s.data.length), s.data])])
   if (result.length >= original.length) return original
   const reference = new WebAssembly.Module(original)
@@ -289,4 +314,43 @@ function compact(input, extended, layerTables = false) {
     throw new Error('Static table compression changed initial geometry memory')
   }
   return result
+}
+
+// Emit one pair of decoder functions. The start function supplies only the
+// addresses and bounds for each run. All original function indices stay valid.
+function installSharedDecoders(section, type, index, calls) {
+  const helper = binaryen.parseText(`(module (memory 1)
+    (func (param $src i32) (param $dst i32) (param $limit i32)
+      (local $left i32) (local $delta i32) ${expandMatchTokens('(local.get $limit)')})
+    (func (param $src i32) (param $dst i32) (param $blocks i32)
+      (local $left i32) (local $delta i32) (local $value i32) ${expandBlockWords()}))`)
+  try {
+    helper.setFeatures(binaryen.Features.BulkMemory | binaryen.Features.MVP)
+    if (!helper.validate()) throw new Error('Invalid shared geometry initializer')
+    const code = sections(Buffer.from(helper.emitBinary())).find(s => s.id === 10).data
+    const cursor = {at:0}
+    if (readUnsigned(code,cursor)!==2) throw new Error('Expected two geometry decoders')
+    section(1).data = appendEntry(section(1).data,Buffer.from([0x60,3,0x7f,0x7f,0x7f,0]))
+    for(let n=0;n<2;n++) {
+      const pos=cursor.at
+      const size=readUnsigned(code,cursor)
+      cursor.at+=size
+      section(3).data=appendEntry(section(3).data,unsigned(type))
+      section(10).data=appendEntry(section(10).data,code.subarray(pos,cursor.at))
+    }
+    const start=[0] // No locals in the start function.
+    for(const {op,args} of calls) {
+      for(const arg of args) {
+        const bytes=[...unsigned(arg)]
+        if(bytes.at(-1)&64){bytes[bytes.length-1]|=128; bytes.push(0)}
+        start.push(0x41,...bytes)
+      }
+      if(op==='copy') start.push(0xfc,10,0,0)
+      else start.push(0x10,...unsigned(index+(op==='blocks'?1:0)))
+    }
+    start.push(11)
+    section(1).data=appendEntry(section(1).data,Buffer.from([0x60,0,0]))
+    section(3).data=appendEntry(section(3).data,unsigned(type+1))
+    section(10).data=appendEntry(section(10).data,Buffer.concat([unsigned(start.length),Buffer.from(start)]))
+  } finally { helper.dispose() }
 }

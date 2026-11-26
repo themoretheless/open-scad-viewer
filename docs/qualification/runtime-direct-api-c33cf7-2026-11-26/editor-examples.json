@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "c33cf77041cf33b83330b9014229e9bfa91b173d6e427eb4f60227d475378122",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/split-periodic-plane-strip.r",
+      "exampleSha256": "efc70ff5878e65eb301af3cec076734a270bb220a15a053e2d146470b630ceeb",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n5,66\nГотово · 50 ms"
+    }
+  ]
+}

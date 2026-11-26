@@ -33,8 +33,13 @@ const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wa
 const optimized = optimizeWasm(built)
 let wasm = compactWasmTables(optimized)
 if (wasm.length > 20 * 1024 * 1024) {
-  const next = compactWasmTables(optimizeWasm(built, {input: optimized}))
+  const second = optimizeWasm(built, {input: optimized})
+  const next = compactWasmTables(second)
   if (next.length < wasm.length) wasm = next
+  if (wasm.length > 20 * 1024 * 1024) {
+    const merged = compactWasmTables(optimizeWasm(built, {input: second, mergeSimilar: true}))
+    if (merged.length < wasm.length) wasm = merged
+  }
 }
 console.log(`geometry-kernels artifact: sha256=${createHash('sha256').update(wasm).digest('hex')} bytes=${wasm.byteLength}`)
 // Skip WebAssembly.Module compilation, brotli quality 11 and base85 encoding
