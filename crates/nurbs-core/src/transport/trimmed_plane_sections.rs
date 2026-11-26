@@ -18,6 +18,9 @@ mod boundary;
 #[path = "section_event_requests.rs"]
 mod events;
 
+#[path = "section_material_requests.rs"]
+mod material;
+
 #[path = "stored_section_requests.rs"]
 mod storage;
 
@@ -56,6 +59,12 @@ pub(super) fn apply(v: &Value, op: &str) -> Result<Value> {
     let second = project("right", right)?;
     if remaining == 0 {
         return Ok(json!({"status":"refused","reason":"ResourceLimit","workUsed":budget}));
+    }
+    if matches!(
+        op,
+        "classify_section_gaps" | "assemble_section_material" | "measure_section_material"
+    ) {
+        return material::measure(v, op, &first, &second, remaining, budget - remaining);
     }
     if matches!(op, "partition_face_events" | "enclose_face_events") {
         return events::measure(v, op, &first, &second, remaining, budget - remaining);

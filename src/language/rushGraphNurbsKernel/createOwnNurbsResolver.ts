@@ -1109,6 +1109,9 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'classify_section_gaps':
+          case 'assemble_section_material':
+          case 'measure_section_material':
           case 'partition_face_events':
           case 'enclose_face_events':
           case 'match_quadratic_contacts':
@@ -1120,6 +1123,8 @@ export function createOwnNurbsResolver(
             const surface=needSurface(n.input)
             const report=callGeometryRust<object>(n.op,{source:surface,right:needSurface(n.target_geometry),
               loops:n.loops.map(r=>r.map(needCurve)),left_loop_count:n.left_loop_count,max_work:n.max_work,
+              ...('max_winding_cells' in n ? {tolerance_uv:n.tolerance_uv,max_winding_cells:n.max_winding_cells} : {}),
+              ...('endpoint_tolerance' in n ? {endpoint_tolerance:n.endpoint_tolerance} : {}),
               ...('max_passes' in n ? {max_passes:n.max_passes} : {}),
               ...('xyz_tolerance' in n ? {xyz_tolerance:n.xyz_tolerance} : {}),
               ...('parameter_width' in n ? {parameter_width:n.parameter_width} : {})})
