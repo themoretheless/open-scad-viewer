@@ -13719,7 +13719,7 @@
     {
       "id": "NURBS-0495",
       "name": "Точная склейка рациональных NURBS-кривых разной степени",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_exact_degree_elevation",
@@ -13729,7 +13729,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
         "docs/qualification/nurbs-curvature-field-495-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-495-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-495-2026-11-17/native.log.gz",
+        "examples/rush/join-mixed-degree.r",
+        "tests/rushDegreeSeams.test.ts"
       ],
       "remainingQualification": [
         "Join adjacent NURBS curves of different degree without changing the source parameter laws.",
@@ -13740,7 +13742,7 @@
     {
       "id": "NURBS-0496",
       "name": "Точная склейка NURBS-кривых с удалением избыточных узлов стыка",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_and_simplify_exact_seam",
@@ -13750,7 +13752,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_knot_removal.rs",
         "docs/qualification/nurbs-curvature-field-496-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-496-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-496-2026-11-17/native.log.gz",
+        "examples/rush/compact-join-seam.r",
+        "tests/rushDegreeSeams.test.ts"
       ],
       "remainingQualification": [
         "Join curves and remove only proven redundant seam knots under a shared budget.",
@@ -13761,7 +13765,7 @@
     {
       "id": "NURBS-0497",
       "name": "Точное сравнение односторонних производных NURBS-кривых на стыке до C2",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::compare_exact_curve_seam_jets",
@@ -13770,7 +13774,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-497-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-497-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-497-2026-11-17/native.log.gz",
+        "examples/rush/compare-parametric-seam.r",
+        "tests/rushDegreeSeams.test.ts"
       ],
       "remainingQualification": [
         "Compare exact rational position, first and second derivatives on both sides of a shared parameter.",
@@ -13781,7 +13787,7 @@
     {
       "id": "NURBS-0498",
       "name": "Точная проверка геометрической гладкости стыка NURBS-кривых до G2",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::compare_exact_curve_geometric_seam",
@@ -13790,7 +13796,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-498-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-498-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-498-2026-11-17/native.log.gz",
+        "examples/rush/compare-geometric-seam.r",
+        "tests/rushDegreeSeams.test.ts"
       ],
       "remainingQualification": [
         "Prove G0/G1/G2 seam continuity independently of the source parameter clocks.",

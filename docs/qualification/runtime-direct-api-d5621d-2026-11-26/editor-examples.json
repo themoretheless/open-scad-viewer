@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "d5621dbe19b555db0137412bd4405f0a7f045d30a03015229a0c6bea4bc59be7",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/join-mixed-degree.r",
+      "exampleSha256": "44f0f85077d44b8f73b8264cc4325a5e84e886dc734dcc815eb1ae0d80718321",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n6,29\nГотово · 63 ms"
+    },
+    {
+      "example": "examples/rush/compact-join-seam.r",
+      "exampleSha256": "7885e7bde6d7f97654ea09c5b8c0d6e010fc32d0fec41f32922f6c0001763351",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n8,9\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/compare-parametric-seam.r",
+      "exampleSha256": "5c327030227848e8ebe3720d73e64ecb2f96985107cc72d050354b2d95cefab9",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/compare-geometric-seam.r",
+      "exampleSha256": "0e4af3a7897ffab950faa4e20309dfe6612a2df4234b36cb65790dbecf4cf950",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 6 ms"
+    }
+  ]
+}
