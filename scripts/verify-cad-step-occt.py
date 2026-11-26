@@ -115,10 +115,11 @@ def main(directory, make_preview=True):
                 1e-6, abs(expected['volumeMm3']) * manifest['relativeVolumeTolerance'])
         if 'areaMm2' in expected:
             area_properties = GProp_GProps()
-            BRepGProp.SurfaceProperties_s(shape, area_properties)
+            area_integration_error = BRepGProp.SurfaceProperties_s(shape, area_properties, Eps=1e-11)
             area = area_properties.Mass()
             area_error = abs(area - expected['areaMm2'])
-            measurements.update(areaMm2=area, areaErrorMm2=area_error)
+            measurements.update(areaMm2=area, areaErrorMm2=area_error,
+                                areaIntegrationRelativeError=area_integration_error)
             passed = passed and area_error <= expected['areaToleranceMm2']
         counts = dict(edges=count_unique_shapes(shape, TopAbs_EDGE),
                       vertices=count_unique_shapes(shape, TopAbs_VERTEX),

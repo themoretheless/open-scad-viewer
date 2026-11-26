@@ -1,0 +1,32 @@
+{
+  "toleranceMm": 2e-07,
+  "parts": [
+    {
+      "name": "guided-loft-open-shell",
+      "file": "guided-loft.step",
+      "sha256": "0869a62b96740ed97bac6d9afb295bee7c730dca3cb10dc6fc3237f3e5a45b09",
+      "expected": {
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0.5,
+            2
+          ]
+        ],
+        "solids": 0,
+        "shells": 1,
+        "faces": 1,
+        "wires": 1,
+        "areaMm2": 2.295587149392638,
+        "areaToleranceMm2": 1e-08,
+        "edges": 4,
+        "vertices": 4
+      }
+    }
+  ]
+}
