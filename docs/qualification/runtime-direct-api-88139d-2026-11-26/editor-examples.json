@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "88139dadca6984df60fba1c930b44da66333707417655c352229d2ddadcc2027",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/section-brep-sheets.r",
+      "exampleSha256": "8586bfc1f461f60ae7839d40e27f94de06772ec9236e17c8479926a0ca8b1ecb",
+      "editorStats": "Объекты\n1\nТреугольники\n8\nОбъём\n0\nПлощадь\n12\nГотово · 51 ms"
+    },
+    {
+      "example": "examples/rush/bounded-section-brep-sheets.r",
+      "exampleSha256": "81d8973add42e564ba75916d196eae5a9d8efc582427647c38a186110b5f3afd",
+      "editorStats": "Объекты\n1\nТреугольники\n2\nОбъём\n0\nПлощадь\n1,11\nГотово · 7 ms"
+    }
+  ]
+}

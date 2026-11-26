@@ -10252,7 +10252,7 @@
     {
       "id": "NURBS-0376",
       "name": "Построение B-rep-граней крышек с сохранением исходных кромок NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::build_section_sheets",
@@ -10263,7 +10263,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "docs/qualification/nurbs-curvature-field-376-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-376-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-376-2026-11-17/native.log.gz",
+        "examples/rush/section-brep-sheets.r",
+        "tests/rushSectionSheets.test.ts"
       ],
       "remainingQualification": [
         "Author validated B-rep section sheets with original spatial edges, oriented coedges and certified cap trims.",
@@ -10274,7 +10276,7 @@
     {
       "id": "NURBS-0377",
       "name": "Плоская B-rep-крышка с гарантированным допуском для недвоичной опорной плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::build_section_sheets_with_support_tolerance",
@@ -10287,7 +10289,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs",
         "docs/qualification/nurbs-curvature-field-377-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-377-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-377-2026-11-17/native.log.gz",
+        "examples/rush/bounded-section-brep-sheets.r",
+        "tests/rushSectionSheets.test.ts"
       ],
       "remainingQualification": [
         "Store nonbinary cap supports as exactly planar binary64 surfaces within a certified tolerance.",
