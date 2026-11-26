@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "cb42920b4c002f040aa11ed5b7ef96553a9d248f070a6e0b5232a12513d6d4cd",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/reclock-trim-surface.r",
+      "exampleSha256": "a995e7104db1685e2db3ddca29ca526151ca33fcbfebbfd542fe75092887e6ab",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n248,17\nГотово · 76 ms"
+    },
+    {
+      "example": "examples/rush/reclock-trim-piece.r",
+      "exampleSha256": "0e376c049e0aec716022aa61395047c6e92a766cfddfe21aeba66d0554bf20f2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n6,25\nГотово · 15 ms"
+    },
+    {
+      "example": "examples/rush/certify-uv-chart.r",
+      "exampleSha256": "e359e54942279b60681a6716cbe9a88ff1b3c4452e3a13b2d93b83dd8b30a1a1",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,32\nГотово · 5 ms"
+    }
+  ]
+}

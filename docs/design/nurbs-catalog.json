@@ -8228,7 +8228,7 @@
     {
       "id": "NURBS-0293",
       "name": "Согласованная точная перепараметризация поверхности с UV-контурами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::mobius_trimmed_surface",
@@ -8239,7 +8239,10 @@
         "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs",
         "crates/nurbs-core/tests/exact_mobius_trimmed_contracts.rs",
         "docs/qualification/nurbs-curvature-field-293-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-293-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-293-2026-11-16/native.log.gz",
+        "examples/rush/reclock-trim-surface.r",
+        "tests/rushTrimClock.test.ts",
+        "examples/rush/reclock-trim-piece.r"
       ],
       "remainingQualification": [
         "Reclock a rational tensor patch and its ordered outer and inner trim loops together under one bounded operation.",
@@ -8250,7 +8253,7 @@
     {
       "id": "NURBS-0294",
       "name": "Точная проверка полного UV-контура на принадлежность прямоугольной области",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::certify_pcurve_chart_domain",
@@ -8260,7 +8263,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
         "crates/nurbs-core/tests/exact_pcurve_chart_contracts.rs",
         "docs/qualification/nurbs-curvature-field-294-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-294-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-294-2026-11-16/native.log.gz",
+        "examples/rush/certify-uv-chart.r",
+        "tests/rushTrimClock.test.ts"
       ],
       "remainingQualification": [
         "Certify a rational UV curve on its whole closed rectangular chart, distinguishing a true exit from even-multiplicity contacts and arithmetic refusal.",

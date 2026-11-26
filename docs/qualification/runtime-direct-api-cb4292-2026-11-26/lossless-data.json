@@ -1,0 +1,8 @@
+{
+  "referenceSha256": "876782ed5feb17f46cc792cf7378039d8042ef2106805eaefad08fb4f19d3e52",
+  "referenceBytes": 21206813,
+  "candidateSha256": "cb42920b4c002f040aa11ed5b7ef96553a9d248f070a6e0b5232a12513d6d4cd",
+  "candidateBytes": 20642258,
+  "identicalInitialMemory": true,
+  "previousSha256": "680605c1d477ccb1d2e5f5dc9b41b51cc4145ec977bf885df38252e89f78a124"
+}
