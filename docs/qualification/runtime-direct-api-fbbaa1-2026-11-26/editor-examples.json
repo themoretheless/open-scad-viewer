@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "fbbaa1784ebe4346f67dad3f5b749801db50ba857fc7aa22dca596f2b6c4868a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/planar-face-perimeter.r",
+      "exampleSha256": "5ef889545b691df6a09b9427e6eeddd699426a44099c0a1b68894ecbd04351c8",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,47\nГотово · 62 ms"
+    },
+    {
+      "example": "examples/rush/planar-boundary-distance.r",
+      "exampleSha256": "7a7798c6166edbd4a257c61bea41e81b06280b02fb6a3bc0c5414d6abeddde8c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/planar-material-distance.r",
+      "exampleSha256": "832b265f72776fe0f7a70df007eb1949e4acb1774cdbd3594e0918d20593a0f2",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 10 ms"
+    }
+  ]
+}
