@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "ddfc5fc8f6216ebfb813fbe25a57b1888ed0bac515a7c78399eb55537a0da7d0",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/attach-section-rims.r",
+      "exampleSha256": "cf0c326a054bb1a989013eada406b6030e9a23c0f86224a07ed91fbad6a42eba",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 374 ms"
+    },
+    {
+      "example": "examples/rush/discover-section-rims.r",
+      "exampleSha256": "78d90b834089baf602b84c4cdf1f4285903e7184dab079e33b96e260ed839452",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/attach-bounded-rims.r",
+      "exampleSha256": "fd9d322ea2578413876b6998f4ab86c5fbea8b9608772f19a5402c1b4fa9529a",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/discover-bounded-rims.r",
+      "exampleSha256": "ddd5f5c5ead7cd37dd7059ca7ea3a58ee346d251297f6346fe672de08e7b9793",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 8 ms"
+    }
+  ]
+}

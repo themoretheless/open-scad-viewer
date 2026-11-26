@@ -10302,7 +10302,7 @@
     {
       "id": "NURBS-0378",
       "name": "Сшивка B-rep-крышек с исходными кромками открытой оболочки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::attach_section_caps",
@@ -10314,7 +10314,9 @@
         "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
         "docs/qualification/nurbs-curvature-field-378-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-378-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-378-2026-11-17/native.log.gz",
+        "examples/rush/attach-section-rims.r",
+        "tests/rushRimCaps.test.ts"
       ],
       "remainingQualification": [
         "Attach certified section caps to explicit open shell boundary cycles without duplicating source edges or vertices.",
@@ -10325,7 +10327,7 @@
     {
       "id": "NURBS-0379",
       "name": "Автоматический поиск граничных циклов и сшивка плоских B-rep-крышек",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::discover_and_attach_section_caps",
@@ -10338,7 +10340,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
         "docs/qualification/nurbs-curvature-field-379-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-379-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-379-2026-11-17/native.log.gz",
+        "examples/rush/discover-section-rims.r",
+        "tests/rushRimCaps.test.ts"
       ],
       "remainingQualification": [
         "Find free boundary cycles on an exact section plane and attach validated caps without a manual edge list.",
@@ -10401,7 +10405,7 @@
     {
       "id": "NURBS-0382",
       "name": "Сшивка крышки с исходной оболочкой при ограниченной погрешности плоской опоры",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::attach_section_caps_with_support_tolerance",
@@ -10414,7 +10418,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
         "docs/qualification/nurbs-curvature-field-382-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-382-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-382-2026-11-17/native.log.gz",
+        "examples/rush/attach-bounded-rims.r",
+        "tests/rushRimCaps.test.ts"
       ],
       "remainingQualification": [
         "Sew planar section caps with certified support rounding to unchanged spatial boundary edges.",
@@ -10425,7 +10431,7 @@
     {
       "id": "NURBS-0383",
       "name": "Автоматический поиск граничных циклов в пределах допуска к плоскости",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::discover_and_attach_section_caps_with_support_tolerance",
@@ -10440,7 +10446,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
         "docs/qualification/nurbs-curvature-field-383-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-383-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-383-2026-11-17/native.log.gz",
+        "examples/rush/discover-bounded-rims.r",
+        "tests/rushRimCaps.test.ts"
       ],
       "remainingQualification": [
         "Discover complete free edge cycles inside a certified plane slab and attach independently bounded planar caps.",
