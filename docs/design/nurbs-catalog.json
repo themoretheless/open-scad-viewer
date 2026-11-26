@@ -16855,7 +16855,7 @@
     {
       "id": "NURBS-0636",
       "name": "Уточнение центра масс сборки NURBS при интервальных массах",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_mass_weighted_centroid",
@@ -16863,7 +16863,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-636-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-636-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-636-2026-11-17/native.log.gz",
+        "examples/rush/mass-weighted-centroid.r",
+        "tests/rushPhysicalMoments.test.ts"
       ],
       "remainingQualification": [
         "Bound the centroid using sorted mass endpoint assignments with shared numerator and denominator weights.",
@@ -17098,7 +17100,7 @@
     {
       "id": "NURBS-0647",
       "name": "Физические ограничения главных моментов инерции NURBS-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_physical_principal_moments",
@@ -17107,7 +17109,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
         "docs/qualification/nurbs-curvature-field-647-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-647-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-647-2026-11-17/native.log.gz",
+        "examples/rush/physical-principal-moments.r",
+        "tests/rushPhysicalMoments.test.ts"
       ],
       "remainingQualification": [
         "Tighten principal moments using positive semidefiniteness, ordering and inertia triangle inequalities.",
@@ -17118,7 +17122,7 @@
     {
       "id": "NURBS-0648",
       "name": "Гарантированные разности соседних главных моментов инерции NURBS-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::bound_physical_principal_moment_gaps",
@@ -17126,7 +17130,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-648-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-648-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-648-2026-11-17/native.log.gz",
+        "examples/rush/physical-moment-gaps.r",
+        "tests/rushPhysicalMoments.test.ts"
       ],
       "remainingQualification": [
         "Enclose adjacent ordered moment differences and cap the upper gap by the least moment.",
@@ -17137,7 +17143,7 @@
     {
       "id": "NURBS-0649",
       "name": "Сертификация направления главной оси инерции по невязке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::surface_measure::certify_principal_axis_direction",
@@ -17145,7 +17151,9 @@
         "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-649-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-649-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-649-2026-11-17/native.log.gz",
+        "examples/rush/certify-principal-direction.r",
+        "tests/rushPhysicalMoments.test.ts"
       ],
       "remainingQualification": [
         "Bound the sine of the acute angle to an isolated principal axis from a certified residual and unwanted spectral separation.",

@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "678fb30823c29baf06e9ad9d4ed312e0cd538ea7d922af2fb310c53c7b1441ad",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/mass-weighted-centroid.r",
+      "exampleSha256": "6c473e8e2d64c96e93e628650066f10a44ea35430781cfdd3fb11712f7f753a3",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 60 ms"
+    },
+    {
+      "example": "examples/rush/physical-principal-moments.r",
+      "exampleSha256": "c0c4571020b978be404421cec7c9c3728468a6603de361e6fe293ab5344a5fc2",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/physical-moment-gaps.r",
+      "exampleSha256": "24a23981a18a7aa2e23d226cf58ad5a86ebe61724146d39f9cbdcbc2986c586d",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/certify-principal-direction.r",
+      "exampleSha256": "9c7ab342ebabfe74dd831d53adfa7483df1aa78f34e0c65818e18b46fe163146",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n8\nГотово · 6 ms"
+    }
+  ]
+}
