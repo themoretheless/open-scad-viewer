@@ -722,6 +722,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "isolate_uv_seam" => &["direction","seam_coordinate","parameter_width","max_work"],
         "split_uv_seam" => &["direction","seam_coordinate","piece","max_work"],
         "lift_uv_edge" => &["target_geometry","piece","max_work"],
+        "pullback_curve_to_uv" => &["target_geometry", "tolerance_mm", "max_segments", "max_iterations", "agreement_cells"],
+        "bevel_offset_wire" => &["distance_mm", "tolerance_mm", "max_cells", "piece"],
         "transfer_uv_grid_piece" => &["old_u_breaks","old_v_breaks","u_breaks","v_breaks","u_factors","v_factors","piece","max_work"],
         "relayout_trim_surface" => &["loops","u_breaks","v_breaks","u_factors","v_factors","max_work"],
         "relayout_trim_piece" => &["loops","u_breaks","v_breaks","u_factors","v_factors","loop_index","piece","max_work"],

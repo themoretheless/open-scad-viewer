@@ -1124,6 +1124,27 @@ export function createOwnNurbsResolver(
             result = {kind: 'surface', data: surface}
             break
           }
+          case 'pullback_curve_to_uv': {
+            const {op,id:_id,input,target_geometry,...args}=n
+            const {pcurve,...report}=callGeometryRust<{pcurve:NurbsCurve|null;status:string}>(op,{
+              curve:needCurve(input),surface:needSurface(target_geometry),...args,
+            })
+            constructionReports[key]={measurement:{operation:op,report}}
+            if(!pcurve) throw new Error('Curve lift is unproven: '+report.status)
+            result={kind:'curve',data:pcurve}
+            break
+          }
+          case 'bevel_offset_wire': {
+            const {op,input,distance_mm,tolerance_mm,max_cells,piece}=n
+            const {curves,report}=callGeometryRust<{curves:NurbsCurve[];report:object}>('curve_offset_bevel_wire',{
+              curve:needCurve(input),distance:distance_mm,toleranceMm:tolerance_mm,maxCells:max_cells,
+            })
+            const curve=curves[piece]
+            if(!curve) throw new Error('Offset wire piece index is outside the returned wire')
+            constructionReports[key]={measurement:{operation:op,report:{...report,piece,pieceCount:curves.length}}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'lift_uv_edge': {
             const surface = needSurface(n.target_geometry)
             const source = needCurve(n.input)
