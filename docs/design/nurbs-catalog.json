@@ -13242,7 +13242,7 @@
     {
       "id": "NURBS-0478",
       "name": "Точное выдавливание плоского булева профиля в проверенное B-rep-тело",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::extrude_exact_coplanar_polyline_boolean_brep",
@@ -13261,7 +13261,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/boolean/operations/planar_model.rs",
         "docs/qualification/nurbs-curvature-field-478-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-478-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-478-2026-11-17/native.log.gz",
+        "examples/rush/build-profile-boolean-solid.r",
+        "tests/rushProfileExtrusion.test.ts"
       ],
       "remainingQualification": [
         "Build planar B-rep caps and walls from exact Boolean contours and certify swept volume.",
@@ -13272,7 +13274,7 @@
     {
       "id": "NURBS-0479",
       "name": "Точные центр объёма и тензор инерции выдавленного булева профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_coplanar_polyline_boolean_extrusion_inertia",
@@ -13290,7 +13292,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-479-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-479-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-479-2026-11-17/native.log.gz",
+        "examples/rush/measure-profile-extrusion-inertia.r",
+        "tests/rushProfileExtrusion.test.ts"
       ],
       "remainingQualification": [
         "Integrate exact volumetric mass properties of rational planar Boolean extrusions.",
@@ -13301,7 +13305,7 @@
     {
       "id": "NURBS-0480",
       "name": "Точная классификация точек в косом выдавливании плоского булева профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::locate_points_in_exact_coplanar_polyline_boolean_extrusion",
@@ -13319,7 +13323,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-480-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-480-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-480-2026-11-17/native.log.gz",
+        "examples/rush/locate-profile-extrusion-points.r",
+        "tests/rushProfileExtrusion.test.ts"
       ],
       "remainingQualification": [
         "Classify exact point batches against rational planar Boolean extrusions.",
@@ -13330,7 +13336,7 @@
     {
       "id": "NURBS-0481",
       "name": "Точное отсечение ломаной косым выдавливанием булева профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::clip_path_to_exact_coplanar_polyline_boolean_extrusion",
@@ -13349,7 +13355,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
         "docs/qualification/nurbs-curvature-field-481-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-481-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-481-2026-11-17/native.log.gz",
+        "examples/rush/clip-profile-extrusion-path.r",
+        "tests/rushProfileExtrusion.test.ts"
       ],
       "remainingQualification": [
         "Clip spatial paths to closed rational Boolean extrusions, retaining wall and cap contacts.",
@@ -13360,7 +13368,7 @@
     {
       "id": "NURBS-0482",
       "name": "Гарантированная площадь поверхности выдавленного булева профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_coplanar_polyline_boolean_extrusion_area",
@@ -13378,7 +13386,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-482-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-482-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-482-2026-11-17/native.log.gz",
+        "examples/rush/bound-profile-extrusion-area.r",
+        "tests/rushProfileExtrusion.test.ts"
       ],
       "remainingQualification": [
         "Enclose cap, wall and total area of an exact rational Boolean extrusion.",

@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "1b7e36e8202dd434348b9e9ca43f97b8a5239176a403d34218b12f2eff22943c",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/build-profile-boolean-solid.r",
+      "exampleSha256": "ef438edd9f32ae097e439fa8bdda8543835d20ca516dadba22bf79d5878f11f2",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n12\nПлощадь\n32,65\nГотово · 68 ms"
+    },
+    {
+      "example": "examples/rush/measure-profile-extrusion-inertia.r",
+      "exampleSha256": "c9517daf2aeb559dc0c3dbfadae5e8af8f6aa7efc6de415eb9231529dda1f2a2",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 36 ms"
+    },
+    {
+      "example": "examples/rush/locate-profile-extrusion-points.r",
+      "exampleSha256": "ae3afc12308da41335ea18b850bbd7ae039a502024607e15399a009e49b34bfa",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/clip-profile-extrusion-path.r",
+      "exampleSha256": "7b93eb0df9b2ad4c607a67a87427571051629304b7dd94e89da3736da724dd97",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/bound-profile-extrusion-area.r",
+      "exampleSha256": "1e34622315e75067a623f249c10610d0058d5a1e22df453e8af906da8f508d50",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 5 ms"
+    }
+  ]
+}
