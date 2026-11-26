@@ -133,6 +133,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'store_plane_branch') return russian ? 'Пространственная кривая сечения' : 'store plane branch'
   if (operation === 'split_cell_by_plane') return russian ? 'Разрез узловой ячейки плоскостью' : 'Split knot cell by plane'
   if (operation === 'pair_plane_branch') return russian ? 'Согласованные кривые сечения' : 'pair plane branch'
+  if (operation === 'stitch_plane_strip') return russian ? 'Сшивка ветви через узловые ячейки' : 'stitch plane strip'
+  if (operation === 'trace_plane_strip') return russian ? 'Пространственная кривая через узловые ячейки' : 'trace plane strip'
   if (operation === 'plane_branch_xyz_polyline') return russian ? 'Пространственная аппроксимация ветви' : 'plane branch xyz polyline'
   if (operation === 'audit_plane_side') return russian ? 'Положение поверхности относительно плоскости' : 'audit plane side'
   if (operation === 'refine_plane_side') return russian ? 'Уточнение положения поверхности' : 'refine plane side'

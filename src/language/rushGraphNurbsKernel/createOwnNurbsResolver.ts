@@ -644,6 +644,8 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'stitch_plane_strip':
+          case 'trace_plane_strip':
           case 'sample_plane_branch':
           case 'plane_branch_uv_polyline':
           case 'plane_branch_xyz_polyline':

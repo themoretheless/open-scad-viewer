@@ -9,12 +9,48 @@ pub(super) fn inspect(v: &Value, op: &str) -> Result<Value> {
     let normal = field(v, "plane_normal")?;
     let offset = field(v, "plane_offset_mm")?;
     let max_work = field(v, "max_work")?;
-    let span = field(v, "knot_span")?;
+
     let solve_axis = match v["direction"].as_str() {
         Some("u") => UvAxis::U,
         Some("v") => UvAxis::V,
         _ => return Err(input("Expected a U or V direction")),
     };
+    if matches!(op, "stitch_plane_strip" | "trace_plane_strip") {
+        let strip = plane::SurfacePlaneGraphStripOptions {
+            solve_axis,
+            solved_span: field(v, "solved_span")?,
+            transverse_spans: field(v, "transverse_spans")?,
+            max_normalized_width: field(v, "parameter_width")?,
+            max_work,
+        };
+        let describe = |s: plane::SurfacePlaneGraphStrip| json!({"cells":s.cells.into_iter().map(|c|json!({"span":c.span,"domain":c.domain,"graph":graph(c.graph)})).collect::<Vec<_>>(),"junctions":s.junctions.into_iter().map(|j|json!({"transverse":j.transverse,"solved":j.solved.map(|q|q.to_string())})).collect::<Vec<_>>()});
+        let (report, used) = if op == "stitch_plane_strip" {
+            let r = plane::stitch_surface_plane_graph_strip(&surface, normal, offset, strip)?;
+            (r.outcome.map(describe), r.work_used)
+        } else {
+            let r = plane::approximate_surface_plane_strip_xyz(
+                &surface,
+                normal,
+                offset,
+                plane::SurfacePlaneWorldStripOptions {
+                    strip,
+                    max_xyz_error: field(v, "tolerance_mm")?,
+                    max_segments_per_cell: field(v, "max_segments_per_cell")?,
+                },
+            )?;
+            (r.outcome.map(|w|json!({"strip":describe(w.strip),"uv":w.uv.into_iter().map(|p|p.map(|q|q.to_string())).collect::<Vec<_>>(),"xyz":w.xyz.into_iter().map(|p|p.map(|q|q.to_string())).collect::<Vec<_>>(),"cellVertices":w.cell_vertices,"cellErrorUpper":w.cell_error_upper.into_iter().map(|q|q.to_string()).collect::<Vec<_>>()})),r.work_used)
+        };
+        let mut out = match report {
+            Ok(mut v) => {
+                v["status"] = json!("complete");
+                v
+            }
+            Err(reason) => json!({"status":"refused","reason":format!("{reason:?}")}),
+        };
+        out["workUsed"] = json!(used);
+        return Ok(out);
+    }
+    let span = field(v, "knot_span")?;
     if matches!(
         op,
         "split_cell_by_plane" | "store_plane_branch" | "pair_plane_branch"
