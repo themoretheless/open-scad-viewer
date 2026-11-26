@@ -8424,7 +8424,7 @@
     {
       "id": "NURBS-0301",
       "name": "Точная сверка пространственного ребра с UV-контуром на поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::compare_pcurve_edge",
@@ -8434,7 +8434,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs",
         "crates/nurbs-core/tests/exact_pcurve_edge_agreement_contracts.rs",
         "docs/qualification/nurbs-curvature-field-301-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-301-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-301-2026-11-16/native.log.gz",
+        "examples/rush/verify-uv-edge.r",
+        "tests/rushUvAgreement.test.ts"
       ],
       "remainingQualification": [
         "Compare original homogeneous edge and tensor-composed trim traces on their full common parameter partition without storing reconstructed edge pieces.",
@@ -8445,7 +8447,7 @@
     {
       "id": "NURBS-0302",
       "name": "Точная сверка общего шва по двум UV-контурам соседних поверхностей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::compare_surface_pcurve_seam",
@@ -8455,7 +8457,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs",
         "crates/nurbs-core/tests/exact_surface_pcurve_seam_contracts.rs",
         "docs/qualification/nurbs-curvature-field-302-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-302-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-302-2026-11-16/native.log.gz",
+        "examples/rush/compare-uv-traces.r",
+        "tests/rushUvAgreement.test.ts"
       ],
       "remainingQualification": [
         "Prove equality or locate the first exact mismatch between paired surface-owned trim traces over the union of their parameter partitions.",
@@ -8466,7 +8470,7 @@
     {
       "id": "NURBS-0303",
       "name": "Точная проверка касательных плоскостей вдоль сопряжения двух поверхностей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::compare_pcurve_tangent_planes",
@@ -8477,7 +8481,9 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_tangent.rs",
         "crates/nurbs-core/tests/exact_pcurve_tangent_contracts.rs",
         "docs/qualification/nurbs-curvature-field-303-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-303-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-303-2026-11-16/native.log.gz",
+        "examples/rush/compare-uv-tangents.r",
+        "tests/rushUvAgreement.test.ts"
       ],
       "remainingQualification": [
         "Prove positional and regular tangent-plane agreement over a paired surface seam by exact rational composition and full-interval normal tests.",

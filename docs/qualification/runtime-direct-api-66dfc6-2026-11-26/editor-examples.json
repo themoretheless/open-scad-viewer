@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "66dfc64d9f7bc9f3e9545ede35a1bf5244b0da51af55fee0fd8d4b9863b5860a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/verify-uv-edge.r",
+      "exampleSha256": "e687be07e8f49a334a7484305cea570e26317e2452b8bfe76c026863d87f6d71",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 56 ms"
+    },
+    {
+      "example": "examples/rush/compare-uv-traces.r",
+      "exampleSha256": "2ba374c58575c964b3007ce15ca92b281c8c87a85fb18a6c15f72a7b03242a0a",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/compare-uv-tangents.r",
+      "exampleSha256": "f49439bd8de92756a33ae9d8e31470e9efe8bece6b2d4ed863f90e5e6a5705f3",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n1\nГотово · 6 ms"
+    }
+  ]
+}
