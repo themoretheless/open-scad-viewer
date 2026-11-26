@@ -28,8 +28,8 @@ pub(super) fn assemble(v: &Value) -> Result<Value> {
         })
         .collect();
     let report = trimmed_shell::assemble(
-        model.vertices,
-        model.edges,
+        model.vertices.clone(),
+        model.edges.clone(),
         patches,
         Limits {
             tolerance_mm: field(v, "tolerance_mm")?,

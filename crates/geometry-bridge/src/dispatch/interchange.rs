@@ -2,6 +2,8 @@
 use crate::*;
 #[path="trimmed_shell_requests.rs"]
 mod trimmed_shell_requests;
+#[path="periodic_source_faces.rs"]
+mod periodic_source_faces;
 
 #[path="shared_assembly_rays.rs"]
 mod shared_assembly_rays;
@@ -61,6 +63,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if v["op"].as_str() == Some("sew_periodic_source_face") {
+        return Routed::Handled(periodic_source_faces::sew(&v));
+    }
     if v["op"].as_str() == Some("assemble_owned_trimmed_shell") {
         return Routed::Handled(trimmed_shell_requests::assemble(&v));
     }

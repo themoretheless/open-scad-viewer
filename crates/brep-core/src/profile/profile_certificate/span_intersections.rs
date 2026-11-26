@@ -580,7 +580,7 @@ pub use translated::{
 pub use translated::{
     OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge, OriginalPeriodicSewnFace,
     OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces, PeriodicSewnFaceLimits,
-    own_periodic_sewn_faces,
+    own_periodic_sewn_faces, sew_periodic_source_face,
 };
 
 #[path="span_intersections/algorithm_witness.rs"]

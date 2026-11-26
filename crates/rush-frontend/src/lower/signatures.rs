@@ -119,6 +119,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "variable_radius_fillet_surface" => &["target_geometry", "radius_stations", "side_a", "side_b", "tolerance_mm", "max_march_steps", "max_sections"],
         "profile_spring_surface" => &["center", "radius", "height", "turns", "phase_degrees", "tolerance_mm", "max_spans"],
         "sphere_envelope_surface" => &["target_geometry", "normal", "tolerance_mm", "max_patches", "max_domain_cells"],
+        "sew_periodic_source_face" => &["loops", "wrapped_axes", "base_uv", "base_winding", "probe_radius_uv", "max_work", "max_edges"],
         "assemble_owned_trimmed_shell" => &["tolerance_mm", "tolerance_uv", "agreement_cells", "trim_pairs", "trim_cells", "trim_domain_cells", "regularity_cells"],
         "thicken_nurbs_patch" => &["thickness_mm", "tolerance_mm"],
         "inspect_patch_closure" => &["inputs", "max_intervals", "max_cells"],

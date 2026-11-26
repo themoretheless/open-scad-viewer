@@ -720,7 +720,7 @@ pub use span_intersections::{
 };
 
 pub use span_intersections::{
-    own_periodic_sewn_faces, OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge,
+    own_periodic_sewn_faces, sew_periodic_source_face, OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge,
     OriginalPeriodicSewnFace, OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces,
     PeriodicSewnFaceLimits,
 };
