@@ -20945,7 +20945,7 @@
     {
       "id": "NURBS-0828",
       "name": "Сохранение индивидуальных допусков деталей при обмене STEP-сборкой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::export_step_shared_assembly",
@@ -20954,7 +20954,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-828-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-828-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-828-2026-11-17/native.log.gz",
+        "examples/rush/step-part-tolerances.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Write definition-specific AP242 uncertainty contexts and reuse the same context for equal tolerances.",
@@ -20965,7 +20967,7 @@
     {
       "id": "NURBS-0829",
       "name": "Повторный экспорт STEP-экземпляров с неравномерным масштабированием",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::export_step_shared_assembly",
@@ -20974,7 +20976,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-829-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-829-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-829-2026-11-17/native.log.gz",
+        "examples/rush/export-scaled-step-instance.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Serialize positive per-axis scales in AP242 orthogonal placements without copying the shared definition.",
@@ -20985,7 +20989,7 @@
     {
       "id": "NURBS-0830",
       "name": "Повторный экспорт зеркальных экземпляров общей STEP-геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::export_step_shared_assembly",
@@ -20994,7 +20998,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-830-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-830-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-830-2026-11-17/native.log.gz",
+        "examples/rush/export-mirrored-step-instance.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Reserialize imported reflected orthogonal placements with positive scale magnitudes and a reflected axis frame.",
@@ -21005,7 +21011,7 @@
     {
       "id": "NURBS-0831",
       "name": "Редактирование масштабированного и зеркального размещения STEP-экземпляра",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::set_occurrence_orthogonal_placement",
@@ -21015,7 +21021,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-831-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-831-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-831-2026-11-17/native.log.gz",
+        "examples/rush/set-scaled-step-placement.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Set independent scales and reflection on one shared occurrence under a nonsingular orthogonal placement.",
@@ -21026,7 +21034,7 @@
     {
       "id": "NURBS-0832",
       "name": "Консервативные габариты STEP-экземпляров по общей NURBS-геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::occurrence_bounds",
@@ -21034,7 +21042,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-832-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-832-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-832-2026-11-17/native.log.gz",
+        "examples/rush/step-occurrence-bounds.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Scan the control hull once per definition and apply directed-rounding affine bounds to each placement.",
@@ -21045,7 +21055,7 @@
     {
       "id": "NURBS-0833",
       "name": "Предварительный поиск близких пар экземпляров STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::proximity_candidates",
@@ -21053,7 +21063,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-833-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-833-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-833-2026-11-17/native.log.gz",
+        "examples/rush/step-proximity-pairs.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Identify conservatively close occurrence pairs using a directed-rounding lower bound on Euclidean box distance.",
@@ -21064,7 +21076,7 @@
     {
       "id": "NURBS-0834",
       "name": "Пересечение размещённых тел STEP-сборки с построением общего материала",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::intersect_occurrences",
@@ -21072,7 +21084,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-834-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-834-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-834-2026-11-17/native.log.gz",
+        "examples/rush/step-common-material.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Materialize only the selected pair and evaluate their regularized B-rep intersection.",
@@ -21083,7 +21097,7 @@
     {
       "id": "NURBS-0835",
       "name": "Пакетная проверка объёмных пересечений деталей STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::check_interferences",
@@ -21091,7 +21105,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-835-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-835-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-835-2026-11-17/native.log.gz",
+        "examples/rush/step-interferences.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Filter pairs by conservative boxes, bound narrow-phase work by a caller-supplied candidate limit and report common material or a diagnostic for each candidate.",
@@ -21102,7 +21118,7 @@
     {
       "id": "NURBS-0836",
       "name": "Суммарный объём материала размещённых деталей STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_volume_mm3",
@@ -21111,7 +21127,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-836-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-836-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-836-2026-11-17/native.log.gz",
+        "examples/rush/step-material-volume.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Estimate summed occurrence volume using one mass integration per definition and absolute linear determinants for placements.",
@@ -21122,7 +21140,7 @@
     {
       "id": "NURBS-0837",
       "name": "Импорт совпадающих размещений STEP с отдельными связями экземпляров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::import_step_shared_assembly",
@@ -21132,7 +21150,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-837-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-837-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-837-2026-11-17/native.log.gz",
+        "examples/rush/read-coincident-step-instances.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Preserve coincident placements where each is backed by a distinct explicit product usage path.",
@@ -21143,7 +21163,7 @@
     {
       "id": "NURBS-0838",
       "name": "Центр объёма STEP-сборки с общими NURBS-определениями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_centroid_mm",
@@ -21151,7 +21171,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-838-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-838-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-838-2026-11-17/native.log.gz",
+        "examples/rush/step-material-centroid.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Integrate once per definition, transform each centroid and weight it by the placed material volume.",
@@ -21162,7 +21184,7 @@
     {
       "id": "NURBS-0839",
       "name": "Центральный тензор инерции STEP-сборки с масштабированными экземплярами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_inertia_mm5",
@@ -21170,7 +21192,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-839-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-839-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-839-2026-11-17/native.log.gz",
+        "examples/rush/step-material-inertia.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Transform local central second moments with each occurrence matrix and sum them at the assembly centroid.",
@@ -21181,7 +21205,7 @@
     {
       "id": "NURBS-0840",
       "name": "Суммарная площадь поверхностей STEP-сборки при неравномерном масштабе",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_surface_area_mm2",
@@ -21189,7 +21213,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-840-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-840-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-840-2026-11-17/native.log.gz",
+        "examples/rush/step-material-area.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Reuse definition area for similarities and integrate each distinct general linear placement without its translation.",
@@ -21200,7 +21226,7 @@
     {
       "id": "NURBS-0841",
       "name": "Главные моменты и оси инерции STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::material_principal_inertia",
@@ -21209,7 +21235,9 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
         "docs/qualification/nurbs-curvature-field-841-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-841-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-841-2026-11-17/native.log.gz",
+        "examples/rush/step-principal-inertia.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Diagonalize the normalized assembly inertia tensor and restore principal moments in physical units.",
@@ -21220,7 +21248,7 @@
     {
       "id": "NURBS-0842",
       "name": "Масса, центр масс и тензор инерции STEP-сборки из разных материалов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::mass_properties_with_densities",
@@ -21228,7 +21256,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-842-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-842-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-842-2026-11-17/native.log.gz",
+        "examples/rush/step-mass-properties.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Integrate shared definitions once and accumulate density-weighted affine central moments for each occurrence.",
@@ -21498,7 +21528,7 @@
     {
       "id": "NURBS-0856",
       "name": "Сборка из исходных B-rep-прототипов и таблицы размещений",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::from_placed_solids",
@@ -21507,7 +21537,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-856-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curvature-field-856-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-856-2026-11-18/native.log.gz",
+        "examples/rush/make-step-assembly.r",
+        "tests/rushAssemblyProperties.test.ts"
       ],
       "remainingQualification": [
         "Create an editable shared assembly directly from local solids and authored orthogonal placements, preserving occurrence order and definition identities.",
