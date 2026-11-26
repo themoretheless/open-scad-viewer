@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "2db630392031c9291c21ec7e8bab014aaf5fefe530e6e5cd0aea4b7d8cafab04",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/edit-profile-sector.r",
+      "exampleSha256": "ccb061863bb151e0d30169052677a202997f9481871741c91104150a314df22d",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,65\nГотово · 43 ms"
+    },
+    {
+      "example": "examples/rush/edit-closed-sector.r",
+      "exampleSha256": "42e2a457b7034b06c93598d6345e12655bf532110a0dfd078feaac4923428a57",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,65\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/edit-tangent-sector.r",
+      "exampleSha256": "f6238c43a23d322e2f39f50daea385e82f63ded736f20b596d47f37d15799bbd",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,65\nГотово · 6 ms"
+    }
+  ]
+}

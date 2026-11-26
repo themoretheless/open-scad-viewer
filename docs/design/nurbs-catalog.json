@@ -22867,7 +22867,7 @@
     {
       "id": "NURBS-0923",
       "name": "Локальное редактирование зуба в сжатом круговом NURBS-профиле",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector",
@@ -22876,7 +22876,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-gear-edit-sector-923-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-edit-sector-923-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-edit-sector-923-2026-11-18/native.log.gz",
+        "examples/rush/edit-profile-sector.r",
+        "tests/rushSectorEdits.test.ts"
       ],
       "remainingQualification": [
         "Replacement preserves the piece and knot layouts. This edits in-memory curves; join continuity and validity of a rebuilt solid require separate checks."
@@ -22885,7 +22887,7 @@
     {
       "id": "NURBS-0924",
       "name": "Редактирование зуба с точной проверкой внутренних стыков и циклического шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector_with_closed_joins",
@@ -22894,7 +22896,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/native.log.gz",
+        "examples/rush/edit-closed-sector.r",
+        "tests/rushSectorEdits.test.ts"
       ],
       "remainingQualification": [
         "Exact positional joins at clamped ends incident to edited sector. Global simplicity, tangency and solid validity require separate checks."
@@ -22903,7 +22907,7 @@
     {
       "id": "NURBS-0925",
       "name": "Сохранение касательности G1 при правке сжатого составного профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector_preserving_g1",
@@ -22912,7 +22916,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-g1-edit-925-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-g1-edit-925-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-g1-edit-925-2026-11-18/native.log.gz",
+        "examples/rush/edit-tangent-sector.r",
+        "tests/rushSectorEdits.test.ts"
       ],
       "remainingQualification": [
         "Preserves originally regular exactly G1 clamped joins, with exact rational tests on stored poles. Approximate tangency, curvature and self-intersection are separate."
