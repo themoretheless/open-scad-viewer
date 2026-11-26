@@ -7,6 +7,8 @@ use crate::editing::exact_periodic_surface::build_exact_periodic_surface_trim_pa
 use crate::trim_domain::TrimDomain;
 
 pub(super) const OPS: &[&str] = &[
+    "periodic_trim_set_area",
+    "periodic_trim_set_centroid",
     "trimmed_surface_area_in_window",
     "trimmed_surface_centroid",
     "trimmed_surface_area_inertia",
@@ -39,6 +41,22 @@ pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
                 json!({"workUsed":used,"refusal":result.refusal.map(|r|format!("{r:?}")),"measure":null}),
             );
         };
+        if matches!(op, "periodic_trim_set_area" | "periodic_trim_set_centroid") {
+            use crate::analysis::surface_measure::{periodic_trim_patch_set_area, periodic_trim_patch_set_centroid};
+            let tolerance = field(v, "tolerance_mm2")?;
+            let cells = field(v, "max_surface_cells")?;
+            let trim_cells = field(v, "max_trim_cells")?;
+            let (measure, centroid) = if op == "periodic_trim_set_area" {
+                (periodic_trim_patch_set_area(&patches,tolerance,uv_tolerance,cells,trim_cells)?, None)
+            } else {
+                let r = periodic_trim_patch_set_centroid(&patches,tolerance,uv_tolerance,cells,trim_cells)?;
+                (r.measure, r.centroid_bounds)
+            };
+            let components = measure.components.iter().map(|a|json!({"boundsMm2":a.bounds,
+                "withinTolerance":a.within_tolerance,"cells":a.cells})).collect::<Vec<_>>();
+            return Ok(json!({"measure":area(measure.total),"components":components,"centroidBoundsMm":centroid,
+                "workUsed":used,"refusal":null}));
+        }
         let index: usize = field(v, "outer_contour")?;
         let patch = patches
             .into_iter()

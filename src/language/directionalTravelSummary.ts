@@ -355,6 +355,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'curve_divide_by_length') return russian ? 'Деление по длине' : 'Equal arc-length division'
   if (operation === 'surface_area_bounds') return russian ? 'Площадь поверхности' : 'Surface area'
   if (operation === 'trimmed_surface_area_in_window') return russian ? 'Площадь внутри окна UV' : 'Area inside the UV window'
+  if (operation === 'periodic_trim_set_area') return russian ? 'Суммарная площадь компонент' : 'Total trimmed area'
+  if (operation === 'periodic_trim_set_centroid') return russian ? 'Центр площади компонент' : 'Combined area centroid'
   if (operation === 'trimmed_surface_centroid') return russian ? 'Центр площади' : 'Area centroid'
   if (operation === 'trimmed_surface_area_inertia') return russian ? 'Тензор инерции площади' : 'Area inertia tensor'
   if (operation === 'finite_external_thread') return russian ? 'Наружная резьба' : 'External thread'

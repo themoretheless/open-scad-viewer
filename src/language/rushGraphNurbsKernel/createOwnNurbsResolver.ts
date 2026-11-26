@@ -782,6 +782,15 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'periodic_trim_set_area':
+          case 'periodic_trim_set_centroid': {
+            const {id:_id,input,op,...parameters}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,...parameters})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'trimmed_surface_area_in_window':
           case 'trimmed_surface_centroid':
           case 'trimmed_surface_area_inertia': {
