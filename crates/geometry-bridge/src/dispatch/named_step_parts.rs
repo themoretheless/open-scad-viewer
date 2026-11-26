@@ -1,7 +1,7 @@
 use crate::*;
 use cad_step::{export_named_step_assembly,import_named_step_assembly,import_step_shared_assembly,NamedStepAssembly};
 
-pub(super) const OPS:&[&str]=&["name_step_parts","read_step_names","step_parts_list","select_step_parts",
+pub(super) const OPS:&[&str]=&["name_step_parts","read_step_names","step_parts_list","compress_step_definition","select_step_parts",
     "name_step_variant","append_named_parts","consolidate_named_parts","compare_parts_lists"];
 
 fn write(assembly:&NamedStepAssembly)->Result<String> {
@@ -31,6 +31,15 @@ pub(super) fn apply(v:&Value)->Result<Value>{
             })).collect();
             report["surfaceUsage"]=json!(rows);
             text.to_owned()
+        }
+        "compress_step_definition"=>{
+            let definition=field(v,"definition")?;
+            let faces:Vec<usize>=field(v,"faces")?;
+            let max_work=field(v,"max_work")?;
+            let accepted=assembly.assembly.compress_definition_faces(definition,&faces,max_work)?;
+            report["definition"]=json!(definition);
+            report["accepted"]=json!(accepted);
+            if accepted { write(&assembly)? } else { text.to_owned() }
         }
         "select_step_parts"=>assembly.export_selected_parts(&field::<Vec<usize>>(v,"definition_indices")?,&field::<String>(v,"product_name")?)?,
         "name_step_variant"=>{

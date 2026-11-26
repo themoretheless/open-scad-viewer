@@ -37,3 +37,15 @@ pub(super) fn export(v:&Value)->Result<Value>{
     report["step"]=json!(step);
     Ok(report)
 }
+
+pub(super) fn compress_brep(v: &Value) -> Result<Value> {
+    let model: brep_core::Model = field(v, "model")?;
+    let max_work = field(v, "max_work")?;
+    let compressed = if v["op"].as_str() == Some("compress_brep_faces") {
+        model.compress_face_surfaces(&field::<Vec<usize>>(v, "faces")?, max_work)?
+    } else {
+        model.compress_edge_with_trims(field(v, "edge_index")?, max_work)?
+    };
+    let accepted = compressed.is_some();
+    Ok(json!({"model":compressed.unwrap_or(model),"accepted":accepted}))
+}

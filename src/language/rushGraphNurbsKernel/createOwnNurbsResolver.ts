@@ -3014,8 +3014,9 @@ export function createOwnNurbsResolver(
             const target='target_geometry' in parameters ? parameters.target_geometry : undefined
             const additional=target ? (op==='append_step_assembly' ? {otherStep:requireStepFile(target)} : {model:needBrep(target)}) : {}
             const {model,step:output,...report}=callGeometryRust<{model:NurbsBrep;step:string;definitionCount:number;occurrenceCount:number}>(op==='open_step_file'?'read_shared_step':op,{...Object.fromEntries(Object.entries(parameters).filter(([k])=>k!=='step_text')),...additional,step})
-            sharedStepFiles.set(key,output)
-            constructionReports[key]={measurement:{operation:op,report:{...report,step:output}}}
+            const attachment=op==='open_step_file'?step:output
+            sharedStepFiles.set(key,attachment)
+            constructionReports[key]={measurement:{operation:op,report:{...report,step:attachment}}}
             result={kind:'brep',data:model}
             break
           }
@@ -3041,6 +3042,7 @@ export function createOwnNurbsResolver(
           case 'name_step_parts':
           case 'read_step_names':
           case 'step_parts_list':
+          case 'compress_step_definition':
           case 'select_step_parts':
           case 'name_step_variant':
           case 'append_named_parts':
@@ -3107,6 +3109,14 @@ export function createOwnNurbsResolver(
             if(text===undefined) throw new Error('Select an exported IGES body')
             const {model,...report}=callGeometryRust<{model:NurbsBrep}>('brep_nurbs_import_iges_v2',{text})
             constructionReports[key]={measurement:{operation:n.op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
+          case 'compress_brep_faces':
+          case 'compress_brep_edge': {
+            const {id:_id,input,op,...args}=n
+            const {model,...report}=callGeometryRust<{model:NurbsBrep}>(op,{...args,model:needBrep(input)})
+            constructionReports[key]={measurement:{operation:op,report}}
             result={kind:'brep',data:model}
             break
           }

@@ -77,6 +77,19 @@ fn compact_definition_survives_named_step_round_trip() {
         let directory = std::path::Path::new(&directory);
         std::fs::write(directory.join("original.step"), &initial).unwrap();
         std::fs::write(directory.join("compressed.step"), &edited).unwrap();
+        let mut edge_model = baseline[repeated].clone();
+        let edge = 0;
+        let refine = |curve: &mut nurbs_core::curve::Curve| {
+            *curve = curve.insert((curve.domain()[0] + curve.domain()[1]) / 2., 1).unwrap();
+        };
+        refine(&mut edge_model.edges[edge].curve);
+        for coedge in edge_model.loops.iter_mut()
+            .flat_map(|wire| &mut wire.coedges).filter(|coedge| coedge.edge == edge)
+        {
+            refine(&mut coedge.pcurve);
+        }
+        let (step, _, _) = cad_step::export_step_v9(&edge_model).unwrap();
+        std::fs::write(directory.join("refined-edge.step"), step).unwrap();
     }
     assert!(edited.len() < initial.len());
     let restored = import_named_step_assembly(&edited).unwrap();

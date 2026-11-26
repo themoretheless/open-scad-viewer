@@ -59,6 +59,9 @@ const OPS: &[&str] = &[
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
+    if matches!(v["op"].as_str(), Some("compress_brep_faces" | "compress_brep_edge")) {
+        return Routed::Handled(compact_product_step::compress_brep(&v));
+    }
     if matches!(v["op"].as_str(),Some("compact_body_step"|"compact_product_step")) { return Routed::Handled(compact_product_step::export(&v)); }
     if matches!(v["op"].as_str(),Some("group_step_parts"|"style_step_occurrences"|"read_occurrence_styles")) {return Routed::Handled(step_occurrence_styles::apply(&v));}
     if named_step_parts::OPS.contains(&v["op"].as_str().unwrap_or("")) {return Routed::Handled(named_step_parts::apply(&v));}
