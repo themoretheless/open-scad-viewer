@@ -1473,6 +1473,9 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'minimum_mixed_gap':
+          case 'mixed_path_clearance':
+          case 'mixed_margin_clearance':
           case 'minimum_sphere_gap':
           case 'minimum_box_gap':
           case 'minimum_oriented_box_gap':
