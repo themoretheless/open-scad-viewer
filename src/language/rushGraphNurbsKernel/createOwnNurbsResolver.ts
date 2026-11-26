@@ -1460,6 +1460,10 @@ export function createOwnNurbsResolver(
             result = {kind:'surface',data:surface}
             break
           }
+          case 'join_affine_c1':
+          case 'join_affine_c2':
+          case 'join_projective_c2':
+          case 'join_stationary_c2':
           case 'join_mixed_degree':
           case 'compact_join_seam':
           case 'compare_parametric_seam':

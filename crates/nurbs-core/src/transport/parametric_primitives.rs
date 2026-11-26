@@ -139,7 +139,7 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
     if matches!(op,"merge_patch_strip" | "merge_patch_grid" | "inspect_patch_grid") { return Some(exact_merge_requests::grid(v,op)); }
     if matches!(op,"split_tensor_surface" | "tile_tensor_surface") { return Some(exact_merge_requests::split(v,op)); }
     if matches!(op,"compress_tensor_surface" | "compress_tensor_surface_batch") { return Some(exact_merge_requests::compress(v,op)); }
-    if matches!(op,"join_mixed_degree" | "compact_join_seam" | "compare_parametric_seam" | "compare_geometric_seam" | "merge_weighted_curves" | "merge_weighted_chain" | "merge_curve_exact" | "merge_surface_exact") { return Some(exact_merge_requests::merge(v,op)); }
+    if matches!(op,"join_affine_c1" | "join_affine_c2" | "join_projective_c2" | "join_stationary_c2" | "join_mixed_degree" | "compact_join_seam" | "compare_parametric_seam" | "compare_geometric_seam" | "merge_weighted_curves" | "merge_weighted_chain" | "merge_curve_exact" | "merge_surface_exact") { return Some(exact_merge_requests::merge(v,op)); }
     if matches!(op,"fit_cst_sides" | "naca_five_digit_profile" | "cst_spline_profile" | "cst_section_integrals") { return Some(airfoil_section_requests::build(v,op)); }
     if matches!(op,"fit_sphere_cloud" | "fit_cylinder_cloud" | "fit_cone_cloud" | "fit_torus_cloud" | "fit_plane_cloud") { return Some(cloud_fit_surfaces::build(v,op)); }
     if matches!(op,"surface_highlight_lines" | "surface_reflection_lines" | "surface_isophote_analysis" | "surface_dent_detection") { return Some(optical_surface_analysis::inspect(v,op)); }

@@ -3,11 +3,22 @@ use crate::editing::{exact_curve_merge, exact_surface_merge};
 use crate::surface::Axis;
 
 pub(super) fn merge(v: &Value, op: &str) -> Result<Value> {
-    if matches!(op, "join_mixed_degree" | "compact_join_seam" | "compare_parametric_seam" | "compare_geometric_seam") {
+    if matches!(op, "join_affine_c1" | "join_affine_c2" | "join_projective_c2" | "join_stationary_c2" | "join_mixed_degree" | "compact_join_seam" | "compare_parametric_seam" | "compare_geometric_seam") {
         let left = field(v,"left")?;
         let right = field(v,"right")?;
         let budget = field(v,"max_work")?;
         return match op {
+            "join_affine_c1" | "join_affine_c2" | "join_projective_c2" | "join_stationary_c2" => {
+                let join = match op {
+                    "join_affine_c1" => exact_curve_merge::merge_with_exact_c1_clock,
+                    "join_affine_c2" => exact_curve_merge::merge_with_exact_c2_clock,
+                    "join_projective_c2" => exact_curve_merge::merge_with_exact_projective_c2_clock,
+                    _ => exact_curve_merge::merge_with_exact_stationary_c2_clock,
+                };
+                let r = join(&left,&right,budget)?;
+                let curve = r.curve.ok_or_else(|| input(format!("Parameter matching refused: {:?}",r.refusal)))?;
+                Ok(json!({"curve":curve,"domain":curve.domain(),"seam":left.domain()[1],"workUsed":r.work_used}))
+            }
             "join_mixed_degree" => {
                 let r = exact_curve_merge::merge_with_exact_degree_elevation(&left,&right,budget)?;
                 let curve = r.curve.ok_or_else(|| input(format!("Mixed-degree merge refused: {:?}", r.refusal)))?;
