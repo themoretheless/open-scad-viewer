@@ -116666,6 +116666,83 @@
               "tolerance_mm"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "compact_body_step"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "compact_product_step"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "product_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "material_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "layer_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "face_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "colour_rgb": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "product_name",
+              "material_name",
+              "layer_name",
+              "face_index",
+              "colour_rgb"
+            ],
+            "additionalProperties": false
           }
         ]
       }

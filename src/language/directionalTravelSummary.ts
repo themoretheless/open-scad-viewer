@@ -585,6 +585,8 @@ export function curveMeasurementLabel(operation: string, russian: boolean): stri
   if (operation === 'certified_profile_edit') return russian ? 'Проверка вложенности изменённого сектора' : 'Certified profile edit'
   if (operation === 'verified_gear_edit') return russian ? 'Проверенная правка зуба' : 'Verified gear edit'
   if (operation === 'edited_gear_step') return russian ? 'STEP изменённой шестерни' : 'Edited gear step'
+  if (operation === 'compact_body_step') return russian ? 'Компактный STEP тела' : 'Compact body STEP'
+  if (operation === 'compact_product_step') return russian ? 'Компактный STEP с материалом и оформлением' : 'Compact product STEP'
   if (operation === 'repeat_profile_segment') return russian ? 'Круговой массив сегмента' : 'Repeat profile segment'
   if (operation === 'compress_rotated_segments') return russian ? 'Свёртка повёрнутых сегментов' : 'Compress rotated segments'
   if (operation === 'compress_profile_sectors') return russian ? 'Свёртка многосегментных секторов' : 'Compress profile sectors'

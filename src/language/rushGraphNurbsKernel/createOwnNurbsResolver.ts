@@ -3037,6 +3037,16 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'compact_body_step':
+          case 'compact_product_step': {
+            const {id:_id,input,op,...settings}=n
+            const model=needBrep(input)
+            const report=callGeometryRust<{step:string}>(op,{model,...settings})
+            sharedStepFiles.set(key,report.step)
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model,stepText:report.step}
+            break
+          }
           case 'certified_profile_edit': {
             const {id:_id,input,inputs,loops,op,...options}=n
             const {curve,...report}=callGeometryRust<{curve:NurbsCurve}>(op,{

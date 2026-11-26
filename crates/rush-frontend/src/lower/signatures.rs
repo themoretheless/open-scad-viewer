@@ -105,6 +105,8 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "certified_profile_edit" => &["inputs", "loops", "pieces_per_sector", "sector_index", "piece", "tolerance_mm"],
         "verified_gear_edit" => &["sector_index", "flank_index", "pole_index", "offset_x_mm", "offset_y_mm", "tolerance_mm"],
         "edited_gear_step" => &["sector_index", "flank_index", "pole_index", "offset_x_mm", "offset_y_mm", "tolerance_mm"],
+        "compact_body_step" => &[],
+        "compact_product_step" => &["product_name","material_name","face_index","layer_name","colour_rgb"],
         "repeat_profile_segment" => &["copies", "sector_index"],
         "compress_rotated_segments" => &["inputs", "sector_index", "tolerance_mm"],
         "compress_profile_sectors" => &["inputs", "sector_index", "piece", "pieces_per_sector", "tolerance_mm"],
