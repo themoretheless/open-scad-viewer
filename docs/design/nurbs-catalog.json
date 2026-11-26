@@ -19124,7 +19124,7 @@
     {
       "id": "NURBS-0742",
       "name": "Минимальный попарный зазор в расписании нескольких инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_tools_clearance",
@@ -19132,7 +19132,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-742-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-742-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-742-2026-11-17/native.log.gz",
+        "examples/rush/minimum-tool-pair-gap.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Refine the global minimum among all scheduled tool pairs under one phase-cell budget.",
@@ -19143,7 +19145,7 @@
     {
       "id": "NURBS-0743",
       "name": "Карта попарных контактов для расписания нескольких инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::partition_scheduled_tools_clearance",
@@ -19151,7 +19153,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-743-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-743-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-743-2026-11-17/native.log.gz",
+        "examples/rush/tool-pair-intervals.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Classify ordered contact windows for every scheduled tool pair under one budget.",
@@ -19162,7 +19166,7 @@
     {
       "id": "NURBS-0744",
       "name": "Время первого контакта в попарной карте расписания инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::first_contact",
@@ -19170,7 +19174,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-744-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-744-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-744-2026-11-17/native.log.gz",
+        "examples/rush/first-tool-pair-contact.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Bracket first contact across pair timelines, retaining earlier uncertainty.",
@@ -19181,7 +19187,7 @@
     {
       "id": "NURBS-0745",
       "name": "Время последнего контакта в попарной карте расписания инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::last_contact",
@@ -19189,7 +19195,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-745-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-745-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-745-2026-11-17/native.log.gz",
+        "examples/rush/last-tool-pair-contact.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Bracket last contact across pair timelines, retaining later uncertainty.",
@@ -19200,7 +19208,7 @@
     {
       "id": "NURBS-0746",
       "name": "Суммарное время контакта по карте пар инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::contact_duration_bounds",
@@ -19208,7 +19216,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-746-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-746-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-746-2026-11-17/native.log.gz",
+        "examples/rush/tool-contact-duration.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Bound total scheduled contact duration without double counting overlapping pairs.",
@@ -19219,7 +19229,7 @@
     {
       "id": "NURBS-0747",
       "name": "Самый долгий непрерывный контакт по карте пар инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::longest_contact_duration_bounds",
@@ -19227,7 +19237,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-747-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-747-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-747-2026-11-17/native.log.gz",
+        "examples/rush/longest-tool-contact.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Bound the longest continuous contact across scheduled pairs, including pair handoffs.",
@@ -19238,7 +19250,7 @@
     {
       "id": "NURBS-0748",
       "name": "Пиковое число одновременно контактирующих пар инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::peak_contact_pair_count_bounds",
@@ -19246,7 +19258,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-748-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-748-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-748-2026-11-17/native.log.gz",
+        "examples/rush/peak-tool-pair-count.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Bound maximum simultaneous contact multiplicity over distinct scheduled tool pairs.",
@@ -19257,7 +19271,7 @@
     {
       "id": "NURBS-0749",
       "name": "Длительность одновременного контакта заданного числа пар инструментов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::simultaneous_contact_duration_bounds",
@@ -19265,7 +19279,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-749-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-749-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-749-2026-11-17/native.log.gz",
+        "examples/rush/simultaneous-tool-duration.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Bound elapsed time when at least a specified number of distinct pairs are in contact.",
@@ -19276,7 +19292,7 @@
     {
       "id": "NURBS-0750",
       "name": "Временные интервалы одновременного контакта заданного числа пар",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::simultaneous_contact_windows",
@@ -19284,7 +19300,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-750-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-750-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-750-2026-11-17/native.log.gz",
+        "examples/rush/simultaneous-tool-windows.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Locate confirmed and possible simultaneous contact windows, including isolated instants.",
@@ -19295,7 +19313,7 @@
     {
       "id": "NURBS-0751",
       "name": "Время и пары подтверждённого пика одновременных контактов",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::peak_contact_report",
@@ -19303,7 +19321,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-751-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-751-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-751-2026-11-17/native.log.gz",
+        "examples/rush/peak-tool-contacts.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Return a certified time and distinct contacting pairs for the peak lower bound.",
@@ -19314,7 +19334,7 @@
     {
       "id": "NURBS-0752",
       "name": "Подтверждённые и возможные пары контактов в заданный момент",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::contact_pairs_at_time",
@@ -19322,7 +19342,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-752-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-752-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-752-2026-11-17/native.log.gz",
+        "examples/rush/tool-pairs-at-time.r",
+        "tests/rushToolPairs.test.ts"
       ],
       "remainingQualification": [
         "Query concrete confirmed and possible tool pairs at a given absolute time.",

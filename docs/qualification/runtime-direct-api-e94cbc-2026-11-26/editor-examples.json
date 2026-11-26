@@ -1,0 +1,61 @@
+{
+  "kernelSha256": "e94cbce3ff142c1e4fd43b30062e725d4bfc7b28f018604c499a8a9ee25b5488",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/minimum-tool-pair-gap.r",
+      "exampleSha256": "361e7599f40389911bf4f2c29ad93055fff6afb7313e8b6c78252bc2cc56b3dc",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 73 ms"
+    },
+    {
+      "example": "examples/rush/tool-pair-intervals.r",
+      "exampleSha256": "993081e1485c60c52f73bb352fc3ed3d1045d049ace8b4f703a952973864246c",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 17 ms"
+    },
+    {
+      "example": "examples/rush/first-tool-pair-contact.r",
+      "exampleSha256": "4ad6106ad4bcf73afc470d33c8c50fd480964442d3890594ba5c07541852b4d4",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/last-tool-pair-contact.r",
+      "exampleSha256": "c9d95ccaed6c80b27e32a47600aefa16f91c30d71b7120c8f282974aa40d7d48",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 15 ms"
+    },
+    {
+      "example": "examples/rush/tool-contact-duration.r",
+      "exampleSha256": "6f7377d52f7aa37a9defa54932e34d05b52823fe937dbceb8e654901672d1ff0",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/longest-tool-contact.r",
+      "exampleSha256": "0519761c1ff72ddcc94bdf4301c0d792f7514ec137ff9b99b8bb26d6d3e7cf39",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/peak-tool-pair-count.r",
+      "exampleSha256": "5cecc46c9d25d3658723bec8f849e71f5e6c2f516be8c0847fcc7b54e89e0393",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/simultaneous-tool-duration.r",
+      "exampleSha256": "619663a482207e51a9da540f60a3356c06210042e221f3cdeb5aa47d7fc54255",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/simultaneous-tool-windows.r",
+      "exampleSha256": "d70d1276b520a9b6b102a3907112bb86b8e926d4d459ebd15c885306004ab201",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/peak-tool-contacts.r",
+      "exampleSha256": "766dcd17a37d034288a06d7cdcec001f2a880e3049ca20eb937cea545d0c2402",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/tool-pairs-at-time.r",
+      "exampleSha256": "5f9e3f949ad614276bea59371db402ce9ab43290825cd4e997b58fbc1fd7f77d",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n1\nГотово · 9 ms"
+    }
+  ]
+}
