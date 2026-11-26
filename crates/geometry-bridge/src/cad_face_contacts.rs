@@ -718,3 +718,27 @@ pub(super) fn inspect_authored_shell_orientation(v: &Value) -> Result<Value> {
         "orientationDomainCells":report.orientation_domain_cells,
     }))
 }
+
+pub(super) fn inspect_linear_patch_closure(v: &Value) -> Result<Value> {
+    let models = field::<Vec<brep_core::Model>>(v, "models")?;
+    let audit = brep_core::watertight::inspect_linear_patch_set(
+        &models, field(v, "max_intervals")?, field(v, "max_cells")?,
+    )?;
+    let addresses: Vec<_> = audit.boundaries.iter().map(|edge| {
+        json!({"model":edge.model,"face":edge.face,"wire":edge.wire,"coedge":edge.coedge})
+    }).collect();
+    let matches: Vec<_> = audit.matches.iter().map(|edge| {
+        json!({"boundaries":edge.boundaries,"axis":edge.axis,"rangeMm":edge.range})
+    }).collect();
+    Ok(json!({
+        "boundaries":addresses,
+        "matches":matches,
+        "unsupported":audit.unsupported,
+        "openIntervals":audit.open_intervals,
+        "ambiguousIntervals":audit.ambiguous_intervals,
+        "agreementCells":audit.cells,
+        "sourceAgreementComplete":audit.source_agreement_complete,
+        "allBoundariesPaired":audit.all_boundaries_paired,
+        "edgeToleranceMm":audit.edge_tolerance_mm,
+    }))
+}

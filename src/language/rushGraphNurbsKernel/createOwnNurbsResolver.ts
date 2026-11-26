@@ -3174,6 +3174,14 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'inspect_patch_closure': {
+            const {op,id:_id,input,inputs,...options}=n
+            const model=needBrep(input)
+            const report=callGeometryRust<object>(op,{models:[model,...inputs.map(needBrep)],...options})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'inspect_shell_orientation': {
             const {op,id:_id,input,...options}=n
             const model=needBrep(input)

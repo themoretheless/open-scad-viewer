@@ -1571,3 +1571,33 @@ fn model_only_trim_recovers_a_nonplanar_saddle_loop() {
         std::fs::write(path.with_extension("step"), crate::export_step_v9(&model).unwrap().0).unwrap();
     }
 }
+
+#[test]
+fn independent_iges_cube_panels_have_paired_axis_aligned_boundaries() {
+    let cube = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let mut models = Vec::new();
+    for (index, usage) in cube.shells[0].faces.iter().enumerate() {
+        let mut writer = Writer::new();
+        let surface = writer.emit(128, surface_values(&cube.faces[usage.face].surface).unwrap());
+        let face = writer.emit(144, vec![
+            "144".into(), surface.to_string(), "0".into(), "0".into(), "0".into(),
+        ]);
+        let shell = writer.emit(514, vec![
+            "514".into(), "1".into(), face.to_string(), usize::from(!usage.reversed).to_string(),
+        ]);
+        writer.entities[(shell - 1) / 2].form = 1;
+        let text = render(writer).unwrap();
+        let model = import_iges_v2(&text).unwrap().0;
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 4);
+        models.push(model);
+        if let Some(directory) = std::env::var_os("CAD_IGES_PATCH_CLOSURE_FIXTURES") {
+            std::fs::write(std::path::Path::new(&directory).join(format!("panel-{index}.igs")), text).unwrap();
+        }
+    }
+    let report = brep_core::watertight::inspect_linear_patch_set(&models, 100, 10000).unwrap();
+    assert!(report.all_boundaries_paired, "{report:?}");
+    assert_eq!(report.matches.len(), 12);
+    let open = brep_core::watertight::inspect_linear_patch_set(&models[..5], 100, 10000).unwrap();
+    assert!(!open.all_boundaries_paired);
+    assert_eq!(open.open_intervals, 4);
+}
