@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "6687f4ccbee01071810fb955b476758c5e0d472cbdfbc55539446707965461f0",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/eccentric-bore-stock.r",
+      "exampleSha256": "a5dd2d8ba4216a008709f7ffadb92dfbe00e6de6723cd6ef46f6a75bb4c9f3cf",
+      "editorStats": "Объекты\n1\nТреугольники\n1 804\nОбъём\n3 593,63\nПлощадь\n4 183,94\nГотово · 256 ms"
+    },
+    {
+      "example": "examples/rush/ring-bolt-stock.r",
+      "exampleSha256": "0df30eeecd14a919cdf5809e9317bff55b2d008e25f56d42967fabc40f7873ee",
+      "editorStats": "Объекты\n1\nТреугольники\n2 160\nОбъём\n3 406,34\nПлощадь\n4 611,58\nГотово · 139 ms"
+    },
+    {
+      "example": "examples/rush/ring-bolt-window.r",
+      "exampleSha256": "8deff59c59b1b08531e3ddcf47414f39b203f80ead070328b3e79f28e3377d6e",
+      "editorStats": "Объекты\n1\nТреугольники\n2 160\nОбъём\n7 050,2\nПлощадь\n8 343,37\nГотово · 130 ms"
+    }
+  ]
+}

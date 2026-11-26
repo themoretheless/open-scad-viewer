@@ -35,5 +35,15 @@ it('exports the edited placements as shared AP242 part definitions',async()=>{
     expect(hasSafeSuccessPayload({...result,measurements:[{...measurement,step:12}]})).toBe(false)
     expect(step!.match(/MANIFOLD_SOLID_BREP\(/g)).toHaveLength(definitions)
     expect(step!.match(/NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(occurrences)
+    if (name === 'planetary-gear-set-step') {
+      const directions=step!.split(/\r?\n/).flatMap(line=>{
+        const match=/^#\d+=(DIRECTION\(.+)$/.exec(line)
+        return match ? [match[1]] : []
+      })
+      expect(directions.length).toBeGreaterThanOrEqual(3)
+      expect(directions.length).toBeLessThan(2*occurrences)
+      expect(new Set(directions).size).toBe(directions.length)
+      expect(step!.match(/ITEM_DEFINED_TRANSFORMATION\(/g)).toHaveLength(occurrences)
+    }
   }
 },120000)

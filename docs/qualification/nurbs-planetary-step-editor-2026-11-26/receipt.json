@@ -1,0 +1,15 @@
+{
+  "ids": [
+    "NURBS-0972",
+    "NURBS-0977"
+  ],
+  "entryPoint": "examples/rush/planetary-gear-set-step.r",
+  "exampleSha256": "30331bb90ff64b7e10acc9122624bddf36e5932e69b14941b1fc74756e5c093e",
+  "delivery": "Chromium Rush editor STEP assembly download",
+  "stepSha256": "912dffb0c869a037b01040fb683a2d8dfe18fdcf6b34d0cf7f09edb39ac162a3",
+  "stepBytes": 2158491,
+  "sharedDirections": 20,
+  "independentOccurrenceTransforms": 20,
+  "verifier": "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/verify.py",
+  "verifierOutput": "Two central solids, 18 distinct planet frames, maximum matrix error 3.55e-15"
+}

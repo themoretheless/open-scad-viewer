@@ -1601,6 +1601,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/BARMgXnf.js':105_300,'assets/BmrJCCbN.js':109_500,'assets/Ddg1wd4V.js':216_600,'assets/EGVI0FuR.js':135_400,'assets/mainSolid.worker-CU5aMP2b.js':279_800,'assets/w1xLpM47.js':203_600}),
   }),
+  // ring gear mounting ligaments: 20,386,513 raw bytes, 7,752,193 packed bytes and 15,213,758 total asset bytes.
+  '6687f4ccbee01071810fb955b476758c5e0d472cbdfbc55539446707965461f0':Object.freeze({
+    version:207,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:343_000,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BTqi5ify.js':105_400,'assets/DWCGYYdV.js':203_600,'assets/Dre8KY9e.js':136_000,'assets/U2bShqjy.js':216_700,'assets/f9Xhgk4l.js':109_600,'assets/mainSolid.worker-CZuqHDIC.js':280_400}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

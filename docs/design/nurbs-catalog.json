@@ -22687,7 +22687,7 @@
     {
       "id": "NURBS-0914",
       "name": "Толщина перемычки и предельный диаметр смещённого отверстия внешней шестерни",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::external_gear_bore_stock",
@@ -22696,7 +22696,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-bore-stock-914-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-bore-stock-914-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-bore-stock-914-2026-11-18/native.log.gz",
+        "examples/rush/eccentric-bore-stock.r",
+        "tests/rushGearLigaments.test.ts"
       ],
       "remainingQualification": [
         "Nominal external root circle and parallel circular bore. Does not measure a manufactured fillet or certify material strength."
@@ -22705,7 +22707,7 @@
     {
       "id": "NURBS-0915",
       "name": "Перемычки крепёжных отверстий на окружности внутренней шестерни",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::ring_gear_bolt_stock",
@@ -22714,7 +22716,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/native.log.gz",
+        "examples/rush/ring-bolt-stock.r",
+        "tests/rushGearLigaments.test.ts"
       ],
       "remainingQualification": [
         "Nominal concentric root and outer circles with equally spaced cylindrical holes of equal diameter. Actual fillets and strength are outside the calculation."
@@ -22723,7 +22727,7 @@
     {
       "id": "NURBS-0916",
       "name": "Допустимый диапазон радиуса окружности крепежа кольцевой шестерни",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::ring_gear_bolt_radius_window",
@@ -22732,7 +22736,9 @@
         "crates/nurbs-core/src/construct/curves/involute.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-gear-bolt-window-916-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-gear-bolt-window-916-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-gear-bolt-window-916-2026-11-18/native.log.gz",
+        "examples/rush/ring-bolt-window.r",
+        "tests/rushGearLigaments.test.ts"
       ],
       "remainingQualification": [
         "Certified inner window on the nominal concentric ring with equally spaced equal holes. Boundary overlap can remain unresolved."
@@ -23800,7 +23806,7 @@
     {
       "id": "NURBS-0972",
       "name": "Компактные направления размещения повторяющихся деталей при экспорте STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_planetary_gear_set_step",
@@ -23808,7 +23814,10 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/native.log.gz",
-        "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/receipt.json"
+        "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/receipt.json",
+        "examples/rush/planetary-gear-set-step.r",
+        "tests/rushPlanetInstances.test.ts",
+        "docs/qualification/nurbs-planetary-step-editor-2026-11-26/receipt.json"
       ],
       "remainingQualification": [
         "Bit-identical normalized placement direction triples in a shared STEP assembly. Placement operators, scales and occurrence identity remain independent."
@@ -23900,7 +23909,7 @@
     {
       "id": "NURBS-0977",
       "name": "Передача орбит и ориентации спутников планетарной передачи в Open CASCADE через STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_planetary_gear_set_step",
@@ -23911,7 +23920,10 @@
         "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/verify.py",
         "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/occt.log",
         "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/receipt.json",
-        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/native.log.gz"
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/native.log.gz",
+        "examples/rush/planetary-gear-set-step.r",
+        "tests/rushPlanetInstances.test.ts",
+        "docs/qualification/nurbs-planetary-step-editor-2026-11-26/receipt.json"
       ],
       "remainingQualification": [
         "Rigid proper placements in a flat procedural gear assembly. OCCT verifies all 18 local-to-world planet frames. External nonuniform and reflected placement qualification is separate."
