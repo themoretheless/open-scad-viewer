@@ -8037,7 +8037,7 @@
     {
       "id": "NURBS-0285",
       "name": "Точное деление NURBS-поверхности на две части с общими полюсами и весами шва",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::split_tensor_surface",
@@ -8046,7 +8046,9 @@
         "crates/nurbs-core/src/editing/exact_surface_knot_insertion/split.rs",
         "crates/nurbs-core/tests/exact_tensor_split_contracts.rs",
         "docs/qualification/nurbs-curvature-field-285-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-285-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-285-2026-11-16/native.log.gz",
+        "examples/rush/exact-tensor-split.r",
+        "tests/rushTensorSplit.test.ts"
       ],
       "remainingQualification": [
         "Certified knot insertion followed by structural slicing preserves the complete UV charts and a common rational gauge. The two parts share identical binary64 seam poles and weights.",
@@ -8057,7 +8059,7 @@
     {
       "id": "NURBS-0286",
       "name": "Точное разбиение NURBS-поверхности на сетку UV-патчей с общими швами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::tile_tensor_surface",
@@ -8066,7 +8068,9 @@
         "crates/nurbs-core/src/editing/exact_surface_knot_insertion/tiling.rs",
         "crates/nurbs-core/tests/exact_tensor_split_contracts.rs",
         "docs/qualification/nurbs-curvature-field-286-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-286-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-286-2026-11-16/native.log.gz",
+        "examples/rush/exact-tensor-tiling.r",
+        "tests/rushTensorSplit.test.ts"
       ],
       "remainingQualification": [
         "Refines one complete source tensor before slicing so every output uses the same rational gauge and literal seam poles. Absolute charts are retained and the returned grid can be merged exactly.",

@@ -47,6 +47,72 @@ function appendEntry(data, entry) {
   return Buffer.concat([unsigned(count + 1), data.subarray(cursor.at), entry])
 }
 
+// Encode non-overlapping active segments in their own memory range.
+function compactMatches(bytes, base) {
+  const last = new Int32Array(65536).fill(-1)
+  const payload = []
+  let gain = 0, stop = 0, end = 0
+  let start = 0
+  function literal(end) {
+    while (start < end) {
+      const length = Math.min(128, end - start)
+      payload.push(length - 1, ...bytes.subarray(start, start + length))
+      start += length
+    }
+  }
+  for (let at = 0; at + 4 <= bytes.length;) {
+    const key = Math.imul(bytes.readUInt32LE(at), 0x9e3779b1) >>> 16
+    const previous = last[key]
+    last[key] = at
+    let length = 0
+    if (previous >= 0 && at - previous <= 65535) {
+      while (length < 131 && at + length < bytes.length && bytes[previous + length] === bytes[at + length]) length++
+    }
+    if (length < 5) { at++; continue }
+    literal(at)
+    const offset = at - previous
+    payload.push(128 + length - 4, offset & 255, offset >>> 8)
+    at += length
+    start = at
+    if (at - payload.length > gain) {
+      gain = at - payload.length
+      stop = payload.length
+      end = at
+    }
+  }
+  // Keep the suffix raw from the last point of maximum accumulated saving.
+  // Every previous output boundary then falls at or before the unread input.
+  if (gain < 1024) return
+  const data = Buffer.concat([Buffer.from(payload.slice(0,stop)),bytes.subarray(end)])
+  const runs = [{kind:'lz', length:stop, output:end}]
+  if (end < bytes.length) runs.push({kind:'raw',length:bytes.length-end})
+  return {data, runs, offset:base+gain}
+}
+
+function expandMatches(src,dst,length) {
+  return `(local.set $src (i32.const ${src}))
+    (local.set $dst (i32.const ${dst}))
+    (loop $tokenLoop
+      (local.set $left (i32.load8_u (local.get $src)))
+      (local.set $src (i32.add (local.get $src) (i32.const 1)))
+      (if (i32.lt_u (local.get $left) (i32.const 128))
+        (then
+          (local.set $left (i32.add (local.get $left) (i32.const 1)))
+          (memory.copy (local.get $dst) (local.get $src) (local.get $left))
+          (local.set $src (i32.add (local.get $src) (local.get $left)))
+          (local.set $dst (i32.add (local.get $dst) (local.get $left))))
+        (else
+          (local.set $left (i32.sub (local.get $left) (i32.const 124)))
+          (local.set $delta (i32.load16_u (local.get $src)))
+          (local.set $src (i32.add (local.get $src) (i32.const 2)))
+          (loop $copy
+            (i32.store8 (local.get $dst) (i32.load8_u (i32.sub (local.get $dst) (local.get $delta))))
+            (local.set $dst (i32.add (local.get $dst) (i32.const 1)))
+            (local.set $left (i32.sub (local.get $left) (i32.const 1)))
+            (br_if $copy (local.get $left)))))
+      (br_if $tokenLoop (i32.lt_u (local.get $src) (i32.const ${src+length}))))`
+}
+
 function compactTable(bytes, base) {
   const pieces = []
   const runs = []
@@ -128,7 +194,10 @@ export function compactWasmTables(input) {
     const length = readUnsigned(data, cursor), end = cursor.at + length
     if (end > data.length || base + length >= 0x40000000) return original
     previousEnd = base + length
-    const compact = length >= 2048 && compactTable(data.subarray(cursor.at, end), base)
+    const segmentBytes = data.subarray(cursor.at,end)
+    let compact = length >= 2048 && compactTable(segmentBytes,base)
+    const matches = length >= 2048 && compactMatches(segmentBytes,base)
+    if (matches && (!compact || matches.data.length + 128 < compact.data.length)) compact = matches
     cursor.at = end
     if (!compact) {
       encoded.push(data.subarray(start, end))
@@ -143,7 +212,10 @@ export function compactWasmTables(input) {
     encoded.push(Buffer.from([0, 0x41]), offset, Buffer.from([11]), unsigned(compact.data.length), compact.data)
     let src = compact.offset, dst = base
     for (const run of compact.runs) {
-      if (run.kind === 'raw') {
+      if (run.kind === 'lz') {
+        init.push(expandMatches(src,dst,run.length))
+        dst += run.output
+      } else if (run.kind === 'raw') {
         if (src !== dst) init.push(`(memory.copy (i32.const ${dst}) (i32.const ${src}) (i32.const ${run.length}))`)
         dst += run.length
       } else {

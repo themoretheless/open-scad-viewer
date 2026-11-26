@@ -38,3 +38,18 @@ test('leaves short tables, preexisting initialization and overlapping data segme
     moduleWith([[67,mixedTable()],[70,Buffer.from('replacement')]])
   ]) assert.deepEqual(compactWasmTables(b),b)
 })
+test('restores overlapping backreferences, separated segments and a noisy literal suffix',()=>{
+  const data = Buffer.alloc(40001)
+  const sequence = Buffer.from('ordered rational surface patches')
+  let seed = 9547
+  for(let i=0;i<data.length;i++){
+    seed = (Math.imul(seed,1664525) + 1013904223) >>> 0
+    data[i] = i<500 || i>31009 || (i%2000)<65 ? seed>>>24 : sequence[i%sequence.length]
+  }
+  const original = moduleWith([[17,data],[43501,data.subarray(300,12000)]])
+  const compact = compactWasmTables(original)
+  assert.ok(compact.length < original.length - 20000)
+  const memory = bytes => Buffer.from(new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports.memory.buffer)
+  assert.deepEqual(memory(compact),memory(original))
+  assert.deepEqual(compact,compactWasmTables(original))
+})

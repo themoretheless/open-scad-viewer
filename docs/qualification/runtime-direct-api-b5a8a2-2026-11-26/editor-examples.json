@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "b5a8a209e718d469bb9ad71a3db54371641426d3428807d9f3b29b17ad5c9011",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/exact-tensor-split.r",
+      "exampleSha256": "c6940a7ec1604dc9baf7aa4627a542047ae11ed47e5fab8cd0d2632c246d32d7",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n5,79\nГотово · 67 ms"
+    },
+    {
+      "example": "examples/rush/exact-tensor-tiling.r",
+      "exampleSha256": "3711ea2ae27717ade337ac4c5829f47f6adf14d2f4601c79bdd582bd03025e57",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4,45\nГотово · 9 ms"
+    }
+  ]
+}

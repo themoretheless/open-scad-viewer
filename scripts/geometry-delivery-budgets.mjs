@@ -721,6 +721,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CIcVCw-R.js':203_600,'assets/Y-LGtLy9.js':192_700,'assets/mainSolid.worker-oe0saS3_.js':210_200}),
   }),
+  // Exact tensor split and tiling with lossless table packing (see runtime-direct-api-b5a8a2-2026-11-26/lossless-data.json): 20,601,620 raw bytes, 7,641,383 packed bytes and 14,737,542 total asset bytes.
+  'b5a8a209e718d469bb9ad71a3db54371641426d3428807d9f3b29b17ad5c9011':Object.freeze({
+    version:97,geometryChunkBytes:7_642_000,totalAssetBytes:14_738_000,rawGeometryBytes:20_968_000,
+    namedJsChunkBytes:Object.freeze({
+      index:286_600,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CgArQZZs.js':203_600,'assets/D1hkBHSO.js':192_900,'assets/mainSolid.worker-RmEBSJ2M.js':210_800}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
