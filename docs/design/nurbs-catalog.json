@@ -13493,7 +13493,7 @@
     {
       "id": "NURBS-0486",
       "name": "Точный объём пересечения двух параллельных выдавливаний профилей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_parallel_planar_profile_extrusion_overlap",
@@ -13511,7 +13511,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-486-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-486-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-486-2026-11-17/native.log.gz",
+        "examples/rush/measure-parallel-sweep-overlap.r",
+        "tests/rushParallelSweep.test.ts"
       ],
       "remainingQualification": [
         "Measure exact overlap of two planar profile extrusions with collinear sweeps.",
@@ -13522,7 +13524,7 @@
     {
       "id": "NURBS-0487",
       "name": "Точная замкнутая оболочка пересечения параллельных профильных выдавливаний",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::mesh_exact_parallel_planar_profile_extrusion_overlap",
@@ -13540,7 +13542,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "docs/qualification/nurbs-curvature-field-487-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-487-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-487-2026-11-17/native.log.gz",
+        "examples/rush/mesh-parallel-sweep-overlap.r",
+        "tests/rushParallelSweep.test.ts"
       ],
       "remainingQualification": [
         "Construct the exact closed triangle mesh of positive-volume collinear extrusion overlap.",
@@ -13551,7 +13555,7 @@
     {
       "id": "NURBS-0488",
       "name": "Проверенное B-rep-тело пересечения параллельных профильных выдавливаний",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::brep_exact_parallel_planar_profile_extrusion_overlap",
@@ -13570,7 +13574,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/boolean/operations/planar_model.rs",
         "docs/qualification/nurbs-curvature-field-488-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-488-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-488-2026-11-17/native.log.gz",
+        "examples/rush/build-parallel-sweep-overlap.r",
+        "tests/rushParallelSweep.test.ts"
       ],
       "remainingQualification": [
         "Construct a qualified compact B-rep for positive-volume collinear extrusion overlap.",

@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "e6b5662baec38efc247e15d1af286fe888dbe1b10777e7f912e9798a32b3f0f8",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/measure-parallel-sweep-overlap.r",
+      "exampleSha256": "b298668a608660036cb58816d251d74e62edb2cab0e79eca1e78b20bf568c794",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 416 ms"
+    },
+    {
+      "example": "examples/rush/mesh-parallel-sweep-overlap.r",
+      "exampleSha256": "3e9f3810eb99b35f515c24ed05fb7ed452472061c4b973813066fa631eee4f27",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/build-parallel-sweep-overlap.r",
+      "exampleSha256": "f304a4ac4d77958f1be1925903066b02efbd8aeead2d3018ac36493d74830389",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n8\nПлощадь\n24\nГотово · 47 ms"
+    }
+  ]
+}
