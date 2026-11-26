@@ -2913,6 +2913,17 @@ export function createOwnNurbsResolver(
             result={kind:'curve',data:curve}
             break
           }
+          case 'spatial_contour_sets_distance':
+          case 'closest_spatial_contours':
+          case 'inspect_spatial_clearances':
+          case 'prove_spatial_clearance_along': {
+            const {id:_id,op,input,...parameters}=n
+            const curves=[needCurve(input),...('inputs' in parameters?parameters.inputs.map(id=>needCurve(id)):[])]
+            const {curve,...report}=callGeometryRust<{curve:NurbsCurve}>(op,{...parameters,curves})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'curve',data:curve}
+            break
+          }
           case 'make_step_assembly':
           case 'step_part_tolerances':
           case 'set_scaled_step_placement':

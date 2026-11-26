@@ -63480,6 +63480,187 @@
               },
               "op": {
                 "type": "string",
+                "const": "spatial_contour_sets_distance"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "first_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tolerance_mm": {
+                "type": "number"
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "first_count",
+              "tolerance_mm",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "closest_spatial_contours"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "tolerance_mm": {
+                "type": "number"
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "tolerance_mm",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "inspect_spatial_clearances"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "minimum_mm": {
+                "type": "number"
+              },
+              "tolerance_mm": {
+                "type": "number"
+              },
+              "max_cells": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "minimum_mm",
+              "tolerance_mm",
+              "max_cells"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "prove_spatial_clearance_along"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "inputs": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 255,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "normal": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "number"
+                }
+              },
+              "minimum_mm": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "inputs",
+              "normal",
+              "minimum_mm"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "read_shared_step"
               },
               "input": {
