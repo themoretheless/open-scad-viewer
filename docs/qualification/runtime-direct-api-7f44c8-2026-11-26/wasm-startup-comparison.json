@@ -1,0 +1,86 @@
+{
+  "browser": "Chromium 151.0.7922.34",
+  "protocol": "Five alternating fresh-context samples after two warmup rounds. Raw module compilation and instantiation only; fetch and compression excluded.",
+  "artifacts": [
+    {
+      "role": "baseline",
+      "sha256": "5d718356a051391e6cbdc502b9ae82f6f47061505b4748c271226ca5f1d8b89d",
+      "byteLength": 20682193,
+      "compileMedianMs": 9.399999976158142,
+      "instantiateMedianMs": 2.5,
+      "initialMemoryBytes": 3145728,
+      "samples": [
+        {
+          "compileMs": 9.700000047683716,
+          "instantiateMs": 2.5,
+          "memoryBytes": 3145728,
+          "byteLength": 20682193
+        },
+        {
+          "compileMs": 9.200000047683716,
+          "instantiateMs": 2.700000047683716,
+          "memoryBytes": 3145728,
+          "byteLength": 20682193
+        },
+        {
+          "compileMs": 9.200000047683716,
+          "instantiateMs": 2.700000047683716,
+          "memoryBytes": 3145728,
+          "byteLength": 20682193
+        },
+        {
+          "compileMs": 9.399999976158142,
+          "instantiateMs": 2.399999976158142,
+          "memoryBytes": 3145728,
+          "byteLength": 20682193
+        },
+        {
+          "compileMs": 9.600000023841858,
+          "instantiateMs": 2.399999976158142,
+          "memoryBytes": 3145728,
+          "byteLength": 20682193
+        }
+      ]
+    },
+    {
+      "role": "candidate",
+      "sha256": "7f44c83d92dc7b68528ac92f4fc4ec35d27344670ff3f14ceedfa01d76c730fa",
+      "byteLength": 20932144,
+      "compileMedianMs": 9.5,
+      "instantiateMedianMs": 2.799999952316284,
+      "initialMemoryBytes": 3145728,
+      "samples": [
+        {
+          "compileMs": 9.800000071525574,
+          "instantiateMs": 2.6999999284744263,
+          "memoryBytes": 3145728,
+          "byteLength": 20932144
+        },
+        {
+          "compileMs": 9.400000095367432,
+          "instantiateMs": 2.799999952316284,
+          "memoryBytes": 3145728,
+          "byteLength": 20932144
+        },
+        {
+          "compileMs": 9.5,
+          "instantiateMs": 2.799999952316284,
+          "memoryBytes": 3145728,
+          "byteLength": 20932144
+        },
+        {
+          "compileMs": 9.800000071525574,
+          "instantiateMs": 2.799999952316284,
+          "memoryBytes": 3145728,
+          "byteLength": 20932144
+        },
+        {
+          "compileMs": 9.5,
+          "instantiateMs": 2.8000000715255737,
+          "memoryBytes": 3145728,
+          "byteLength": 20932144
+        }
+      ]
+    }
+  ]
+}

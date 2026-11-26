@@ -1,0 +1,9 @@
+{
+  "kernelSha256": "7f44c83d92dc7b68528ac92f4fc4ec35d27344670ff3f14ceedfa01d76c730fa",
+  "runner": "Chromium",
+  "scenes": [
+    "assemble-owned-trimmed-shell Объекты 1 Треугольники 12 Объём 24 Площадь 52 Готово · 44 ms",
+    "sew-periodic-source-face Объекты 1 Треугольники 256 Объём 0 Площадь 4 Готово · 1 280 ms",
+    "sew-periodic-torus Объекты 1 Треугольники 256 Объём 53,37 Площадь 118,43 Готово · 15 747 ms"
+  ]
+}

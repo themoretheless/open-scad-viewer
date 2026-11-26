@@ -1240,7 +1240,7 @@
       "nativeDomain": "Complete regular original-root components with one common free coordinate per component and globally injective support rectangles publish open world arcs. Additionally, exact single-span degree1/2 polynomial graphs with matching affine XY and diagonal quadratic height difference publish strictly interior closed ellipses, isolated tangent points, tangent double lines, equal-magnitude crossing lines, empty sets or coincident patches; original-source topology and station enclosures replay independently.",
       "remainingQualification": [
         "General closed/mixed-coordinate branches, clipped conics, arbitrary singularities, varying rational weights, multiple spans, noninjective supports and periodic SS quotients remain outside the admitted constructors.",
-        "Transport/editor integration of the sealed Rust owners is separate from native qualification."
+        "The Rush inspector reports the admitted branches. Reusable sealed owner transport and broader intersection families are separate."
       ],
       "nativeQualification": {
         "artifact": "docs/qualification/nurbs-closed-degenerate-ss-2026-10-19/native-tests.json",
@@ -2159,7 +2159,8 @@
         "docs/design/progressive-loft-2026-10-01.md",
         "tests/nurbsGuidedLoft.test.ts",
         "crates/cad-step/tests/guided_loft_step.rs",
-        "docs/qualification/guided-loft-2026-10-01/opencascade-matrix.json"
+        "docs/qualification/guided-loft-2026-10-01/opencascade-matrix.json",
+        "examples/rush/guided-loft-surface.r"
       ],
       "remainingQualification": [
         "broader continuous regularity and solid certification outside the loft contract"
@@ -2713,7 +2714,7 @@
       "remainingQualification": [
         "continuous real-arithmetic Hermite transport estimate excludes libm/control/evaluation rounding; EstimateReached is not a rounding-inclusive certificate",
         "self-collision, continuous regularity, caps, manifold/solid and closed-path topology remain outside the profile-spring surface constructor contract",
-        "WASM, Rush, editor and export integration remain outside native completion"
+        "Export qualification remains separate."
       ],
       "nativeApi": "nurbs_core::profile_spring::approximate"
     },
@@ -2856,7 +2857,7 @@
         "examples/rush/bevel-offset-wire.r"
       ],
       "remainingQualification": [
-        "viewer adapters and export qualification are outside native completion"
+        "Export qualification remains separate."
       ]
     },
     {
@@ -2874,7 +2875,7 @@
       "remainingQualification": [
         "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
         "continuous support contact/G1/G2 between stations, global self-intersection and B-rep trimming/solid remain outside native constructor completion",
-        "WASM, Rush, editor and export integration remain outside native completion"
+        "Export qualification remains separate."
       ],
       "nativeApi": "nurbs_core::offset::fillet_surfaces::rolling_ball_fillet"
     },
@@ -2893,7 +2894,7 @@
       "remainingQualification": [
         "predictor/corrector spine and natural-loft skin are approximate; deviation/reachability estimates are sampled, not continuous rounding-inclusive certificates",
         "continuous support contact/G1/G2 between stations, global self-intersection and B-rep trimming/solid remain outside native constructor completion",
-        "WASM, Rush, editor and export integration remain outside native completion",
+        "Export qualification remains separate.",
         "natural-cubic radius positivity is checked per query and sampled by builder, not certified continuously; law uses normalized reference-spine parameter"
       ],
       "nativeApi": "nurbs_core::offset::fillet_surfaces::variable_radius_fillet"
@@ -2971,7 +2972,7 @@
       "remainingQualification": [
         "continuous rounding-inclusive ideal-thickness error, general trimmed/multispan/multipatch and existing-solid shelling outside admitted native scope",
         "global self-intersection, outward material and embedded-solid validity require independent admission",
-        "WASM/editor/export qualification remains separate"
+        "Export qualification remains separate."
       ]
     },
     {
@@ -3408,7 +3409,7 @@
       "nativeScope": "Capped section-authored geometric blade: symmetric cubic Bezier airfoil, per-section chord/thickness-control/twist/stacking, 2..129 stations. Actual ruled NURBS walls, audited caps and closed owned incidence.",
       "remainingQualification": [
         "standardized aerodynamic sections, aerodynamic performance, root/tip blends and global embedding are not qualified",
-        "WASM/editor/STEP integration remains outside native completion"
+        "The retained blade passed a STEP round-trip through this kernel. Independent CAD exchange is a separate qualification."
       ]
     },
     {
@@ -3425,7 +3426,7 @@
       "remainingQualification": [
         "folding check is sampled; original-surface injectivity and global self-intersection absence are not certified",
         "tip Dome is a shape treatment without formal G1/G2 proof; root closure/B-rep solid and rounding-inclusive geometry error are outside the wing surface constructor contract",
-        "WASM, Rush, editor and export integration remain outside native completion"
+        "Export qualification remains separate."
       ],
       "nativeApi": "nurbs_core::wing_loft::loft_wing"
     },
@@ -3532,25 +3533,27 @@
         "examples/rush/approximate-function-surface.r"
       ],
       "remainingQualification": [
-        "viewer adapters and export qualification are outside native completion"
+        "Export qualification remains separate."
       ]
     },
     {
       "id": "NURBS-0100",
       "name": "trimmed multipatch shell",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::trimmed_shell::assemble",
       "evidence": [
         "crates/brep-core/src/source_body/trimmed_shell.rs",
         "crates/brep-core/tests/trimmed_shell.rs",
         "docs/design/nurbs-trimmed-shell.md",
         "docs/qualification/nurbs-trimmed-shell-2026-10-15/native-tests.json",
-        "docs/qualification/nurbs-trimmed-shell-2026-10-15/native-tests.log"
+        "docs/qualification/nurbs-trimmed-shell-2026-10-15/native-tests.log",
+        "tests/rushOwnedTrimmedShell.test.ts",
+        "examples/rush/assemble-owned-trimmed-shell.r"
       ],
       "nativeScope": "One explicitly owned connected closed shell from trimmed rational patches. Admission requires continuous boundary agreement, valid trim regions, whole-chart spanwise regularity and closed connected vertex links. Unresolved audits never return an admitted model. No Body is authored.",
       "remainingQualification": [
         "automatic sewing, degenerate pole edges and closed edges with identical endpoint IDs are outside this constructor",
-        "global embedding, outward solid orientation, volume, periodic seam inference and WASM/editor/STEP integration are not qualified"
+        "Global embedding, outward solid orientation, volume, periodic seam inference and STEP export remain outside the owned shell contract."
       ]
     },
     {
@@ -5296,7 +5299,7 @@
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "remainingQualification": [
-        "viewer adapters and export qualification are outside native completion"
+        "Export qualification remains separate."
       ],
       "nativeApi": "nurbs_core::curve_pullback::project",
       "evidence": [
@@ -5310,7 +5313,7 @@
     {
       "id": "NURBS-0173",
       "name": "разбиение trim-контура на периодическом шве",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "evidence": [
@@ -5426,7 +5429,9 @@
         "crates/brep-core/src/profile/profile_certificate/span_intersections/translated/periodic_chart_fan_patches.rs",
         "crates/brep-core/src/profile/profile_certificate/span_intersections/translated/periodic_sewn_faces.rs",
         "docs/design/nurbs-physical-branches-and-sewn-faces.md",
-        "docs/qualification/nurbs-physical-branches-sewn-faces-2026-10-19/native-tests.json"
+        "docs/qualification/nurbs-physical-branches-sewn-faces-2026-10-19/native-tests.json",
+        "tests/rushPeriodicSourceFaces.test.ts",
+        "examples/rush/sew-periodic-source-face.r"
       ],
       "partialNativeApi": "brep_core::profile_certificate::assemble_periodic_surface_faces",
       "nativeApi": "brep_core::profile_certificate::own_periodic_sewn_faces",
@@ -5441,7 +5446,7 @@
       "nativeDomain": "Exact original source/frame loop winding, nonalternating high-germ contacts, complete signed patch nesting, actual support rank/global embedding and oriented auxiliary seam sewing by equality of complete original native intervals. Publishes contact-aware face/vertex/edge/coedge ownership, including two-axis corner quotient.",
       "remainingQualification": [
         "Unpaired auxiliary intervals, including authored contours lying exactly on a seam without additional source-bound admission, refuse.",
-        "Contact-aware abstract normalization does not assert a contact-free closed manifold Body. Legacy Model serialization and editor/transport integration remain separate from native completion."
+        "Rush reports the exact contact-aware ownership of authored trims alongside the support preview. Legacy Model publication and contact-free closed manifold Body admission remain separate."
       ],
       "nativeQualification": {
         "artifact": "docs/qualification/nurbs-physical-branches-sewn-faces-2026-10-19/native-tests.json",
@@ -5937,7 +5942,7 @@
       "remainingQualification": [
         "general curved automatic partial-overlap matching, closed-seam phases and degenerate boundary images outside the admitted native scope",
         "parameter bijection, trim simplicity, vertex links, manifold embedding and solid validity require independent qualifications",
-        "WASM/editor/export integration remains separate"
+        "Export qualification remains separate."
       ],
       "nativeApi": "brep_core::watertight::inspect_linear_patch_set",
       "nativeScope": "Automatic exact image partitions of clamped positive-rational axis-aligned boundaries, including one-to-many partial overlaps and nonlinear rational parameterization; continuous original lift agreement, opposite unique interval uses, explicit open/ambiguous/unsupported results. General full-boundary affine and nonlinear correspondence remain separate available APIs. This is boundary-set seam closure, not a manifold/embedded-solid certificate."
@@ -6216,7 +6221,7 @@
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
-        "JSON, WASM, Rush, editor and exchange not qualified"
+        "Exchange qualification remains separate."
       ]
     },
     {
@@ -6235,7 +6240,7 @@
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
-        "JSON, WASM, Rush, editor and exchange not qualified"
+        "Exchange qualification remains separate."
       ]
     },
     {
@@ -6254,7 +6259,7 @@
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
-        "JSON, WASM, Rush, editor and exchange not qualified"
+        "Exchange qualification remains separate."
       ]
     },
     {
@@ -9667,7 +9672,7 @@
       "remainingQualification": [
         "Order rational and quadratic support-clock values by exact polynomial signs, grouping truly equal coordinates.",
         "Compare quadratic branches using their vertices and exact reduced polynomial signs. Retain every source index in stable groups of equal coordinates.",
-        "WASM and application integration are separate."
+        "Independent interchange of algebraic clocks is a separate qualification."
       ]
     },
     {
@@ -9693,7 +9698,7 @@
       "remainingQualification": [
         "Isolate ordered algebraic contact coordinates in disjoint rational clock intervals and construct exact witnesses between them.",
         "Exact comparisons refine only neighboring boxes that overlap. Each gap receives an exact rational witness. Coincident input coordinates share one box with all source indices.",
-        "WASM and application integration are separate."
+        "Independent interchange of rational witnesses is a separate qualification."
       ]
     },
     {

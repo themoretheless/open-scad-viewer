@@ -1,0 +1,7 @@
+{
+  "kernelSha256": "7f44c83d92dc7b68528ac92f4fc4ec35d27344670ff3f14ceedfa01d76c730fa",
+  "runner": "Vitest",
+  "source": "TypeScript test evidence from NURBS catalog plus editor/runtime regression suites",
+  "testFilesPassed": 281,
+  "testsPassed": 1244
+}

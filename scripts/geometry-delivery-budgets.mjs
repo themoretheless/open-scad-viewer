@@ -1753,6 +1753,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/ByI72rOZ.js':118_700,'assets/CWeAXlzq.js':203_600,'assets/DCnrHqhR.js':147_400,'assets/DTMO0Tc0.js':114_600,'assets/cP9lHtvI.js':225_900,'assets/mainSolid.worker-DWIHfWdV.js':291_900}),
   }),
+  // NURBS source-bound trimmed shells and periodic seams: 20,932,144 raw bytes, 8,071,253 packed bytes and 15,610,113 total asset bytes.
+  '7f44c83d92dc7b68528ac92f4fc4ec35d27344670ff3f14ceedfa01d76c730fa':Object.freeze({
+    version:226,geometryChunkBytes:8_072_000,totalAssetBytes:15_611_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/B6i14N82.js':115_000,'assets/CdTObQ_W.js':226_300,'assets/CqUHDBjh.js':148_000,'assets/DvumSr0D.js':119_200,'assets/QUiMeq2m.js':203_600,'assets/mainSolid.worker-BYTkFChR.js':292_500}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
