@@ -7,6 +7,9 @@ use crate::analysis::curve_measure::{
 pub(super) fn dispatch(v: &Value, op: &str) -> Result<Value> {
     let [a,b]: [crate::curve::Curve; 2] = field(v, "curves")?;
     let curves = [&a, &b];
+    if matches!(op,"minimum_scheduled_gap" | "scheduled_contact_intervals" | "held_contact_intervals" | "minimum_held_gap") {
+        return super::scheduled_clearance::dispatch(v, op, curves);
+    }
     let radii = field(v, "radii_mm")?;
     let budget = field(v, "max_cells")?;
     if op == "synchronized_contact_intervals" {

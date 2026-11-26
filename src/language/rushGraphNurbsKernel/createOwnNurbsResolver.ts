@@ -1484,6 +1484,10 @@ export function createOwnNurbsResolver(
           case 'longest_chain_violation':
           case 'minimum_synchronized_gap':
           case 'synchronized_contact_intervals':
+          case 'minimum_scheduled_gap':
+          case 'scheduled_contact_intervals':
+          case 'held_contact_intervals':
+          case 'minimum_held_gap':
           case 'minimum_affine_gap':
           case 'affine_contact_intervals':
           case 'first_chain_violation':
