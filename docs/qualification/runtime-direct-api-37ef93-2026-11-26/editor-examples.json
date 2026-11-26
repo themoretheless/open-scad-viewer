@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "37ef935613069ba4022171842a52d94b88c9bb5ef1e013be36682e7bdb0c3ae7",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/exact-wire-area.r",
+      "exampleSha256": "61fc4676adf475311a023ffdd036aaf7746723a3321b8c69ede311adfc25d863",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 73 ms"
+    },
+    {
+      "example": "examples/rush/exact-wire-mass.r",
+      "exampleSha256": "251a4c2b8d3bd362f9eec254ca13b87a988dddbaa685ff454dd8ea6e8bfec11a",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 18 ms"
+    },
+    {
+      "example": "examples/rush/exact-wire-inertia.r",
+      "exampleSha256": "8f221654cb0bbd4671f5f6f36b56644b5ed2b809f7d34ffb0d45769a9b8c7388",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n12\nГотово · 9 ms"
+    }
+  ]
+}
