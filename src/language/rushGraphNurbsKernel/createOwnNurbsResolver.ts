@@ -1086,6 +1086,8 @@ export function createOwnNurbsResolver(
           case 'infer_rim_planes':
           case 'close_inferred_rims':
           case 'close_bounded_inferred_rims':
+          case 'inspect_inferred_solid':
+          case 'build_expanded_solid':
           case 'build_inferred_solid':
           case 'close_section_planes':
           case 'build_bounded_section_solid':
@@ -1100,6 +1102,7 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'expanded_section_sheets':
           case 'section_brep_sheets':
           case 'bounded_section_brep_sheets': {
             const {id:_id,op,input,inputs,loops,...settings}=n

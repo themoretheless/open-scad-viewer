@@ -11,6 +11,7 @@ mod rim_caps;
 #[path="brep_inferred_rims.rs"]
 mod inferred_rims;
 const OPS: &[&str] = &[
+    "inspect_inferred_solid","expanded_section_sheets","build_expanded_solid",
     "build_section_solid",
     "infer_rim_planes",
     "close_inferred_rims",
@@ -122,6 +123,8 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "inspect_inferred_solid" => inferred_rims::inspect(&v),
+        "build_expanded_solid" => rim_caps::solid(&v,"expanded"),
         "build_section_solid" => rim_caps::solid(&v,"exact"),
         op @ ("infer_rim_planes" | "close_inferred_rims" | "close_bounded_inferred_rims") => inferred_rims::infer(&v,op),
         "build_inferred_solid" => rim_caps::solid(&v,"inferred"),
@@ -129,7 +132,7 @@ fn handle(v: Value) -> Result<Value> {
         "build_bounded_section_solid" => rim_caps::solid(&v,"bounded"),
         "close_bounded_planes" => rim_caps::close_planes(&v,true),
         op @ ("attach_section_rims" | "discover_section_rims" | "attach_bounded_rims" | "discover_bounded_rims") => rim_caps::attach(&v,op),
-        op @ ("section_brep_sheets"|"bounded_section_brep_sheets")=>section_sheets::build(&v,op),
+        op @ ("expanded_section_sheets"|"section_brep_sheets"|"bounded_section_brep_sheets")=>section_sheets::build(&v,op),
         "brep_partition_closed_ss" => closed_ss::partition(v),
         "brep_bound_exact_periodic_trim_directional_area" => brep::exact_periodic_trim_directional_area_request(&v),
         "brep_measure_exact_periodic_trim_window_mass_properties" => brep::exact_periodic_trim_surface_window_mass_request(&v),

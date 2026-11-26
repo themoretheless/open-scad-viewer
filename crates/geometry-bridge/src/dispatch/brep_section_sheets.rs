@@ -27,11 +27,33 @@ pub(super) fn build(v: &Value, op: &str) -> Result<Value> {
                 .collect::<Vec<_>>(),
         )
     } else {
-        let sheet = cap::build_section_sheets(&rings, normal, offset, options)?;
+        let sheet = if op == "expanded_section_sheets" {
+            cap::build_section_sheets_with_expanded_exact_support(&rings, normal, offset, options)?
+        } else {
+            cap::build_section_sheets(&rings, normal, offset, options)?
+        };
         let errors = vec![String::from("0"); sheet.model.faces.len()];
         (sheet, errors)
     };
+    let support_domains = sheet
+        .model
+        .faces
+        .iter()
+        .map(|face| {
+            let s = &face.surface;
+            [
+                [
+                    s.knots_u[s.degree_u],
+                    s.knots_u[s.knots_u.len() - 1 - s.degree_u],
+                ],
+                [
+                    s.knots_v[s.degree_v],
+                    s.knots_v[s.knots_v.len() - 1 - s.degree_v],
+                ],
+            ]
+        })
+        .collect::<Vec<_>>();
     Ok(
-        json!({"model":sheet.model,"faceRings":sheet.face_rings,"edgeCount":sheet.model.edges.len(),"shellsClosed":sheet.model.shells.iter().map(|s|s.closed).collect::<Vec<_>>(),"supportErrorUpper":errors,"workUsed":sheet.exact_work,"verificationCells":sheet.verification_cells}),
+        json!({"model":sheet.model,"supportDomains":support_domains,"faceRings":sheet.face_rings,"edgeCount":sheet.model.edges.len(),"shellsClosed":sheet.model.shells.iter().map(|s|s.closed).collect::<Vec<_>>(),"supportErrorUpper":errors,"workUsed":sheet.exact_work,"verificationCells":sheet.verification_cells}),
     )
 }

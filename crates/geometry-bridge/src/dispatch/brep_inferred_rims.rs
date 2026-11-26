@@ -39,3 +39,31 @@ pub(super) fn infer(v: &Value, op: &str) -> Result<Value> {
         json!({"model":attached.model,"closed":attached.model.shells[shell].closed,"capFaces":attached.cap_faces,"supportErrorUpper":bounds,"workUsed":attached.exact_work}),
     )
 }
+
+pub(super) fn inspect(v: &Value) -> Result<Value> {
+    let source: brep_core::Model = field(v, "source")?;
+    let options = cap::SectionAttachmentOptions {
+        max_exact_work: field(v, "max_work")?,
+        max_verification_cells: field(v, "max_verification_cells")?,
+        support_tolerance_mm: field(v, "support_tolerance_mm")?,
+    };
+    let r = cap::inspect_inferred_section_solid(
+        &source,
+        options,
+        super::closed_ss::closed_solid_policy(field(v, "tolerance_uv")?),
+    )?;
+    let evidence = r.admission.geometry();
+    let orientations = evidence
+        .orientations
+        .iter()
+        .map(|o| json!({"shell":o.shell,"expectedOutward":o.expected_outward,"outward":o.outward}))
+        .collect::<Vec<_>>();
+    let bounds = r
+        .support_error_upper
+        .into_iter()
+        .map(|q| q.to_string())
+        .collect::<Vec<_>>();
+    Ok(
+        json!({"model":r.admission.candidate(),"qualified":r.admission.solid().is_some(),"capFaces":r.cap_faces,"boundaryProven":evidence.boundary.proven,"joinsExact":evidence.boundary.agreement.all_joins_exact,"nestingConsistent":evidence.nesting.as_ref().and_then(|n|n.roles_consistent),"orientations":orientations,"supportErrorUpper":bounds}),
+    )
+}

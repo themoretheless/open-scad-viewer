@@ -131,7 +131,11 @@ pub(super) fn solid(v: &Value, mode: &str) -> Result<Value> {
         volume_tolerance_mm3: field(v, "volume_tolerance_mm3")?,
         max_volume_cells: field(v, "max_volume_cells")?,
     };
-    let (section, errors) = if mode == "inferred" {
+    let (section, errors) = if mode == "expanded" {
+        let r = cap::build_expanded_inferred_section_solid(&source, options)?;
+        let bounds = vec![String::from("0"); r.cap_faces.len()];
+        (r, bounds)
+    } else if mode == "inferred" {
         let r =
             cap::build_inferred_section_solid(&source, field(v, "support_tolerance_mm")?, options)?;
         (
