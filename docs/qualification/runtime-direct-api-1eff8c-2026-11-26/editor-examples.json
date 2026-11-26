@@ -1,0 +1,56 @@
+{
+  "kernelSha256": "1eff8cc19a1c94787132024e226c87094cbfb027efb3224a38cbbb157805dd82",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/read-shared-step.r",
+      "exampleSha256": "4dc25b0e3e749701683cd947691769ddc9989eca253e4ac07b5c1dc056acf122",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 227 ms"
+    },
+    {
+      "example": "examples/rush/replace-step-part.r",
+      "exampleSha256": "63fa5f4daad7ad09cbf5be8d186b1c5529175f0a2881e382e0bd28c172cecc07",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 158 ms"
+    },
+    {
+      "example": "examples/rush/replace-step-instance.r",
+      "exampleSha256": "647f410e0894fe6b29c3d5e54ce1399d7e04f20882288aea220dd7f8d358dcce",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 226 ms"
+    },
+    {
+      "example": "examples/rush/place-step-instance.r",
+      "exampleSha256": "03a724a98e90ef7bb4d9e9a0725e442d7cf8fa90f810e382ad002b99a15175f2",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 230 ms"
+    },
+    {
+      "example": "examples/rush/remove-step-instance.r",
+      "exampleSha256": "9a1c83bdd475216ba8d8ddf286091d02c2e84dd5155113b72184e8ab38d7f8f2",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 243 ms"
+    },
+    {
+      "example": "examples/rush/add-step-instance.r",
+      "exampleSha256": "037c61e3d8dfc5f242a0a0fee3bf84b97950cbe44162819d03b2349f00c16c83",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 243 ms"
+    },
+    {
+      "example": "examples/rush/insert-step-solid.r",
+      "exampleSha256": "fa01b773aac69aa3f79425b95528c09dc02e9316390349f48f649552d52bb114",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 251 ms"
+    },
+    {
+      "example": "examples/rush/append-step-assembly.r",
+      "exampleSha256": "59faa9c5a98a28bcb33d0f8553fa6413ff5af8caf9dd795285ef4c0a34f61b78",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 391 ms"
+    },
+    {
+      "example": "examples/rush/deduplicate-step-parts.r",
+      "exampleSha256": "28e86596452780a6ef1679ef7ae49bfc557503ab39fe6f6825fd27722dcc97bf",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 669 ms"
+    },
+    {
+      "example": "examples/rush/extract-step-instances.r",
+      "exampleSha256": "5de01e9cf43364d0c6087f26c8679df0e90fe7f21c1a5a6f29c2cbfd200c823f",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n271,19\nПлощадь\n387,59\nГотово · 265 ms"
+    }
+  ]
+}

@@ -20722,7 +20722,7 @@
     {
       "id": "NURBS-0818",
       "name": "Импорт сборки STEP AP242 без дублирования геометрии экземпляров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::import_step_shared_assembly",
@@ -20732,7 +20732,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-818-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-818-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-818-2026-11-17/native.log.gz",
+        "examples/rush/read-shared-step.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Import three shared herringbone definitions with twenty placements and materialize one closed planet on demand.",
@@ -20743,7 +20745,7 @@
     {
       "id": "NURBS-0819",
       "name": "Повторный экспорт STEP AP242 после замены общей геометрии детали",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::export_step_shared_assembly",
@@ -20753,7 +20755,9 @@
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-819-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-819-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-819-2026-11-17/native.log.gz",
+        "examples/rush/replace-step-part.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Export edited definitions as closed solids with proper rigid placements. The twenty-placement herringbone assembly retains all transforms and three shared definitions while exporting the changed planet height.",
@@ -20764,7 +20768,7 @@
     {
       "id": "NURBS-0820",
       "name": "Локальная замена геометрии отдельного экземпляра STEP-сборки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::replace_occurrence_geometry",
@@ -20773,7 +20777,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-820-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-820-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-820-2026-11-17/native.log.gz",
+        "examples/rush/replace-step-instance.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Split a shared definition only for the edited occurrence and export the resulting two definitions with all original placements.",
@@ -20784,7 +20790,7 @@
     {
       "id": "NURBS-0821",
       "name": "Перемещение и поворот отдельного экземпляра общей геометрии STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::set_occurrence_placement",
@@ -20794,7 +20800,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-821-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-821-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-821-2026-11-17/native.log.gz",
+        "examples/rush/place-step-instance.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Edit one proper rigid local-to-assembly placement and export it without duplicating the B-rep definition.",
@@ -20805,7 +20813,7 @@
     {
       "id": "NURBS-0822",
       "name": "Удаление экземпляра STEP-сборки с очисткой неиспользуемой геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::remove_occurrence",
@@ -20814,7 +20822,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-822-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-822-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-822-2026-11-17/native.log.gz",
+        "examples/rush/remove-step-instance.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Remove a placement, preserve definitions still referenced by peers and retire an unused definition while remapping surviving indices.",
@@ -20825,7 +20835,7 @@
     {
       "id": "NURBS-0823",
       "name": "Добавление экземпляра STEP-сборки с общей геометрией",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::add_occurrence",
@@ -20834,7 +20844,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-823-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-823-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-823-2026-11-17/native.log.gz",
+        "examples/rush/add-step-instance.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Append a rigid placement for an existing definition without copying its geometry.",
@@ -20845,7 +20857,7 @@
     {
       "id": "NURBS-0824",
       "name": "Вставка нового замкнутого тела в существующую STEP-сборку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::insert_solid",
@@ -20854,7 +20866,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-824-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-824-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-824-2026-11-17/native.log.gz",
+        "examples/rush/insert-step-solid.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Insert a closed solid as a new definition and add its first rigid placement atomically.",
@@ -20865,7 +20879,7 @@
     {
       "id": "NURBS-0825",
       "name": "Объединение STEP-сборок с композицией размещений без развёртывания геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::append_assembly",
@@ -20874,7 +20888,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-825-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-825-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-825-2026-11-17/native.log.gz",
+        "examples/rush/append-step-assembly.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Append a shared assembly under a rigid transform while preserving definition sharing within each input.",
@@ -20885,7 +20901,7 @@
     {
       "id": "NURBS-0826",
       "name": "Точное объединение одинаковых определений B-rep в STEP-сборке",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::deduplicate_definitions",
@@ -20894,7 +20910,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-826-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-826-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-826-2026-11-17/native.log.gz",
+        "examples/rush/deduplicate-step-parts.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Deduplicate identical indexed B-rep payloads without modifying local geometry or occurrence transforms.",
@@ -20905,7 +20923,7 @@
     {
       "id": "NURBS-0827",
       "name": "Извлечение выбранных экземпляров в самостоятельную STEP-сборку",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Сборки",
       "nativeApi": "cad_step::StepSharedAssembly::extract_occurrences",
@@ -20914,7 +20932,9 @@
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-curvature-field-827-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-827-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-827-2026-11-17/native.log.gz",
+        "examples/rush/extract-step-instances.r",
+        "tests/rushSharedAssemblies.test.ts"
       ],
       "remainingQualification": [
         "Extract an ordered selection with its original placements and only the definitions it uses.",
