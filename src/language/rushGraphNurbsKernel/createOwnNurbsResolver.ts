@@ -1536,6 +1536,13 @@ export function createOwnNurbsResolver(
           case 'hull_workspace':
           case 'rotating_hull_obstacles':
           case 'rounded_rotating_obstacles':
+          case 'rotating_face_obstacles':
+          case 'rotating_corner_obstacles':
+          case 'rotating_asymmetric_obstacles':
+          case 'rotating_skew_obstacles':
+          case 'rotating_chord_obstacles':
+          case 'rotating_clipped_chord_obstacles':
+          case 'rotating_exact_chord_obstacles':
           case 'profiled_rotating_obstacles':
           case 'hull_obstacles':
           case 'partition_axis_position':

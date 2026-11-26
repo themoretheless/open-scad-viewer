@@ -8,7 +8,7 @@ use crate::analysis::curve_measure::{
     partition_curve_rounded_hull_obstacle_clearance, partition_curve_rounded_hull_workspace,
 };
 
-pub(super) const OPS:&[&str]=&["point_workspace","point_obstacles","ball_obstacles","profiled_ball_workspace","minimum_profiled_ball_workspace","profiled_hull_workspace","minimum_profiled_hull_workspace","rotating_hull_workspace","minimum_rotating_hull_gap","rotating_hull_obstacles","rounded_rotating_obstacles","profiled_rotating_obstacles","profiled_rotating_workspace","minimum_profiled_rotating_gap","ball_workspace",
+pub(super) const OPS:&[&str]=&["point_workspace","point_obstacles","ball_obstacles","profiled_ball_workspace","minimum_profiled_ball_workspace","profiled_hull_workspace","minimum_profiled_hull_workspace","rotating_hull_workspace","minimum_rotating_hull_gap","rotating_hull_obstacles","rounded_rotating_obstacles","rotating_face_obstacles","rotating_corner_obstacles","rotating_asymmetric_obstacles","rotating_skew_obstacles","rotating_chord_obstacles","rotating_clipped_chord_obstacles","rotating_exact_chord_obstacles","profiled_rotating_obstacles","profiled_rotating_workspace","minimum_profiled_rotating_gap","ball_workspace",
     "capsule_workspace","hull_workspace","hull_obstacles"];
 
 fn planes(data:&[[f64;4]]) -> Vec<WorkspaceHalfSpace<'_>> {

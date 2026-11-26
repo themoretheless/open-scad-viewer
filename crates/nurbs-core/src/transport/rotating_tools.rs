@@ -3,7 +3,7 @@ use crate::analysis::curve_measure::*;
 use crate::curve::Curve;
 
 pub(super) const OPS:&[&str]=&["rotating_hull_workspace","minimum_rotating_hull_gap","rotating_hull_obstacles","rounded_rotating_obstacles",
-    "profiled_rotating_obstacles","profiled_rotating_workspace","minimum_profiled_rotating_gap"];
+    "rotating_face_obstacles","rotating_corner_obstacles","rotating_asymmetric_obstacles","rotating_skew_obstacles","rotating_chord_obstacles","rotating_clipped_chord_obstacles","rotating_exact_chord_obstacles","profiled_rotating_obstacles","profiled_rotating_workspace","minimum_profiled_rotating_gap"];
 
 fn xy_curve(mut curve:Curve)->Result<Curve>{
     curve.validate()?;
@@ -37,7 +37,19 @@ pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
         let r=match op {
             "rotating_hull_obstacles"=>partition_planar_rotating_hull_obstacle_clearance(&p,&d,field(v,"domain")?,&obs,&vertices,tol,budget)?,
             "rounded_rotating_obstacles"=>partition_planar_rotating_rounded_hull_obstacle_clearance(&p,&d,field(v,"domain")?,&obs,&vertices,field(v,"radius_mm")?,tol,budget)?,
-            _=>partition_planar_rotating_profiled_hull_obstacle_clearance(&p,&d,&profile()?,&obs,&vertices,tol,budget)?,
+            _=>{
+                let certify=match op {
+                    "rotating_face_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_contact,
+                    "rotating_corner_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_corner_contact,
+                    "rotating_asymmetric_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact,
+                    "rotating_skew_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_skew_contact,
+                    "rotating_chord_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_chord_contact,
+                    "rotating_clipped_chord_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact,
+                    "rotating_exact_chord_obstacles"=>partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact,
+                    _=>partition_planar_rotating_profiled_hull_obstacle_clearance,
+                };
+                certify(&p,&d,&profile()?,&obs,&vertices,tol,budget)?
+            }
         };
         return Ok(json!({"workUsed":r.work_plane_cells,"cells":r.cells.into_iter().map(|c|json!({
             "domain":c.parameter_interval,"span":c.span,"status":format!("{:?}",c.status),"obstacles":c.obstacles.into_iter().map(|s|format!("{s:?}")).collect::<Vec<_>>()
