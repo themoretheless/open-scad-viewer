@@ -1469,6 +1469,14 @@ export function createOwnNurbsResolver(
             result={kind:'surface',data:surface}
             break
           }
+          case 'inspect_surface_intersection': {
+            const {op,input,target_geometry}=n
+            const surface=needSurface(input)
+            const report=callGeometryRust<object>(op,{surface,target:needSurface(target_geometry)})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'surface',data:surface}
+            break
+          }
           case 'trace_geodesic': {
             const {op,id:_id,input,return_field,...settings}=n
             const surface=needSurface(input)
