@@ -8155,7 +8155,7 @@
     {
       "id": "NURBS-0290",
       "name": "Независимое точное перепараметрирование пролётов Безье с единым весом на шве",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::mobius_piecewise_bezier_surface",
@@ -8165,7 +8165,10 @@
         "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
         "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs",
         "docs/qualification/nurbs-curvature-field-290-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-290-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-290-2026-11-16/native.log.gz",
+        "examples/rush/piecewise-clock-curve.r",
+        "examples/rush/piecewise-clock-surface.r",
+        "tests/rushSpanClocks.test.ts"
       ],
       "remainingQualification": [
         "Applies a different positive clock on each span of a piecewise Bézier curve or tensor patch. A shared cumulative homogeneous scale preserves the complete geometry and literal seam weights.",
@@ -8176,7 +8179,7 @@
     {
       "id": "NURBS-0291",
       "name": "Перенос абсолютных границ пролётов Безье с сохранением геометрии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::relayout_bezier_surface",
@@ -8186,7 +8189,10 @@
         "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
         "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs",
         "docs/qualification/nurbs-curvature-field-291-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-291-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-291-2026-11-16/native.log.gz",
+        "examples/rush/relayout-clock-curve.r",
+        "examples/rush/relayout-clock-surface.r",
+        "tests/rushSpanClocks.test.ts"
       ],
       "remainingQualification": [
         "Relayout a piecewise Bézier curve or tensor surface on a new absolute knot grid with independent positive span clocks.",

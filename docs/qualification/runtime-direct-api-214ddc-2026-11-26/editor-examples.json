@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "214ddc89ceb8895f8ac5dbe08aded410a25a118a38184b91df9f187b09c28b5d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/piecewise-clock-curve.r",
+      "exampleSha256": "807a927ee47e4803cdd0d8e0dfb2874d621ef03315e77697adeea6529d478b72",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n3,63\nГотово · 62 ms"
+    },
+    {
+      "example": "examples/rush/piecewise-clock-surface.r",
+      "exampleSha256": "d8ebb459a3c65771eb754657f89581bc6df187c79141cbf5fe463362facd0a97",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,19\nГотово · 8 ms"
+    },
+    {
+      "example": "examples/rush/relayout-clock-curve.r",
+      "exampleSha256": "e852a87024e5ab43912a7cf71c5185b5508dac2c56a5077721d11ee56d87dbd4",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n3,64\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/relayout-clock-surface.r",
+      "exampleSha256": "4982676d590a3e7f7890883555e3b790d7e76c0f191f3365009901659f2227fc",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n11,17\nГотово · 5 ms"
+    }
+  ]
+}
