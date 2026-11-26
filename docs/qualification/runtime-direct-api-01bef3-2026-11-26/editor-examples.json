@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "01bef35e3da4646c71c2c08b66489cc211a6ced2bd73163dfbb252d0b1c0ec6a",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/measure-swept-ball-gap.r",
+      "exampleSha256": "7e1106fb01a74d73e8e18e845e6d8fa9ce0d8376a3c08117fcfc7cefe7a775ee",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 61 ms"
+    },
+    {
+      "example": "examples/rush/measure-swept-path-gap.r",
+      "exampleSha256": "a3e9e2e1a4974474ce10c7508cd7fb8f0ba40d312d3878cd69177d64de5024f4",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 19 ms"
+    },
+    {
+      "example": "examples/rush/classify-swept-path-material.r",
+      "exampleSha256": "50df326c9c7e8845c2d32b27a8469efc99980603d5dee83e453390296e2721c3",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 18 ms"
+    },
+    {
+      "example": "examples/rush/bound-swept-first-contact.r",
+      "exampleSha256": "f77f1afffd428a520758d3eaa71ddd8cf65b2d43ec50921c8e912b4175556d42",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 57 ms"
+    },
+    {
+      "example": "examples/rush/bound-swept-face-ranges.r",
+      "exampleSha256": "68bff17dd3c665c407a783e63d0a52c9bd662f17dcf34e71d131578d4aa894c9",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 28 ms"
+    }
+  ]
+}

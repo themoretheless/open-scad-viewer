@@ -11758,7 +11758,7 @@
     {
       "id": "NURBS-0430",
       "name": "Точный сферический зазор вдоль пространственного отрезка у плоскогранного тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_swept_ball_clearance",
@@ -11774,7 +11774,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
         "docs/qualification/nurbs-curvature-field-430-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-430-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-430-2026-11-17/native.log.gz",
+        "examples/rush/measure-swept-ball-gap.r",
+        "tests/rushSweptClearance.test.ts"
       ],
       "remainingQualification": [
         "Compare a swept ball radius against the exact minimum path-to-boundary distance with witnesses.",
@@ -11785,7 +11787,7 @@
     {
       "id": "NURBS-0431",
       "name": "Точный сферический зазор вдоль пространственной ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_swept_path_clearance",
@@ -11801,7 +11803,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
         "docs/qualification/nurbs-curvature-field-431-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-431-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-431-2026-11-17/native.log.gz",
+        "examples/rush/measure-swept-path-gap.r",
+        "tests/rushSweptClearance.test.ts"
       ],
       "remainingQualification": [
         "Find a globally minimizing path span for exact swept ball clearance under one shared budget.",
@@ -11812,7 +11816,7 @@
     {
       "id": "NURBS-0432",
       "name": "Точная классификация траектории шара относительно материала плоскогранного тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::exact_polyhedral_swept_path_material",
@@ -11828,7 +11832,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
         "docs/qualification/nurbs-curvature-field-432-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-432-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-432-2026-11-17/native.log.gz",
+        "examples/rush/classify-swept-path-material.r",
+        "tests/rushSweptClearance.test.ts"
       ],
       "remainingQualification": [
         "Classify the entire polyline ball sweep as contained, exterior, tangent or crossing the material boundary.",
@@ -11839,7 +11845,7 @@
     {
       "id": "NURBS-0433",
       "name": "Гарантированный интервал первого контакта шара вдоль пространственной ломаной",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_swept_path_first_contact",
@@ -11855,7 +11861,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
         "docs/qualification/nurbs-curvature-field-433-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-433-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-433-2026-11-17/native.log.gz",
+        "examples/rush/bound-swept-first-contact.r",
+        "tests/rushSweptClearance.test.ts"
       ],
       "remainingQualification": [
         "Isolate the first contacting span and its first boundary-contact parameter by exact prefix tests.",
@@ -11866,7 +11874,7 @@
     {
       "id": "NURBS-0434",
       "name": "Гарантированные границы контакта движущегося шара по граням тела",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::analysis::bounded_polyhedral_swept_face_contact_ranges",
@@ -11882,7 +11890,9 @@
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
         "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
         "docs/qualification/nurbs-curvature-field-434-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-434-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-434-2026-11-17/native.log.gz",
+        "examples/rush/bound-swept-face-ranges.r",
+        "tests/rushSweptClearance.test.ts"
       ],
       "remainingQualification": [
         "Enclose the first and last contact parameters of each retained face on each swept path span.",
