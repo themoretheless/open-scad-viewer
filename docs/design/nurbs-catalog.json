@@ -10519,7 +10519,7 @@
     {
       "id": "NURBS-0386",
       "name": "Точные плоскости свободных граничных циклов B-rep-оболочки",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::infer_section_planes",
@@ -10533,7 +10533,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
         "docs/qualification/nurbs-curvature-field-386-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-386-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-386-2026-11-17/native.log.gz",
+        "examples/rush/infer-rim-planes.r",
+        "tests/rushInferredRims.test.ts"
       ],
       "remainingQualification": [
         "Infer exact rational planes of free shell boundary cycles and group coplanar rings for capping.",
@@ -10544,7 +10546,7 @@
     {
       "id": "NURBS-0387",
       "name": "Автоматическое закрытие B-rep-оболочки по точно выведенным плоскостям",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::close_shell_with_inferred_section_caps",
@@ -10558,7 +10560,9 @@
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
         "docs/qualification/nurbs-curvature-field-387-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-387-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-387-2026-11-17/native.log.gz",
+        "examples/rush/close-inferred-rims.r",
+        "tests/rushInferredRims.test.ts"
       ],
       "remainingQualification": [
         "Infer all rim planes and close the selected shell with exact supports and retained topology.",
@@ -10569,7 +10573,7 @@
     {
       "id": "NURBS-0388",
       "name": "Автоматические крышки с ограниченным округлением выведенной плоской опоры",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::close_shell_with_bounded_inferred_section_caps",
@@ -10585,7 +10589,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
         "docs/qualification/nurbs-curvature-field-388-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-388-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-388-2026-11-17/native.log.gz",
+        "examples/rush/close-bounded-inferred-rims.r",
+        "tests/rushInferredRims.test.ts"
       ],
       "remainingQualification": [
         "Infer exact rim planes and close the shell with jointly rounded planar supports and certified displacement bounds.",
@@ -10596,7 +10602,7 @@
     {
       "id": "NURBS-0389",
       "name": "Автоматическое B-rep-тело с выведенными плоскостями крышек и гарантированным объёмом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "brep_core::planar_cap::build_inferred_section_solid",
@@ -10616,7 +10622,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
         "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
         "docs/qualification/nurbs-curvature-field-389-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-389-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-389-2026-11-17/native.log.gz",
+        "examples/rush/build-inferred-solid.r",
+        "tests/rushInferredRims.test.ts"
       ],
       "remainingQualification": [
         "Infer the cap planes from a standalone shell, bound support rounding, and prove the stored solid and its positive volume.",

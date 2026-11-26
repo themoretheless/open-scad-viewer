@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "c866f6b255b9d2f3bcb93377c23f8b9c7c0eb6caa547c6b91082457ddec51a6b",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/infer-rim-planes.r",
+      "exampleSha256": "8dea5ff3a1ced96460d3ab6891bdb422c616c0eb6867c35b1468fb4e6d891591",
+      "editorStats": "Объекты\n1\nТреугольники\n3\nОбъём\n0\nПлощадь\n1,87\nГотово · 31 ms"
+    },
+    {
+      "example": "examples/rush/close-inferred-rims.r",
+      "exampleSha256": "c8dda2da676835d2201eeb173533c3104da7da99026dafe5b1b4bd5b90e570f7",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 11 ms"
+    },
+    {
+      "example": "examples/rush/close-bounded-inferred-rims.r",
+      "exampleSha256": "416a9de3888cc4c55a9ac2c91346b8f8794d891700449a1894fc5ac4e127cb57",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/build-inferred-solid.r",
+      "exampleSha256": "c40a3b24858e73ea5ed21314d0c448495220bedc8567910a589ff1cb1dec23da",
+      "editorStats": "Объекты\n1\nТреугольники\n4\nОбъём\n0,17\nПлощадь\n2,37\nГотово · 28 ms"
+    }
+  ]
+}
