@@ -22927,7 +22927,7 @@
     {
       "id": "NURBS-0926",
       "name": "Проверка простоты и вложенности контуров при редактировании сжатого NURBS-сектора",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::profile_certificate::replace_certified_profile_sector",
@@ -22937,7 +22937,9 @@
         "crates/brep-core/src/profile/profile_certificate.rs",
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-certified-sector-edit-926-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-certified-sector-edit-926-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-certified-sector-edit-926-2026-11-18/native.log.gz",
+        "examples/rush/certified-profile-edit.r",
+        "tests/rushCertifiedGearEdits.test.ts"
       ],
       "remainingQualification": [
         "Planar material-left loops within existing profile certificate limits. Does not certify a three-dimensional body or continuity above G0."
@@ -22946,7 +22948,7 @@
     {
       "id": "NURBS-0927",
       "name": "Проверка правки зуба полного сжатого контура с доказательством разделения групп",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::gear::replace_verified_gear_sector",
@@ -22956,7 +22958,9 @@
         "crates/brep-core/src/parts/gear/mod.rs",
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/native.log.gz",
+        "examples/rush/verified-gear-edit.r",
+        "tests/rushCertifiedGearEdits.test.ts"
       ],
       "remainingQualification": [
         "Grouped planar teeth with four or six pieces, optional bore or required outer rim, subject to local certificates and far-hull proof budgets."
@@ -22965,7 +22969,7 @@
     {
       "id": "NURBS-0928",
       "name": "Построение шевронного тела из проверенного изменённого профиля с передачей в STEP",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "brep_core::gear::gear_from_verified_profile",
@@ -22975,7 +22979,9 @@
         "crates/brep-core/src/parts/gear/mod.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-edited-gear-body-step-928-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-edited-gear-body-step-928-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-edited-gear-body-step-928-2026-11-18/native.log.gz",
+        "examples/rush/edited-gear-step.r",
+        "tests/rushCertifiedGearEdits.test.ts"
       ],
       "remainingQualification": [
         "Validated model topology and edited base profile; no global solid intersection or original involute fit claim."

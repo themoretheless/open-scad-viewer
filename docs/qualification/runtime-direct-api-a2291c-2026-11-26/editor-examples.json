@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "a2291c59e01c5c110d64eeb368cb890b79efb0ab1eda3db120e95a7143e85ba1",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/certified-profile-edit.r",
+      "exampleSha256": "de3bdf6ae2a7e269874e18f252025cb25da70d895f053640f8f74ed0a7a53529",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n4\nГотово · 51 ms"
+    },
+    {
+      "example": "examples/rush/verified-gear-edit.r",
+      "exampleSha256": "fb75bf01e7ab06b900fc294546073f8d36e6333aa1b87487fc4db9a283d7277c",
+      "editorStats": "Объекты\n1\nТреугольники\n6 944\nОбъём\n8 885,31\nПлощадь\n5 316,6\nГотово · 5 934 ms"
+    },
+    {
+      "example": "examples/rush/edited-gear-step.r",
+      "exampleSha256": "1823d4cee5b3d618da2e4ddbd3f460f5dc8b404083242b19e56e71f154da3e19",
+      "editorStats": "Объекты\n1\nТреугольники\n6 944\nОбъём\n8 885,31\nПлощадь\n5 316,6\nГотово · 7 630 ms"
+    }
+  ]
+}
