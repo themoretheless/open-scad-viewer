@@ -22161,7 +22161,7 @@
     {
       "id": "NURBS-0887",
       "name": "Совместное точное сжатие узлов и степени параметрической NURBS-кривой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_knot_removal::compress_curve",
@@ -22170,7 +22170,9 @@
         "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
         "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
         "docs/qualification/nurbs-curve-compression-887-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-887-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-887-2026-11-18/native.log.gz",
+        "examples/rush/compress-profile-curve.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22179,7 +22181,7 @@
     {
       "id": "NURBS-0888",
       "name": "Атомарное точное сжатие набора параметрических NURBS-кривых",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_knot_removal::compress_curve_batch",
@@ -22188,7 +22190,9 @@
         "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
         "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
         "docs/qualification/nurbs-curve-compression-888-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-888-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-888-2026-11-18/native.log.gz",
+        "examples/rush/compress-profile-segments.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22197,7 +22201,7 @@
     {
       "id": "NURBS-0889",
       "name": "Точное объединение и сжатие цепочки кривых разных степеней",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::compress_mixed_degree_chain",
@@ -22206,7 +22210,9 @@
         "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-889-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-889-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-889-2026-11-18/native.log.gz",
+        "examples/rush/compress-profile-chain.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22215,7 +22221,7 @@
     {
       "id": "NURBS-0890",
       "name": "Ориентация и точное объединение разнонаправленных сегментов профиля",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::orient_and_compress_chain",
@@ -22224,7 +22230,9 @@
         "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-890-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-890-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-890-2026-11-18/native.log.gz",
+        "examples/rush/orient-profile-chain.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22233,7 +22241,7 @@
     {
       "id": "NURBS-0891",
       "name": "Восстановление профиля из неупорядоченного разбиения параметрического интервала",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_parameter_partition",
@@ -22242,7 +22250,9 @@
         "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-891-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-891-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-891-2026-11-18/native.log.gz",
+        "examples/rush/restore-profile-partition.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22251,7 +22261,7 @@
     {
       "id": "NURBS-0892",
       "name": "Сборка открытой NURBS-цепочки по графу концов с независимыми параметрами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_open_endpoint_chain",
@@ -22260,7 +22270,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-892-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-892-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-892-2026-11-18/native.log.gz",
+        "examples/rush/assemble-open-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22269,7 +22281,7 @@
     {
       "id": "NURBS-0893",
       "name": "Сборка замкнутого профиля по графу концов с заданным швом и обходом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_closed_endpoint_chain",
@@ -22278,7 +22290,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-893-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-893-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-893-2026-11-18/native.log.gz",
+        "examples/rush/assemble-closed-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22287,7 +22301,7 @@
     {
       "id": "NURBS-0894",
       "name": "Восстановление и сжатие плоской границы с доказательством простоты контура",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_simple_planar_loop",
@@ -22296,7 +22310,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-894-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-894-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-894-2026-11-18/native.log.gz",
+        "examples/rush/assemble-planar-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22305,7 +22321,7 @@
     {
       "id": "NURBS-0895",
       "name": "Сборка простой плоской границы с заданным направлением обхода и фиксированным швом",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_wound_planar_loop",
@@ -22314,7 +22330,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-895-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-895-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-895-2026-11-18/native.log.gz",
+        "examples/rush/orient-planar-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22323,7 +22341,7 @@
     {
       "id": "NURBS-0896",
       "name": "Сборка пространственного контура с доказательством простоты через координатную проекцию",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_simple_spatial_loop",
@@ -22332,7 +22350,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-896-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-896-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-896-2026-11-18/native.log.gz",
+        "examples/rush/assemble-projected-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22341,7 +22361,7 @@
     {
       "id": "NURBS-0897",
       "name": "Доказательство простоты пространственного контура в точной наклонной проекции",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_oblique_simple_loop",
@@ -22350,7 +22370,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-897-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-897-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-897-2026-11-18/native.log.gz",
+        "examples/rush/assemble-oblique-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22359,7 +22381,7 @@
     {
       "id": "NURBS-0898",
       "name": "Доказательство простоты пространственного контура по стыкам и расстояниям между сегментами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop",
@@ -22368,7 +22390,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-898-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-898-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-898-2026-11-18/native.log.gz",
+        "examples/rush/assemble-spatial-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
@@ -22377,7 +22401,7 @@
     {
       "id": "NURBS-0899",
       "name": "Проверка простоты пространственного контура с многопролётными NURBS-рёбрами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Точное упрощение",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop",
@@ -22386,7 +22410,9 @@
         "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-899-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-curve-compression-899-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-curve-compression-899-2026-11-18/native.log.gz",
+        "examples/rush/assemble-multispan-spatial-profile.r",
+        "tests/rushProfileCompression.test.ts"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."

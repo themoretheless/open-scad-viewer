@@ -1,0 +1,71 @@
+{
+  "kernelSha256": "e57387c7491ed28a8aa36fbcd97f3c848d67d2672a4b8fc793632ecd006256b7",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/compress-profile-curve.r",
+      "exampleSha256": "fe6b366b8ce5228218b08e9017fcb12566e0c33955bd9f6504844f9146dbb0fa",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 45 ms"
+    },
+    {
+      "example": "examples/rush/compress-profile-segments.r",
+      "exampleSha256": "3c33fec71f8f0f14f68b04841014b59569d2425d95d646ebf07cca4c799cf5aa",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 6 ms"
+    },
+    {
+      "example": "examples/rush/compress-profile-chain.r",
+      "exampleSha256": "9c765f7120f2283472c8210bd0cff5224acb1c74806f438df12c769d051a8a4e",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/orient-profile-chain.r",
+      "exampleSha256": "54b7c7cfa67f2943581c3f1cf7f2d9957b1725348f25a3c0d113322d4b378224",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/restore-profile-partition.r",
+      "exampleSha256": "c53a44373b6a7a623de710bc156b4e87cc7ad8361da6ccd7fb70dcd1eb67e467",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/assemble-open-profile.r",
+      "exampleSha256": "522a50a008a77737c0f4e4c41af3e868851b6e2c4c98cdd65c452c131cf9e682",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 4 ms"
+    },
+    {
+      "example": "examples/rush/assemble-closed-profile.r",
+      "exampleSha256": "9cc0f9ee955ee6ad9fd2dfa4f36f011d18ffbd32a6adac41f21559134023d02a",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/assemble-planar-profile.r",
+      "exampleSha256": "63f07957a2510515acdf804097dace603302aa95b326d22ef2061a211b05175f",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/orient-planar-profile.r",
+      "exampleSha256": "deeeaec3c9a09d8a6db353db83467c31c620607674e7b98dc83e8ad7b12bff97",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/assemble-projected-profile.r",
+      "exampleSha256": "5d1e6a170293c67d66cf66eb7ed21b439e8e7c9c9c7c01a8a86de7791d373eaf",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/assemble-oblique-profile.r",
+      "exampleSha256": "4f6ee36f569ef0fc26d9e68467ee810502225a79c409eb1a5bb9b4c108b12a87",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n3,41\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/assemble-spatial-profile.r",
+      "exampleSha256": "6f6297f09cb9b197a2c61239d4a52326df315ae77b89d58c5cff0a19b261ce7f",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n9,66\nГотово · 5 ms"
+    },
+    {
+      "example": "examples/rush/assemble-multispan-spatial-profile.r",
+      "exampleSha256": "25251fddeb7b446f9f5849b8efad738c24de3166349982245cafd79ee016fc67",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n9,66\nГотово · 4 ms"
+    }
+  ]
+}
