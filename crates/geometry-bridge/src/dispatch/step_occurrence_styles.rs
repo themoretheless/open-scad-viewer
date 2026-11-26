@@ -95,3 +95,45 @@ pub(super) fn branch(v: &Value) -> Result<Value> {
     report["step"] = json!(step);
     Ok(report)
 }
+
+pub(super) const BALANCE_OPS: &[&str] = &[
+    "measure_bearing_inertia", "balance_two_planes", "balance_fixed_sites", "add_assembly_point_mass",
+];
+
+pub(super) fn balance(v: &Value) -> Result<Value> {
+    let value = &v["properties"];
+    let mut mass = brep_core::analysis::AssemblyMass {
+        mass: field(value, "massKg")?,
+        centroid: field(value, "centroidMm")?,
+        inertia: field(value, "inertiaKgMm2")?,
+    };
+    let operation = v["op"].as_str().unwrap_or("");
+    let mut report = json!({});
+    if operation == "add_assembly_point_mass" {
+        mass = mass.with_point_mass(field(v, "mass_position")?, field(v, "point_mass_kg")?)?;
+    } else {
+        let point = field(v, "axis_point")?;
+        let direction = field(v, "axis_direction")?;
+        match operation {
+            "measure_bearing_inertia" => {
+                report["axisInertiaKgMm2"] = json!(mass.moment_about_axis(point, direction)?);
+                report["staticUnbalanceKgMm"] = json!(mass.static_unbalance(point, direction)?);
+            }
+            "balance_two_planes" => {
+                report["planeCorrectionsKgMm"] = json!(mass.two_plane_balance_corrections(
+                    point, direction, field(v, "balance_planes")?,
+                )?);
+            }
+            "balance_fixed_sites" => {
+                report["siteMassesKg"] = json!(mass.balance_at_fixed_sites(
+                    point, direction, field(v, "balance_planes")?, field(v, "balance_sites")?,
+                )?);
+            }
+            _ => return Err(input("Unknown assembly balance operation")),
+        }
+    }
+    report["massKg"] = json!(mass.mass);
+    report["centroidMm"] = json!(mass.centroid);
+    report["inertiaKgMm2"] = json!(mass.inertia);
+    Ok(report)
+}

@@ -3068,6 +3068,19 @@ export function createOwnNurbsResolver(
             result={kind:'brep',data:model}
             break
           }
+          case 'measure_bearing_inertia':
+          case 'balance_two_planes':
+          case 'balance_fixed_sites':
+          case 'add_assembly_point_mass': {
+            const {id:_id,input,op,...args}=n
+            const model=needBrep(input)
+            const upstream=constructionReports[input]
+            if(!upstream || !('measurement' in upstream)) throw new Error('Select a STEP branch mass measurement')
+            const report=callGeometryRust<object>(op,{...args,properties:upstream.measurement.report})
+            constructionReports[key]={measurement:{operation:op,report}}
+            result={kind:'brep',data:model}
+            break
+          }
           case 'group_step_parts':
           case 'style_step_occurrences':
           case 'read_occurrence_styles':
