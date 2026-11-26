@@ -12,7 +12,7 @@ use crate::analysis::curve_measure::{
     partition_curve_oriented_box_clearance, partition_curve_spherical_clearance,
 };
 
-pub(super) const OPS:&[&str]=&["angular_speed_limit","angular_acceleration_limit","angular_jerk_limit","orientation_sector","relative_orientation_sector","relative_angular_limits","orientation_winding","curve_winding_at_point","contour_fill_at_point","curve_winding_over_box","signed_contour_distance","contour_fill_over_box","signed_contour_box_distance","angular_travel","relative_angular_travel","angular_motion_limits","angular_slowdown_bounds","angular_duration_bounds","angular_motion_deadline","sphere_path_clearance","capsule_path_clearance","box_path_clearance",
+pub(super) const OPS:&[&str]=&["angular_speed_limit","angular_acceleration_limit","angular_jerk_limit","orientation_sector","relative_orientation_sector","relative_angular_limits","orientation_winding","curve_winding_at_point","contour_fill_at_point","curve_winding_over_box","contour_box_distance","contour_disk_distance","contour_capsule_distance","contour_rectangle_distance","planar_contour_sets_distance","signed_contour_distance","contour_fill_over_box","signed_contour_box_distance","angular_travel","relative_angular_travel","angular_motion_limits","angular_slowdown_bounds","angular_duration_bounds","angular_motion_deadline","sphere_path_clearance","capsule_path_clearance","box_path_clearance",
     "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","violation_path_length","violation_obstacle_lengths","violation_path_duration","chain_violation_duration","last_chain_violation","chain_clearance_timeline","longest_chain_violation","minimum_synchronized_gap","synchronized_contact_intervals","minimum_tool_pair_gap","tool_pair_intervals","first_tool_pair_contact","last_tool_pair_contact","tool_contact_duration","longest_tool_contact","peak_tool_pair_count","simultaneous_tool_duration","simultaneous_tool_windows","peak_tool_contacts","tool_pairs_at_time","minimum_scheduled_gap","scheduled_contact_intervals","held_contact_intervals","minimum_held_gap","minimum_affine_gap","affine_contact_intervals","first_chain_violation","minimum_chain_gap","mixed_margin_clearance","variable_sphere_clearance","minimum_variable_sphere_gap","variable_scene_clearance","minimum_variable_scene_gap","profiled_scene_clearance","minimum_profiled_scene_gap","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
 
 pub(super) fn minimum(r:SphericalMinimumClearance)->Value{
@@ -21,6 +21,7 @@ pub(super) fn minimum(r:SphericalMinimumClearance)->Value{
 }
 
 pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
+    if super::contour_obstacles::OPS.contains(&op) { return super::contour_obstacles::dispatch(v,op); }
     if super::contour_fills::OPS.contains(&op) { return super::contour_fills::dispatch(v,op); }
     if super::orientation_frames::OPS.contains(&op) { return super::orientation_frames::dispatch(v,op); }
     if super::angular_limits::OPS.contains(&op) { return super::angular_limits::dispatch(v,op); }

@@ -1524,6 +1524,11 @@ export function createOwnNurbsResolver(
           case 'curve_winding_at_point':
           case 'contour_fill_at_point':
           case 'curve_winding_over_box':
+          case 'contour_box_distance':
+          case 'contour_disk_distance':
+          case 'contour_capsule_distance':
+          case 'contour_rectangle_distance':
+          case 'planar_contour_sets_distance':
           case 'signed_contour_distance':
           case 'contour_fill_over_box':
           case 'signed_contour_box_distance':
