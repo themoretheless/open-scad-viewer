@@ -1,0 +1,26 @@
+{
+  "kernelSha256": "6358e57687cb4f4b5ce60c932c4bbefe44f882881df955e8ccd6333de549269f",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/join-affine-c1.r",
+      "exampleSha256": "6901c3f2a157714998b3bfca2fc2b5fb4b8169042af148cb3c7d176a0c997f6f",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n9\nГотово · 64 ms"
+    },
+    {
+      "example": "examples/rush/join-affine-c2.r",
+      "exampleSha256": "1d350e92c4ec5d120cf2a0014e57c23428fe0a76965e8ff5e46a69863aad5b4a",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n4,65\nГотово · 10 ms"
+    },
+    {
+      "example": "examples/rush/join-projective-c2.r",
+      "exampleSha256": "acba84f2625a1a4b4109b8427cfb9eb63c43feaf9b7a1abd5a87db287d71d303",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n5,75\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/join-stationary-c2.r",
+      "exampleSha256": "81fd808cbb82e19f0a92f643b999e5080125bd2166d8b7d5abf109403526d2d2",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2\nГотово · 9 ms"
+    }
+  ]
+}

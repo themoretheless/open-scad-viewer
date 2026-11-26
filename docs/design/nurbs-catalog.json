@@ -13809,7 +13809,7 @@
     {
       "id": "NURBS-0499",
       "name": "Точная склейка NURBS-кривых с согласованием параметров до C1",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_exact_c1_clock",
@@ -13819,7 +13819,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
         "docs/qualification/nurbs-curvature-field-499-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-499-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-499-2026-11-17/native.log.gz",
+        "examples/rush/join-affine-c1.r",
+        "tests/rushClockJoins.test.ts"
       ],
       "remainingQualification": [
         "Match the first derivatives exactly with a positive affine clock change on the right curve before merging.",
@@ -13830,7 +13832,7 @@
     {
       "id": "NURBS-0500",
       "name": "Точная склейка NURBS-кривых с аффинным согласованием параметров до C2",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_exact_c2_clock",
@@ -13839,7 +13841,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-500-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-500-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-500-2026-11-17/native.log.gz",
+        "examples/rush/join-affine-c2.r",
+        "tests/rushClockJoins.test.ts"
       ],
       "remainingQualification": [
         "Prove equal first and second derivatives after changing the right parameter by an exact affine map.",
@@ -13850,7 +13854,7 @@
     {
       "id": "NURBS-0501",
       "name": "Точная склейка NURBS-кривых до C2 с дробно-линейным параметром",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_exact_projective_c2_clock",
@@ -13860,7 +13864,9 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs",
         "docs/qualification/nurbs-curvature-field-501-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-501-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-501-2026-11-17/native.log.gz",
+        "examples/rush/join-projective-c2.r",
+        "tests/rushClockJoins.test.ts"
       ],
       "remainingQualification": [
         "Match a regular G2 seam to C2 with a pole-free exact fractional-linear change of the right clock.",
@@ -13871,7 +13877,7 @@
     {
       "id": "NURBS-0502",
       "name": "Точная склейка NURBS-кривых до C2 в точке с нулевыми касательными",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_exact_stationary_c2_clock",
@@ -13880,7 +13886,9 @@
         "crates/nurbs-core/src/editing/rational_edit.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-502-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-502-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-502-2026-11-17/native.log.gz",
+        "examples/rush/join-stationary-c2.r",
+        "tests/rushClockJoins.test.ts"
       ],
       "remainingQualification": [
         "Match the stationary second derivatives by a positive exact affine parameter change.",
