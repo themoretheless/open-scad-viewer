@@ -1,7 +1,8 @@
 use super::*;
 use crate::analysis::curve_measure::{
     ToolpathObstacle, measure_minimum_toolpath_clearance, partition_toolpath_clearance_with_margin,
-    partition_toolpath_clearance,
+    partition_toolpath_clearance, measure_toolpath_clearance_violation_length,
+    measure_toolpath_violation_lengths_by_obstacle, measure_toolpath_clearance_violation_duration, TimedMotionSegment,
 };
 use crate::analysis::curve_measure::{
     measure_minimum_spherical_clearance, measure_minimum_box_clearance, measure_minimum_oriented_box_clearance,
@@ -12,7 +13,7 @@ use crate::analysis::curve_measure::{
 };
 
 pub(super) const OPS:&[&str]=&["sphere_path_clearance","capsule_path_clearance","box_path_clearance",
-    "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","mixed_margin_clearance","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
+    "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","violation_path_length","violation_obstacle_lengths","violation_path_duration","mixed_margin_clearance","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
 
 fn minimum(r:SphericalMinimumClearance)->Value{
     json!({"gap":r.gap_bounds,"witnessParameter":r.witness_parameter,"witnessObstacle":r.witness_obstacle,
@@ -27,7 +28,7 @@ pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
     let tol=field(v,if minimize || op=="minimum_mixed_gap" {"gap_tolerance_mm"} else {"parameter_tolerance"})?;
     let budget=field(v,"max_cells")?;
     let r=match op {
-        "minimum_mixed_gap" | "mixed_path_clearance" | "mixed_margin_clearance" => {
+        "minimum_mixed_gap" | "mixed_path_clearance" | "mixed_margin_clearance" | "violation_path_length" | "violation_obstacle_lengths" | "violation_path_duration" => {
             let rows: Vec<Vec<f64>> = field(v, "obstacles")?;
             let frames: Vec<_> = rows.iter().map(|p| {
                 (p.len() == 15).then(|| [&p[3..6], &p[6..9], &p[9..12]])
@@ -41,6 +42,22 @@ pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
                     _ => return Err(input("Mixed obstacles require 4, 6, 7 or 15 coordinates")),
                 })
             }).collect::<Result<Vec<_>>>()?;
+            if op == "violation_path_duration" {
+                let segment = TimedMotionSegment { curve: &curve, interval: domain, duration: field(v,"duration_s")? };
+                let report = measure_toolpath_clearance_violation_duration(segment, &obstacles, radius, field(v,"margin_mm")?, tol, budget)?;
+                return Ok(json!({"duration":report.bounds,"byObstacle":report.by_obstacle,"workUsed":report.work_obstacle_cells}));
+            }
+            if matches!(op,"violation_path_length" | "violation_obstacle_lengths") {
+                let margin = field(v,"margin_mm")?;
+                let length_tol = field(v,"length_tolerance_mm")?;
+                let length_budget = field(v,"max_length_cells")?;
+                if op == "violation_obstacle_lengths" {
+                    let r = measure_toolpath_violation_lengths_by_obstacle(&curve, domain, &obstacles, radius, margin, tol, length_tol, budget, length_budget)?;
+                    return Ok(json!({"length":r.union.bounds,"byObstacle":r.by_obstacle,"workUsed":r.union.work_obstacle_cells,"lengthCells":r.union.work_length_cells}));
+                }
+                let r = measure_toolpath_clearance_violation_length(&curve, domain, &obstacles, radius, margin, tol, length_tol, budget, length_budget)?;
+                return Ok(json!({"length":r.bounds,"workUsed":r.work_obstacle_cells,"lengthCells":r.work_length_cells}));
+            }
             if op == "minimum_mixed_gap" {
                 return Ok(minimum(measure_minimum_toolpath_clearance(&curve, domain, &obstacles, radius, tol, budget)?));
             }

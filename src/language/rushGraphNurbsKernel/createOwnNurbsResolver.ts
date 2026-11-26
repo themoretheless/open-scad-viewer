@@ -1475,6 +1475,9 @@ export function createOwnNurbsResolver(
           }
           case 'minimum_mixed_gap':
           case 'mixed_path_clearance':
+          case 'violation_path_length':
+          case 'violation_obstacle_lengths':
+          case 'violation_path_duration':
           case 'mixed_margin_clearance':
           case 'minimum_sphere_gap':
           case 'minimum_box_gap':
