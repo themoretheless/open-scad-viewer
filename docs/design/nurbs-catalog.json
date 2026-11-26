@@ -18767,7 +18767,7 @@
     {
       "id": "NURBS-0725",
       "name": "Сертифицированная длина участков с нарушением зазора",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_clearance_violation_length",
@@ -18775,7 +18775,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-725-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-725-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-725-2026-11-17/native.log.gz",
+        "examples/rush/violation-path-length.r",
+        "tests/rushViolationMeasures.test.ts"
       ],
       "remainingQualification": [
         "Enclose the geometric length of the union of clearance violations.",
@@ -18786,7 +18788,7 @@
     {
       "id": "NURBS-0726",
       "name": "Сертифицированная длина нарушений зазора по каждому препятствию",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_violation_lengths_by_obstacle",
@@ -18794,7 +18796,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-726-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-726-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-726-2026-11-17/native.log.gz",
+        "examples/rush/violation-obstacle-lengths.r",
+        "tests/rushViolationMeasures.test.ts"
       ],
       "remainingQualification": [
         "Attribute bounded arc length to individual obstacles and their union with one integration per cell.",
@@ -18805,7 +18809,7 @@
     {
       "id": "NURBS-0727",
       "name": "Сертифицированная длительность нарушения зазора вдоль NURBS-траектории",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-exact-simplification",
       "category": "Точное редактирование",
       "nativeApi": "nurbs_core::analysis::curve_measure::measure_toolpath_clearance_violation_duration",
@@ -18813,7 +18817,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curvature-field-727-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-727-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-727-2026-11-17/native.log.gz",
+        "examples/rush/violation-path-duration.r",
+        "tests/rushViolationMeasures.test.ts"
       ],
       "remainingQualification": [
         "Bound clearance violation duration in the traversal clock, for each obstacle and their union.",
