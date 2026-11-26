@@ -127,6 +127,7 @@ pub(super) fn dispatch_other(v: Value, op: String) -> Result<Value> {
     if periodic_chart_measurements::OPS.contains(&op_str) {
         return periodic_chart_measurements::dispatch(&v, op_str);
     }
+    if trajectory_ranges::OPS.contains(&op_str) { return trajectory_ranges::dispatch(&v,op_str); }
     if motion_turns::OPS.contains(&op_str) { return motion_turns::dispatch(&v,op_str); }
     if motion_jumps::OPS.contains(&op_str) { return motion_jumps::dispatch(&v,op_str); }
     if trimmed_surface_integrals::OPS.contains(&op_str) { return trimmed_surface_integrals::dispatch(&v, op_str); }

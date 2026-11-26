@@ -1473,6 +1473,9 @@ export function createOwnNurbsResolver(
             result = {kind:'curve',data:curve}
             break
           }
+          case 'partition_axis_position':
+          case 'partition_axis_positions':
+          case 'partition_trajectory_bounds':
           case 'check_timed_chain':
           case 'inspect_knot_turns':
           case 'inspect_join_turn':
