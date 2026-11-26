@@ -1107,6 +1107,11 @@ export function createOwnNurbsResolver(
           case 'measure_polyhedral_signed_distance':
           case 'sample_polyhedral_signed_distances':
           case 'measure_swept_ball_gap':
+          case 'bound_path_material_length':
+          case 'clip_exterior_path':
+          case 'clip_interior_path':
+          case 'partition_solid_path':
+          case 'bound_path_length_breakdown':
           case 'find_path_face_contacts':
           case 'clip_path_to_material':
           case 'find_path_boundary_events':

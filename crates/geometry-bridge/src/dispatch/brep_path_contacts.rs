@@ -49,6 +49,39 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
                 .collect::<Vec<_>>();
             json!({"model":model,"spans":spans,"workUsed":result.exact_work})
         }
+        "clip_exterior_path" => {
+            let result = a::exact_polyhedral_path_exterior_clip(&solid, &path, work)?;
+            let spans=result.span_intervals.into_iter().map(|parts|parts.into_iter().map(|p|json!({"parameters":p.parameters.map(|q|q.to_string()),"included":p.endpoints_included})).collect::<Vec<_>>()).collect::<Vec<_>>();
+            json!({"model":model,"spans":spans,"workUsed":result.exact_work})
+        }
+        "clip_interior_path" => {
+            let result = a::exact_polyhedral_path_interior_clip(&solid, &path, work)?;
+            let spans=result.span_intervals.into_iter().map(|parts|parts.into_iter().map(|p|json!({"parameters":p.parameters.map(|q|q.to_string()),"included":p.endpoints_included})).collect::<Vec<_>>()).collect::<Vec<_>>();
+            json!({"model":model,"spans":spans,"workUsed":result.exact_work})
+        }
+        "partition_solid_path" => {
+            let result = a::exact_polyhedral_path_partition(&solid, &path, work)?;
+            let spans=result.spans.into_iter().map(|parts|parts.into_iter().map(|p|json!({"parameters":p.parameters.map(|q|q.to_string()),"included":p.endpoints_included,"location":format!("{:?}",p.location)})).collect::<Vec<_>>()).collect::<Vec<_>>();
+            json!({"model":model,"spans":spans,"workUsed":result.exact_work})
+        }
+        "bound_path_material_length" => {
+            let result = a::bounded_polyhedral_path_material_length(
+                &solid,
+                &path,
+                field(v, "tolerance_mm")?,
+                work,
+            )?;
+            json!({"model":model,"lengthBoundsMm":result.length_bounds_mm.map(|q|q.to_string()),"workUsed":result.exact_work})
+        }
+        "bound_path_length_breakdown" => {
+            let result = a::bounded_polyhedral_path_length_breakdown(
+                &solid,
+                &path,
+                field(v, "tolerance_mm")?,
+                work,
+            )?;
+            json!({"model":model,"interiorMm":result.interior_bounds_mm.map(|q|q.to_string()),"boundaryMm":result.boundary_bounds_mm.map(|q|q.to_string()),"exteriorMm":result.exterior_bounds_mm.map(|q|q.to_string()),"workUsed":result.exact_work})
+        }
         _ => {
             let result = a::exact_polyhedral_path_boundary_events(&solid, &path, work)?;
             let events=result.events.into_iter().map(|e|json!({"parameters":e.parameters.map(|q|q.to_string()),"before":e.before.map(|l|format!("{l:?}")),"after":e.after.map(|l|format!("{l:?}"))})).collect::<Vec<_>>();
