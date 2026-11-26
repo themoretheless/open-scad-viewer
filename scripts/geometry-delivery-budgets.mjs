@@ -665,6 +665,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/CsjS3uuZ.js':203_600,'assets/DrCq49Ym.js':191_200,'assets/mainSolid.worker-B6HQ0Xa9.js':205_800}),
   }),
+  // Curvature threshold contour roots and graphs: 20,884,398 raw bytes, 7,468,910 packed bytes and 14,543,597 total asset bytes.
+  '794b4de8b9e34cfa5cfe67a49988df36e93f14ab26d0fb07401b8771fb842d4f':Object.freeze({
+    version:90,geometryChunkBytes:7_533_000,totalAssetBytes:14_584_000,rawGeometryBytes:20_964_000,
+    namedJsChunkBytes:Object.freeze({
+      index:284_400,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DJVwJb1j.js':191_300,'assets/D_keCb9x.js':203_600,'assets/mainSolid.worker-DOkEDyt1.js':206_400}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "794b4de8b9e34cfa5cfe67a49988df36e93f14ab26d0fb07401b8771fb842d4f",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/curvature-threshold-contour.r",
+      "exampleSha256": "309c8e39d5aa165fc51aa914eacc6f972a777e3f47c8924fe764c7dc3138ee29",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n1,22\nГотово · 75 ms"
+    }
+  ]
+}

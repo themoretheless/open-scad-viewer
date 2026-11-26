@@ -7550,7 +7550,7 @@
     {
       "id": "NURBS-0266",
       "name": "Изоляция пороговых корней разности главных кривизн на границе ячейки NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_edge_roots",
@@ -7563,7 +7563,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
         "docs/qualification/nurbs-curvature-field-266-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-266-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-266-2026-11-15/native.log.gz",
+        "examples/rush/curvature-threshold-contour.r",
+        "tests/rushGapContours.test.ts"
       ],
       "remainingQualification": [
         "Exact original one-sided edge restriction and Bernstein sign variation retain exact dyadic roots and complete coverage by open brackets. Variation one proves one simple root. Coincident edges are represented separately.",
@@ -7574,7 +7576,7 @@
     {
       "id": "NURBS-0267",
       "name": "Сертификат единственной ветви порогового контура кривизны на ячейке NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_graph",
@@ -7586,7 +7588,9 @@
         "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
         "docs/qualification/nurbs-curvature-field-267-2026-11-15/receipt.json",
-        "docs/qualification/nurbs-curvature-field-267-2026-11-15/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-267-2026-11-15/native.log.gz",
+        "examples/rush/curvature-threshold-contour.r",
+        "tests/rushGapContours.test.ts"
       ],
       "remainingQualification": [
         "Strict Bernstein derivative signs and opposite signs over two complete faces certify one simple contour crossing per transverse parameter in the chosen chart axis.",
@@ -7597,7 +7601,7 @@
     {
       "id": "NURBS-0268",
       "name": "Выборка сертифицированной ветви порогового контура NURBS с гарантированными UV-интервалами",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::sample_curvature_gap_graph",
@@ -7609,7 +7613,9 @@
         "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
         "docs/qualification/nurbs-curvature-field-268-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-268-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-268-2026-11-16/native.log.gz",
+        "examples/rush/curvature-threshold-contour.r",
+        "tests/rushGapContours.test.ts"
       ],
       "remainingQualification": [
         "Exactly lifts each transverse binary64 parameter and bisects only a certified unique contour. All returned intervals have exact dyadic unit coordinates and a width bounded by the requested depth.",
@@ -7620,7 +7626,7 @@
     {
       "id": "NURBS-0269",
       "name": "Доказанный диапазон наклона порогового контура NURBS в исходных UV-координатах",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_slope",
@@ -7633,7 +7639,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_range.rs",
         "docs/qualification/nurbs-curvature-field-269-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-269-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-269-2026-11-16/native.log.gz",
+        "examples/rush/curvature-threshold-contour.r",
+        "tests/rushGapContours.test.ts"
       ],
       "remainingQualification": [
         "Bounds the signed slope of a unique threshold contour by exact Bernstein coefficient ratios of the implicit derivatives in the two absolute knot clocks.",
