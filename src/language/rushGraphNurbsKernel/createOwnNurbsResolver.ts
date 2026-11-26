@@ -1096,6 +1096,11 @@ export function createOwnNurbsResolver(
           case 'project_polyhedral_body':
           case 'measure_polyhedral_frame':
           case 'measure_polyhedral_axis_gap':
+          case 'section_polyhedral_faces':
+          case 'assemble_polyhedral_section_loops':
+          case 'measure_polyhedral_section_area':
+          case 'measure_polyhedral_section_centroid':
+          case 'bound_polyhedral_section_perimeter':
           case 'classify_polyhedral_plane':
           case 'intersect_polyhedral_edges':
           case 'measure_polyhedral_volume':

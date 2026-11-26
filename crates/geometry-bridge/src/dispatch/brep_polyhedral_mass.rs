@@ -100,3 +100,52 @@ fn qualify(
             )
         })
 }
+
+pub(super) fn measure_section(v: &Value, op: &str) -> Result<Value> {
+    let solid = qualify(
+        field(v, "source")?,
+        super::closed_ss::closed_solid_policy(field(v, "tolerance_uv")?),
+    )?;
+    let normal = field(v, "plane_normal")?;
+    let offset = field(v, "plane_offset_mm")?;
+    let work = field(v, "max_work")?;
+    let model = solid.model();
+    let loops_json = |rings: Vec<analysis::PolyhedralSectionLoop>| {
+        rings.into_iter().map(|ring|json!({"faces":ring.faces,"pointsMm":ring.points_mm.into_iter().map(|p|p.map(|x|x.to_string())).collect::<Vec<_>>()})).collect::<Vec<_>>()
+    };
+    Ok(match op {
+        "section_polyhedral_faces" => {
+            let r = analysis::exact_polyhedral_transverse_section(&solid, normal, offset, work)?;
+            let faces=r.faces.into_iter().map(|f|json!({"face":f.face,"segmentsMm":f.segments_mm.into_iter().map(|seg|seg.map(|p|p.map(|x|x.to_string()))).collect::<Vec<_>>()})).collect::<Vec<_>>();
+            json!({"model":model,"faces":faces,"workUsed":r.exact_work})
+        }
+        "assemble_polyhedral_section_loops" => {
+            let r = analysis::exact_polyhedral_section_loops(&solid, normal, offset, work)?;
+            json!({"model":model,"loops":loops_json(r.loops),"workUsed":r.exact_work})
+        }
+        "measure_polyhedral_section_area" => {
+            let r = analysis::exact_polyhedral_section_area(&solid, normal, offset, work)?;
+            json!({"model":model,"areaSquaredMm4":r.area_squared_mm4.to_string(),"depths":r.depths,"loops":loops_json(r.loops),"workUsed":r.exact_work})
+        }
+        "measure_polyhedral_section_centroid" => {
+            let r = analysis::exact_polyhedral_section_centroid(&solid, normal, offset, work)?;
+            json!({"model":model,"centroidMm":r.centroid_mm.map(|p|p.map(|x|x.to_string())),"areaSquaredMm4":r.section.area_squared_mm4.to_string(),"depths":r.section.depths,"loops":loops_json(r.section.loops),"workUsed":r.section.exact_work})
+        }
+        "bound_polyhedral_section_perimeter" => {
+            let r = analysis::bounded_polyhedral_section_perimeter(
+                &solid,
+                normal,
+                offset,
+                field(v, "max_width_mm")?,
+                work,
+            )?;
+            json!({"model":model,"perimeterBoundsMm":r.bounds_mm.map(|x|x.to_string()),"loops":loops_json(r.loops),"workUsed":r.exact_work})
+        }
+        _ => {
+            return Err(nurbs_core::Error::new(
+                "BREP_INVALID_INPUT",
+                "Unknown section measurement",
+            ));
+        }
+    })
+}
