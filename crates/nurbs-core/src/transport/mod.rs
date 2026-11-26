@@ -13,6 +13,7 @@ mod periodic_surface_assembly;
 mod motion_jumps;
 mod trajectory_clearance;
 mod chain_clearance;
+mod synchronized_clearance;
 mod tool_workspaces;
 mod trajectory_ranges;
 mod motion_turns;

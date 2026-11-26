@@ -13,7 +13,7 @@ use crate::analysis::curve_measure::{
 };
 
 pub(super) const OPS:&[&str]=&["sphere_path_clearance","capsule_path_clearance","box_path_clearance",
-    "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","violation_path_length","violation_obstacle_lengths","violation_path_duration","chain_violation_duration","last_chain_violation","chain_clearance_timeline","longest_chain_violation","first_chain_violation","minimum_chain_gap","mixed_margin_clearance","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
+    "oriented_box_path_clearance","first_sphere_contact","minimum_sphere_partition_gap","minimum_mixed_gap","mixed_path_clearance","violation_path_length","violation_obstacle_lengths","violation_path_duration","chain_violation_duration","last_chain_violation","chain_clearance_timeline","longest_chain_violation","minimum_synchronized_gap","synchronized_contact_intervals","minimum_affine_gap","affine_contact_intervals","first_chain_violation","minimum_chain_gap","mixed_margin_clearance","minimum_sphere_gap","minimum_box_gap","minimum_oriented_box_gap","minimum_capsule_gap"];
 
 fn minimum(r:SphericalMinimumClearance)->Value{
     json!({"gap":r.gap_bounds,"witnessParameter":r.witness_parameter,"witnessObstacle":r.witness_obstacle,
@@ -21,6 +21,9 @@ fn minimum(r:SphericalMinimumClearance)->Value{
 }
 
 pub(super) fn dispatch(v:&Value,op:&str)->Result<Value>{
+    if matches!(op, "minimum_synchronized_gap" | "synchronized_contact_intervals" | "minimum_affine_gap" | "affine_contact_intervals") {
+        return super::synchronized_clearance::dispatch(v, op);
+    }
     if matches!(op, "chain_violation_duration" | "last_chain_violation" | "chain_clearance_timeline" | "longest_chain_violation" | "first_chain_violation" | "minimum_chain_gap") {
         return with_obstacles(v, |obstacles| super::chain_clearance::dispatch(v, op, obstacles));
     }
