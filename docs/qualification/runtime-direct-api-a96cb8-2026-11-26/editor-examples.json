@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "a96cb8ac506bc3ff9de66e505acedf9688dff96e9d71b1f9dd7a27542c22b694",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/project-polyhedral-body.r",
+      "exampleSha256": "8d75a871609e4eed6da04bc6baee9492a97fa0ae7f68bb067518da7aeb0afd9c",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 50 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-frame.r",
+      "exampleSha256": "980e69cad10623e4e530ed966b2a6c6e36b247e3cf7406963bc74a77b7887f9b",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 16 ms"
+    },
+    {
+      "example": "examples/rush/measure-polyhedral-axis-gap.r",
+      "exampleSha256": "63167ccb85b8aa557d061caf06d8c2c7a34534c01391d2dba894c1c1e91af01d",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 23 ms"
+    },
+    {
+      "example": "examples/rush/classify-polyhedral-plane.r",
+      "exampleSha256": "c7468ec4f337e6a96ff5cfa97ba50de351a7d527f6c93d27eba47bafeba40873",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/intersect-polyhedral-edges.r",
+      "exampleSha256": "40dfcfbcc34dcef28e445cf0ebec250342464748443472ed79133ae4f606f20f",
+      "editorStats": "Объекты\n1\nТреугольники\n12\nОбъём\n24\nПлощадь\n52\nГотово · 13 ms"
+    }
+  ]
+}
