@@ -1,0 +1,31 @@
+{
+  "kernelSha256": "874a6a005518aacd3bb27e2a19ccda07d129abdd46c3663abab8a6b59894716e",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/curve-patch-clearance.r",
+      "exampleSha256": "a1b80e165a9ea6330423c00db1fc428642e6a8ee3d1d2ecc61767c19e007da3c",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 44 ms"
+    },
+    {
+      "example": "examples/rush/patch-pair-clearance.r",
+      "exampleSha256": "7a7289afd5638b48764e4ae91e0d34dc8c25e06cd7aba2f8bdaa68c57af15c27",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 7 ms"
+    },
+    {
+      "example": "examples/rush/trimmed-face-clearance.r",
+      "exampleSha256": "1bc7487877533b4184f6f0ea02eaea271157e950bfb288f2e96a85b8e88c13ed",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 13 ms"
+    },
+    {
+      "example": "examples/rush/curve-trimmed-face-distance.r",
+      "exampleSha256": "838d119f345d635829aae623109bba15eb56cdc6b48509fa35e9a1e06b9d48f4",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 9 ms"
+    },
+    {
+      "example": "examples/rush/swept-ball-face-clearance.r",
+      "exampleSha256": "f51fb7c03a26fc713dade5bbfc0ec5d45af8114e269c1ade3e695f90add34819",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n4\nГотово · 9 ms"
+    }
+  ]
+}

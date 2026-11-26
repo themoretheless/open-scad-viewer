@@ -22554,7 +22554,7 @@
     {
       "id": "NURBS-0907",
       "name": "Проверка монтажного зазора между пространственной кривой и полным NURBS-патчем",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_curve_surface_clearance",
@@ -22562,7 +22562,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_surface_distance.rs",
         "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/native.log.gz",
+        "examples/rush/curve-patch-clearance.r",
+        "tests/rushFaceClearance.test.ts"
       ],
       "remainingQualification": [
         "Full untrimmed tensor patch and spatial curve. Unproved threshold decisions remain unresolved."
@@ -22571,7 +22573,7 @@
     {
       "id": "NURBS-0908",
       "name": "Проверка монтажного зазора между двумя полными NURBS-поверхностями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_surface_surface_clearance",
@@ -22579,7 +22581,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/surface_distance_queries.rs",
         "docs/qualification/nurbs-spatial-clearance-908-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-908-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-908-2026-11-18/native.log.gz",
+        "examples/rush/patch-pair-clearance.r",
+        "tests/rushFaceClearance.test.ts"
       ],
       "remainingQualification": [
         "Two full untrimmed positive-weight tensor surfaces. Unproved threshold decisions remain unresolved."
@@ -22588,7 +22592,7 @@
     {
       "id": "NURBS-0909",
       "name": "Проверка монтажного зазора между обрезанными NURBS-гранями с отверстиями",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::inspect_trimmed_surface_clearance",
@@ -22596,7 +22600,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/surface_distance_queries.rs",
         "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/native.log.gz",
+        "examples/rush/trimmed-face-clearance.r",
+        "tests/rushFaceClearance.test.ts"
       ],
       "remainingQualification": [
         "Trimmed positive-weight tensor surfaces with oriented UV loops. An admitted witness is required on each face. Unproved threshold decisions remain unresolved."
@@ -22605,7 +22611,7 @@
     {
       "id": "NURBS-0910",
       "name": "Границы расстояния от пространственной NURBS-кривой до обрезанной поверхности",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::trimmed_surface_distance::curve_distance",
@@ -22613,7 +22619,9 @@
         "crates/nurbs-core/src/trim/trimmed_surface_distance.rs",
         "crates/nurbs-core/tests/curve_surface_distance.rs",
         "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-910-2026-11-18/native.log.gz",
+        "examples/rush/curve-trimmed-face-distance.r",
+        "tests/rushFaceClearance.test.ts"
       ],
       "remainingQualification": [
         "Spatial curve and positive-weight tensor surface with oriented UV loops. Upper bound requires an admitted witness. Work limits can leave a wider interval."
@@ -22622,7 +22630,7 @@
     {
       "id": "NURBS-0911",
       "name": "Монтажный запас сферического инструмента на криволинейной траектории у обрезанной грани",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::trimmed_surface_distance::swept_ball_clearance",
@@ -22630,7 +22638,9 @@
         "crates/nurbs-core/src/trim/trimmed_surface_distance.rs",
         "crates/nurbs-core/tests/curve_surface_distance.rs",
         "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/native.log.gz",
+        "examples/rush/swept-ball-face-clearance.r",
+        "tests/rushFaceClearance.test.ts"
       ],
       "remainingQualification": [
         "Constant radius ball swept along the full curve, including end caps. Signed margin refers to the retained surface image. Work limits can leave its sign unresolved."
