@@ -865,6 +865,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/C9pbFN13.js':197_000,'assets/CJJ-rmsd.js':203_600,'assets/mainSolid.worker-BsukTNAd.js':221_500}),
   }),
+  // Rational wire moment bounds: 20,819,120 raw bytes, 7,706,805 packed bytes and 14,859,352 total asset bytes.
+  '99b96effb83cbcf17ed0404ea3ffb789b06c8bbb17295314c8df2238d8e7b956':Object.freeze({
+    version:115,geometryChunkBytes:7_707_000,totalAssetBytes:14_860_000,rawGeometryBytes:20_968_000,
+    namedJsChunkBytes:Object.freeze({
+      index:293_000,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BscAHTpe.js':197_100,'assets/jbyymqEm.js':203_600,'assets/mainSolid.worker-BeLGpm2B.js':222_100}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "99b96effb83cbcf17ed0404ea3ffb789b06c8bbb17295314c8df2238d8e7b956",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/bound-wire-moments.r",
+      "exampleSha256": "4e26f8e7c7cda7aa46db78071e002d4bb57c0c8fa96ed19bfe738802b07515eb",
+      "editorStats": "Объекты\n1\nТреугольники\n192\nОбъём\n0\nПлощадь\n2,42\nГотово · 60 ms"
+    }
+  ]
+}

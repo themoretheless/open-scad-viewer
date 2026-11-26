@@ -8973,7 +8973,7 @@
     {
       "id": "NURBS-0325",
       "name": "Сертифицированные интервалы моментов площади произвольных рациональных плоских контуров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::trim::planar_mass_bounds::bound_planar_boundary_moments",
@@ -8984,7 +8984,9 @@
         "crates/nurbs-foundation/src/distance/curve_jets.rs",
         "crates/nurbs-core/tests/certified_planar_moment_contracts.rs",
         "docs/qualification/nurbs-curvature-field-325-2026-11-17/receipt.json",
-        "docs/qualification/nurbs-curvature-field-325-2026-11-17/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-325-2026-11-17/native.log.gz",
+        "examples/rush/bound-wire-moments.r",
+        "tests/rushBoundedWireMoments.test.ts"
       ],
       "remainingQualification": [
         "Integrate six signed area moments using outward rational interval jets and adaptive cell refinement.",
