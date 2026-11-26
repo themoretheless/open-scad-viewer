@@ -1,0 +1,12 @@
+{
+  "sourceCommit": "c978657aa4aafc583e2d9b47ffb826bf587c287c",
+  "commands": [
+    "STEP_CORPUS_OUTPUT=<output> cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test exchange_round_trip_corpus",
+    "python scripts/verify-step-roundtrip-corpus.py <output>"
+  ],
+  "nativeTestsPassed": 2,
+  "openCascadeCasesPassed": 51,
+  "maxVolumeRelativeError": 1.8603179197028782e-11,
+  "maxAreaRelativeError": 1.8603179197028782e-11,
+  "maxCentroidErrorMm": 1.1888268147686176e-11
+}
