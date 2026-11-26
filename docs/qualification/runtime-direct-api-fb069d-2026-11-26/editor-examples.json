@@ -1,0 +1,16 @@
+{
+  "kernelSha256": "fb069d422e4360ebaff52010e08ffef37debf1e6bf9b96b20680f16365949e71",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/routed-tube-pair.r",
+      "exampleSha256": "e3ba4e8ec2daaf4b329b472d5168210e8884f1b0a5952d1b05f3a99122c785e7",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n5\nГотово · 46 ms"
+    },
+    {
+      "example": "examples/rush/routed-tube-bundle.r",
+      "exampleSha256": "fe51dc23dbcd8c9911156fdf954ee12f6c749aab36a76b1c8c7c88afcab1c88c",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n5\nГотово · 8 ms"
+    }
+  ]
+}

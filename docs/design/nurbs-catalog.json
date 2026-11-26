@@ -22649,7 +22649,7 @@
     {
       "id": "NURBS-0912",
       "name": "Монтажный зазор двух трубок вдоль независимых пространственных NURBS-траекторий",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::tube_pair_clearance",
@@ -22657,7 +22657,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_pair_distance.rs",
         "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-912-2026-11-18/native.log.gz",
+        "examples/rush/routed-tube-pair.r",
+        "tests/rushRoutedTubes.test.ts"
       ],
       "remainingQualification": [
         "Two independent full spatial curves with constant radii and spherical caps. Work limits can leave the sign unresolved."
@@ -22666,7 +22668,7 @@
     {
       "id": "NURBS-0913",
       "name": "Поиск минимального монтажного зазора в пучке трубок разных диаметров",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Измерения",
       "nativeApi": "nurbs_core::analysis::curve_measure::tube_bundle_clearance",
@@ -22674,7 +22676,9 @@
         "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_pair_distance.rs",
         "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/native.log.gz",
+        "examples/rush/routed-tube-bundle.r",
+        "tests/rushRoutedTubes.test.ts"
       ],
       "remainingQualification": [
         "Independent full spatial curves with constant radii and spherical caps. Witness pair attains the upper bound. Overlapping intervals can leave the closest pair nonunique."
