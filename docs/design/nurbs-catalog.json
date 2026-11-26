@@ -21901,7 +21901,7 @@
     {
       "id": "NURBS-0874",
       "name": "Интервальная оценка коэффициента торцового перекрытия внешней прямозубой пары",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::external_spur_contact_ratio_bounds",
@@ -21910,7 +21910,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-874-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-874-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-874-2026-11-18/native.log.gz",
+        "examples/rush/external-spur-ratio.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
@@ -21919,7 +21921,7 @@
     {
       "id": "NURBS-0875",
       "name": "Интервальная оценка коэффициента торцового перекрытия внутренней прямозубой пары",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::internal_spur_contact_ratio_bounds",
@@ -21928,7 +21930,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-875-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-875-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-875-2026-11-18/native.log.gz",
+        "examples/rush/internal-spur-ratio.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "Nominal active involutes only, standard centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
@@ -21937,7 +21941,7 @@
     {
       "id": "NURBS-0876",
       "name": "Интервальная оценка коэффициента торцового перекрытия при заданном межосевом расстоянии",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::mounted_spur_contact_ratio_bounds",
@@ -21946,7 +21950,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-876-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-876-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-876-2026-11-18/native.log.gz",
+        "examples/rush/mounted-spur-ratio.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "Nominal active involutes only, specified centre distance, zero backlash and quarter-module clearance. Undercut and interference are separate."
@@ -21955,7 +21961,7 @@
     {
       "id": "NURBS-0877",
       "name": "Радиальные зазоры между вершинами и впадинами зубьев установленной пары",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::spur_tip_root_clearance_bounds",
@@ -21964,7 +21970,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-877-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-877-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-877-2026-11-18/native.log.gz",
+        "examples/rush/spur-tip-clearance.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "Nominal radial clearance along the line of centres. Flank and fillet interference require separate checks."
@@ -21973,7 +21981,7 @@
     {
       "id": "NURBS-0878",
       "name": "Измерение толщины зуба по хорде и глубины установки зубомера",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::spur_tooth_chord_bounds",
@@ -21982,7 +21990,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-878-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-878-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-878-2026-11-18/native.log.gz",
+        "examples/rush/spur-tooth-chord.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External standard spur involutes only. The measurement circle must be certified within the active flank."
@@ -21991,7 +22001,7 @@
     {
       "id": "NURBS-0879",
       "name": "Оценка утонения зуба по диапазону измеренных хорд",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::spur_tooth_thinning_bounds",
@@ -22000,7 +22010,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-879-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-879-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-879-2026-11-18/native.log.gz",
+        "examples/rush/spur-tooth-thinning.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External standard spur involutes only. The measurement circle must be certified within the active flank."
@@ -22009,7 +22021,7 @@
     {
       "id": "NURBS-0880",
       "name": "Окружной боковой зазор пары на рабочих делительных окружностях",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::mounted_spur_backlash_bounds",
@@ -22018,7 +22030,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-880-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-880-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-880-2026-11-18/native.log.gz",
+        "examples/rush/external-spur-backlash.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External spur pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
@@ -22027,7 +22041,7 @@
     {
       "id": "NURBS-0881",
       "name": "Окружной боковой зазор сателлита и внутреннего венца",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::mounted_internal_spur_backlash_bounds",
@@ -22036,7 +22050,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-881-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-881-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-881-2026-11-18/native.log.gz",
+        "examples/rush/internal-spur-backlash.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "Internal spur ring pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
@@ -22045,7 +22061,7 @@
     {
       "id": "NURBS-0882",
       "name": "Границы бокового зазора во всём допуске на межосевое расстояние",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::spur_backlash_over_mounting_range",
@@ -22054,7 +22070,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-882-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-882-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-882-2026-11-18/native.log.gz",
+        "examples/rush/spur-backlash-range.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External and internal spur pairs. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
@@ -22063,7 +22081,7 @@
     {
       "id": "NURBS-0883",
       "name": "Коэффициент торцового перекрытия во всём допуске на межосевое расстояние",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::spur_contact_ratio_over_mounting_range",
@@ -22072,7 +22090,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-883-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-883-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-883-2026-11-18/native.log.gz",
+        "examples/rush/spur-overlap-range.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
@@ -22081,7 +22101,7 @@
     {
       "id": "NURBS-0884",
       "name": "Диапазон межосевых расстояний по требуемому коэффициенту перекрытия",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::mounting_window_for_contact_ratio",
@@ -22090,7 +22110,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-884-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-884-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-884-2026-11-18/native.log.gz",
+        "examples/rush/spur-mounting-window.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
@@ -22099,7 +22121,7 @@
     {
       "id": "NURBS-0885",
       "name": "Зазор между окружностями вершин сателлитов с допусками установки осей",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::planet_tip_gap_bounds",
@@ -22108,7 +22130,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-885-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-885-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-885-2026-11-18/native.log.gz",
+        "examples/rush/planet-tip-separation.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "External planet tip envelopes only. Overlapping envelopes need a tooth-phase check."
@@ -22117,7 +22141,7 @@
     {
       "id": "NURBS-0886",
       "name": "Подбор числа равноотстоящих сателлитов по фазе сборки и зазору",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-intersections",
       "category": "Зубчатые передачи",
       "nativeApi": "nurbs_core::involute::planetary_layout_counts",
@@ -22126,7 +22150,9 @@
         "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-886-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-spur-contact-886-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-spur-contact-886-2026-11-18/native.log.gz",
+        "examples/rush/spinner-layout-counts.r",
+        "tests/rushSpurInspection.test.ts"
       ],
       "remainingQualification": [
         "Nominal concentric unshifted spur layout only. Flank interference and manufacturing tolerances require separate checks."

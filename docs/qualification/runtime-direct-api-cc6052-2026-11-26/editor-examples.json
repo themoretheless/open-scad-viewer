@@ -1,0 +1,71 @@
+{
+  "kernelSha256": "cc6052f3e6f9b664dc05eabfa77e2185d7b83183804b3f74b8e5a3b6bd271c90",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/external-spur-ratio.r",
+      "exampleSha256": "194008976c6f13eda2345e3d0a8d44894cfc079169dc04abe5d08a94f16e4f87",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 156 ms"
+    },
+    {
+      "example": "examples/rush/internal-spur-ratio.r",
+      "exampleSha256": "a0f3a43fbb0af945cd7f7d713db8d03cbfd85ab6729ef6934a3192c5557ef176",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 48 ms"
+    },
+    {
+      "example": "examples/rush/mounted-spur-ratio.r",
+      "exampleSha256": "538034855c90a758966f8305ca7254adc0739e2a36705b45e94f192a9cc68753",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 46 ms"
+    },
+    {
+      "example": "examples/rush/spur-tip-clearance.r",
+      "exampleSha256": "24dd389d06f46f080f0c398aa846f260ac279a0d962384a00f26ccb7525ec1b6",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 44 ms"
+    },
+    {
+      "example": "examples/rush/spur-tooth-chord.r",
+      "exampleSha256": "0d6dc77b3c331c6a7f1978fac6fa01ccc6824da86220726fe29c7118ee4654ba",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 43 ms"
+    },
+    {
+      "example": "examples/rush/spur-tooth-thinning.r",
+      "exampleSha256": "f1e795554ca3a2f609d608afe8201f4bee99c874adb0c6bc88427c0fdbeccbdd",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 43 ms"
+    },
+    {
+      "example": "examples/rush/external-spur-backlash.r",
+      "exampleSha256": "d40d0a06574ea422574c27ecd2c3ffe7a020c2e4628f9fdd755030877c1212d2",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 43 ms"
+    },
+    {
+      "example": "examples/rush/internal-spur-backlash.r",
+      "exampleSha256": "82ad9fc47ca0eefa8caef93d7ad87e15c473e431cf01fa9850f25829e0cbb562",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 47 ms"
+    },
+    {
+      "example": "examples/rush/spur-backlash-range.r",
+      "exampleSha256": "18175256aecd277aa8aafeafa56637c1fa7e1c865416d6f254d544f3ae6031b1",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 45 ms"
+    },
+    {
+      "example": "examples/rush/spur-overlap-range.r",
+      "exampleSha256": "eca18e6b7b4570896c2e8bc443ab353f8a856d00ae4a3e20f62259d92d056fdd",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 42 ms"
+    },
+    {
+      "example": "examples/rush/spur-mounting-window.r",
+      "exampleSha256": "f278a9b3d93768566eced6aed262a5916b37eb6c8b64b845defd237d27093485",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 42 ms"
+    },
+    {
+      "example": "examples/rush/planet-tip-separation.r",
+      "exampleSha256": "bfbbb9353359c51de25a8a41221147c2381d957c3d1c820ad646193fd75e1a27",
+      "editorStats": "Объекты\n1\nТреугольники\n1 436\nОбъём\n612,06\nПлощадь\n855,55\nГотово · 42 ms"
+    },
+    {
+      "example": "examples/rush/spinner-layout-counts.r",
+      "exampleSha256": "f5ea15b7d33a2d6bfe70b51e815c692ed5d11a268678fff4b7aa4c7cff919947",
+      "editorStats": "Объекты\n1\nТреугольники\n284\nОбъём\n23,13\nПлощадь\n69,6\nГотово · 18 ms"
+    }
+  ]
+}

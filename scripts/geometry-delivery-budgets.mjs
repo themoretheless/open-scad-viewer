@@ -1561,6 +1561,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/B4uN6ZFx.js':132_200,'assets/CW9Ztdgt.js':214_100,'assets/DGzy8c8E.js':106_900,'assets/DzPsoE9b.js':102_800,'assets/mainSolid.worker-CN12n4Sb.js':276_600,'assets/qcKY30Eu.js':203_600}),
   }),
+  // spur gear inspection and spinner layout bounds: 20,314,554 raw bytes, 7,727,252 packed bytes and 15,169,143 total asset bytes.
+  'cc6052f3e6f9b664dc05eabfa77e2185d7b83183804b3f74b8e5a3b6bd271c90':Object.freeze({
+    version:202,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:339_900,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BxOxD07A.js':132_800,'assets/C7tGMadH.js':107_800,'assets/CpbTapic.js':103_600,'assets/YE0b90NQ.js':203_600,'assets/mainSolid.worker-DuCS1cKo.js':277_300,'assets/xtdJhYn2.js':214_900}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
