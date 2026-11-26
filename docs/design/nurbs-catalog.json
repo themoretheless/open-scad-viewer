@@ -3394,14 +3394,16 @@
     {
       "id": "NURBS-0092",
       "name": "лопатка",
-      "status": "native",
+      "status": "integrated",
       "nativeApi": "brep_core::blade::build",
       "evidence": [
         "crates/brep-core/src/parts/blade.rs",
         "crates/brep-core/tests/blade.rs",
         "docs/design/nurbs-blade.md",
         "docs/qualification/nurbs-blade-2026-10-15/native-tests.json",
-        "docs/qualification/nurbs-blade-2026-10-15/native-tests.log"
+        "docs/qualification/nurbs-blade-2026-10-15/native-tests.log",
+        "tests/rushBladeWing.test.ts",
+        "examples/rush/section-blade.r"
       ],
       "nativeScope": "Capped section-authored geometric blade: symmetric cubic Bezier airfoil, per-section chord/thickness-control/twist/stacking, 2..129 stations. Actual ruled NURBS walls, audited caps and closed owned incidence.",
       "remainingQualification": [
@@ -3412,11 +3414,13 @@
     {
       "id": "NURBS-0093",
       "name": "крыло",
-      "status": "native",
+      "status": "integrated",
       "evidence": [
         "crates/nurbs-core/src/construct/surfaces/wing_loft.rs",
         "crates/nurbs-core/tests/wing_loft.rs",
-        "docs/design/nurbs-wing-loft.md"
+        "docs/design/nurbs-wing-loft.md",
+        "tests/rushBladeWing.test.ts",
+        "examples/rush/wing-loft-surface.r"
       ],
       "remainingQualification": [
         "folding check is sampled; original-surface injectivity and global self-intersection absence are not certified",

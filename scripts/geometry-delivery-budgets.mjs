@@ -1745,6 +1745,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/C8gxxgr7.js':146_800,'assets/CUZbrcPz.js':225_500,'assets/Cfo5nZyS.js':118_400,'assets/hxCcfDKS.js':203_600,'assets/mainSolid.worker-_uomuEnH.js':291_200,'assets/yeOvWt37.js':114_200}),
   }),
+  // NURBS blade and wing lofts: 20,682,193 raw bytes, 7,856,794 packed bytes and 15,391,687 total asset bytes.
+  '5d718356a051391e6cbdc502b9ae82f6f47061505b4748c271226ca5f1d8b89d':Object.freeze({
+    version:225,geometryChunkBytes:8_028_000,totalAssetBytes:15_451_000,rawGeometryBytes:20_972_000,
+    namedJsChunkBytes:Object.freeze({
+      index:347_500,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/ByI72rOZ.js':118_700,'assets/CWeAXlzq.js':203_600,'assets/DCnrHqhR.js':147_400,'assets/DTMO0Tc0.js':114_600,'assets/cP9lHtvI.js':225_900,'assets/mainSolid.worker-DWIHfWdV.js':291_900}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
