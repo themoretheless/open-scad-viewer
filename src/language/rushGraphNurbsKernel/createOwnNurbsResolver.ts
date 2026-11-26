@@ -513,6 +513,9 @@ export function createOwnNurbsResolver(
           case 'triangulate_profile_boolean':
           case 'measure_profile_extrusion_inertia':
           case 'locate_profile_extrusion_points':
+          case 'section_profile_extrusion':
+          case 'section_profile_extrusion_parallel':
+          case 'split_profile_extrusion_volume':
           case 'clip_profile_extrusion_path':
           case 'bound_profile_extrusion_area':
           case 'extrude_profile_boolean_shell':

@@ -54,6 +54,9 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
         | "build_profile_boolean_solid"
         | "measure_profile_extrusion_inertia"
         | "locate_profile_extrusion_points"
+        | "section_profile_extrusion"
+        | "section_profile_extrusion_parallel"
+        | "split_profile_extrusion_volume"
         | "clip_profile_extrusion_path"
         | "bound_profile_extrusion_area"
         | "extrude_profile_boolean_shell"
@@ -232,6 +235,40 @@ pub(super) fn measure(v: &Value, op: &str) -> Result<Value> {
                                 .map(|l| format!("{l:?}"))
                                 .collect::<Vec<_>>();
                             json!({"locations":locations,"workUsed":r.exact_work})
+                        }
+                        "section_profile_extrusion" | "section_profile_extrusion_parallel" => {
+                            let section = if op == "section_profile_extrusion" {
+                                a::section_exact_coplanar_polyline_boolean_extrusion
+                            } else {
+                                a::section_parallel_exact_coplanar_polyline_boolean_extrusion
+                            };
+                            let r = section(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                &point(&v["cut_normal"])?,
+                                &coordinate(&v["cut_offset"])?,
+                                work,
+                            )?;
+                            let cells = r.cells_mm.into_iter().map(coordinates).collect::<Vec<_>>();
+                            json!({"cellsMm":cells,"workUsed":r.exact_work})
+                        }
+                        "split_profile_extrusion_volume" => {
+                            let r = a::split_volume_of_exact_coplanar_polyline_boolean_extrusion(
+                                &points,
+                                &first_holes,
+                                &second,
+                                &second_holes,
+                                mode,
+                                &point(&v["sweep_mm"])?,
+                                &point(&v["cut_normal"])?,
+                                &coordinate(&v["cut_offset"])?,
+                                work,
+                            )?;
+                            json!({"belowMm3":r.below_mm3.to_string(),"aboveMm3":r.above_mm3.to_string(),"totalMm3":r.total_mm3.to_string(),"workUsed":r.exact_work})
                         }
                         "clip_profile_extrusion_path" => {
                             let r = a::clip_path_to_exact_coplanar_polyline_boolean_extrusion(
