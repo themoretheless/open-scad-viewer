@@ -673,6 +673,14 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/DJVwJb1j.js':191_300,'assets/D_keCb9x.js':203_600,'assets/mainSolid.worker-DOkEDyt1.js':206_400}),
   }),
+  // Curvature contour UV polyline bounds: 20,898,980 raw bytes, 7,472,564 packed bytes and 14,550,494 total asset bytes.
+  'df7846ba3658251bc1db2a7cc027235a6090255c6d5d86feadf7fb42705f497d':Object.freeze({
+    version:91,geometryChunkBytes:7_533_000,totalAssetBytes:14_584_000,rawGeometryBytes:20_964_000,
+    namedJsChunkBytes:Object.freeze({
+      index:285_000,DirectModeler:498_800,geometryBuildEngine:345_500,wasmStreaming:185_800,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BUZwAhs0.js':191_500,'assets/C0nYg56a.js':203_600,'assets/mainSolid.worker-OahbVh1-.js':207_000}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

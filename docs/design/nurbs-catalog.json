@@ -7652,7 +7652,7 @@
     {
       "id": "NURBS-0270",
       "name": "Непрерывный сертификат ошибки UV-ломаной порогового контура NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_polyline",
@@ -7665,7 +7665,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "docs/qualification/nurbs-curvature-field-270-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-270-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-270-2026-11-16/native.log.gz",
+        "examples/rush/curvature-uv-polylines.r",
+        "tests/rushGapPolylines.test.ts"
       ],
       "remainingQualification": [
         "Covers the original cell with a polyline at supplied transverse parameters. Exact bracket midpoint error and implicit slope variation bound the whole segment in the absolute root clock. This is a UV parameter bound, not a world-space mesh or contour topology certificate.",
@@ -7676,7 +7678,7 @@
     {
       "id": "NURBS-0271",
       "name": "Адаптивная UV-ломаная порогового контура NURBS по заданному допуску",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::adapt_curvature_gap_polyline",
@@ -7689,7 +7691,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "docs/qualification/nurbs-curvature-field-271-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-271-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-271-2026-11-16/native.log.gz",
+        "examples/rush/curvature-uv-polylines.r",
+        "tests/rushGapPolylines.test.ts"
       ],
       "remainingQualification": [
         "Automatically inserts transverse midpoints where the continuous bound exceeds the absolute root-axis tolerance. Vertex and precision limits return the complete ordered cover with actual bounds, while exact work refusal is atomic.",
@@ -7700,7 +7704,7 @@
     {
       "id": "NURBS-0272",
       "name": "Непрерывные границы второй производной порогового контура NURBS в исходном UV",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_second_derivative",
@@ -7713,7 +7717,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "docs/qualification/nurbs-curvature-field-272-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-272-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-272-2026-11-16/native.log.gz",
+        "examples/rush/curvature-uv-polylines.r",
+        "tests/rushGapPolylines.test.ts"
       ],
       "remainingQualification": [
         "Bounds the signed implicit second derivative on the certified contour. Exact rational coefficient proofs preserve constant derivatives even when unreduced degree exceeds the Bernstein hull limit.",
@@ -7724,7 +7730,7 @@
     {
       "id": "NURBS-0273",
       "name": "Адаптивная UV-ломаная по границе второй производной контура NURBS",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_surface_derivative::adapt_curvature_gap_polyline_second_order",
@@ -7738,7 +7744,9 @@
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
         "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs",
         "docs/qualification/nurbs-curvature-field-273-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-273-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-273-2026-11-16/native.log.gz",
+        "examples/rush/curvature-uv-polylines.r",
+        "tests/rushGapPolylines.test.ts"
       ],
       "remainingQualification": [
         "Combines the certified second-derivative chord remainder with the first-order bound and exact vertex bracket error. The quadratic bound can meet a requested UV tolerance with fewer vertices.",

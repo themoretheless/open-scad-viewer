@@ -1,0 +1,11 @@
+{
+  "kernelSha256": "df7846ba3658251bc1db2a7cc027235a6090255c6d5d86feadf7fb42705f497d",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/curvature-uv-polylines.r",
+      "exampleSha256": "9f2567dd54a1e00d9f33043ec496fa4102b89f0f47bd2a6ceb5b0d7e1a38601c",
+      "editorStats": "Объекты\n1\nТреугольники\n512\nОбъём\n0\nПлощадь\n1,22\nГотово · 72 ms"
+    }
+  ]
+}
