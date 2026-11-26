@@ -1,0 +1,21 @@
+{
+  "kernelSha256": "406d9bb164e0b2a9b79695ad1f6baa7f8e845ace1a7de83ff67ad5ebcd33d4cd",
+  "runner": "Chromium",
+  "examples": [
+    {
+      "example": "examples/rush/transfer-uv-grid-piece.r",
+      "exampleSha256": "c85af6ba015f8e74d59679a29c41dbb24dd206bac2278b33e5031e3f546f9805",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n24\nГотово · 54 ms"
+    },
+    {
+      "example": "examples/rush/relayout-trim-surface.r",
+      "exampleSha256": "84f19e104a241ac50df99fd6ba1d03a8a3f9e165c0e4f3b35a1aecaa69a5a938",
+      "editorStats": "Объекты\n1\nТреугольники\n256\nОбъём\n0\nПлощадь\n776,37\nГотово · 18 ms"
+    },
+    {
+      "example": "examples/rush/relayout-trim-piece.r",
+      "exampleSha256": "c47ae37755b9313b4f15a427bf023abca0b700fbb4b254c89be66237c74dbeca",
+      "editorStats": "Объекты\n1\nТреугольники\n128\nОбъём\n0\nПлощадь\n2,5\nГотово · 15 ms"
+    }
+  ]
+}

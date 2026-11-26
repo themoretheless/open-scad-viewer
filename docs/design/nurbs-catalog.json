@@ -8348,7 +8348,7 @@
     {
       "id": "NURBS-0298",
       "name": "Точный перенос UV-контура между кусочно-перепараметризованными сетками",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::pullback_relayout_pcurve",
@@ -8361,7 +8361,9 @@
         "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
         "crates/nurbs-core/tests/exact_pcurve_relayout_contracts.rs",
         "docs/qualification/nurbs-curvature-field-298-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-298-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-298-2026-11-16/native.log.gz",
+        "examples/rush/transfer-uv-grid-piece.r",
+        "tests/rushUvRelayout.test.ts"
       ],
       "remainingQualification": [
         "Transfer original rational UV trims through an independent piecewise Möbius relayout on each tensor axis.",
@@ -8372,7 +8374,7 @@
     {
       "id": "NURBS-0299",
       "name": "Точная смена кусочной UV-сетки у поверхности с обрезкой",
-      "status": "native",
+      "status": "integrated",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_projective::relayout_trimmed_bezier_surface",
@@ -8382,7 +8384,10 @@
         "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs",
         "crates/nurbs-core/tests/exact_trimmed_relayout_contracts.rs",
         "docs/qualification/nurbs-curvature-field-299-2026-11-16/receipt.json",
-        "docs/qualification/nurbs-curvature-field-299-2026-11-16/native.log.gz"
+        "docs/qualification/nurbs-curvature-field-299-2026-11-16/native.log.gz",
+        "examples/rush/relayout-trim-surface.r",
+        "tests/rushUvRelayout.test.ts",
+        "examples/rush/relayout-trim-piece.r"
       ],
       "remainingQualification": [
         "Relayout a piecewise Bézier tensor patch with its ordered closed UV trims under a shared budget, preserving their three-dimensional images.",
