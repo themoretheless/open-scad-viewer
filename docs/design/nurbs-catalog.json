@@ -2155,6 +2155,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::guided_loft::interpolate",
       "evidence": [
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/guided-loft-occt.json",
         "crates/nurbs-core/src/construct/surfaces/loft/guided_loft.rs",
         "docs/design/progressive-loft-2026-10-01.md",
         "tests/nurbsGuidedLoft.test.ts",
@@ -15251,6 +15252,8 @@
       "category": "Точное редактирование",
       "nativeApi": "cad_step::periodic_trim_step::export_exact_periodic_trim_sheet_step",
       "evidence": [
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/periodic-sheet-occt.json",
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/periodic-sheet-edited-occt.json",
         "crates/cad-step/src/periodic_trim_step.rs",
         "crates/cad-step/tests/exact_periodic_trim_step_contracts.rs",
         "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
@@ -23258,6 +23261,7 @@
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_grouped_step_assembly",
       "evidence": [
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/browser-grouped-occurrence-colours.json",
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/tests/edited_gear_step.rs",
@@ -23284,6 +23288,7 @@
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_styled_step_assembly",
       "evidence": [
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/browser-grouped-occurrence-colours.json",
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",
         "crates/cad-step/src/lib.rs",
