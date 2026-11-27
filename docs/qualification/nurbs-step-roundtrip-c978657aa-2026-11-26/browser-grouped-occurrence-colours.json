@@ -1,0 +1,78 @@
+{
+  "browser": {
+    "browser": "151.0.7922.34",
+    "wasmSha256": "4ac9fb4008ade7203877b54846d07f76c98fb95035f45a16f5c22ee2e3191cb4",
+    "downloads": 5,
+    "group": "Группа 1",
+    "offsetXmm": 7
+  },
+  "occt": {
+    "passed": true,
+    "oracle": "OpenCascade XCAF",
+    "version": "8.0.1.1.0",
+    "stepSha256": "91f4e1240f7eb25a244eeb260f8372142ab7367ee970026731958a136c832eac",
+    "definitions": 1,
+    "occurrences": 2,
+    "definitionVolumeMm3": 7999.999999999999,
+    "worldPlacementsMm": [
+      [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      [
+        [
+          1.0,
+          0.0,
+          0.0,
+          7.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ]
+    ],
+    "parentGroups": [
+      [],
+      [
+        "Группа 1"
+      ]
+    ],
+    "occurrenceColours": {
+      "0.0": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "7.0": [
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  }
+}

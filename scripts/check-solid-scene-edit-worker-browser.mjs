@@ -7,6 +7,8 @@ import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPacka
 const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-profile-offset')
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
+const groupedColours=process.argv.includes('--grouped-colours')
+assert.ok(!groupedColours||process.argv.includes('--absolute-placement'),'Grouped colour qualification requires --absolute-placement')
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
@@ -111,6 +113,40 @@ try {
   assert.deepEqual(actual.instance.matrix,expectedMatrix)
   assert.equal(actual.mesh,undefined,'Compact export stores linked placement rather than duplicate geometry')
   if(placementStep)await download('STEP сборки · тела и группы','instance-placed.step',false)
+  if(groupedColours){
+   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+   const pick=async name=>{
+    await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
+    await activate(solid.getByRole('button',{name,exact:true}))
+   }
+   const paint=async(name,color)=>{
+    await pick(name)
+    await activate(solid.getByRole('tab',{name:'Свойства',exact:true}))
+    await solid.getByLabel('Цвет материала',{exact:true}).fill(color)
+    await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor()
+   }
+   await paint(created.bodies.find(body=>!body.instance).name,'#ff0000')
+   await paint(linked.name,'#0000ff')
+   await activate(solid.getByRole('button',{name:'Новая группа',exact:true}))
+   await solid.getByLabel('Активная группа',{exact:true}).locator('option[value="Группа 1"]').waitFor({state:'attached'})
+   await solid.getByLabel('Активная группа',{exact:true}).selectOption('Группа 1')
+   await activate(solid.getByRole('button',{name:'Перенести выбор',exact:true}))
+   let grouped
+   for(let attempt=0;attempt<10;attempt++){
+    grouped=await download('Скачать проект JSON','instance-grouped.json')
+    if(grouped.bodies.find(body=>body.id===linked.id)?.group==='Группа 1')break
+    await page.waitForTimeout(500)
+   }
+   assert.deepEqual(grouped.bodies.map(body=>body.material?.color),['#ff0000','#0000ff'])
+   assert.equal(grouped.bodies.find(body=>body.id===linked.id).group,'Группа 1')
+   assert.deepEqual(grouped.bodies.find(body=>body.id===linked.id).instance.matrix,expectedMatrix)
+   await download('STEP сборки · тела и группы','instance-grouped.step',false)
+   assert.deepEqual(renderErrors,[])
+   const wasmSha256=createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')
+   const report={browser:browser.version(),wasmSha256,downloads,group:'Группа 1',offsetXmm:expectedMatrix[0][3]}
+   await writeFile(path.join(directory,'grouped-colours-browser.json'),JSON.stringify(report,null,2)+'\n')
+  }else{
+
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
   await activate(solid.getByRole('button',{name:'↶',exact:true}))
   await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
@@ -118,6 +154,8 @@ try {
   assert.deepEqual(await download('Скачать проект JSON','instance-placement-undone.json'),created)
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  }
+ }
+ if(!groupedColours){
  await command('Select instance source')
  const before=await download('Скачать проект JSON','before.json');assert.equal(before.bodies.length,2)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
@@ -201,4 +239,5 @@ try {
  const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
  const report={gpuActive,browser:browser.version(),placementStep,workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,objectHistory:process.argv.includes('--object-history'),keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'scene-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
+ }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
