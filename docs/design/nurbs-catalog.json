@@ -23261,6 +23261,7 @@
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_grouped_step_assembly",
       "evidence": [
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/browser-nested-group-placement.json",
         "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/browser-grouped-occurrence-colours.json",
         "crates/cad-step/src/lib.rs",
         "crates/cad-step/src/step_v3_export.rs",
@@ -23288,6 +23289,7 @@
       "category": "Зубчатые передачи",
       "nativeApi": "cad_step::export_styled_step_assembly",
       "evidence": [
+        "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/browser-nested-group-placement.json",
         "docs/qualification/nurbs-step-roundtrip-c978657aa-2026-11-26/browser-grouped-occurrence-colours.json",
         "crates/cad-step/src/step_v3_export.rs",
         "crates/cad-step/src/step_interchange_v3/import_routes.rs",

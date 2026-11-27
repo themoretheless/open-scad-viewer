@@ -26,6 +26,7 @@ parser.add_argument('fixture', type=Path)
 parser.add_argument('--offset-x-mm', type=float, default=5)
 parser.add_argument('--definition-volume-mm3', type=float, default=6)
 parser.add_argument('--grouped-colours', action='store_true')
+parser.add_argument('--nested-groups', action='store_true')
 args = parser.parse_args()
 fixture = args.fixture
 reader = STEPCAFControl_Reader()
@@ -76,7 +77,7 @@ BRepGProp.VolumeProperties_s(shape, volume)
 assert abs(volume.Mass() - args.definition_volume_mm3) < 1e-9
 colours = {}
 if args.grouped_colours:
-    assert parents == ([], ['Группа 1']), parents
+    assert parents == ([], ['Группа 2', 'Группа 1'] if args.nested_groups else ['Группа 1']), parents
     model = reader.Reader().StepModel()
     contexts = {}
     styles = []

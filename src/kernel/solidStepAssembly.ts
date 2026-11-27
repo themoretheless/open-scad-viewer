@@ -1,3 +1,5 @@
+import { validateDirectGroupHierarchy } from '../app/directGroupHierarchy'
+import { nestSharedStepGroups } from './solidStepGroupHierarchy'
 import type { DirectDocument } from '../app/directModeling'
 import { warmGeometryKernel } from './geometry/kernel'
 import { solidMaterialRgb } from './solidMaterial'
@@ -41,7 +43,7 @@ function labelSharedAssembly(text: string, definitions: DirectDocument['bodies']
   )
 }
 
-/** Current Solid hierarchy: root → flat groups → bodies, including all hidden bodies.
+/** Current Solid hierarchy: root → groups → bodies, including all hidden bodies.
  * Sketches/curves/surfaces are refused rather than silently omitted.
  */
 export async function exportSolidStepAssembly(document: DirectDocument): Promise<string> {
@@ -62,6 +64,7 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
   if (missing.length) throw Error(`STEP assembly requires exact B-rep geometry: ${missing.map(b => b.name).join(', ')}`)
   await warmGeometryKernel()
   const { exportDirectStepV9, exportSharedStepAssembly } = await import('./cadNurbsStep')
+  validateDirectGroupHierarchy(snapshot.groups ?? [])
   const groupNames = [...new Set([
     ...(snapshot.groups ?? []).map(group => group.name),
     ...snapshot.bodies.flatMap(body => body.group ? [body.group] : []),
@@ -94,7 +97,7 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
       // through the independently materialized current bodies below.
     }
     if (shared) {
-      const labeledGroups = shared.replace(
+      const labeledGroups = nestSharedStepGroups(shared, groupNames, snapshot.groups ?? []).replace(
         /^(#\d+=(?:PRODUCT|NEXT_ASSEMBLY_USAGE_OCCURRENCE)\()'group-(\d+)'/gm,
         (_, prefix: string, index: string) => prefix + quoted('group:' + groupNames[Number(index)]),
       )
@@ -143,7 +146,11 @@ export async function exportSolidStepAssembly(document: DirectDocument): Promise
   for (const name of groupNames) {
     const group = product(`group:${name}`, name)
     groups.set(name, group)
-    attach(root, group, `group:${name}`, name)
+  }
+  const parents = new Map(snapshot.groups?.map(group => [group.name, group.parent]))
+  for (const [name, group] of groups) {
+    const parent = parents.get(name)
+    attach(parent ? groups.get(parent)! : root, group, `group:${name}`, name)
   }
   for (const body of snapshot.bodies) {
     const exported = exportDirectStepV9(body.brep!).text

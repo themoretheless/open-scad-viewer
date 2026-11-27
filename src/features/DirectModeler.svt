@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { directGroupBranch, editDirectGroupParent } from '../app/directGroupHierarchy'
 import {createAsyncPanels} from './directModeler/createAsyncPanels'
 const {
   ExpressionShellCheck, SurfacePairChecks, SurfaceDistanceCheck, ProfileBridgeCheck,
@@ -596,6 +597,28 @@ watch(selectedCvPoint, point => {
 }, { immediate: true })
 // Workspace visibility and locks do not alter geometry or its undo history.
 const hiddenIds = ref<string[]>([]), lockedIds = ref<string[]>([]), activeGroup = ref('')
+const groupMotion=ref({x:0,y:0,z:0,angle:0,scale:1})
+const savedActiveGroup=computed(()=>document.value.groups?.find(group=>group.name===activeGroup.value))
+const groupParentChoices=computed(()=>{
+ const groups=document.value.groups??[],branch=directGroupBranch(groups,activeGroup.value)
+ return groups.filter(group=>!branch.has(group.name))
+})
+function reparentActiveGroup(event:Event){
+ const name=activeGroup.value,parent=(event.target as HTMLSelectElement).value
+ void commitInWorker(()=>{const next=history.document;next.groups=editDirectGroupParent(next.groups??[],name,parent);return next})
+}
+function transformActiveGroup(){
+ const before=snapDocument.value,branch=directGroupBranch(before.groups??[],activeGroup.value)
+ const objects=documentObjects(before).filter(object=>object.group&&branch.has(object.group))
+ const {x,y,z,angle,scale}=groupMotion.value
+ if(!objects.length||scale<=0||![x,y,z,angle,scale].every(Number.isFinite))return
+ if(objects.some(object=>!objectSelectable(object.id)||(!before.bodies.some(body=>body.id===object.id)&&!before.sketches.some(sketch=>sketch.id===object.id)))){
+  error.value=label('Разблокируйте тела и эскизы группы. Преобразование отдельных NURBS-кривых и поверхностей группы пока недоступно.','Unlock the group bodies and sketches. Group transforms of standalone NURBS curves and surfaces are unavailable.')
+  return
+ }
+ void commitDirectTransform(before,objects.map(object=>object.id),[x,y,z],angle,scale)
+}
+
 const documentObjects = (d:DirectDocument) => [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]]
 const objectInView = (id:string) => objectVisible(id)&&(!isolatedBodyIds.value.length||isolatedBodyIds.value.includes(id))
 const objectVisible = (id:string) => !hiddenIds.value.includes(id)
@@ -2522,8 +2545,10 @@ watch(() => props.appendBodies, request => {
       ...request.bodies,
     ]
     if (built) {
-      const groups = (next.groups ?? []).filter(group => !replaced.has(group.name))
-      next.groups = [...groups, { name: built.name, source: built.source }]
+      const prior = (next.groups ?? []).find(group => group.name === (built.replaces ?? built.name))
+      const groups = (next.groups ?? []).filter(group => !replaced.has(group.name)).map(group =>
+        built.replaces && group.parent === built.replaces ? {...group,parent:built.name} : group)
+      next.groups = [...groups, { name: built.name, source: built.source, ...(prior?.parent ? {parent:prior.parent} : {}) }]
     }
     cancelGesture()
     // The worker runs the authoritative parser over the raw request bodies.
@@ -3416,9 +3441,17 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               @click="openGroupDialog(null)"
             ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </div>
+          <details v-if="savedActiveGroup">
+            <summary>{{ label('Иерархия и преобразование группы','Group hierarchy and transform') }}</summary>
+            <label>{{ label('Родительская группа','Parent group') }} <select :aria-label="label('Родительская группа','Parent group')" :value="savedActiveGroup.parent??''" @change="reparentActiveGroup"><option value="">{{ label('Корень сцены','Scene root') }}</option><option v-for="group in groupParentChoices" :key="group.name" :value="group.name">{{ group.name }}</option></select></label>
+            <label v-for="axis in ['x','y','z'] as const" :key="axis">{{ axis.toUpperCase() }} <input type="number" step="any" v-model.number="groupMotion[axis]" :aria-label="label('Сдвиг группы ','Group translation ')+axis.toUpperCase()"></label>
+            <label>{{ label('Поворот группы Z, °','Group rotation Z, °') }} <input type="number" step="any" v-model.number="groupMotion.angle"></label>
+            <label>{{ label('Масштаб группы','Group scale') }} <input type="number" step="any" min="0.001" v-model.number="groupMotion.scale"></label>
+            <button type="button" :disabled="directTransformPending" @click="transformActiveGroup">{{ label('Преобразовать группу','Transform group') }}</button>
+          </details>
           <SceneVirtualList ref="sceneList" :items="sceneRows" v-slot="{item:row,style,position,total}">
               <li v-if="row.kind==='group' && row.section" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-group" :class="{ 'selected-group': !!row.section.name && row.section.name === selectedGroup }">
-                <button class="group-name" :aria-label="label('Активная группа: ','Active group: ')+(row.section.name??label('Без группы','Ungrouped'))" :aria-pressed="activeGroup===(row.section.name??'')" @click="activeGroup=row.section.name??''">{{ activeGroup===(row.section.name??'')?'● ':'' }}{{ row.section.name ?? label('Тела', 'Bodies') }}</button>
+                <button class="group-name" :aria-label="label('Активная группа: ','Active group: ')+(row.section.name??label('Без группы','Ungrouped'))" :aria-pressed="activeGroup===(row.section.name??'')" @click="activeGroup=row.section.name??''">{{ activeGroup===(row.section.name??'')?'● ':'' }}<span :style="{paddingInlineStart:Math.min(row.section.depth,8)*12+'px'}">{{ row.section.name ?? label('Тела', 'Bodies') }}</span></button>
                 <button v-if="row.section.name" class="group-remove" :aria-label="label('Изолировать группу: ','Isolate group: ')+row.section.name" @click="isolateGroup(row.section.name)">◎</button>
                 <button
                   v-if="row.section.name"

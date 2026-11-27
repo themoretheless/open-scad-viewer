@@ -1,3 +1,4 @@
+import { validateDirectGroups } from './directGroupHierarchy'
 import { isDirectExactFullRound } from './directExactFullRound'
 import { countOperation } from '../dev/operationCounters'
 import { packHistoryText, unpackHistoryText, sweepHistoryTextPool, type HistoryText } from './historyText'
@@ -79,6 +80,7 @@ export interface DirectBody {
 export interface DirectGroup {
   name: string
   source: string
+  parent?: string
 }
 export interface DirectInterchangeMetadata {
   step?: {
@@ -280,17 +282,7 @@ function* directDocumentValidation(
   }
   if (!Array.isArray(d.curves) || !Array.isArray(d.surfaces) || d.curves.length + d.surfaces.length > 128)
     throw new Error('Invalid Solid NURBS collection.')
-  // Absent rather than empty, so a document with no groups stays identical to one
-  // written before groups existed.
-  if (d.groups !== undefined && (!Array.isArray(d.groups) || d.groups.length > 64))
-    throw new Error('Invalid group collection.')
-  const groupNames = new Set<string>()
-  for (const g of d.groups ?? []) {
-    if (!g || typeof g.name !== 'string' || g.name.length === 0 || g.name.length > 100 || groupNames.has(g.name))
-      throw new Error('Invalid group name.')
-    if (typeof g.source !== 'string' || g.source.length > 100_000) throw new Error('Invalid group source.')
-    groupNames.add(g.name)
-  }
+  validateDirectGroups(d.groups)
   const ids = new Set<string>()
   const checkObjectIdentity = (item: { id: string; name: string; group?: string }) => {
     if (

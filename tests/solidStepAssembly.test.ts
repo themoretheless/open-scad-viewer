@@ -105,3 +105,49 @@ it('preserves groups when an older shared writer ignores hierarchy fields', asyn
   expect(text).toContain("PRODUCT('group:Parts','Parts'")
   expect(text.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(2)
 })
+
+it('retains a shared definition and occurrence colours through two mounted groups', async () => {
+  const { createSolidInstance } = await import('../src/kernel/solidInstances')
+  const { importDirectStepV9 } = await import('../src/kernel/cadNurbsStep')
+  const source = scene().bodies[0]
+  delete source.group
+  source.material = { name: 'Source red', color: '#ff0000' }
+  const matrix = [[1,0,0,7],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+  const doc = createSolidInstance({ version: 1, sketches: [], bodies: [source] }, source.id, 'copy', matrix)
+  doc.groups = [{name: 'Inner', source: '', parent:'Outer'}, {name:'Outer', source:''}]
+  doc.bodies[1].group = 'Inner'
+  doc.bodies[1].material = { name: 'Instance blue', color: '#0000ff' }
+  const text = await exportSolidStepAssembly(doc)
+  expect(text.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(1)
+  expect(text.match(/=PRESENTATION_STYLE_BY_CONTEXT\(/g)).toHaveLength(2)
+  expect(importDirectStepV9(text).model.bodies).toHaveLength(2)
+  const inner = /^#\d+=NEXT_ASSEMBLY_USAGE_OCCURRENCE\('group:Inner','Inner','',#(\d+),#(\d+),\$\)/m.exec(text)!
+  const outer = /^#\d+=NEXT_ASSEMBLY_USAGE_OCCURRENCE\('group:Outer','Outer','',#(\d+),#(\d+),\$\)/m.exec(text)!
+  expect(inner[1]).toBe(outer[2])
+  expect(inner[1]).not.toBe(outer[1])
+  const { detachSolidInstances } = await import('../src/kernel/solidInstances')
+  const materialized = await exportSolidStepAssembly(detachSolidInstances(doc, ['copy']))
+  expect(materialized.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(2)
+  expect(materialized.match(/=COLOUR_RGB\(/g)).toHaveLength(2)
+  expect(importDirectStepV9(materialized).model.bodies).toHaveLength(2)
+  const materializedInner = /^#\d+=NEXT_ASSEMBLY_USAGE_OCCURRENCE\('group:Inner','Inner','',#(\d+),#(\d+),\$\)/m.exec(materialized)!
+  const materializedOuter = /^#\d+=NEXT_ASSEMBLY_USAGE_OCCURRENCE\('group:Outer','Outer','',#(\d+),#(\d+),\$\)/m.exec(materialized)!
+  expect(materializedInner[1]).toBe(materializedOuter[2])
+  doc.groups[1].parent = 'Inner'
+  await expect(exportSolidStepAssembly(doc)).rejects.toThrow(/hierarchy/)
+})
+
+it('round-trips parent links in the editor document and rejects missing parents or cycles', async () => {
+  const { parseDirectDocument, serializeDirectDocument } = await import('../src/app/directModeling')
+  const doc: DirectDocument = {
+    version: 1, sketches: [], bodies: [],
+    groups: [{name: 'Outer', source: ''}, {name:'Inner', source:'', parent:'Outer'}],
+  }
+  const restore = () => parseDirectDocument(serializeDirectDocument(doc))
+  expect(restore().groups).toEqual(doc.groups)
+  doc.groups![1]!.parent = 'Missing'
+  expect(restore).toThrow(/missing parent/)
+  doc.groups![1]!.parent = 'Outer'
+  doc.groups![0]!.parent = 'Inner'
+  expect(restore).toThrow(/cycle/)
+})

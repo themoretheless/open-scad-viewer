@@ -8,6 +8,8 @@ const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 const groupedColours=process.argv.includes('--grouped-colours')
+const nestedGroups=process.argv.includes('--nested-groups')
+assert.ok(!nestedGroups||groupedColours,'Nested group qualification requires --grouped-colours')
 assert.ok(!groupedColours||process.argv.includes('--absolute-placement'),'Grouped colour qualification requires --absolute-placement')
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
@@ -140,10 +142,48 @@ try {
    assert.deepEqual(grouped.bodies.map(body=>body.material?.color),['#ff0000','#0000ff'])
    assert.equal(grouped.bodies.find(body=>body.id===linked.id).group,'Группа 1')
    assert.deepEqual(grouped.bodies.find(body=>body.id===linked.id).instance.matrix,expectedMatrix)
-   await download('STEP сборки · тела и группы','instance-grouped.step',false)
+   if(nestedGroups){
+    if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+    await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
+    await activate(solid.getByRole('button',{name:'Новая группа',exact:true}))
+    await activate(solid.getByRole('button',{name:'Активная группа: Группа 1',exact:true}))
+    await activate(solid.getByText('Иерархия и преобразование группы',{exact:true}))
+    await solid.getByLabel('Родительская группа',{exact:true}).selectOption('Группа 2')
+    let nested
+    for(let attempt=0;attempt<10;attempt++){
+     nested=await download('Скачать проект JSON','instance-nested.json')
+     if(nested.groups?.some(group=>group.name==='Группа 1'&&group.parent==='Группа 2'))break
+     await page.waitForTimeout(500)
+    }
+    assert.ok(nested.groups?.some(group=>group.name==='Группа 1'&&group.parent==='Группа 2'))
+    if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+    await activate(solid.getByRole('button',{name:'Активная группа: Группа 2',exact:true}))
+    const panel=solid.getByText('Иерархия и преобразование группы',{exact:true})
+    if(await panel.evaluate(element=>!element.parentElement.open))await activate(panel)
+    await solid.getByLabel('Сдвиг группы X',{exact:true}).fill('3')
+    await activate(solid.getByRole('button',{name:'Преобразовать группу',exact:true}))
+    let moved
+    for(let attempt=0;attempt<10;attempt++){
+     moved=await download('Скачать проект JSON','instance-group-moved.json')
+     if(moved.bodies.find(body=>body.id===linked.id)?.instance?.matrix[0][3]===10)break
+     await page.waitForTimeout(500)
+    }
+    assert.equal(moved.bodies.find(body=>body.id===linked.id)?.instance?.matrix[0][3],10)
+    assert.deepEqual(moved.bodies.find(body=>!body.instance),grouped.bodies.find(body=>!body.instance))
+    if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+    await activate(solid.getByRole('button',{name:'↶',exact:true}))
+    assert.deepEqual(await download('Скачать проект JSON','instance-nested-undo.json'),nested)
+    if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+    await activate(solid.getByRole('button',{name:'↷',exact:true}))
+    assert.deepEqual(await download('Скачать проект JSON','instance-nested-redo.json'),moved)
+    await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor()
+    await page.reload()
+    assert.deepEqual(await download('Скачать проект JSON','instance-nested-reloaded.json'),moved)
+    await download('STEP сборки · тела и группы','instance-nested.step',false)
+   }else await download('STEP сборки · тела и группы','instance-grouped.step',false)
    assert.deepEqual(renderErrors,[])
    const wasmSha256=createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')
-   const report={browser:browser.version(),wasmSha256,downloads,group:'Группа 1',offsetXmm:expectedMatrix[0][3]}
+   const report={browser:browser.version(),wasmSha256,downloads,group:'Группа 1',nestedGroups,offsetXmm:expectedMatrix[0][3]+(nestedGroups?3:0),undoRedoReload:nestedGroups}
    await writeFile(path.join(directory,'grouped-colours-browser.json'),JSON.stringify(report,null,2)+'\n')
   }else{
 

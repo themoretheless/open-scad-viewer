@@ -1,3 +1,4 @@
+import { directGroupBranch, orderDirectGroups } from '../../app/directGroupHierarchy'
 import type { CommitInWorker } from './prepareDocumentCommit'
 import { type DirectBody, type DirectDocument, type DirectSketch, type DirectHistory } from '../../app/directModeling'
 import { type Pane, DEFAULT_GROUP_SOURCE } from './helpers'
@@ -26,6 +27,25 @@ export interface SceneTreeOptions {
   sync: (next?: DirectDocument) => void
 }
 
+/** Bodies listed by group, ungrouped first, with parents ordered before their children. */
+function buildBodySections(document: DirectDocument, objects: readonly {group?: string}[]) {
+  const ungrouped = document.bodies.filter(body => body.group === undefined)
+  const sections: { key: string; name: string | null; depth: number; bodies: DirectBody[] }[] = []
+  if (ungrouped.length) sections.push({ key: '', name: null, depth: 0, bodies: ungrouped })
+  const named = new Map<string, DirectBody[]>((document.groups ?? []).map(g => [g.name, []]))
+  for (const object of objects)
+    if (object.group && !named.has(object.group)) named.set(object.group, [])
+  for (const body of document.bodies) {
+    if (body.group === undefined) continue
+    const existing = named.get(body.group)
+    if (existing) existing.push(body)
+    else named.set(body.group, [body])
+  }
+  for (const {name, depth} of orderDirectGroups(named.keys(), document.groups))
+    sections.push({ key: name, name, depth, bodies: named.get(name)! })
+  return sections
+}
+
 export function useSceneTree(options: SceneTreeOptions) {
   const {
     cancelCommandState,
@@ -47,23 +67,7 @@ export function useSceneTree(options: SceneTreeOptions) {
     selection,
     sync,
   } = options
-  /** Bodies listed by group, ungrouped first, each group keeping its insertion order. */
-  const bodySections = computed(() => {
-    const ungrouped = document.value.bodies.filter(body => body.group === undefined)
-    const sections: { key: string; name: string | null; bodies: DirectBody[] }[] = []
-    if (ungrouped.length) sections.push({ key: '', name: null, bodies: ungrouped })
-    const named = new Map<string, DirectBody[]>((document.value.groups ?? []).map(g => [g.name, []]))
-    for (const object of documentObjects(document.value))
-      if (object.group && !named.has(object.group)) named.set(object.group, [])
-    for (const body of document.value.bodies) {
-      if (body.group === undefined) continue
-      const existing = named.get(body.group)
-      if (existing) existing.push(body)
-      else named.set(body.group, [body])
-    }
-    for (const [name, bodies] of named) sections.push({ key: name, name, bodies })
-    return sections
-  })
+  const bodySections = computed(() => buildBodySections(document.value, documentObjects(document.value)))
 
   interface SceneRow {
     key: string
@@ -72,7 +76,7 @@ export function useSceneTree(options: SceneTreeOptions) {
     pane?: Pane
     dot?: string
     title?: string
-    section?: { name: string | null }
+    section?: { name: string | null; depth: number }
     item?: {
       id: string
       name: string
@@ -117,8 +121,9 @@ export function useSceneTree(options: SceneTreeOptions) {
 
   function isolateGroup(name: string) {
     cancelCommandState()
+    const branch = directGroupBranch(document.value.groups ?? [], name)
     isolatedBodyIds.value = documentObjects(document.value)
-      .filter(o => o.group === name)
+      .filter(o => o.group && branch.has(o.group))
       .map(o => o.id)
     const selected = selectedIds.value.filter(id => isolatedBodyIds.value.includes(id) && objectSelectable(id))
     selection.value = selected[0] ?? ''
@@ -139,7 +144,12 @@ export function useSceneTree(options: SceneTreeOptions) {
           next.sketches = pruneSketchCurveConstraints(next.sketches.filter(item => item.group !== name))
           if (next.curves) next.curves = next.curves.filter(item => item.group !== name)
           if (next.surfaces) next.surfaces = next.surfaces.filter(item => item.group !== name)
-          const remaining = (next.groups ?? []).filter(group => group.name !== name)
+          const parent = next.groups?.find(group => group.name === name)?.parent
+          const remaining = (next.groups ?? []).filter(group => group.name !== name).map(group => {
+            if (group.parent !== name) return group
+            const { parent: _, ...rest } = group
+            return parent ? { ...rest, parent } : rest
+          })
           if (remaining.length) next.groups = remaining
           else delete next.groups
           return next
